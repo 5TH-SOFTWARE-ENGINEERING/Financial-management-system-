@@ -1,0 +1,136 @@
+2025-11-09 19:31:55,339 - app.main - INFO - Celery configured successfully
+2025-11-09 19:31:55,540 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 19:31:59,550 - app.main - ERROR - Failed to create database tables: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "user"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-11-09 19:31:59,550 - app.main - INFO - Directory uploads created/verified
+2025-11-09 19:31:59,550 - app.main - INFO - Directory reports created/verified
+2025-11-09 19:31:59,601 - app.main - INFO - Directory backups created/verified
+2025-11-09 19:31:59,609 - app.main - INFO - Directory logs created/verified
+2025-11-09 19:45:23,588 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 19:45:49,826 - app.main - INFO - Celery configured successfully
+2025-11-09 19:45:49,880 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 19:45:50,526 - app.main - ERROR - Failed to create database tables: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "user"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-11-09 19:45:50,530 - app.main - INFO - Directory uploads created/verified
+2025-11-09 19:45:50,530 - app.main - INFO - Directory reports created/verified
+2025-11-09 19:45:50,530 - app.main - INFO - Directory backups created/verified
+2025-11-09 19:45:50,549 - app.main - INFO - Directory logs created/verified
+2025-11-09 19:57:08,375 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 19:57:34,715 - app.main - INFO - Celery configured successfully
+2025-11-09 19:57:34,790 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 19:57:35,932 - app.main - ERROR - Failed to create database tables: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  database "finance_db" does not exist
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-11-09 19:57:35,948 - app.main - INFO - Directory uploads created/verified
+2025-11-09 19:57:35,951 - app.main - INFO - Directory reports created/verified
+2025-11-09 19:57:35,951 - app.main - INFO - Directory backups created/verified
+2025-11-09 19:57:35,963 - app.main - INFO - Directory logs created/verified
+2025-11-09 20:20:37,565 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 20:21:01,881 - app.main - INFO - Celery configured successfully
+2025-11-09 20:21:01,905 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 20:21:03,590 - app.main - INFO - Database tables created successfully
+2025-11-09 20:21:03,590 - app.main - INFO - Directory uploads created/verified
+2025-11-09 20:21:03,590 - app.main - INFO - Directory reports created/verified
+2025-11-09 20:21:03,590 - app.main - INFO - Directory backups created/verified
+2025-11-09 20:21:03,590 - app.main - INFO - Directory logs created/verified
+2025-11-09 20:22:01,055 - app.main - INFO - Request: GET http://127.0.0.1:8000/health
+2025-11-09 20:22:01,060 - app.main - ERROR - Database health check failed: Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')
+2025-11-09 20:22:06,440 - app.main - ERROR - Redis health check failed: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2025-11-09 20:22:06,495 - app.main - INFO - Response: 200 in 5.4399s
+2025-11-09 20:22:07,679 - app.main - INFO - Request: GET http://127.0.0.1:8000/favicon.ico
+2025-11-09 20:22:07,891 - app.main - INFO - Response: 404 in 0.2123s
+2025-11-09 20:22:25,448 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-09 20:22:25,465 - app.main - INFO - Response: 404 in 0.0155s
+2025-11-09 20:22:43,698 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-09 20:22:43,708 - app.main - INFO - Response: 404 in 0.0100s
+2025-11-09 20:22:52,698 - app.main - INFO - Request: GET http://127.0.0.1:8000/
+2025-11-09 20:22:52,716 - app.main - INFO - Response: 200 in 0.0176s
+2025-11-09 20:30:12,998 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 20:30:32,593 - app.main - INFO - Celery configured successfully
+2025-11-09 20:30:32,613 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 20:30:33,025 - app.main - INFO - Database tables created successfully
+2025-11-09 20:30:33,025 - app.main - INFO - Directory uploads created/verified
+2025-11-09 20:30:33,025 - app.main - INFO - Directory reports created/verified
+2025-11-09 20:30:33,025 - app.main - INFO - Directory backups created/verified
+2025-11-09 20:30:33,040 - app.main - INFO - Directory logs created/verified
+2025-11-09 20:30:46,571 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-09 20:30:46,588 - app.main - INFO - Response: 404 in 0.0171s
+2025-11-09 20:30:51,110 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-09 20:30:51,135 - app.main - INFO - Response: 404 in 0.0250s
+2025-11-09 20:36:35,043 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 20:36:49,470 - app.main - INFO - Celery configured successfully
+2025-11-09 20:36:49,500 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 20:36:49,932 - app.main - INFO - Database tables created successfully
+2025-11-09 20:36:49,932 - app.main - INFO - Directory uploads created/verified
+2025-11-09 20:36:49,932 - app.main - INFO - Directory reports created/verified
+2025-11-09 20:36:49,932 - app.main - INFO - Directory backups created/verified
+2025-11-09 20:36:49,972 - app.main - INFO - Directory logs created/verified
+2025-11-09 20:37:08,968 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-09 20:37:08,979 - app.main - INFO - Response: 404 in 0.0098s
+2025-11-09 20:37:11,605 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-09 20:37:11,616 - app.main - INFO - Response: 404 in 0.0110s
+2025-11-09 20:39:05,993 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 20:41:51,902 - app.main - INFO - Celery configured successfully
+2025-11-09 20:41:51,925 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 20:41:52,305 - app.main - ERROR - Failed to create database tables: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "user"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-11-09 20:41:52,317 - app.main - INFO - Directory uploads created/verified
+2025-11-09 20:41:52,317 - app.main - INFO - Directory reports created/verified
+2025-11-09 20:41:52,317 - app.main - INFO - Directory backups created/verified
+2025-11-09 20:41:52,330 - app.main - INFO - Directory logs created/verified
+2025-11-09 20:42:54,558 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 20:43:05,243 - app.main - INFO - Celery configured successfully
+2025-11-09 20:43:05,243 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 20:43:05,512 - app.main - ERROR - Failed to create database tables: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "user"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-11-09 20:43:05,512 - app.main - INFO - Directory uploads created/verified
+2025-11-09 20:43:05,528 - app.main - INFO - Directory reports created/verified
+2025-11-09 20:43:05,542 - app.main - INFO - Directory backups created/verified
+2025-11-09 20:43:05,551 - app.main - INFO - Directory logs created/verified
+2025-11-09 20:44:58,865 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 20:45:14,174 - app.main - INFO - Celery configured successfully
+2025-11-09 20:45:14,202 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 20:45:14,599 - app.main - INFO - Database tables created successfully
+2025-11-09 20:45:14,599 - app.main - INFO - Directory uploads created/verified
+2025-11-09 20:45:14,599 - app.main - INFO - Directory reports created/verified
+2025-11-09 20:45:14,615 - app.main - INFO - Directory backups created/verified
+2025-11-09 20:45:14,615 - app.main - INFO - Directory logs created/verified
+2025-11-09 20:45:49,603 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-09 20:45:49,636 - app.main - INFO - Response: 200 in 0.0334s
+2025-11-09 20:46:08,498 - app.main - INFO - Request: GET http://127.0.0.1:8000/openapi.json
+2025-11-09 20:46:11,196 - app.main - INFO - Response: 200 in 2.6976s
+2025-11-09 20:49:04,417 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 20:49:15,848 - app.main - INFO - Celery configured successfully
+2025-11-09 20:49:15,869 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 20:49:16,234 - app.main - INFO - Database tables created successfully
+2025-11-09 20:49:16,234 - app.main - INFO - Directory uploads created/verified
+2025-11-09 20:49:16,234 - app.main - INFO - Directory reports created/verified
+2025-11-09 20:49:16,249 - app.main - INFO - Directory backups created/verified
+2025-11-09 20:49:16,249 - app.main - INFO - Directory logs created/verified
+2025-11-09 20:54:06,389 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-09 20:54:29,810 - app.main - INFO - Celery configured successfully
+2025-11-09 20:54:29,814 - app.main - INFO - Starting Finance Management System Backend
+2025-11-09 20:54:33,949 - app.main - INFO - Database tables created successfully
+2025-11-09 20:54:33,949 - app.main - INFO - Directory uploads created/verified
+2025-11-09 20:54:33,964 - app.main - INFO - Directory reports created/verified
+2025-11-09 20:54:33,964 - app.main - INFO - Directory backups created/verified
+2025-11-09 20:54:33,964 - app.main - INFO - Directory logs created/verified
+2025-11-10 20:37:48,163 - app.main - INFO - Celery configured successfully
+2025-11-10 20:37:48,634 - app.main - INFO - Starting Finance Management System Backend
+2025-11-10 20:37:51,065 - app.main - INFO - Database tables created successfully
+2025-11-10 20:37:51,065 - app.main - INFO - Directory uploads created/verified
+2025-11-10 20:37:51,080 - app.main - INFO - Directory reports created/verified
+2025-11-10 20:37:51,080 - app.main - INFO - Directory backups created/verified
+2025-11-10 20:37:51,080 - app.main - INFO - Directory logs created/verified
+2025-11-10 20:38:12,192 - app.main - INFO - Request: GET http://localhost:8000/
+2025-11-10 20:38:12,272 - app.main - INFO - Response: 200 in 0.0791s
+2025-11-10 20:38:15,179 - app.main - INFO - Request: GET http://localhost:8000/favicon.ico
+2025-11-10 20:38:15,195 - app.main - INFO - Response: 404 in 0.0156s
+2025-11-10 20:38:27,002 - app.main - INFO - Request: GET http://localhost:8000/docs
+2025-11-10 20:38:27,006 - app.main - INFO - Response: 200 in 0.0041s
+2025-11-10 20:38:29,653 - app.main - INFO - Request: GET http://localhost:8000/openapi.json
+2025-11-10 20:38:30,563 - app.main - INFO - Response: 200 in 0.9095s
