@@ -1,24 +1,231 @@
 'use client';
-
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react';
+import { toast, Toaster } from 'sonner';
 import { LoginSchema, type LoginInput } from '@/lib/validation';
 import { useUserStore } from '@/store/userStore';
-import { cn } from '@/lib/utils';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Sphere, MeshDistortMaterial, Points, PointMaterial } from '@react-three/drei';
-import * as THREE from 'three';
-import type { Mesh } from 'three';
-import { useRef } from 'react';
 
+// ========================
+// THEME (replace with your theme import if exists)
+// ========================
+const theme = {
+  colors: { primary: '#ff7e5f' },
+  spacing: {
+    xs: '4px',
+    sm: '8px',
+    md: '12px',
+    lg: '20px',
+    xl: '28px',
+  },
+  borderRadius: {
+    md: '8px',
+    lg: '12px',
+  },
+  typography: {
+    fontFamily: '"Inter", sans-serif',
+    fontSizes: {
+      sm: '14px',
+      md: '16px',
+      xl: '26px',
+    },
+    fontWeights: {
+      medium: 500,
+      semibold: 600,
+    },
+  },
+  shadows: {
+    lg: '0 4px 20px rgba(0,0,0,0.3)',
+  },
+  transitions: {
+    default: '0.3s ease-in-out',
+  },
+};
+
+// ========================
+// STYLED COMPONENTS
+// ========================
+const LoginContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: rgb(82, 80, 80);
+  font-family: ${theme.typography.fontFamily};
+`;
+
+const LoginCard = styled.div`
+  background: rgb(43, 42, 42);
+  padding: ${theme.spacing.xl};
+  border-radius: ${theme.borderRadius.lg};
+  box-shadow: ${theme.shadows.lg};
+  width: 100%;
+  max-width: 450px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.lg};
+`;
+
+const Title = styled.h1`
+  text-align: center;
+  font-size: ${theme.typography.fontSizes.xl};
+  font-weight: ${theme.typography.fontWeights.semibold};
+  background: linear-gradient(90deg, #ff7e5f, #feb47b);
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 
+    0 0 5px rgba(255, 126, 95, 0.8),
+    0 0 10px rgba(255, 126, 95, 0.6),
+    0 0 15px rgba(255, 126, 95, 0.4);
+  animation: pulse 2s infinite alternate;
+
+  @keyframes pulse {
+    0% {
+      text-shadow: 
+        0 0 5px rgba(255, 126, 95, 0.8),
+        0 0 10px rgba(255, 126, 95, 0.6);
+    }
+    100% {
+      text-shadow: 
+        0 0 10px rgba(255, 126, 95, 1),
+        0 0 20px rgba(255, 126, 95, 0.8);
+    }
+  }
+`;
+
+const Subtitle = styled.h2`
+  text-align: center;
+  color: #ffffff;
+  font-size: ${theme.typography.fontSizes.md};
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: ${theme.spacing.lg};
+  position: relative;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: ${theme.spacing.sm};
+  color: #ffffff;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.sm};
+  border: 1px solid #4a4a4a;
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.typography.fontSizes.sm};
+  background-color: #333333;
+  color: #ffffff;
+  transition: border-color ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${theme.colors.primary};
+  }
+
+  &::placeholder {
+    color: #b3b3b3;
+  }
+`;
+
+const PasswordContainer = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
+const EyeIcon = styled.button`
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #d1d1d1;
+
+  &:hover {
+    color: ${theme.colors.primary};
+  }
+`;
+
+const CheckboxContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const Checkbox = styled.input`
+  cursor: pointer;
+`;
+
+const CheckboxLabel = styled.label`
+  color: #ffffff;
+  font-size: ${theme.typography.fontSizes.sm};
+  cursor: pointer;
+`;
+
+const SignInButton = styled.button`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  background-color: ${theme.colors.primary};
+  color: #ffffff;
+  border: none;
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.medium};
+  cursor: pointer;
+  transition: background-color ${theme.transitions.default};
+
+  &:hover {
+    background-color: #feb47b;
+  }
+
+  &:disabled {
+    background-color: #4a4a4a;
+    cursor: not-allowed;
+  }
+`;
+
+const ForgotPassword = styled.a`
+  text-align: right;
+  color: #ffffff;
+  font-size: ${theme.typography.fontSizes.sm};
+  cursor: pointer;
+  &:hover {
+    color: ${theme.colors.primary};
+  }
+`;
+
+const ErrorMessage = styled.div`
+  color: #ff4d4f;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin-top: ${theme.spacing.xs};
+  text-align: center;
+`;
+
+// ========================
+// MAIN COMPONENT
+// ========================
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { login, error } = useUserStore();
+  const { login, error: authError } = useUserStore();
 
   const {
     register,
@@ -32,198 +239,70 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login(data.email, data.password);
+      toast.success('Login successful!');
       router.push('/dashboard');
-    } catch (error) {
-      console.error('Login failed:', error);
+    } catch {
+      toast.error('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Custom 3D Sphere with dynamic pulsing scale animation for background
-  function PulsingSphere({ position }: { position: [number, number, number] }) {
-    const meshRef = useRef<Mesh>(null!);
-    useFrame((state) => {
-      if (meshRef.current) {
-        meshRef.current.rotation.y += 0.005; // Subtle additional rotation
-        meshRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 2) * 0.1); // Pulsing scale for dynamism
-      }
-    });
-
-    return (
-      <Sphere ref={meshRef} args={[1.5, 64, 64]} position={position}>
-        <MeshDistortMaterial
-          color="#3b82f6" // Blue for trust/security theme
-          attach="material"
-          distort={0.3} // Subtle distortion for fluid, modern feel
-          speed={2} // Increased speed for more dynamism
-          roughness={0}
-        />
-      </Sphere>
-    );
-  }
-
-  // Custom Particle System with dynamic speed variation for background
-  function DynamicParticles({ position }: { position: [number, number, number] }) {
-    return (
-      <Points
-        limit={15000} // Increased particles for more density
-        range={150} // Wider spread
-        width={60}
-        height={60}
-        depth={60}
-        speed={0.002} // Slightly faster floating
-        factor={0.6} // Higher density
-        position={position}
-      >
-        <PointMaterial
-          transparent
-          size={0.015} // Slightly smaller for subtlety
-          sizeAttenuation={true}
-          depthWrite={false}
-          color="#60a5fa" // Light blue to match theme
-          opacity={0.7} // Slightly more opaque
-        />
-      </Points>
-    );
-  }
-
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900/20 via-zinc-900/10 to-black/20 px-4 overflow-hidden">
-      {/* Background 3D Animation */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
-          <color attach="background" args={['transparent']} />
-          <ambientLight intensity={0.5} />
-          <pointLight position={[10, 10, 10]} intensity={1} />
-          
-          {/* Pulsing Distorted Sphere */}
-          <PulsingSphere position={[0, 0, 0]} />
-          
-          {/* Dynamic Particle System */}
-          <DynamicParticles position={[0, 0, 0]} />
-          
-          <OrbitControls 
-            enablePan={false} 
-            enableZoom={false} 
-            enableRotate={true}
-            autoRotate
-            autoRotateSpeed={0.8} // Slightly faster rotation for dynamism
-            maxPolarAngle={Math.PI / 2}
-            minPolarAngle={Math.PI / 2}
-          />
-        </Canvas>
-      </div>
+    <LoginContainer>
+      <Toaster position="top-right" />
+      <LoginCard>
+        <Title>Login to Your Account</Title>
+        <Subtitle>Welcome back! Please sign in below</Subtitle>
 
-      {/* Centered Login Form */}
-      <div className="relative z-10 w-full max-w-md space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-white">
-            Financial Management System
-          </h1>
-          <p className="mt-2 text-sm text-zinc-200">
-            Sign in to your account
-          </p>
-        </div>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <FormGroup>
+            <Label>Email</Label>
+            <Input
+              {...register('email')}
+              type="email"
+              placeholder="Enter your email"
+              disabled={isLoading}
+            />
+            {errors.email && <ErrorMessage>{errors.email.message}</ErrorMessage>}
+          </FormGroup>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Error Message */}
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
-
-          {/* Email Field */}
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium text-white">
-              Email address
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-zinc-400" />
-              <input
-                {...register('email')}
-                type="email"
-                id="email"
-                autoComplete="email"
-                className={cn(
-                  "w-full pl-10 pr-3 py-2 border rounded-md bg-white/10 backdrop-blur-sm text-white placeholder:text-zinc-400 border-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-                  errors.email && "border-destructive focus:ring-destructive"
-                )}
-                placeholder="Enter your email"
-                disabled={isLoading}
-              />
-            </div>
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-
-          {/* Password Field */}
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-white">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-zinc-400" />
-              <input
+          <FormGroup>
+            <Label>Password</Label>
+            <PasswordContainer>
+              <Input
                 {...register('password')}
                 type={showPassword ? 'text' : 'password'}
-                id="password"
-                autoComplete="current-password"
-                className={cn(
-                  "w-full pl-10 pr-10 py-2 border rounded-md bg-white/10 backdrop-blur-sm text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-                  errors.password && "border-destructive focus:ring-destructive"
-                )}
                 placeholder="Enter your password"
                 disabled={isLoading}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-400 hover:text-white"
-                disabled={isLoading}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
+              <EyeIcon type="button" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff /> : <Eye />}
+              </EyeIcon>
+            </PasswordContainer>
             {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
+              <ErrorMessage>{errors.password.message}</ErrorMessage>
             )}
-          </div>
+          </FormGroup>
 
-          {/* Forgot Password Link */}
-          <div className="text-right">
-            <button
-              type="button"
-              onClick={() => router.push('/auth/reset-password')}
-              className="text-sm text-zinc-300 hover:text-white hover:underline"
-              disabled={isLoading}
-            >
-              Forgot your password?
-            </button>
-          </div>
+          <CheckboxContainer>
+            <Checkbox
+              type="checkbox"
+              id="remember"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <CheckboxLabel htmlFor="remember">Remember me</CheckboxLabel>
+            <ForgotPassword onClick={() => router.push('/auth/reset-password')}>
+              Forgot password?
+            </ForgotPassword>
+          </CheckboxContainer>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={cn(
-              "w-full py-2 px-4 rounded-md text-primary-foreground bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
-              isLoading && "opacity-50"
-            )}
-          >
-            {isLoading ? 'Signing in...' : 'Sign in'}
-          </button>
+          <SignInButton type="submit" disabled={isLoading}>
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </SignInButton>
         </form>
-      </div>
-    </div>
+      </LoginCard>
+    </LoginContainer>
   );
 }
