@@ -146,19 +146,14 @@ export class RoleService implements RoleServiceInterface {
     switch (userType) {
       case UserType.ADMIN:
         return roles.filter(r => r.name === 'ADMIN');
-      case UserType.INSURANCE_ADMIN:
-        return roles.filter(r => r.name === 'ADMIN' || r.name.includes('INSURANCE'));
-      case UserType.PROVIDER_ADMIN:
-        return roles.filter(r => r.name === 'ADMIN' || r.name.includes('PROVIDER'));
-      case UserType.CORPORATE_ADMIN:
-        return roles.filter(r => r.name === 'CORPORATE');
-      case UserType.STAFF:
-      case UserType.INSURANCE_STAFF:
-        return roles.filter(r => r.name === 'STAFF');
-      case UserType.MEMBER:
-        return roles.filter(r => r.name === 'MEMBER');
-      case UserType.PROVIDER:
-        return roles.filter(r => r.name === 'PROVIDER');
+      case UserType.FINANCE_ADMIN:
+        return roles.filter(r => r.name === 'ADMIN' || r.name.includes('FINANCE'));
+      case UserType.FINANCE_ADMIN:
+        return roles.filter(r => r.name === 'ADMIN' || r.name.includes('FINANCE'));
+      case UserType.ACCOUNTANT_ADMIN:
+        return roles.filter(r => r.name === 'ACCOUNTANT');
+      case UserType.EMPLOYEE:
+        return roles.filter(r => r.name === 'EMPLOYEE');
       default:
         return [];
     }

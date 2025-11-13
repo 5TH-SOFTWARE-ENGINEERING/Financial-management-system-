@@ -1,21 +1,21 @@
-
 // lib/services/corporate-client-service.ts
-import { 
-  CorporateClient, 
-  CorporateClientStatus, 
-  CoveragePlan, 
-  CoveragePlanStatus, 
-  MOCK_CORPORATE_CLIENTS 
+import {
+  CorporateClient,
+  FinancialPlan,
+  FinancialPlanStatus,
+  MOCK_CORPORATE_CLIENTS
 } from '../models/corporate-client';
 
 // In-memory data store for demo purposes
 let corporateClients = [...MOCK_CORPORATE_CLIENTS];
 
-export const CorporateClientService = {
+export const FinanceClientService = {
   /**
    * Create a new corporate client
    */
-  createCorporateClient: async (client: Omit<CorporateClient, 'id' | 'createdAt' | 'updatedAt' | 'coveragePlans'>): Promise<CorporateClient> => {
+  createCorporateClient: async (
+    client: Omit<CorporateClient, 'id' | 'createdAt' | 'updatedAt' | 'financialPlans'>
+  ): Promise<CorporateClient> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -24,7 +24,7 @@ export const CorporateClientService = {
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      coveragePlans: []
+      financialPlans: []
     };
     
     corporateClients.push(newClient);
@@ -52,19 +52,22 @@ export const CorporateClientService = {
   },
   
   /**
-   * Get corporate clients by insurance company ID
+   * Get corporate clients by finance company ID
    */
-  getCorporateClientsByInsuranceCompanyId: async (insuranceCompanyId: string): Promise<CorporateClient[]> => {
+  getCorporateClientsByFinanceCompanyId: async (financeCompanyId: string): Promise<CorporateClient[]> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    return corporateClients.filter(c => c.insuranceCompanyId === insuranceCompanyId);
+    return corporateClients.filter(c => c.financeCompanyId === financeCompanyId);
   },
   
   /**
-   * Update corporate client status
+   * Update corporate client (no status field used)
    */
-  updateCorporateClientStatus: async (id: string, status: CorporateClientStatus): Promise<CorporateClient | null> => {
+  updateCorporateClient: async (
+    id: string,
+    updates: Partial<CorporateClient>
+  ): Promise<CorporateClient | null> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 400));
     
@@ -73,7 +76,7 @@ export const CorporateClientService = {
     
     const updatedClient = {
       ...corporateClients[clientIndex],
-      status,
+      ...updates,
       updatedAt: new Date().toISOString()
     };
     
@@ -82,19 +85,19 @@ export const CorporateClientService = {
   },
   
   /**
-   * Add a new coverage plan to a corporate client
+   * Add a new financial plan to a corporate client
    */
-  addCoveragePlan: async (
-    corporateClientId: string, 
-    plan: Omit<CoveragePlan, 'id' | 'createdAt' | 'updatedAt' | 'corporateClientId'>
-  ): Promise<CoveragePlan | null> => {
+  addFinancialPlan: async (
+    corporateClientId: string,
+    plan: Omit<FinancialPlan, 'id' | 'createdAt' | 'updatedAt' | 'corporateClientId'>
+  ): Promise<FinancialPlan | null> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
     
     const clientIndex = corporateClients.findIndex(c => c.id === corporateClientId);
     if (clientIndex === -1) return null;
     
-    const newPlan: CoveragePlan = {
+    const newPlan: FinancialPlan = {
       ...plan,
       id: Date.now().toString(),
       corporateClientId,
@@ -102,34 +105,54 @@ export const CorporateClientService = {
       updatedAt: new Date().toISOString()
     };
     
-    corporateClients[clientIndex].coveragePlans.push(newPlan);
+    corporateClients[clientIndex].financialPlans.push(newPlan);
     return newPlan;
   },
   
   /**
-   * Update a coverage plan
+   * Update a financial plan
    */
-  updateCoveragePlan: async (
+  updateFinancialPlan: async (
     corporateClientId: string,
     planId: string,
-    updates: Partial<CoveragePlan>
-  ): Promise<CoveragePlan | null> => {
+    updates: Partial<FinancialPlan>
+  ): Promise<FinancialPlan | null> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 400));
     
     const clientIndex = corporateClients.findIndex(c => c.id === corporateClientId);
     if (clientIndex === -1) return null;
     
-    const planIndex = corporateClients[clientIndex].coveragePlans.findIndex(p => p.id === planId);
+    const planIndex = corporateClients[clientIndex].financialPlans.findIndex(p => p.id === planId);
     if (planIndex === -1) return null;
     
     const updatedPlan = {
-      ...corporateClients[clientIndex].coveragePlans[planIndex],
+      ...corporateClients[clientIndex].financialPlans[planIndex],
       ...updates,
       updatedAt: new Date().toISOString()
     };
     
-    corporateClients[clientIndex].coveragePlans[planIndex] = updatedPlan;
+    corporateClients[clientIndex].financialPlans[planIndex] = updatedPlan;
     return updatedPlan;
+  },
+  
+  /**
+   * Delete a financial plan
+   */
+  deleteFinancialPlan: async (
+    corporateClientId: string,
+    planId: string
+  ): Promise<boolean> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
+    const clientIndex = corporateClients.findIndex(c => c.id === corporateClientId);
+    if (clientIndex === -1) return false;
+    
+    const initialLength = corporateClients[clientIndex].financialPlans.length;
+    corporateClients[clientIndex].financialPlans =
+      corporateClients[clientIndex].financialPlans.filter(p => p.id !== planId);
+    
+    return corporateClients[clientIndex].financialPlans.length < initialLength;
   }
-}; 
+};
