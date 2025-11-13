@@ -14,7 +14,6 @@ interface LoginResponse {
     adminType: AdminType;
     userType: UserType;
     isActive: boolean;
-    insuranceCompanyId: string | null;
     roles?: any[];
     permissions?: any;
   };
@@ -74,8 +73,6 @@ export const authService = {
         adminType: rawAdminType,
         isActive = true,
         lastLoginAt,
-        insuranceCompanyId = null,
-        corporateClientId = null,
         createdAt,
         updatedAt,
         roles = [],
@@ -84,15 +81,11 @@ export const authService = {
 
       // Validate userType and determine adminType
       let adminType = rawAdminType; // Default to the value from the backend
-      if (userType === UserType.PROVIDER_ADMIN) {
-        adminType = AdminType.PROVIDER_ADMIN;
+      if (userType === UserType.FINANCE_ADMIN) {
+        adminType = AdminType.FINANCE_ADMIN;
       } else if (userType === UserType.ADMIN && rawAdminType === AdminType.SYSTEM_ADMIN) {
         adminType = AdminType.SYSTEM_ADMIN;
-      } else if (userType === UserType.INSURANCE_ADMIN) {
-        adminType = AdminType.INSURANCE_ADMIN;
-      } else if (userType === UserType.CORPORATE_ADMIN) {
-        adminType = AdminType.CORPORATE_ADMIN;
-      }
+      } 
 
       // Create the complete user object
       const completeUser: Admin = {
