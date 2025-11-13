@@ -167,3 +167,18 @@
 2025-11-13 07:23:51,971 - app.main - INFO - Response: 200 in 1.8568s
 2025-11-13 07:23:58,099 - app.main - INFO - Request: GET http://localhost:8000/openapi.json
 2025-11-13 07:23:59,215 - app.main - INFO - Response: 200 in 1.1169s
+2025-11-13 17:37:39,374 - app.main - INFO - Celery configured successfully
+2025-11-13 17:37:39,565 - app.main - INFO - Starting Finance Management System Backend
+2025-11-13 17:37:40,704 - app.main - INFO - Database tables created successfully
+2025-11-13 17:37:40,704 - app.main - INFO - Directory uploads created/verified
+2025-11-13 17:37:40,719 - app.main - INFO - Directory reports created/verified
+2025-11-13 17:37:40,721 - app.main - INFO - Directory backups created/verified
+2025-11-13 17:37:40,725 - app.main - INFO - Directory logs created/verified
+2025-11-13 17:38:19,579 - app.main - INFO - Request: GET http://127.0.0.1:8000/
+2025-11-13 17:38:19,728 - app.main - INFO - Response: 200 in 0.1491s
+2025-11-13 17:38:34,065 - app.main - INFO - Request: GET http://127.0.0.1:8000/favicon.ico
+2025-11-13 17:38:34,072 - app.main - INFO - Response: 404 in 0.0075s
+2025-11-13 17:38:55,292 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-13 17:38:55,329 - app.main - INFO - Response: 200 in 0.0368s
+2025-11-13 17:38:59,875 - app.main - INFO - Request: GET http://127.0.0.1:8000/openapi.json
+2025-11-13 17:39:01,028 - app.main - INFO - Response: 200 in 1.1531s
