@@ -361,3 +361,27 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-11-14 18:49:43,226 - app.main - INFO - Response: 200 in 0.0090s
 2025-11-14 18:49:56,231 - app.main - INFO - Request: GET http://127.0.0.1:8000/openapi.json
 2025-11-14 18:49:59,278 - app.main - INFO - Response: 200 in 3.0472s
+2025-11-14 19:47:24,113 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-14 19:50:36,968 - app.main - INFO - Celery configured successfully
+2025-11-14 19:51:14,363 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 19:51:15,426 - app.main - INFO - Response: 200 in 1.0636s
+2025-11-14 19:51:15,457 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-14 19:51:15,501 - app.main - INFO - Request: POST http://testserver/api/v1/users/
+2025-11-14 19:51:18,030 - app.main - INFO - Response: 201 in 2.5282s
+2025-11-14 19:51:18,432 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 201 Created"
+2025-11-14 19:51:19,240 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 19:51:20,906 - app.main - INFO - Response: 200 in 1.6659s
+2025-11-14 19:51:20,915 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-14 19:51:20,924 - app.main - INFO - Request: POST http://testserver/api/v1/users/subordinates
+2025-11-14 19:51:22,447 - app.main - INFO - Response: 201 in 1.5230s
+2025-11-14 19:51:22,651 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/subordinates "HTTP/1.1 201 Created"
+2025-11-14 19:51:22,761 - app.main - INFO - Request: POST http://testserver/api/v1/users/subordinates
+2025-11-14 19:51:23,658 - app.main - INFO - Response: 201 in 0.8979s
+2025-11-14 19:51:23,667 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/subordinates "HTTP/1.1 201 Created"
+2025-11-14 19:51:23,802 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 19:51:24,615 - app.main - INFO - Response: 200 in 0.8125s
+2025-11-14 19:51:24,626 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-14 19:51:24,689 - app.main - INFO - Request: POST http://testserver/api/v1/users/
+2025-11-14 19:51:24,759 - app.main - WARNING - HTTP Exception: 403 - Not enough permissions
+2025-11-14 19:51:24,768 - app.main - INFO - Response: 403 in 0.0789s
+2025-11-14 19:51:24,775 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 403 Forbidden"

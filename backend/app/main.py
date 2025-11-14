@@ -294,6 +294,53 @@ async def api_info():
     }
 
 
+@app.on_event("startup")
+def create_default_admin():
+    db = SessionLocal()
+    try:
+        admin_email = "admin@expense.com"
+        admin_username = "admin"
+        admin_password = "admin1234"  # 8+ chars
+
+        # Check by email OR username
+        existing = (
+            db.query(User)
+            .filter(
+                (User.email == admin_email) | (User.username == admin_username)
+            )
+            .first()
+        )
+        if existing:
+            print(f"Default admin already exists: {admin_email}")
+            return
+
+        # Create admin
+        user_in = UserCreate(
+            email=admin_email,
+            username=admin_username,
+            password=admin_password,
+            full_name="Default Administrator",
+            role=UserRole.ADMIN
+        )
+        hashed = get_password_hash(user_in.password)
+        db_user = User(
+            email=user_in.email,
+            username=user_in.username,
+            hashed_password=hashed,
+            full_name=user_in.full_name,
+            role=user_in.role,
+            is_active=True,
+            is_verified=True
+        )
+        db.add(db_user)
+        db.commit()
+        print(f"Default admin created: {admin_email} / {admin_password}")
+    except Exception as e:
+        db.rollback()
+        print(f"Failed to create default admin: {e}")
+    finally:
+        db.close()
+
 # Celery configuration (for background tasks)
 celery_app = None
 try:

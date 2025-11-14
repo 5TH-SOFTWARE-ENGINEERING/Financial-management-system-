@@ -448,3 +448,60 @@ def create_default_admin():
     finally:
         db.close()
    -->
+
+
+   
+<!-- how to create the super admin
+
+# app/main.py
+from fastapi import FastAPI
+from .api.v1 import auth, users
+from .core.database import SessionLocal
+from .models.user import User, UserRole
+from .core.security import get_password_hash
+
+app = FastAPI()
+
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+
+
+@app.on_event("startup")
+def create_default_superadmin():
+    db = SessionLocal()
+    try:
+        email = "superadmin@expense.com"
+        username = "superadmin"
+        password = "super1234"  # 8+ chars
+
+        # Check if already exists
+        existing = db.query(User).filter(
+            (User.email == email) | (User.username == username)
+        ).first()
+
+        if existing:
+            print(f"Default SUPER_ADMIN already exists: {email}")
+            return
+
+        # Create superadmin
+        hashed_password = get_password_hash(password)
+        superadmin = User(
+            email=email,
+            username=username,
+            hashed_password=hashed_password,
+            full_name="Super Administrator",
+            role=UserRole.SUPER_ADMIN,
+            is_active=True,
+            is_verified=True
+        )
+        db.add(superadmin)
+        db.commit()
+        db.refresh(superadmin)
+        print(f"Default SUPER_ADMIN created: {email} / {password}")
+    except Exception as e:
+        db.rollback()
+        print(f"Failed to create default SUPER_ADMIN: {e}")
+    finally:
+        db.close()
+
+ -->
