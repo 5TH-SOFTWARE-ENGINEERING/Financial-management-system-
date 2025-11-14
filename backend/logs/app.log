@@ -285,3 +285,45 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-11-14 16:13:52,921 - app.main - WARNING - HTTP Exception: 401 - Incorrect username or password
 2025-11-14 16:13:52,924 - app.main - INFO - Response: 401 in 0.7025s
 2025-11-14 16:13:52,933 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 401 Unauthorized"
+2025-11-14 18:27:13,094 - app.main - INFO - Celery configured successfully
+2025-11-14 18:27:41,119 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 18:27:41,995 - app.main - WARNING - HTTP Exception: 401 - Incorrect username or password
+2025-11-14 18:27:42,019 - app.main - INFO - Response: 401 in 0.9003s
+2025-11-14 18:27:42,080 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 401 Unauthorized"
+2025-11-14 18:33:56,342 - app.main - INFO - Celery configured successfully
+2025-11-14 18:34:05,302 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 18:34:06,590 - app.main - INFO - Response: 200 in 1.2880s
+2025-11-14 18:34:06,610 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-14 18:34:06,647 - app.main - INFO - Request: POST http://testserver/api/v1/users/
+2025-11-14 18:34:06,869 - app.main - INFO - Response: 422 in 0.2228s
+2025-11-14 18:34:06,877 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 422 Unprocessable Entity"
+2025-11-14 18:37:19,911 - app.main - INFO - Celery configured successfully
+2025-11-14 18:37:29,460 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 18:37:31,058 - app.main - INFO - Response: 200 in 1.5987s
+2025-11-14 18:37:31,109 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-14 18:37:31,121 - app.main - INFO - Request: POST http://testserver/api/v1/users/
+2025-11-14 18:37:32,013 - app.main - INFO - Response: 201 in 0.8913s
+2025-11-14 18:37:32,028 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 201 Created"
+2025-11-14 18:40:34,293 - app.main - INFO - Celery configured successfully
+2025-11-14 18:40:42,185 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 18:40:42,933 - app.main - INFO - Response: 200 in 0.7481s
+2025-11-14 18:40:42,943 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-14 18:40:42,974 - app.main - INFO - Request: POST http://testserver/api/v1/users/
+2025-11-14 18:40:43,833 - app.main - INFO - Response: 201 in 0.8591s
+2025-11-14 18:40:43,853 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 201 Created"
+2025-11-14 18:40:43,893 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 18:40:44,610 - app.main - INFO - Response: 200 in 0.7165s
+2025-11-14 18:40:44,619 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-14 18:40:44,654 - app.main - INFO - Request: POST http://testserver/api/v1/users/subordinates
+2025-11-14 18:40:45,682 - app.main - INFO - Response: 201 in 1.0283s
+2025-11-14 18:40:45,694 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/subordinates "HTTP/1.1 201 Created"
+2025-11-14 18:40:45,745 - app.main - INFO - Request: POST http://testserver/api/v1/users/subordinates
+2025-11-14 18:40:46,839 - app.main - INFO - Response: 201 in 1.0927s
+2025-11-14 18:40:46,859 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/subordinates "HTTP/1.1 201 Created"
+2025-11-14 18:40:46,884 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 18:40:47,752 - app.main - INFO - Response: 200 in 0.8684s
+2025-11-14 18:40:47,762 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-14 18:40:47,788 - app.main - INFO - Request: POST http://testserver/api/v1/users/
+2025-11-14 18:40:47,841 - app.main - WARNING - HTTP Exception: 403 - Not enough permissions
+2025-11-14 18:40:47,890 - app.main - INFO - Response: 403 in 0.1019s
+2025-11-14 18:40:47,905 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 403 Forbidden"

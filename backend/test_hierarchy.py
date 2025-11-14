@@ -36,8 +36,8 @@ def setup_test_data():
 
         # Create users in order
         users = [
-            ("superadmin@test.com", "superadmin", "test123", "Super Admin", UserRole.SUPER_ADMIN, None),
-            ("admin@test.com", "admin", "test123", "Admin User", UserRole.ADMIN, None),
+            ("superadmin@test.com", "superadmin", "test1234", "Super Admin", UserRole.SUPER_ADMIN, None),
+            ("admin@test.com", "admin", "test1234", "Admin User", UserRole.ADMIN, None),
         ]
 
         created = {}
@@ -119,11 +119,12 @@ def test_admin_creates_manager():
         "username": "newmgr",
         "password": "test1234",
         "full_name": "New Manager",
-        "role": "MANAGER"  # ← UPPERCASE
+        "role": "manager"
     }
     r = client.post("/api/v1/users/", json=data, headers=headers)
-    assert r.status_code == 200, f"Create failed: {r.json()}"
+    assert r.status_code in [200, 201], f"Create failed: {r.json()}"
     print("Admin created manager")
+
 
 
 def test_manager_creates_subordinates():
@@ -131,24 +132,30 @@ def test_manager_creates_subordinates():
     token = get_auth_token("manager")
     headers = {"Authorization": f"Bearer {token}"}
 
-    for role in ["ACCOUNTANT", "EMPLOYEE"]:  # ← UPPERCASE
+    for role in ["accountant", "employee"]:
         data = {
-            "email": f"new{role.lower()}@test.com",
-            "username": f"new{role.lower()}",
+            "email": f"new{role}@test.com",
+            "username": f"new{role}",
             "password": "test1234",
             "full_name": f"New {role.title()}",
-            "role": role  # ← "ACCOUNTANT", "EMPLOYEE"
+            "role": role
         }
         r = client.post("/api/v1/users/subordinates", json=data, headers=headers)
-        assert r.status_code == 200, f"Create {role} failed: {r.json()}"
-        print(f"Manager created {role.lower()}")
+        assert r.status_code in [200, 201], f"Create {role} failed: {r.json()}"
+        print(f"Manager created {role}")
+
 
 
 def test_hierarchy_restrictions():
     print("\nTesting: Restrictions")
     token = get_auth_token("employee")
     headers = {"Authorization": f"Bearer {token}"}
-    r = client.post("/api/v1/users/", json={"email": "x@x.com", "username": "x", "password": "x", "role": "employee"}, headers=headers)
+
+    r = client.post(
+        "/api/v1/users/",
+        json={"email": "x@x.com", "username": "x", "password": "x", "role": "employee"},
+        headers=headers
+    )
     assert r.status_code == 403
     print("Employee blocked from creating users")
 
