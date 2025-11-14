@@ -61,7 +61,7 @@ def setup_test_data():
         manager = User(
             email="manager@test.com",
             username="manager",
-            hashed_password=get_password_hash("test123"),
+            hashed_password=get_password_hash("test1234"),
             full_name="Finance Manager",
             role=UserRole.MANAGER,
             is_active=True,
@@ -81,7 +81,7 @@ def setup_test_data():
             user = User(
                 email=email,
                 username=username,
-                hashed_password=get_password_hash("test123"),
+                hashed_password=get_password_hash("test1234"),
                 full_name=name,
                 role=role,
                 is_active=True,
@@ -103,7 +103,7 @@ def setup_test_data():
         db.close()
 
 
-def get_auth_token(username: str, password: str = "test123") -> str:
+def get_auth_token(username: str, password: str = "test1234") -> str:
     response = client.post("/api/v1/auth/login", data={"username": username, "password": password})
     assert response.status_code == 200, f"Login failed: {response.text}"
     return response.json()["access_token"]
@@ -117,7 +117,7 @@ def test_admin_creates_manager():
     data = {
         "email": "newmgr@test.com",
         "username": "newmgr",
-        "password": "test123",
+        "password": "test1234",
         "full_name": "New Manager",
         "role": "MANAGER"  # ← UPPERCASE
     }
@@ -135,7 +135,7 @@ def test_manager_creates_subordinates():
         data = {
             "email": f"new{role.lower()}@test.com",
             "username": f"new{role.lower()}",
-            "password": "test123",
+            "password": "test1234",
             "full_name": f"New {role.title()}",
             "role": role  # ← "ACCOUNTANT", "EMPLOYEE"
         }

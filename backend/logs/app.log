@@ -273,3 +273,15 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-11-14 11:35:35,008 - app.main - INFO - Request: POST http://testserver/api/v1/users/
 2025-11-14 11:35:35,115 - app.main - INFO - Response: 422 in 0.1071s
 2025-11-14 11:35:35,122 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 422 Unprocessable Entity"
+2025-11-14 16:06:51,346 - app.main - INFO - Celery configured successfully
+2025-11-14 16:07:40,845 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 16:07:42,540 - app.main - INFO - Response: 200 in 1.6962s
+2025-11-14 16:07:42,554 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-14 16:07:42,637 - app.main - INFO - Request: POST http://testserver/api/v1/users/
+2025-11-14 16:07:43,049 - app.main - INFO - Response: 422 in 0.4119s
+2025-11-14 16:07:43,057 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 422 Unprocessable Entity"
+2025-11-14 16:13:41,280 - app.main - INFO - Celery configured successfully
+2025-11-14 16:13:52,222 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-14 16:13:52,921 - app.main - WARNING - HTTP Exception: 401 - Incorrect username or password
+2025-11-14 16:13:52,924 - app.main - INFO - Response: 401 in 0.7025s
+2025-11-14 16:13:52,933 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 401 Unauthorized"
