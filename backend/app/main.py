@@ -13,9 +13,17 @@ import os
 from datetime import datetime
 
 from .core.config import settings
-from .core.database import engine, Base, get_db  # Added get_db import
-from .api.v1 import auth, users, revenue, expenses, dashboard, reports, approvals, notifications, admin
+from .core.database import engine, Base, get_db, SessionLocal
+from .api.v1 import (
+    auth, users, revenue, expenses, dashboard,
+    reports, approvals, notifications, admin
+)
 from .utils.audit import AuditLogger, AuditAction
+
+# --- Critical imports for default admin creation ---
+from .models.user import User, UserRole        # SQLAlchemy model + Enum
+from .schemas.user import UserCreate           # Pydantic schema
+from .utils.security import get_password_hash
 
 # Create log directory early if LOG_FILE is set (prevents FileNotFoundError during config)
 if settings.LOG_FILE:
