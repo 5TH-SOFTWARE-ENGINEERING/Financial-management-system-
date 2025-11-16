@@ -209,6 +209,41 @@ export const CreateReportSchema = z.object({
   }),
 });
 
+// Reset password schemas
+export const ResetPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+}).superRefine((data, ctx) => {
+  // For OTP step
+  if (data.otp !== undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'OTP must be 6 digits',
+      path: ['otp'],
+    });
+  }
+  // For new password step
+  if (data.newPassword !== undefined && data.confirmPassword !== undefined) {
+    if (data.newPassword !== data.confirmPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Passwords don't match",
+        path: ['confirmPassword'],
+      });
+    }
+    if (data.newPassword.length < 8) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_small,
+        minimum: 8,
+        type: 'string',
+        inclusive: true,
+        message: 'Password must be at least 8 characters',
+        path: ['newPassword'],
+      });
+    }
+  }
+});
+
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export type CreateDepartmentInput = z.infer<typeof CreateDepartmentSchema>;
 export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;

@@ -277,20 +277,27 @@ const accessCache = new Map<string, boolean>();
  * Enhanced component access check that considers userType
  */
 export const canAccessComponent = (
-  userType: UserType | string, 
+  userType: UserType | string,
   componentId: ComponentId
 ): boolean => {
-  // Create cache key
   const cacheKey = `${userType}:${componentId}`;
-  
-  // Check cache first
+
   if (accessCache.has(cacheKey)) {
     return accessCache.get(cacheKey)!;
   }
 
-  // Normalize userType to lowercase for comparison
-  const normalizedUserType = userType.toLowerCase();
+  const normalizedUserType = userType.toString().toLowerCase();
 
-  // Admin has full access
-  if (normalizedUserType === UserType.ADMIN) {
-    accessCache.set(cacheKey,
+  // Admin always gets access
+  if (normalizedUserType === UserType.ADMIN.toLowerCase()) {
+    accessCache.set(cacheKey, true);
+    return true;
+  }
+
+  // Check mapping
+  const allowedComponents = USER_TYPE_COMPONENT_MAP[userType as UserType] ?? [];
+  const result = allowedComponents.includes(componentId);
+
+  accessCache.set(cacheKey, result);
+  return result;
+};
