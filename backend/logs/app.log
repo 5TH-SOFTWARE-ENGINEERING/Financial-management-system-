@@ -607,3 +607,15 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-11-16 08:52:09,855 - app.main - INFO - Response: 200 in 6.7759s
 2025-11-16 09:00:30,823 - app.main - INFO - Request: GET http://127.0.0.1:8000/.well-known/appspecific/com.chrome.devtools.json
 2025-11-16 09:00:30,902 - app.main - INFO - Response: 404 in 0.0799s
+2025-11-16 09:50:49,618 - app.main - INFO - Celery configured successfully
+2025-11-16 09:50:49,842 - app.main - INFO - Starting Finance Management System Backend
+2025-11-16 09:50:50,615 - app.main - INFO - Database tables created successfully
+2025-11-16 09:50:50,617 - app.main - INFO - Directory uploads created/verified
+2025-11-16 09:50:50,619 - app.main - INFO - Directory reports created/verified
+2025-11-16 09:50:50,621 - app.main - INFO - Directory backups created/verified
+2025-11-16 09:50:50,624 - app.main - INFO - Directory logs created/verified
+2025-11-16 09:50:51,309 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-16 09:51:18,825 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-16 09:51:19,099 - app.main - INFO - Response: 200 in 0.2743s
+2025-11-16 09:51:30,721 - app.main - INFO - Request: GET http://127.0.0.1:8000/openapi.json
+2025-11-16 09:51:35,590 - app.main - INFO - Response: 200 in 4.8690s
