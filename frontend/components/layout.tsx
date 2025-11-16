@@ -1,14 +1,14 @@
+// components/layout.tsx
 'use client';
 
 import React, { ReactNode } from 'react';
 import styled from 'styled-components';
-import { Navbar } from '@/components/common/Navbar';
-import { Sidebar } from '@/components/common/Sidebar';
+import Navbar from "@/components/common/Navbar";
+import Sidebar from "@/components/common/Sidebar";
 
 const LayoutContainer = styled.div`
   display: flex;
   min-height: 100vh;
-
 `;
 
 const MainContent = styled.main`
@@ -40,4 +40,4 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 };
 
-export default Layout; 
+export default Layout;

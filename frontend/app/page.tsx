@@ -1,3 +1,4 @@
+//app/page.tsx
 'use client';
 
 import React, { useState, useRef } from 'react';
@@ -40,6 +41,7 @@ const Wrapper = styled.div`
 const GradientBackground = styled.div`
   position: absolute;
   inset: 0;
+  pointer-events: none;  /* ← IMPORTANT FIX */
   background: linear-gradient(
     135deg,
     rgb(9, 10, 10) 0%,
@@ -50,6 +52,7 @@ const GradientBackground = styled.div`
   );
   z-index: 0;
 `;
+
 
 const HeroSection = styled.section`
   position: relative;
@@ -227,7 +230,7 @@ export default function Home() {
 
   return (
     <Wrapper>
-      <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <Header />
 
       <HeroSection>
         <GradientBackground />
@@ -252,7 +255,7 @@ export default function Home() {
             Streamline revenue tracking, expense approvals, and compliance-ready reporting.
           </Subtitle>
           <Link href="/auth/login">
-            <Button size="lg" className="cursor-pointer transition-all duration-300 text-zinc-700 dark:text-zinc-300 
+            <Button size="lg" className=" cursor-pointer transition-all duration-300 text-zinc-700 dark:text-zinc-300 
              hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 
              hover:scale-105 hover:shadow-[0_0_10px_rgba(99,102,241,0.3)]">Get Started</Button>
           </Link>

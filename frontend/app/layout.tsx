@@ -1,3 +1,4 @@
+//app/layout
 'use client';
 
 import { Inter } from 'next/font/google';
@@ -35,7 +36,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <StyledComponentsRegistry>
           <ThemeProvider theme={theme}>
-            <AuthProvider> {/* ⭐ REQUIRED FOR useAuth() */}
+            <AuthProvider> 
               <LayoutContainer>
                 <MainContent>
                   <ContentWrapper>{children}</ContentWrapper>

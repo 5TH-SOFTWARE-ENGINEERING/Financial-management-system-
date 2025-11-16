@@ -87,16 +87,13 @@ const AddButton = styled.button`
   height: 32px;
   border: none;
   border-radius: 50%;
-  background: ${theme.colors.textSecondary};
-  color: ${theme.colors.background};
+  background: ${props => props.theme.colors.textSecondary};
+  color: ${props => props.theme.colors.background};
   cursor: pointer;
-  transition: background-color ${theme.transitions.default};
+  transition: background-color ${props => props.theme.transitions.default};
 
   &:hover {
-    background: ${props => {
-    const color = theme.colors.primary;
-    return `${color}dd`;
-  }};
+    background: ${props => `${props.theme.colors.primary}dd`};
   }
 
   svg {
@@ -337,6 +334,10 @@ export default function Navbar() {
   const handleRolesClick = () => {
     router.push('/settings/roles');
     setIsDropdownOpen(false);
+  };
+  
+  const handleSignOut = () => {
+    logout(); // Use the centralized logout function from auth context
   };
 
   const initials = user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';

@@ -392,7 +392,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         <SheetTrigger asChild>
           <Button variant="outline" size="icon" className="mr-2 md:hidden">
             <Menu className="h-4 w-4" />
-            <span className="sr-only">Toggle Sidebar</span>
+            <span className="sr-only"></span>
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">

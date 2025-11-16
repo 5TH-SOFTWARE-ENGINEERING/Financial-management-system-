@@ -5,12 +5,17 @@ import { Resource, Action, UserType } from './models';
 interface AuthorizationHook {
   hasPermission: (resource: Resource, action: Action) => boolean;
   hasUserPermission: (userId: string, resource: Resource, action: Action) => boolean;
+
+  // Role helpers
+  isSuperAdmin: () => boolean;
   isAdmin: () => boolean;
+  isFinanceAdmin: () => boolean;
   isAccountant: () => boolean;
   isEmployee: () => boolean;
+
   hasRole: (roleName: string) => boolean;
   hasUserType: (userType: UserType) => boolean;
-  isFinanceAdmin: () => boolean;
+
   refreshUser: () => Promise<void>;
 }
 
@@ -21,12 +26,22 @@ export const useAuthorization = (): AuthorizationHook => {
   const { user, hasPermission, hasUserPermission, refreshUser } = useAuth();
 
   /**
+   * Check if the user is a super admin
+   */
+  const isSuperAdmin = (): boolean => {
+    if (!user) return false;
+    return user.role === UserType.SUPER_ADMIN;
+  };
+
+  /**
    * Check if the user is an administrator
    */
   const isAdmin = (): boolean => {
     if (!user) return false;
-    return user.role === UserType.ADMIN || 
-           user.role === UserType.FINANCE_ADMIN;
+    return (
+      user.role === UserType.ADMIN ||
+      user.role === UserType.FINANCE_ADMIN
+    );
   };
 
   /**
@@ -54,7 +69,7 @@ export const useAuthorization = (): AuthorizationHook => {
   };
 
   /**
-   * Check if the user has a specific role
+   * Check if the user has a specific role string
    */
   const hasRole = (roleName: string): boolean => {
     if (!user) return false;
@@ -62,7 +77,7 @@ export const useAuthorization = (): AuthorizationHook => {
   };
 
   /**
-   * Check if the user has a specific user type
+   * Check if the user has a specific UserType enum value
    */
   const hasUserType = (userType: UserType): boolean => {
     if (!user) return false;
@@ -72,12 +87,13 @@ export const useAuthorization = (): AuthorizationHook => {
   return {
     hasPermission,
     hasUserPermission,
+    isSuperAdmin,
     isAdmin,
+    isFinanceAdmin,
     isAccountant,
     isEmployee,
     hasRole,
     hasUserType,
-    isFinanceAdmin,
     refreshUser
   };
-}; 
+};
