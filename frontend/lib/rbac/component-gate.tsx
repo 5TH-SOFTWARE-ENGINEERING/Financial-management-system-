@@ -1,3 +1,4 @@
+// lib/rbac/component-gate.tsx
 'use client';
 
 import React, { ReactNode, useEffect } from 'react';
@@ -27,32 +28,29 @@ export const ComponentGate: React.FC<ComponentGateProps> = ({
     if (debug) {
       console.log('ComponentGate Debug:', {
         componentId,
-        userType: user?.userType,
-        adminType: user?.adminType,
-        hasAccess: user ? canAccessComponent(user.userType, componentId, user.adminType) : false
+        role: user?.role,
+        hasAccess: user ? canAccessComponent(user.role, componentId) : false
       });
     }
   }, [componentId, user, debug]);
   
-  if (!user || !user.userType) {
+  if (!user || !user.role) {
     if (debug) {
-      console.warn('ComponentGate: No user or userType found', { componentId });
+      console.warn('ComponentGate: No user or role found', { componentId });
     }
     return fallback ? <>{fallback}</> : null;
   }
   
   const hasAccess = canAccessComponent(
-    user.userType,
-    componentId,
-    user.adminType
+    user.role,
+    componentId
   );
   
   if (!hasAccess) {
     if (debug) {
       console.warn('ComponentGate: Access denied', {
         componentId,
-        userType: user.userType,
-        adminType: user.adminType
+        role: user.role
       });
     }
     return fallback ? <>{fallback}</> : null;

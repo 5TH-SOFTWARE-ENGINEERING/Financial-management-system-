@@ -22,7 +22,6 @@ export enum ComponentId {
   REVENUE_CREATE = 'revenue.create',
   REVENUE_EDIT = 'revenue.edit',
   REVENUE_DELETE = 'revenue.delete',
-  FINANCE_MANAGER_DASHBOARD = "finance_manager.dashboard",
   
   // Expense management components
   EXPENSE_LIST = 'expense.list',
@@ -52,18 +51,6 @@ export enum ComponentId {
   PROJECT_CREATE = 'project.create',
   PROJECT_EDIT = 'project.edit',
   PROJECT_DELETE = 'project.delete',
-  
-  // Corporate Client management components
-  CORPORATE_CLIENT_LIST = 'corporate_client.list',
-  CORPORATE_CLIENT_CREATE = 'corporate_client.create',
-  CORPORATE_CLIENT_EDIT = 'corporate_client.edit',
-  CORPORATE_CLIENT_DELETE = 'corporate_client.delete',
-  
-  // Financial Plan management components
-  FINANCIAL_PLAN_LIST = 'financial_plan.list',
-  FINANCIAL_PLAN_CREATE = 'financial_plan.create',
-  FINANCIAL_PLAN_EDIT = 'financial_plan.edit',
-  FINANCIAL_PLAN_DELETE = 'financial_plan.delete',
   
   // Profile components
   PROFILE_VIEW = 'profile.view',
@@ -101,8 +88,6 @@ export enum ComponentId {
   SIDEBAR_REPORT = 'sidebar.report',
   SIDEBAR_DEPARTMENT = 'sidebar.department',
   SIDEBAR_PROJECT = 'sidebar.project',
-  SIDEBAR_CORPORATE_CLIENT = 'sidebar.corporate_client',
-  SIDEBAR_FINANCIAL_PLAN = 'sidebar.financial_plan',
   
   // Finance management components
   FINANCE_LIST = 'finance.list',
@@ -113,10 +98,6 @@ export enum ComponentId {
   FINANCE_MANAGER_DASHBOARD = 'finance_manager.dashboard',
   ACCOUNTANT_DASHBOARD = 'accountant.dashboard',
   EMPLOYEE_DASHBOARD = 'employee.dashboard',
-  ADMIN_LIST = 'admin.list',
-  ADMIN_CREATE = 'admin.create',
-  ADMIN_EDIT = 'admin.edit',
-  ADMIN_DELETE = 'admin.delete',
   ADMIN_PERMISSION = 'admin.permission',
   
   // Accountant management components
@@ -174,14 +155,6 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
     ComponentId.PROJECT_CREATE,
     ComponentId.PROJECT_EDIT,
     ComponentId.PROJECT_DELETE,
-    ComponentId.CORPORATE_CLIENT_LIST,
-    ComponentId.CORPORATE_CLIENT_CREATE,
-    ComponentId.CORPORATE_CLIENT_EDIT,
-    ComponentId.CORPORATE_CLIENT_DELETE,
-    ComponentId.FINANCIAL_PLAN_LIST,
-    ComponentId.FINANCIAL_PLAN_CREATE,
-    ComponentId.FINANCIAL_PLAN_EDIT,
-    ComponentId.FINANCIAL_PLAN_DELETE,
     ComponentId.PROFILE_VIEW,
     ComponentId.PROFILE_EDIT,
     ComponentId.SETTINGS_VIEW,
@@ -194,18 +167,15 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
     ComponentId.PERMISSION_EDIT,
     // Sidebar for all
     ComponentId.SIDEBAR_USERS,
-    ComponentId.SIDEBAR_ROLES,
     ComponentId.SIDEBAR_REVENUE,
     ComponentId.SIDEBAR_EXPENSE,
     ComponentId.SIDEBAR_TRANSACTION,
     ComponentId.SIDEBAR_REPORT,
     ComponentId.SIDEBAR_DEPARTMENT,
     ComponentId.SIDEBAR_PROJECT,
-    ComponentId.SIDEBAR_CORPORATE_CLIENT,
-    ComponentId.SIDEBAR_FINANCIAL_PLAN,
   ],
   
-  [UserType.FINANCE_MANAGER]: [
+  [UserType.FINANCE_ADMIN]: [
     // Common components
     ComponentId.LOGIN,
     ComponentId.HEADER,
@@ -323,95 +293,4 @@ export const canAccessComponent = (
 
   // Admin has full access
   if (normalizedUserType === UserType.ADMIN) {
-    accessCache.set(cacheKey, true);
-    return true;
-  }
-
-  // Get the components allowed for this user type
-  const allowedComponents = USER_TYPE_COMPONENT_MAP[userType as UserType] || [];
-
-  const hasAccess = allowedComponents.includes(componentId);
-
-  // Cache the result
-  accessCache.set(cacheKey, hasAccess);
-  return hasAccess;
-};
-
-/**
- * Helper function to check component access by resource and action
- */
-export const canAccessComponentByPermission = (
-  resource: Resource, 
-  action: string, 
-  componentId: ComponentId
-): boolean => {
-  // Get components allowed for this resource/action combination
-  const componentsForAction = getComponentsForResourceAction(resource, action);
-  return componentsForAction.includes(componentId);
-};
-
-/**
- * Helper function to get components for a resource/action combination
- */
-const getComponentsForResourceAction = (
-  resource: Resource,
-  action: string
-): ComponentId[] => {
-  // Map resources and actions to component IDs
-  const resourceActionMap: Record<string, Record<string, ComponentId[]>> = {
-    users: {
-      read: [ComponentId.USER_LIST],
-      create: [ComponentId.USER_CREATE],
-      update: [ComponentId.USER_EDIT],
-      delete: [ComponentId.USER_DELETE]
-    },
-    revenues: {
-      read: [ComponentId.REVENUE_LIST],
-      create: [ComponentId.REVENUE_CREATE],
-      update: [ComponentId.REVENUE_EDIT],
-      delete: [ComponentId.REVENUE_DELETE]
-    },
-    expenses: {
-      read: [ComponentId.EXPENSE_LIST],
-      create: [ComponentId.EXPENSE_CREATE],
-      update: [ComponentId.EXPENSE_EDIT],
-      delete: [ComponentId.EXPENSE_DELETE]
-    },
-    transactions: {
-      read: [ComponentId.TRANSACTION_LIST],
-      manage: [ComponentId.TRANSACTION_APPROVE, ComponentId.TRANSACTION_REJECT]
-    },
-    reports: {
-      read: [ComponentId.REPORT_LIST],
-      create: [ComponentId.REPORT_CREATE],
-      update: [ComponentId.REPORT_EDIT],
-      delete: [ComponentId.REPORT_DELETE]
-    },
-    departments: {
-      read: [ComponentId.DEPARTMENT_LIST],
-      create: [ComponentId.DEPARTMENT_CREATE],
-      update: [ComponentId.DEPARTMENT_EDIT],
-      delete: [ComponentId.DEPARTMENT_DELETE]
-    },
-    projects: {
-      read: [ComponentId.PROJECT_LIST],
-      create: [ComponentId.PROJECT_CREATE],
-      update: [ComponentId.PROJECT_EDIT],
-      delete: [ComponentId.PROJECT_DELETE]
-    },
-    corporate_clients: {
-      read: [ComponentId.CORPORATE_CLIENT_LIST],
-      create: [ComponentId.CORPORATE_CLIENT_CREATE],
-      update: [ComponentId.CORPORATE_CLIENT_EDIT],
-      delete: [ComponentId.CORPORATE_CLIENT_DELETE]
-    },
-    financial_plans: {
-      read: [ComponentId.FINANCIAL_PLAN_LIST],
-      create: [ComponentId.FINANCIAL_PLAN_CREATE],
-      update: [ComponentId.FINANCIAL_PLAN_EDIT],
-      delete: [ComponentId.FINANCIAL_PLAN_DELETE]
-    },
-  };
-
-  return resourceActionMap[resource]?.[action as Action] || [];
-};
+    accessCache.set(cacheKey,

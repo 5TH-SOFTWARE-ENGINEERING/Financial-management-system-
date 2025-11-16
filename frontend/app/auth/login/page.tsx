@@ -1,3 +1,4 @@
+// app/auth/login/page.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
@@ -10,7 +11,6 @@ import { useAuth } from '@/lib/rbac';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast, Toaster } from 'sonner';
 import { LoginSchema, type LoginInput } from '@/lib/validation';
-import { useUserStore } from '@/store/userStore';
 
 const theme = {
   colors: { primary: '#ff7e5f' },
@@ -219,7 +219,6 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { login, error: authError } = useUserStore();
 
   const {
     register,

@@ -1,12 +1,13 @@
+// lib/rbac/use-authorization.tsx
 import { useAuth } from './auth-context';
 import { Resource, Action, UserType } from './models';
 
 interface AuthorizationHook {
   hasPermission: (resource: Resource, action: Action) => boolean;
-  hasUserPermission: (userId: string, resource: Resource, action: Action) => Promise<boolean>;
+  hasUserPermission: (userId: string, resource: Resource, action: Action) => boolean;
   isAdmin: () => boolean;
   isAccountant: () => boolean;
-  isEmpoyee: () => boolean;
+  isEmployee: () => boolean;
   hasRole: (roleName: string) => boolean;
   hasUserType: (userType: UserType) => boolean;
   isFinanceAdmin: () => boolean;
@@ -24,26 +25,40 @@ export const useAuthorization = (): AuthorizationHook => {
    */
   const isAdmin = (): boolean => {
     if (!user) return false;
-    return user.roles.some(role => role.name === 'ADMIN') || 
-           user.userType === UserType.ADMIN || 
-           user.userType === UserType.FINANCE_ADMIN;
+    return user.role === UserType.ADMIN || 
+           user.role === UserType.FINANCE_ADMIN;
   };
 
   /**
-   * Check if the user is an insurance administrator
+   * Check if the user is a finance admin
    */
-  const isInsuranceAdmin = (): boolean => {
+  const isFinanceAdmin = (): boolean => {
     if (!user) return false;
-    return user.userType === UserType.FINANCE_ADMIN;
+    return user.role === UserType.FINANCE_ADMIN;
   };
 
+  /**
+   * Check if the user is an accountant
+   */
+  const isAccountant = (): boolean => {
+    if (!user) return false;
+    return user.role === UserType.ACCOUNTANT;
+  };
+
+  /**
+   * Check if the user is an employee
+   */
+  const isEmployee = (): boolean => {
+    if (!user) return false;
+    return user.role === UserType.EMPLOYEE;
+  };
 
   /**
    * Check if the user has a specific role
    */
   const hasRole = (roleName: string): boolean => {
     if (!user) return false;
-    return user.roles.some(role => role.name === roleName);
+    return user.role === roleName;
   };
 
   /**
@@ -51,15 +66,18 @@ export const useAuthorization = (): AuthorizationHook => {
    */
   const hasUserType = (userType: UserType): boolean => {
     if (!user) return false;
-    return user.userType === userType;
+    return user.role === userType;
   };
 
   return {
     hasPermission,
     hasUserPermission,
     isAdmin,
+    isAccountant,
+    isEmployee,
     hasRole,
     hasUserType,
+    isFinanceAdmin,
     refreshUser
   };
 }; 

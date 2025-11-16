@@ -1,7 +1,7 @@
-// lib/models/corporae-clients.ts
+// lib/validation/finance.ts
 import { z } from 'zod';
 
-export const UserRole = z.enum(['admin', 'finance_manager', 'accountant', 'employee']);
+export const UserRole = z.enum(['ADMIN', 'FINANCE_ADMIN', 'ACCOUNTANT', 'EMPLOYEE']);
 export type UserRole = z.infer<typeof UserRole>;
 
 export const TransactionStatus = z.enum(['pending', 'approved', 'rejected']);
@@ -19,7 +19,7 @@ export const LoginSchema = z.object({
 });
 
 export const RegisterSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  full_name: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   role: UserRole,
@@ -45,12 +45,16 @@ export const ExpenseSchema = z.object({
 
 export const UserSchema = z.object({
   id: z.string(),
-  name: z.string(),
+  username: z.string(),
   email: z.string().email(),
+  full_name: z.string(),
+  phone: z.string().optional(),
   role: UserRole,
   managerId: z.string().optional(),
-  isActive: z.boolean().default(true),
-  createdAt: z.string(),
+  is_active: z.boolean().default(true),
+  created_at: z.string(),
+  updated_at: z.string().optional(),
+  last_login: z.string().optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;
@@ -170,127 +174,9 @@ export const ProjectSchema = z.object({
 
 export type Project = z.infer<typeof ProjectSchema>;
 
-// Corporate Client schema
-export const CorporateClientStatus = z.enum(['active', 'inactive', 'pending', 'suspended']);
-export type CorporateClientStatus = z.infer<typeof CorporateClientStatus>;
-
-export const FinancialPlanStatus = z.enum(['active', 'inactive', 'archived']);
-export type FinancialPlanStatus = z.infer<typeof FinancialPlanStatus>;
-
-export const CorporateClientSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  contactPersonName: z.string(),
-  contactEmail: z.string().email(),
-  status: CorporateClientStatus,
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  totalAccounts: z.number(),
-  financialPlans: z.array(FinancialPlanSchema),
-});
-
-export const FinancialPlanSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  corporateClientId: z.string(),
-  planDetails: z.string(),
-  monthlyFee: z.number(),
-  minimumBalance: z.number(),
-  interestRate: z.number(),
-  maxWithdrawal: z.number(),
-  status: FinancialPlanStatus,
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-
-export type CorporateClient = z.infer<typeof CorporateClientSchema>;
-export type FinancialPlan = z.infer<typeof FinancialPlanSchema>;
-
-// Mock data for corporate clients
-export const MOCK_CORPORATE_CLIENTS: CorporateClient[] = [
-  {
-    id: '1',
-    name: 'Acme Corporation',
-    contactPersonName: 'John Smith',
-    contactEmail: 'jsmith@acme.com',
-    status: CorporateClientStatus.ACTIVE,
-    createdAt: '2023-01-15T00:00:00Z',
-    updatedAt: '2023-04-20T00:00:00Z',
-    totalAccounts: 250,
-    financialPlans: [
-      {
-        id: '1',
-        name: 'Acme Premium Savings Plan',
-        description: 'High-yield savings for Acme corporate funds',
-        corporateClientId: '1',
-        planDetails: 'Full liquidity with competitive interest',
-        monthlyFee: 25,
-        minimumBalance: 5000,
-        interestRate: 4.5,
-        maxWithdrawal: 100000,
-        status: FinancialPlanStatus.ACTIVE,
-        createdAt: '2023-01-20T00:00:00Z',
-        updatedAt: '2023-01-20T00:00:00Z',
-      },
-      {
-        id: '2',
-        name: 'Acme Basic Investment Plan',
-        description: 'Balanced investment for Acme reserves',
-        corporateClientId: '1',
-        planDetails: 'Low-risk portfolio management',
-        monthlyFee: 15,
-        minimumBalance: 10000,
-        interestRate: 3.2,
-        maxWithdrawal: 50000,
-        status: FinancialPlanStatus.ACTIVE,
-        createdAt: '2023-01-20T00:00:00Z',
-        updatedAt: '2023-01-20T00:00:00Z',
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Globex Corporation',
-    contactPersonName: 'Jane Doe',
-    contactEmail: 'jdoe@globex.com',
-    status: CorporateClientStatus.ACTIVE,
-    createdAt: '2023-02-10T00:00:00Z',
-    updatedAt: '2023-05-15T00:00:00Z',
-    totalAccounts: 500,
-    financialPlans: [
-      {
-        id: '3',
-        name: 'Globex Elite Investment Plan',
-        description: 'Premium investment strategy for Globex corporate funds',
-        corporateClientId: '2',
-        planDetails: 'Diversified portfolio with high returns',
-        monthlyFee: 35,
-        minimumBalance: 25000,
-        interestRate: 5.8,
-        maxWithdrawal: 200000,
-        status: FinancialPlanStatus.ACTIVE,
-        createdAt: '2023-02-15T00:00:00Z',
-        updatedAt: '2023-02-15T00:00:00Z',
-      }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Initech',
-    contactPersonName: 'Bill Lumbergh',
-    contactEmail: 'blumbergh@initech.com',
-    status: CorporateClientStatus.PENDING,
-    createdAt: '2023-03-05T00:00:00Z',
-    updatedAt: '2023-03-05T00:00:00Z',
-    totalAccounts: 120,
-    financialPlans: []
-  }
-];
-
 // Create/update schemas
 export const CreateUserSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  full_name: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   role: UserRole,

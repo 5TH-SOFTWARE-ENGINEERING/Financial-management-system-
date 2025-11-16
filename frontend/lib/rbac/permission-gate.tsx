@@ -1,3 +1,4 @@
+// lib/rabc/persmission-gate.tsx
 'use client';
 
 import React, { ReactNode } from 'react';

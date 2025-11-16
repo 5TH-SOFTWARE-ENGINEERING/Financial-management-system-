@@ -1,4 +1,4 @@
-// lib/rabc/models.ts
+// lib/rbac/models.ts
 export interface Permission {
   id: string;
   name: string;
@@ -15,13 +15,16 @@ export interface Role {
 }
 
 export interface User {
-  id: string;
+  id: number;
   username: string;
   email: string;
-  name: string;
-  roles: Role[];
-  password: string;
-  userType: UserType;
+  full_name: string;
+  phone?: string | null;
+  role: UserType;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+  last_login?: Date | null;
 }
 
 export enum UserType {
@@ -42,7 +45,8 @@ export enum Resource {
   PROFILE = 'profile',
   DEPARTMENTS = 'departments',
   PROJECTS = 'projects',
-  FINANCIAL_PLANS = 'financial_plans'
+  FINANCIAL_PLANS = 'financial_plans',
+  SETTINGS = 'settings'
 }
 
 export enum Action {
@@ -51,10 +55,6 @@ export enum Action {
   UPDATE = 'update',
   DELETE = 'delete',
   MANAGE = 'manage', // Includes all actions
-}
-export enum AdminType {
-  ADMIN = 'SYSTEM_ADMIN',
-  FINANCE_MANAGER = 'FINANCE_ADMIN',
 }
 
 // Default permissions with finance-specific resources
@@ -113,97 +113,4 @@ export const DEFAULT_PERMISSIONS: Permission[] = [
   
   // Project permissions
   { id: '33', name: 'Create Projects', description: 'Can create projects', resource: Resource.PROJECTS, action: Action.CREATE },
-  { id: '34', name: 'Read Projects', description: 'Can view projects', resource: Resource.PROJECTS, action: Action.READ },
-  { id: '35', name: 'Update Projects', description: 'Can update projects', resource: Resource.PROJECTS, action: Action.UPDATE },
-  { id: '36', name: 'Delete Projects', description: 'Can delete projects', resource: Resource.PROJECTS, action: Action.DELETE },
-  
-  // Corporate Client permissions
-  { id: '37', name: 'Create Corporate Clients', description: 'Can create corporate clients', resource: Resource.CORPORATE_CLIENTS, action: Action.CREATE },
-  { id: '38', name: 'Read Corporate Clients', description: 'Can view corporate clients', resource: Resource.CORPORATE_CLIENTS, action: Action.READ },
-  { id: '39', name: 'Update Corporate Clients', description: 'Can update corporate clients', resource: Resource.CORPORATE_CLIENTS, action: Action.UPDATE },
-  { id: '40', name: 'Delete Corporate Clients', description: 'Can delete corporate clients', resource: Resource.CORPORATE_CLIENTS, action: Action.DELETE },
-  
-  // Financial Plan permissions
-  { id: '41', name: 'Create Financial Plans', description: 'Can create financial plans', resource: Resource.FINANCIAL_PLANS, action: Action.CREATE },
-  { id: '42', name: 'Read Financial Plans', description: 'Can view financial plans', resource: Resource.FINANCIAL_PLANS, action: Action.READ },
-  { id: '43', name: 'Update Financial Plans', description: 'Can update financial plans', resource: Resource.FINANCIAL_PLANS, action: Action.UPDATE },
-  { id: '44', name: 'Delete Financial Plans', description: 'Can delete financial plans', resource: Resource.FINANCIAL_PLANS, action: Action.DELETE },
-];
-
-// Default roles with hierarchical permissions
-export const DEFAULT_ROLES: Role[] = [
-  {
-    id: '1',
-    name: 'admin',
-    description: 'System administrator with full access',
-    permissions: DEFAULT_PERMISSIONS, // All permissions
-  },
-  {
-    id: '2',
-    name: 'finance_manager',
-    description: 'Finance manager with broad permissions over subordinates',
-    permissions: DEFAULT_PERMISSIONS.filter(p => 
-      [Resource.DASHBOARD, Resource.PROFILE, Resource.SETTINGS].includes(p.resource) || 
-      [Resource.USERS, Resource.ROLES, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS, Resource.DEPARTMENTS, Resource.PROJECTS, Resource.CORPORATE_CLIENTS, Resource.FINANCIAL_PLANS].includes(p.resource)
-    ),
-  },
-  {
-    id: '3',
-    name: 'accountant',
-    description: 'Accountant with permissions for financial records and reports',
-    permissions: DEFAULT_PERMISSIONS.filter(p => 
-      [Resource.DASHBOARD, Resource.PROFILE].includes(p.resource) || 
-      [Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS].includes(p.resource)
-    ),
-  },
-  {
-    id: '4',
-    name: 'employee',
-    description: 'Employee with basic permissions for personal entries',
-    permissions: DEFAULT_PERMISSIONS.filter(p => 
-      [Resource.DASHBOARD, Resource.PROFILE].includes(p.resource) || 
-      [Resource.REVENUES, Resource.EXPENSES].includes(p.resource)
-    ),
-  },
-];
-
-// Mock user data with finance roles
-export const MOCK_USERS: User[] = [
-  {
-    id: '1',
-    username: 'admin',
-    email: 'admin@example.com',
-    name: 'System Admin',
-    roles: [DEFAULT_ROLES.find(r => r.name === 'admin')!],
-    password: 'password1',
-    userType: UserType.ADMIN
-  },
-  {
-    id: '2',
-    username: 'finance_manager',
-    email: 'manager@example.com',
-    name: 'Finance Manager',
-    roles: [DEFAULT_ROLES.find(r => r.name === 'finance_manager')!],
-    password: 'password2',
-    userType: UserType.FINANCE_MANAGER
-  },
-  {
-    id: '3',
-    username: 'accountant',
-    email: 'accountant@example.com',
-    name: 'John Accountant',
-    roles: [DEFAULT_ROLES.find(r => r.name === 'accountant')!],
-    password: 'password3',
-    userType: UserType.ACCOUNTANT
-  },
-  {
-    id: '4',
-    username: 'employee',
-    email: 'employee@example.com',
-    name: 'Jane Employee',
-    roles: [DEFAULT_ROLES.find(r => r.name === 'employee')!],
-    password: 'password4',
-    userType: UserType.EMPLOYEE
-  },
-];
-
+  { id: '34', name: 'Read Projects', description: 'Can view projects', resource: Resource.PROJECTS },

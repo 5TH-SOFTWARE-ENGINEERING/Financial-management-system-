@@ -1,28 +1,26 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Resource, Action } from './models';
+import { User, Resource, Action, UserType } from './models';
 import { useRouter } from 'next/navigation';
-import { roleService } from '../services/role-service';
 import { authService } from '../services/auth-service';
-import { Admin } from './user';
 
 interface AuthContextType {
-  user: Admin | null;
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   hasPermission: (resource: Resource, action: Action) => boolean;
-  hasUserPermission: (userId: string, resource: Resource, action: Action) => Promise<boolean>;
+  hasUserPermission: (userId: string, resource: Resource, action: Action) => boolean;
   refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<Admin | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -41,12 +39,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
   
     try {
-      const response = await authService.login(username, password);
+      const response = await authService.login(email, password);
   
       // Log auth context processing
       console.log('Auth Context Processing:', JSON.stringify({
@@ -59,9 +57,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: response.user?.id,
           username: response.user?.username,
           email: response.user?.email,
-          userType: response.user?.userType,
-          adminType: response.user?.adminType,
-          isActive: response.user?.isActive
+          role: response.user?.role,
+          is_active: response.user?.is_active
         }
       }, null, 2));
   
@@ -76,44 +73,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
   
       // Create user object with required fields
-      const userWithRoles = {
+      const completeUser: User = {
         id: response.user.id,
         username: response.user.username,
-        email: response.user.email || null,
-        name: response.user.firstName || response.user.lastName
-          ? `${response.user.firstName || ''} ${response.user.lastName || ''}`.trim()
-          : response.user.username,
-        userType: response.user.userType || 'USER',
-        adminType: response.user.adminType || null,
-        roles: response.user.roles || [],
-        permissions: response.user.permissions || {},
-        isActive: response.user.isActive !== false
+        email: response.user.email,
+        full_name: response.user.full_name || response.user.username,
+        phone: response.user.phone || null,
+        role: response.user.role || UserType.EMPLOYEE,
+        is_active: response.user.is_active !== false,
+        created_at: response.user.created_at || new Date(),
+        updated_at: response.user.updated_at || new Date(),
+        last_login: response.user.last_login || null,
       };
   
       // Log final processed user data
       console.log('Processed User Data:', JSON.stringify({
         timestamp: new Date().toISOString(),
         user: {
-          ...userWithRoles,
+          ...completeUser,
           token: '[REDACTED]'
         },
         status: {
-          hasRoles: userWithRoles.roles.length > 0,
-          hasPermissions: Object.keys(userWithRoles.permissions).length > 0,
-          isActive: userWithRoles.isActive,
-          adminType: userWithRoles.adminType
+          isActive: completeUser.is_active,
+          role: completeUser.role
         }
       }, null, 2));
   
       // Check if account is active
-      if (userWithRoles.isActive === false) {
-        const message = `Account is inactive. Please contact your system administrator. (User: ${userWithRoles.username}, Type: ${userWithRoles.userType}, Admin Type: ${userWithRoles.adminType})`;
+      if (completeUser.is_active === false) {
+        const message = `Account is inactive. Please contact your system administrator. (User: ${completeUser.username}, Role: ${completeUser.role})`;
         setError(message);
         return false;
       }
   
-      setUser(userWithRoles);
-      localStorage.setItem('user', JSON.stringify(userWithRoles));
+      setUser(completeUser);
+      localStorage.setItem('user', JSON.stringify(completeUser));
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
@@ -138,7 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
         // First try to call the backend logout endpoint
-        await fetch('http://localhost:3000/api/auth/logout', {
+        await fetch('http://localhost:8000/api/v1/auth/logout', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -170,26 +164,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         
         // Redirect to root path (where Login component is)
-        router.push('/login');
+        router.push('/auth/login');
     }
   };
   
   const hasPermission = (resource: Resource, action: Action): boolean => {
     if (!user) return false;
 
-    return user.roles.some(role => 
-      role.permissions.some(
-        permission => permission.resource === resource && 
-                     (permission.action === action || permission.action === Action.MANAGE)
-      )
-    );
+    // Simplified permission check based on role
+    // In a full RBAC system, this would query roles/permissions
+    const rolePermissions: Record<UserType, Resource[]> = {
+      [UserType.ADMIN]: [Resource.DASHBOARD, Resource.USERS, Resource.ROLES, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS, Resource.SETTINGS],
+      [UserType.FINANCE_MANAGER]: [Resource.DASHBOARD, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS],
+      [UserType.ACCOUNTANT]: [Resource.DASHBOARD, Resource.REVENUES, Resource.EXPENSES, Resource.REPORTS],
+      [UserType.EMPLOYEE]: [Resource.DASHBOARD, Resource.PROFILE]
+    };
+
+    const allowedResources = rolePermissions[user.role] || [];
+    return allowedResources.includes(resource);
   };
   
-  const hasUserPermission = async (userId: string, resource: Resource, action: Action): Promise<boolean> => {
+  const hasUserPermission = (userId: string, resource: Resource, action: Action): boolean => {
     // In a real app, you would make an API call to check permissions for any user
     // For demo purposes, we'll only check the current user
-    if (!user) return false;
-    if (user.id !== userId) return false;
+    if (!user || user.id.toString() !== userId) return false;
     
     return hasPermission(resource, action);
   };
@@ -199,26 +197,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       // In a real app, this would be an API call to get the latest user data
-      // Here we're just refreshing the roles from our service
-      const userTypeRoles = await roleService.getRolesByUserType(user.userType);
-      
-      // Combine existing roles with user type roles
-      const combinedRoles = [...user.roles];
-      
-      // Add user type roles if they don't already exist
-      for (const role of userTypeRoles) {
-        if (!user.roles.some(r => r.id === role.id)) {
-          combinedRoles.push(role);
-        }
-      }
-      
-      const refreshedUser = {
-        ...user,
-        roles: combinedRoles
-      };
-      
-      setUser(refreshedUser);
-      localStorage.setItem('user', JSON.stringify(refreshedUser));
+      // Here we're just re-setting the user (no changes for demo)
+      setUser(user);
     } catch (err) {
       console.error('Failed to refresh user data', err);
     }

@@ -1,40 +1,39 @@
 // lib/services/auth-service.ts
-
-import { Admin } from '../rabc/user';
-import { AdminType, UserType } from '../rabc/models';
-import { cn } from "/@/lib/utils"
+import { User } from '../rbac/models';
+import { UserType } from '../rbac/models';
 
 interface LoginResponse {
   user: {
-    id: string;
+    id: number;
     username: string;
-    email: string | null;
-    firstName: string;
-    lastName: string;
-    adminType: AdminType;
-    userType: UserType;
-    isActive: boolean;
-    roles?: any[];
-    permissions?: any;
+    email: string;
+    full_name: string;
+    phone?: string | null;
+    role: UserType;
+    is_active: boolean;
+    created_at?: Date;
+    updated_at?: Date;
+    last_login?: Date | null;  // Allow null to match User interface
   };
   access_token: string;
 }
+
 export const authService = {
-  async login(username: string, password: string): Promise<LoginResponse> {
+  async login(email: string, password: string): Promise<LoginResponse> {
     try {
       console.log('Login Request:', JSON.stringify({
-        requestData: { username, password: '********' },
+        requestData: { email, password: '********' },
         timestamp: new Date().toISOString()
       }, null, 2));
 
-      const response = await fetch('http://localhost:3000/auth/login', {
+      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),  // Backend expects email/password
       });
 
       const data = await response.json();
@@ -64,45 +63,29 @@ export const authService = {
       // Destructure user with default values for optional fields
       const {
         id,
-        username: userUsername,
-        email = null,
-        firstName = '',
-        lastName = '',
-        phoneNumber = '',
-        userType,
-        adminType: rawAdminType,
-        isActive = true,
-        lastLoginAt,
-        createdAt,
-        updatedAt,
-        roles = [],
-        permissions = {}
+        username,
+        email: userEmail,
+        full_name = '',
+        phone = null,
+        role,
+        is_active = true,
+        created_at,
+        updated_at,
+        last_login
       } = data.user;
 
-      // Validate userType and determine adminType
-      let adminType = rawAdminType; // Default to the value from the backend
-      if (userType === UserType.FINANCE_ADMIN) {
-        adminType = AdminType.FINANCE_ADMIN;
-      } else if (userType === UserType.ADMIN && rawAdminType === AdminType.SYSTEM_ADMIN) {
-        adminType = AdminType.SYSTEM_ADMIN;
-      } 
-
-      // Create the complete user object
-      const completeUser: Admin = {
+      // Create the complete user object aligned with finance system
+      const completeUser: User = {
         id,
-        username: userUsername,
-        email,
-        firstName,
-        lastName,
-        phoneNumber,
-        userType,
-        adminType, // Use the determined adminType
-        isActive,
-        lastLoginAt: lastLoginAt ? new Date(lastLoginAt) : null,
-        createdAt: createdAt ? new Date(createdAt) : new Date(),
-        updatedAt: updatedAt ? new Date(updatedAt) : new Date(),
-        roles,
-        permissions
+        username,
+        email: userEmail,
+        full_name,
+        phone,
+        role,  // UserType from backend (e.g., ADMIN, MANAGER, ACCOUNTANT)
+        is_active,
+        created_at: created_at ? new Date(created_at) : new Date(),
+        updated_at: updated_at ? new Date(updated_at) : new Date(),
+        last_login: last_login ? new Date(last_login) : null,
       };
 
       // Log processed response

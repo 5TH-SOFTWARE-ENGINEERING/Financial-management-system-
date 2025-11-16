@@ -560,3 +560,11 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-11-15 15:10:12,120 - app.main - INFO - Directory reports created/verified
 2025-11-15 15:10:12,121 - app.main - INFO - Directory backups created/verified
 2025-11-15 15:10:12,124 - app.main - INFO - Directory logs created/verified
+2025-11-15 15:28:29,424 - app.main - INFO - Celery configured successfully
+2025-11-15 15:28:30,170 - app.main - INFO - Starting Finance Management System Backend
+2025-11-15 15:28:30,387 - app.main - INFO - Database tables created successfully
+2025-11-15 15:28:30,393 - app.main - INFO - Directory uploads created/verified
+2025-11-15 15:28:30,409 - app.main - INFO - Directory reports created/verified
+2025-11-15 15:28:30,527 - app.main - INFO - Directory backups created/verified
+2025-11-15 15:28:30,618 - app.main - INFO - Directory logs created/verified
+2025-11-15 15:28:38,959 - app.main - INFO - Default admin created: admin@expense.com / admin1234
