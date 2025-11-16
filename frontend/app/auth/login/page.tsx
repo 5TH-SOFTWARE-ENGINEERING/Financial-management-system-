@@ -258,7 +258,7 @@ export default function Login() {
             <Input
               {...register('email')}
               type="email"
-              placeholder="Enter your email"
+              placeholder="Enter your Email or Username "
               disabled={isLoading}
             />
             {errors.email && <ErrorMessage>{errors.email.message}</ErrorMessage>}
