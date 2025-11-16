@@ -199,7 +199,7 @@ const SignInButton = styled.button`
 
 const ForgotPassword = styled.a`
   text-align: right;
-  color: #ffffff;
+  color:rgb(46, 63, 212);
   font-size: ${theme.typography.fontSizes.sm};
   cursor: pointer;
   &:hover {
