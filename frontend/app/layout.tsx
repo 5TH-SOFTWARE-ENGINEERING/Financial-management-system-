@@ -1,28 +1,51 @@
-// app/layout.tsx (Simplified - removed complex providers to avoid import errors; add back once basic page works)
+'use client';
 
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import { Toaster } from "@/components/ui/sonner";
+import { Inter } from 'next/font/google';
+import styled, { ThemeProvider } from 'styled-components';
+import { theme } from '@/components/common/theme';
+import StyledComponentsRegistry from '@/lib/registry';
+import { AuthProvider } from '@/lib/rbac/auth-context'; 
+import { Toaster } from '@/components/ui/sonner';
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: 'Financial Management System',
-  description: 'Secure financial tracking',
-}
+const LayoutContainer = styled.div`
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+`;
+
+const MainContent = styled.main`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ContentWrapper = styled.div`
+  flex: 1;
+`;
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        {children}
-        <Toaster position="top-right" />
+        <StyledComponentsRegistry>
+          <ThemeProvider theme={theme}>
+            <AuthProvider> {/* ⭐ REQUIRED FOR useAuth() */}
+              <LayoutContainer>
+                <MainContent>
+                  <ContentWrapper>{children}</ContentWrapper>
+                </MainContent>
+              </LayoutContainer>
+              <Toaster position="top-right" reverseOrder={false} />
+            </AuthProvider>
+          </ThemeProvider>
+        </StyledComponentsRegistry>
       </body>
     </html>
-  )
+  );
 }

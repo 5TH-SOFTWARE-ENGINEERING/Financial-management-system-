@@ -124,7 +124,7 @@ const CardLoadingContainer = styled.div`
   padding: ${theme.spacing.md};
   background-color: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
-  box-shadow: ${theme.shadows.sm};
+  box-shadow: ${theme.shadows?.sm ?? "0 1px 3px rgba(0,0,0,0.1)"};
   display: flex;
   flex-direction: column;
   align-items: center;
