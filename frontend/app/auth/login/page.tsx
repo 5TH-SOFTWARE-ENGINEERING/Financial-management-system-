@@ -146,7 +146,7 @@ const PasswordContainer = styled.div`
 const EyeIcon = styled.button`
   position: absolute;
   top: 50%;
-  right: 8px;
+  right: 0px;
   transform: translateY(-50%);
   background: none;
   border: none;
@@ -179,7 +179,7 @@ const SignInButton = styled.button`
   width: 100%;
   padding: ${theme.spacing.md};
   background-color: ${theme.colors.primary};
-  color: #ffffff;
+  color:rgb(255, 255, 255);
   border: none;
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.md};
