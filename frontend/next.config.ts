@@ -1,8 +1,10 @@
+// next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  styledComponents: true,
-  /* config options here */
+  compiler: {
+    styledComponents: true,  
+  },
 };
 
 export default nextConfig;
