@@ -45,8 +45,8 @@ const GradientBackground = styled.div`
   background: linear-gradient(
     135deg,
     rgb(9, 10, 10) 0%,
-    rgb(6, 82, 168) 50%,
-    rgb(243, 239, 239) 50%,
+    rgb(112, 98, 100) 50%,
+    rgb(116, 105, 105) 50%,
     rgb(12, 11, 11) 70%,
     rgb(13, 14, 13) 100%
   );
@@ -81,7 +81,7 @@ const Title = styled(motion.h1)`
 
 const Subtitle = styled(motion.p)`
   font-size: 1.2rem;
-  color: #d1d5db;
+  color:rgb(99, 135, 189);
   max-width: 700px;
   margin: 0 auto 2rem auto;
   line-height: 1.6;
@@ -182,7 +182,6 @@ function PulsingSphere({ position }: { position: [number, number, number] }) {
   );
 }
 
-// === MAIN PAGE ===
 export default function Home() {
   const [openModal, setOpenModal] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -255,7 +254,7 @@ export default function Home() {
             Streamline revenue tracking, expense approvals, and compliance-ready reporting.
           </Subtitle>
           <Link href="/auth/login">
-            <Button size="lg" className=" pointer transition-all duration-300 text-zinc-700 dark:text-zinc-300 
+            <Button size="lg" className=" cursor-pointer transition-all duration-300 text-zinc-700 dark:text-zinc-300 
              hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 
              hover:scale-105 hover:shadow-[0_0_10px_rgba(99,102,241,0.3)]">Get Started</Button>
           </Link>
