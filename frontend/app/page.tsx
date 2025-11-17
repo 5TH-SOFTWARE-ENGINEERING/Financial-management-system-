@@ -154,7 +154,7 @@ const CloseButton = styled.button`
 const TeamSection = styled.section`
   padding: 4rem 1rem;
   text-align: center;
-  background-color: #0b0c10;
+  background-color:rgb(32, 35, 37);
 `;
 
 const TeamImage = styled(Image)`
