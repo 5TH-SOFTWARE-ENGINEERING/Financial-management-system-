@@ -166,7 +166,7 @@ const Word = styled(motion.span)`
   display: inline-block;
 `;
 
-// === 3D COMPONENTS ===
+// 3D 
 function PulsingSphere({ position }: { position: [number, number, number] }) {
   const meshRef = useRef<Mesh>(null!);
   useFrame((state) => {
