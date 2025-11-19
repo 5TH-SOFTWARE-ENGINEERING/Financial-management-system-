@@ -1,4 +1,4 @@
-// lib/services/finance-service.ts
+// lib/services/auth-service.ts
 // Generic finance service for internal management (revenues, expenses, transactions, etc.)
 // Removed all corporate client-specific logic
 

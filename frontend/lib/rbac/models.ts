@@ -15,7 +15,7 @@ export interface Role {
 }
 
 export interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
   full_name: string;
@@ -128,5 +128,49 @@ export const DEFAULT_PERMISSIONS: Permission[] = [
     // Financial plans (example)
     { id: '37', name: 'Read Financial Plans', description: 'Can view financial plans', resource: Resource.FINANCIAL_PLANS, action: Action.READ },
     { id: '38', name: 'Manage Settings',      description: 'Can manage settings',       resource: Resource.SETTINGS, action: Action.MANAGE },
-  ];
-  
+];
+export const DEFAULT_ROLES: Role[] = [
+  {
+    id: 'role-super-admin',
+    name: UserType.SUPER_ADMIN,
+    permissions: [...DEFAULT_PERMISSIONS],
+    description: "Full unrestricted access"
+  },
+
+  {
+    id: 'role-admin',
+    name: UserType.ADMIN,
+    permissions: DEFAULT_PERMISSIONS.filter(p =>
+      p.resource !== Resource.SETTINGS &&
+      p.action !== Action.MANAGE
+    ),
+    description: "Admin with limited restrictions"
+  },
+
+  {
+    id: 'role-finance-admin',
+    name: UserType.FINANCE_ADMIN,
+    permissions: DEFAULT_PERMISSIONS.filter(p =>
+      [Resource.REVENUES, Resource.EXPENSES, Resource.REPORTS, Resource.TRANSACTIONS].includes(p.resource)
+    ),
+    description: "Finance Manager role"
+  },
+
+  {
+    id: 'role-accountant',
+    name: UserType.ACCOUNTANT,
+    permissions: DEFAULT_PERMISSIONS.filter(p =>
+      [Resource.REVENUES, Resource.EXPENSES, Resource.REPORTS].includes(p.resource)
+    ),
+    description: "Accountant"
+  },
+
+  {
+    id: 'role-employee',
+    name: UserType.EMPLOYEE,
+    permissions: DEFAULT_PERMISSIONS.filter(p =>
+      [Resource.REVENUES, Resource.EXPENSES, Resource.PROFILE].includes(p.resource)
+    ),
+    description: "Employee"
+  }
+]
