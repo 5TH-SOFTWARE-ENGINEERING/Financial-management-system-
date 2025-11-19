@@ -642,3 +642,62 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-11-17 15:18:37,945 - app.main - INFO - Response: 200 in 6.4074s
 2025-11-17 15:24:08,031 - app.main - INFO - Request: POST http://127.0.0.1:8000/api/v1/auth/login-json
 2025-11-17 15:24:11,126 - app.main - INFO - Response: 200 in 3.0939s
+2025-11-17 18:45:18,706 - app.main - INFO - Celery configured successfully
+2025-11-17 18:45:18,914 - app.main - INFO - Starting Finance Management System Backend
+2025-11-17 18:45:19,266 - app.main - INFO - Database tables created successfully
+2025-11-17 18:45:19,270 - app.main - INFO - Directory uploads created/verified
+2025-11-17 18:45:19,272 - app.main - INFO - Directory reports created/verified
+2025-11-17 18:45:19,272 - app.main - INFO - Directory backups created/verified
+2025-11-17 18:45:19,343 - app.main - INFO - Directory logs created/verified
+2025-11-17 18:45:19,767 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-17 18:47:00,742 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-17 18:47:00,781 - app.main - INFO - Response: 200 in 0.0390s
+2025-11-17 18:47:09,933 - app.main - INFO - Request: GET http://127.0.0.1:8000/openapi.json
+2025-11-17 18:47:10,825 - app.main - INFO - Response: 200 in 0.8921s
+2025-11-17 18:49:23,084 - app.main - INFO - Request: POST http://127.0.0.1:8000/api/v1/auth/login-json
+2025-11-17 18:49:24,397 - app.main - INFO - Response: 200 in 1.3125s
+2025-11-17 18:51:34,837 - app.main - INFO - Request: POST http://127.0.0.1:8000/api/v1/auth/login
+2025-11-17 18:51:35,491 - app.main - INFO - Response: 200 in 0.6534s
+2025-11-17 18:57:17,113 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/auth/login
+2025-11-17 18:57:17,113 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-17 18:57:17,454 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login
+2025-11-17 18:57:17,655 - app.main - INFO - Response: 422 in 0.2014s
+2025-11-17 19:19:23,663 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/auth/login
+2025-11-17 19:19:23,750 - app.main - INFO - Response: 200 in 0.0883s
+2025-11-17 19:19:24,164 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login
+2025-11-17 19:19:24,211 - app.main - INFO - Response: 422 in 0.0470s
+2025-11-17 20:09:55,124 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/auth/login
+2025-11-17 20:09:55,474 - app.main - INFO - Response: 200 in 0.3498s
+2025-11-17 20:09:55,843 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login
+2025-11-17 20:09:56,061 - app.main - INFO - Response: 422 in 0.2180s
+2025-11-17 20:38:45,832 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-17 20:43:14,452 - app.main - INFO - Celery configured successfully
+2025-11-17 20:43:14,631 - app.main - INFO - Starting Finance Management System Backend
+2025-11-17 20:43:14,858 - app.main - INFO - Database tables created successfully
+2025-11-17 20:43:14,863 - app.main - INFO - Directory uploads created/verified
+2025-11-17 20:43:14,865 - app.main - INFO - Directory reports created/verified
+2025-11-17 20:43:14,868 - app.main - INFO - Directory backups created/verified
+2025-11-17 20:43:14,897 - app.main - INFO - Directory logs created/verified
+2025-11-17 20:43:15,320 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-17 20:43:42,115 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-17 20:43:46,500 - app.main - INFO - Response: 200 in 4.3852s
+2025-11-17 20:43:46,595 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-17 20:43:46,605 - app.main - INFO - Request: POST http://testserver/api/v1/users/
+2025-11-17 20:43:48,011 - app.main - INFO - Response: 201 in 1.4055s
+2025-11-17 20:43:48,025 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 201 Created"
+2025-11-17 20:43:48,047 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-17 20:43:48,841 - app.main - INFO - Response: 200 in 0.7932s
+2025-11-17 20:43:48,854 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-17 20:43:48,862 - app.main - INFO - Request: POST http://testserver/api/v1/users/subordinates
+2025-11-17 20:43:49,853 - app.main - INFO - Response: 201 in 0.9922s
+2025-11-17 20:43:49,863 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/subordinates "HTTP/1.1 201 Created"
+2025-11-17 20:43:49,909 - app.main - INFO - Request: POST http://testserver/api/v1/users/subordinates
+2025-11-17 20:43:53,020 - app.main - INFO - Response: 201 in 3.1109s
+2025-11-17 20:43:53,031 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/subordinates "HTTP/1.1 201 Created"
+2025-11-17 20:43:53,051 - app.main - INFO - Request: POST http://testserver/api/v1/auth/login
+2025-11-17 20:43:53,823 - app.main - INFO - Response: 200 in 0.7725s
+2025-11-17 20:43:53,839 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/auth/login "HTTP/1.1 200 OK"
+2025-11-17 20:43:53,851 - app.main - INFO - Request: POST http://testserver/api/v1/users/
+2025-11-17 20:43:53,873 - app.main - WARNING - HTTP Exception: 403 - Not enough permissions
+2025-11-17 20:43:53,877 - app.main - INFO - Response: 403 in 0.0260s
+2025-11-17 20:43:53,884 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 403 Forbidden"

@@ -7,7 +7,6 @@ import Link from "next/link";
 import { Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/lib/rbac';
-
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast, Toaster } from 'sonner';
 import { LoginSchema, type LoginInput } from '@/lib/validation';
@@ -44,7 +43,6 @@ const theme = {
     default: '0.3s ease-in-out',
   },
 };
-
 const LoginContainer = styled.div`
   display: flex;
   justify-content: center;
@@ -53,7 +51,6 @@ const LoginContainer = styled.div`
   background: rgb(82, 80, 80);
   font-family: ${theme.typography.fontFamily};
 `;
-
 const LoginCard = styled.div`
   background: rgb(43, 42, 42);
   padding: ${theme.spacing.xl};
@@ -71,7 +68,6 @@ const LoginCard = styled.div`
   flex-direction: column;
   gap: ${theme.spacing.lg};
 `;
-
 const Title = styled.h1`
   text-align: center;
   font-size: ${theme.typography.fontSizes.xl};
@@ -98,18 +94,15 @@ const Title = styled.h1`
     }
   }
 `;
-
 const Subtitle = styled.h2`
   text-align: center;
   color: #ffffff;
   font-size: ${theme.typography.fontSizes.md};
 `;
-
 const FormGroup = styled.div`
   margin-bottom: ${theme.spacing.lg};
   position: relative;
 `;
-
 const Label = styled.label`
   display: block;
   margin-bottom: ${theme.spacing.sm};
@@ -117,7 +110,6 @@ const Label = styled.label`
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
 `;
-
 const Input = styled.input`
   width: 100%;
   padding: ${theme.spacing.sm};
@@ -137,12 +129,10 @@ const Input = styled.input`
     color: #b3b3b3;
   }
 `;
-
 const PasswordContainer = styled.div`
   position: relative;
   width: 100%;
 `;
-
 const EyeIcon = styled.button`
   position: absolute;
   top: 50%;
@@ -157,24 +147,20 @@ const EyeIcon = styled.button`
     color: ${theme.colors.primary};
   }
 `;
-
 const CheckboxContainer = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
   margin-bottom: ${theme.spacing.md};
 `;
-
 const Checkbox = styled.input`
   cursor: pointer;
 `;
-
 const CheckboxLabel = styled.label`
   color: #ffffff;
   font-size: ${theme.typography.fontSizes.sm};
   cursor: pointer;
 `;
-
 const SignInButton = styled.button`
   width: 100%;
   padding: ${theme.spacing.md};
@@ -196,7 +182,6 @@ const SignInButton = styled.button`
     cursor: not-allowed;
   }
 `;
-
 const ForgotPassword = styled.a`
   text-align: right;
   color:rgb(46, 63, 212);
@@ -206,7 +191,6 @@ const ForgotPassword = styled.a`
     color: ${theme.colors.primary};
   }
 `;
-
 const ErrorMessage = styled.div`
   color: #ff4d4f;
   font-size: ${theme.typography.fontSizes.sm};
@@ -231,10 +215,11 @@ export default function Login() {
   const onSubmit = async (data: LoginInput) => {
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
+      await login(data.identifier, data.password);
       toast.success('Login successful!');
       router.push('/dashboard');
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -256,12 +241,12 @@ export default function Login() {
           <FormGroup>
             <Label>Email</Label>
             <Input
-              {...register('email')}
-              type="email"
+              {...register('identifier')}
+              type="text"
               placeholder="Enter your Email or Username "
               disabled={isLoading}
             />
-            {errors.email && <ErrorMessage>{errors.email.message}</ErrorMessage>}
+            {errors.identifier && <ErrorMessage>{errors.identifier.message}</ErrorMessage>}
           </FormGroup>
 
           <FormGroup>
