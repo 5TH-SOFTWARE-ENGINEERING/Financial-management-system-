@@ -174,8 +174,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Simplified permission check based on role
     // In a full RBAC system, this would query roles/permissions
     const rolePermissions: Record<UserType, Resource[]> = {
+      [UserType.SUPER_ADMIN]: [Resource.DASHBOARD, Resource.USERS, Resource.ROLES, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS, Resource.SETTINGS],
       [UserType.ADMIN]: [Resource.DASHBOARD, Resource.USERS, Resource.ROLES, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS, Resource.SETTINGS],
-      [UserType.FINANCE_MANAGER]: [Resource.DASHBOARD, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS],
+      [UserType.FINANCE_ADMIN]: [Resource.DASHBOARD, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS],
       [UserType.ACCOUNTANT]: [Resource.DASHBOARD, Resource.REVENUES, Resource.EXPENSES, Resource.REPORTS],
       [UserType.EMPLOYEE]: [Resource.DASHBOARD, Resource.PROFILE]
     };

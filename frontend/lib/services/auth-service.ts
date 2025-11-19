@@ -26,29 +26,29 @@ export const authService = {
 
       const data = await response.json();
 
-      console.group("📩 Backend Response");
+      console.group(" Response from the backend");
       console.log("Status:", response.status);
       console.log("Data:", data);
       console.groupEnd();
 
       if (response.status === 401) {
-        throw new Error("Invalid credentials");
+        throw new Error("Invalid credentials Try again!");
       }
 
       // Handle backend validation & error messages nicely
       if (!response.ok) {
         const message = Array.isArray(data.detail)
           ? data.detail.map((e: any) => e.msg).join(", ")
-          : data.detail || "Login failed";
+          : data.detail || "Login failed!";
 
-        throw new Error(message);
+        throw new Error(message);//throw a new error message
       }
 
       // Gracefully handle different backend structures
       const rawUser = data.user || data.data?.user || null;
 
       if (!rawUser) {
-        console.error("❌ Unexpected Response:", data);
+        console.error(" Unexpected Response emerged:", data);
         throw new Error("Unexpected response format: user missing");
       }
 
@@ -65,14 +65,14 @@ export const authService = {
         last_login: rawUser.last_login ? new Date(rawUser.last_login) : null,
       };
 
-      console.log("✅ Processed User:", user);
+      console.log("Processed User:", user);
 
       return {
         user,
         access_token: data.access_token,
       };
     } catch (err) {
-      console.error("🔥 Login Error:", err);
+      console.error("Login Error!:", err);
       throw err;
     }
   },

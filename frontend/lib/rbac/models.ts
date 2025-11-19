@@ -28,8 +28,9 @@ export interface User {
 }
 
 export enum UserType {
+  SUPER_ADMIN='SUPER_ADMIN',
   ADMIN = 'ADMIN',
-  FINANCE_MANAGER = 'FINANCE_ADMIN',
+  FINANCE_ADMIN = 'FINANCE_ADMIN',
   ACCOUNTANT = 'ACCOUNTANT',
   EMPLOYEE = 'EMPLOYEE'
 }
@@ -55,6 +56,12 @@ export enum Action {
   UPDATE = 'update',
   DELETE = 'delete',
   MANAGE = 'manage', // Includes all actions
+}
+
+export enum AdminType {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  FINANCE_ADMIN = 'FINANCE_ADMIN'
 }
 
 // Default permissions with finance-specific resources
