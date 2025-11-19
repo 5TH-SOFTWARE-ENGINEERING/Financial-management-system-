@@ -7,7 +7,6 @@ interface AuthorizationHook {
   hasUserPermission: (userId: string, resource: Resource, action: Action) => boolean;
 
   // Role helpers
-  isSuperAdmin: () => boolean;
   isAdmin: () => boolean;
   isFinanceAdmin: () => boolean;
   isAccountant: () => boolean;
@@ -28,10 +27,10 @@ export const useAuthorization = (): AuthorizationHook => {
   /**
    * Check if the user is a super admin
    */
-  const isSuperAdmin = (): boolean => {
-    if (!user) return false;
-    return user.role === UserType.SUPER_ADMIN;
-  };
+  // const isSuperAdmin = (): boolean => {
+  //   if (!user) return false;
+  //   return user.role === UserType.SUPER_ADMIN;
+  // };
 
   /**
    * Check if the user is an administrator
@@ -87,7 +86,6 @@ export const useAuthorization = (): AuthorizationHook => {
   return {
     hasPermission,
     hasUserPermission,
-    isSuperAdmin,
     isAdmin,
     isFinanceAdmin,
     isAccountant,

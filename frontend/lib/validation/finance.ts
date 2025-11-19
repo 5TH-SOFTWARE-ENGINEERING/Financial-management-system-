@@ -1,7 +1,7 @@
 // lib/validation/finance.ts
 import { z } from 'zod';
 
-export const UserRole = z.enum(['ADMIN', 'FINANCE_ADMIN', 'ACCOUNTANT', 'EMPLOYEE']);
+export const UserRole = z.enum(['SUPER_ADMIN', 'ADMIN', 'FINANCE_ADMIN', 'ACCOUNTANT', 'EMPLOYEE']);
 export type UserRole = z.infer<typeof UserRole>;
 
 export const TransactionStatus = z.enum(['pending', 'approved', 'rejected']);

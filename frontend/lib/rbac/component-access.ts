@@ -118,63 +118,6 @@ export enum ComponentId {
  * Maps user types to the components they can access
  */
 export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
-  [UserType.SUPER_ADMIN]: [
-    // Common components
-    ComponentId.LOGIN,
-    ComponentId.HEADER,
-    ComponentId.ADMIN_DASHBOARD,
-    ComponentId.SIDEBAR_DASHBOARD,
-    ComponentId.SIDEBAR_PROFILE,
-    ComponentId.SIDEBAR_SETTINGS,
-    
-    // All management components
-    ComponentId.USER_LIST,
-    ComponentId.USER_CREATE,
-    ComponentId.USER_EDIT,
-    ComponentId.USER_DELETE,
-    ComponentId.REVENUE_LIST,
-    ComponentId.REVENUE_CREATE,
-    ComponentId.REVENUE_EDIT,
-    ComponentId.REVENUE_DELETE,
-    ComponentId.EXPENSE_LIST,
-    ComponentId.EXPENSE_CREATE,
-    ComponentId.EXPENSE_EDIT,
-    ComponentId.EXPENSE_DELETE,
-    ComponentId.TRANSACTION_LIST,
-    ComponentId.TRANSACTION_APPROVE,
-    ComponentId.TRANSACTION_REJECT,
-    ComponentId.REPORT_LIST,
-    ComponentId.REPORT_CREATE,
-    ComponentId.REPORT_EDIT,
-    ComponentId.REPORT_DELETE,
-    ComponentId.DEPARTMENT_LIST,
-    ComponentId.DEPARTMENT_CREATE,
-    ComponentId.DEPARTMENT_EDIT,
-    ComponentId.DEPARTMENT_DELETE,
-    ComponentId.PROJECT_LIST,
-    ComponentId.PROJECT_CREATE,
-    ComponentId.PROJECT_EDIT,
-    ComponentId.PROJECT_DELETE,
-    ComponentId.PROFILE_VIEW,
-    ComponentId.PROFILE_EDIT,
-    ComponentId.SETTINGS_VIEW,
-    ComponentId.SETTINGS_EDIT,
-    ComponentId.ADMIN_LIST,
-    ComponentId.ADMIN_CREATE,
-    ComponentId.ADMIN_EDIT,
-    ComponentId.ADMIN_DELETE,
-    ComponentId.PERMISSION_VIEW,
-    ComponentId.PERMISSION_EDIT,
-    // Sidebar for all
-    ComponentId.SIDEBAR_USERS,
-    ComponentId.SIDEBAR_REVENUE,
-    ComponentId.SIDEBAR_EXPENSE,
-    ComponentId.SIDEBAR_TRANSACTION,
-    ComponentId.SIDEBAR_REPORT,
-    ComponentId.SIDEBAR_DEPARTMENT,
-    ComponentId.SIDEBAR_PROJECT,
-  ],
-  
   [UserType.ADMIN]: [
     // Common components
     ComponentId.LOGIN,

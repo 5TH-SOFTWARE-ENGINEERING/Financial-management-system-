@@ -2,18 +2,28 @@
 
 import { Role, Permission, DEFAULT_ROLES, DEFAULT_PERMISSIONS, User, UserType } from "../rbac/models";
 
+interface RoleServiceInterface {
+  getAllRoles(): Promise<Role[]>;
+  getRoleById(roleType: UserType): Promise<Role | null>;
+  assignRoleToUser(userId: string, role: UserType): Promise<User | null>;
+  removeRoleFromUser(userId: string): Promise<User | null>;
+  getRolePermissions(role: UserType): Promise<Permission[]>;
+  getRolesByUserType(userType: UserType): Promise<Role[]>;
+}
+
 // Mock DB
 let roles = [...DEFAULT_ROLES];
 let permissions = [...DEFAULT_PERMISSIONS];
 let users: User[] = [];
 
-export class RoleService {
+export class RoleService implements RoleServiceInterface {
   async getAllRoles(): Promise<Role[]> {
     return [...roles];
   }
 
-  async getRoleById(id: string): Promise<Role | null> {
-    return roles.find(r => r.id === id) || null;
+  async getRoleById(roleType: UserType): Promise<Role | null> {
+    const role = roles.find(r => r.name === roleType);
+    return role ? { ...role } : null;
   }
 
   async createRole(role: Omit<Role, "id">): Promise<Role> {
@@ -36,24 +46,31 @@ export class RoleService {
     return roles.length < before;
   }
 
-  //  Assign single role
-  async assignRoleToUser(userId: string, role: UserType): Promise<User | null> {
-    const user = users.find(u => u.id === userId);
-    if (!user) return null;
+// Assign a role to a user
+async assignRoleToUser(userId: string, role: UserType): Promise<User | null> {
+  const userIndex = users.findIndex(u => u.id === userId);
+  if (userIndex === -1) return null;
 
-    user.role = role;
-    return user;
-  }
+  users[userIndex].role = role;
+  return { ...users[userIndex] };
+}
 
-  async getRolePermissions(role: UserType): Promise<Permission[]> {
-    const r = roles.find(r => r.name === role);
-    return r ? [...r.permissions] : [];
-  }
+// Remove a role from a user
+async removeRoleFromUser(userId: string): Promise<User | null> {
+  const userIndex = users.findIndex(u => u.id === userId);
+  if (userIndex === -1) return null;
+
+  users[userIndex].role = UserType.EMPLOYEE; // default role
+  return { ...users[userIndex] };
+}
+
+async getRolePermissions(role: UserType): Promise<Permission[]> {
+  const roleObj = await this.getRoleById(role);
+  return roleObj ? [...roleObj.permissions] : [];
+}
 
   async getRolesByUserType(userType: UserType): Promise<Role[]> {
     switch (userType) {
-      case UserType.SUPER_ADMIN:
-        return roles;
       case UserType.ADMIN:
         return roles.filter(r => r.name === "ADMIN");
       case UserType.FINANCE_ADMIN:

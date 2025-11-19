@@ -57,9 +57,8 @@ export const RegisterSchema = z.object({
 
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 
-// ==============================
+
 // REVENUE & EXPENSE
-// ==============================
 export const RevenueSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
   description: z.string().min(1, 'Description is required'),

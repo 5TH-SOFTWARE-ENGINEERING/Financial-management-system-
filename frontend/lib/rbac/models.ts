@@ -28,7 +28,6 @@ export interface User {
 }
 
 export enum UserType {
-  SUPER_ADMIN='SUPER_ADMIN',
   ADMIN = 'ADMIN',
   FINANCE_ADMIN = 'FINANCE_ADMIN',
   ACCOUNTANT = 'ACCOUNTANT',
@@ -59,7 +58,6 @@ export enum Action {
 }
 
 export enum AdminType {
-  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   FINANCE_ADMIN = 'FINANCE_ADMIN'
 }
@@ -130,21 +128,12 @@ export const DEFAULT_PERMISSIONS: Permission[] = [
     { id: '38', name: 'Manage Settings',      description: 'Can manage settings',       resource: Resource.SETTINGS, action: Action.MANAGE },
 ];
 export const DEFAULT_ROLES: Role[] = [
-  {
-    id: 'role-super-admin',
-    name: UserType.SUPER_ADMIN,
-    permissions: [...DEFAULT_PERMISSIONS],
-    description: "Full unrestricted access"
-  },
 
   {
     id: 'role-admin',
     name: UserType.ADMIN,
-    permissions: DEFAULT_PERMISSIONS.filter(p =>
-      p.resource !== Resource.SETTINGS &&
-      p.action !== Action.MANAGE
-    ),
-    description: "Admin with limited restrictions"
+    permissions: [...DEFAULT_PERMISSIONS],
+    description: "Full unrestricted access"
   },
 
   {
