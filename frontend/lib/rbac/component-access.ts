@@ -175,16 +175,14 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
     ComponentId.SIDEBAR_PROJECT,
   ],
   
-  [UserType.FINANCE_ADMIN]: [
-    // Common components
+  [UserType.FINANCE_MANAGER]: [
     ComponentId.LOGIN,
     ComponentId.HEADER,
     ComponentId.FINANCE_MANAGER_DASHBOARD,
     ComponentId.SIDEBAR_DASHBOARD,
     ComponentId.SIDEBAR_PROFILE,
     ComponentId.SIDEBAR_SETTINGS,
-    
-    // Management for subordinates
+  
     ComponentId.USER_LIST,
     ComponentId.USER_CREATE,
     ComponentId.USER_EDIT,
@@ -216,6 +214,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
     ComponentId.PROFILE_EDIT,
     ComponentId.SETTINGS_VIEW,
     ComponentId.SETTINGS_EDIT,
+  
     // Sidebar
     ComponentId.SIDEBAR_USERS,
     ComponentId.SIDEBAR_REVENUE,
@@ -224,7 +223,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
     ComponentId.SIDEBAR_REPORT,
     ComponentId.SIDEBAR_DEPARTMENT,
     ComponentId.SIDEBAR_PROJECT,
-  ],
+  ],  
   
   [UserType.ACCOUNTANT]: [
     ComponentId.LOGIN,

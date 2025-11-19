@@ -3,6 +3,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
+import { User } from '@/lib/rbac/models';
 import {
   Users, DollarSign, TrendingUp, FileText, Shield, Calendar,
   CreditCard, Activity, Briefcase, UserCheck,
@@ -139,8 +140,8 @@ const AdminDashboard: React.FC = () => {
     
     return (
       <div>
-        <h1>Welcome, {user.name}</h1>
-        <p>Your {user.userType} Dashboard</p>
+        <h1>Welcome, {user.username}</h1>
+        <p>Your {user.role} Dashboard</p>
       </div>
     );
   };
@@ -182,7 +183,8 @@ const AdminDashboard: React.FC = () => {
           </ComponentGate>
 
           {/* Manager Dashboard */}
-          <ComponentGate componentId={ComponentId.MANAGER_DASHBOARD}>
+          <ComponentGate componentId={ComponentId.FINANCE_MANAGER_DASHBOARD
+          }>
             <SectionTitle>Department Performance</SectionTitle>
             <DashboardGrid>
               <StatsCard>

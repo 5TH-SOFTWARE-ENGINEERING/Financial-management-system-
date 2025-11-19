@@ -248,7 +248,6 @@ export default function Login() {
             />
             {errors.identifier && <ErrorMessage>{errors.identifier.message}</ErrorMessage>}
           </FormGroup>
-
           <FormGroup>
             <Label>Password</Label>
             <PasswordContainer>

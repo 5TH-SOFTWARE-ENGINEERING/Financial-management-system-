@@ -1,4 +1,4 @@
-// Models
+// lib/rabc/index.ts
 export * from './models';
 
 // Authentication
