@@ -701,3 +701,23 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-11-17 20:43:53,873 - app.main - WARNING - HTTP Exception: 403 - Not enough permissions
 2025-11-17 20:43:53,877 - app.main - INFO - Response: 403 in 0.0260s
 2025-11-17 20:43:53,884 - httpx - INFO - HTTP Request: POST http://testserver/api/v1/users/ "HTTP/1.1 403 Forbidden"
+2025-11-19 11:15:44,012 - app.main - INFO - Celery configured successfully
+2025-11-19 11:15:44,392 - app.main - INFO - Starting Finance Management System Backend
+2025-11-19 11:15:44,958 - app.main - INFO - Database tables created successfully
+2025-11-19 11:15:45,037 - app.main - INFO - Directory uploads created/verified
+2025-11-19 11:15:45,053 - app.main - INFO - Directory reports created/verified
+2025-11-19 11:15:45,080 - app.main - INFO - Directory backups created/verified
+2025-11-19 11:15:45,084 - app.main - INFO - Directory logs created/verified
+2025-11-19 11:15:45,648 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-19 11:16:40,000 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-19 11:16:41,236 - app.main - INFO - Response: 200 in 1.2359s
+2025-11-19 11:16:45,356 - app.main - INFO - Request: GET http://127.0.0.1:8000/openapi.json
+2025-11-19 11:16:46,238 - app.main - INFO - Response: 200 in 0.8823s
+2025-11-19 11:18:11,055 - app.main - INFO - Request: POST http://127.0.0.1:8000/api/v1/auth/login-json
+2025-11-19 11:18:12,232 - app.main - INFO - Response: 200 in 1.1764s
+2025-11-19 11:19:40,913 - app.main - INFO - Request: POST http://127.0.0.1:8000/api/v1/auth/login
+2025-11-19 11:19:41,751 - app.main - INFO - Response: 200 in 0.8386s
+2025-11-19 11:21:15,326 - app.main - INFO - Request: POST http://127.0.0.1:8000/api/v1/auth/login
+2025-11-19 11:21:16,650 - app.main - INFO - Response: 200 in 1.3239s
+2025-11-19 11:56:54,875 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login
+2025-11-19 11:57:02,331 - app.main - INFO - Response: 200 in 7.6558s
