@@ -43,7 +43,7 @@ import { useAuthorization } from '@/lib/rbac/use-authorization';
 import { UserType } from '@/lib/rbac/models';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { useUserStore } from '@/store/userStore'; // Integrated from original snippet for auth consistency
-import { Badge } from '@/components/ui/badge'; // Optional for indicators
+// import { Badge } from '@/components/ui/badge'; // Optional for indicators
 
 // EAT Clock Component
 const EATClock: React.FC = () => {
@@ -160,7 +160,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const pathname = usePathname();
-  const { hasUserType, isAdmin, isSuperAdmin } = useAuthorization();
+  const { hasUserType, isAdmin } = useAuthorization();
   const { user } = useAuth();
   const userStore = useUserStore(); // Integrated for additional auth checks if needed
 
@@ -185,7 +185,6 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     setOpenDropdowns((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const isSuperAdminLike = () => isSuperAdmin() || hasUserType(UserType.SUPER_ADMIN);
   const isAdminLike = () => isAdmin() || hasUserType(UserType.ADMIN);
 
   const navContent = (
@@ -212,7 +211,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           </ComponentGate>
 
           {/* Users & Roles */}
-          {(isSuperAdminLike() || isAdminLike()) && (
+          {( isAdminLike()) && (
             <ComponentGate componentId={ComponentId.SIDEBAR_USERS}>
               <Dropdown
                 label="Users & Roles"
@@ -243,7 +242,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           )}
 
           {/* Transactions */}
-          {hasUserType([UserType.MANAGER, UserType.ADMIN, UserType.SUPER_ADMIN]) && (
+          {hasUserType([UserType.FINANCE_ADMIN, UserType.ADMIN]) && (
             <ComponentGate componentId={ComponentId.SIDEBAR_TRANSACTIONS}>
               <Dropdown
                 label="Transactions"
@@ -274,7 +273,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           )}
 
           {/* Reports */}
-          {hasUserType([UserType.ACCOUNTANT, UserType.MANAGER, UserType.ADMIN, UserType.SUPER_ADMIN]) && (
+          {hasUserType([UserType.ACCOUNTANT, UserType.FINANCE_ADMIN, UserType.ADMIN]) && (
             <ComponentGate componentId={ComponentId.SIDEBAR_REPORTS}>
               <Dropdown
                 label="Reports"
@@ -311,7 +310,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           )}
 
           {/* Accounts */}
-          {hasUserType([UserType.ACCOUNTANT, UserType.ADMIN, UserType.SUPER_ADMIN]) && (
+          {hasUserType([UserType.ACCOUNTANT, UserType.ADMIN]) && (
             <ComponentGate componentId={ComponentId.SIDEBAR_ACCOUNTS}>
               <NavItem
                 href="/accounts"
@@ -323,7 +322,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           )}
 
           {/* Budgets */}
-          {hasUserType([UserType.MANAGER, UserType.ADMIN, UserType.SUPER_ADMIN]) && (
+          {hasUserType([UserType.FINANCE_ADMIN, UserType.ADMIN,]) && (
             <ComponentGate componentId={ComponentId.SIDEBAR_BUDGETS}>
               <NavItem
                 href="/budgets"

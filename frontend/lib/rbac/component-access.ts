@@ -5,11 +5,22 @@ import { UserType, Resource } from './models';
  * Component access codes for role-based access control
  * Each component in the system should have a unique component ID
  */
-export enum ComponentId {
+
   // Common components
-  LOGIN = 'com.login',
-  HEADER = 'com.header',
-  DASHBOARD = 'com.dashboard',
+  export enum ComponentId {
+    // SIDEBAR_DASHBOARD = "SIDEBAR_DASHBOARD",
+    // SIDEBAR_USERS = "SIDEBAR_USERS",
+    SIDEBAR_TRANSACTIONS = "SIDEBAR_TRANSACTIONS",
+    SIDEBAR_REPORTS = "SIDEBAR_REPORTS",
+    SIDEBAR_ACCOUNTS = "SIDEBAR_ACCOUNTS",     
+    SIDEBAR_BUDGETS = "SIDEBAR_BUDGETS",
+    // SIDEBAR_PROFILE = "SIDEBAR_PROFILE",
+    // SIDEBAR_SETTINGS = "SIDEBAR_SETTINGS",
+    LOGIN = 'com.login',
+    HEADER = 'com.header',
+    DASHBOARD = 'com.dashboard',
+    MANAGER_DASHBOARD = "MANAGER_DASHBOARD",
+    // ADMIN_DASHBOARD = "ADMIN_DASHBOARD",
   
   // User management components
   USER_LIST = 'users.list',

@@ -12,8 +12,8 @@ interface AuthorizationHook {
   isAccountant: () => boolean;
   isEmployee: () => boolean;
 
-  hasRole: (roleName: string) => boolean;
-  hasUserType: (userType: UserType) => boolean;
+  hasRole: (roleName: string | string[]) => boolean;
+  hasUserType: (userType: UserType | UserType[]) => boolean;
 
   refreshUser: () => Promise<void>;
 }
@@ -25,15 +25,7 @@ export const useAuthorization = (): AuthorizationHook => {
   const { user, hasPermission, hasUserPermission, refreshUser } = useAuth();
 
   /**
-   * Check if the user is a super admin
-   */
-  // const isSuperAdmin = (): boolean => {
-  //   if (!user) return false;
-  //   return user.role === UserType.SUPER_ADMIN;
-  // };
-
-  /**
-   * Check if the user is an administrator
+   * ROLE CHECK HELPERS
    */
   const isAdmin = (): boolean => {
     if (!user) return false;
@@ -43,43 +35,44 @@ export const useAuthorization = (): AuthorizationHook => {
     );
   };
 
-  /**
-   * Check if the user is a finance admin
-   */
   const isFinanceAdmin = (): boolean => {
     if (!user) return false;
     return user.role === UserType.FINANCE_ADMIN;
   };
 
-  /**
-   * Check if the user is an accountant
-   */
   const isAccountant = (): boolean => {
     if (!user) return false;
     return user.role === UserType.ACCOUNTANT;
   };
 
-  /**
-   * Check if the user is an employee
-   */
   const isEmployee = (): boolean => {
     if (!user) return false;
     return user.role === UserType.EMPLOYEE;
   };
 
   /**
-   * Check if the user has a specific role string
+   * Check if the user has a specific role string OR ANY from a list
    */
-  const hasRole = (roleName: string): boolean => {
+  const hasRole = (roleName: string | string[]): boolean => {
     if (!user) return false;
+
+    if (Array.isArray(roleName)) {
+      return roleName.includes(user.role);
+    }
+
     return user.role === roleName;
   };
 
   /**
-   * Check if the user has a specific UserType enum value
+   * Check if the user has a specific UserType enum OR ANY from a list
    */
-  const hasUserType = (userType: UserType): boolean => {
+  const hasUserType = (userType: UserType | UserType[]): boolean => {
     if (!user) return false;
+
+    if (Array.isArray(userType)) {
+      return userType.includes(user.role);
+    }
+
     return user.role === userType;
   };
 
@@ -92,6 +85,6 @@ export const useAuthorization = (): AuthorizationHook => {
     isEmployee,
     hasRole,
     hasUserType,
-    refreshUser
+    refreshUser,
   };
 };
