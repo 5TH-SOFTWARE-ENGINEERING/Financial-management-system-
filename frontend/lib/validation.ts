@@ -2,8 +2,6 @@
 import { z } from 'zod';
 
 // ==============================
-// ENUMS (must match backend UserType)
-// ==============================
 export const UserRole = z.enum(['ADMIN', 'FINANCE_ADMIN', 'ACCOUNTANT', 'EMPLOYEE']);
 export type UserRole = z.infer<typeof UserRole>;
 
@@ -16,10 +14,6 @@ export type NotificationType = z.infer<typeof NotificationType>;
 export const ReportFormat = z.enum(['pdf', 'csv', 'excel']);
 export type ReportFormat = z.infer<typeof ReportFormat>;
 
-// ==============================
-// AUTH SCHEMAS
-// ==============================
-// LOGIN: Accept either email OR username
 export const LoginSchema = z.object({
   identifier: z
     .string()
@@ -80,10 +74,6 @@ export const ExpenseSchema = z.object({
 
 export type ExpenseInput = z.infer<typeof ExpenseSchema>;
 
-// ==============================
-// RESET PASSWORD (Multi-step)
-
-// ==============================
 export const ResetPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
   otp: z.string().length(6, "OTP must be 6 digits"),
@@ -116,9 +106,6 @@ export type ResetPasswordRequestInput = z.infer<typeof ResetPasswordRequestSchem
 export type ResetPasswordOTPInput = z.infer<typeof ResetPasswordOTPSchema>;
 export type ResetPasswordNewInput = z.infer<typeof ResetPasswordNewSchema>;
 
-// ==============================
-// USER OUTPUT SCHEMA
-// ==============================
 export const UserSchema = z.object({
   id: z.number(),
   username: z.string(),
@@ -134,9 +121,6 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
-// ==============================
-// TRANSACTION
-// ==============================
 export const TransactionSchema = z.object({
   id: z.string(),
   type: z.enum(['revenue', 'expense']),
@@ -157,9 +141,6 @@ export const TransactionSchema = z.object({
 
 export type Transaction = z.infer<typeof TransactionSchema>;
 
-// ==============================
-// NOTIFICATION
-// ==============================
 export const NotificationSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -173,9 +154,6 @@ export const NotificationSchema = z.object({
 
 export type Notification = z.infer<typeof NotificationSchema>;
 
-// ==============================
-// REPORT
-// ==============================
 export const ReportSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -196,9 +174,6 @@ export const ReportSchema = z.object({
 
 export type Report = z.infer<typeof ReportSchema>;
 
-// ==============================
-// DASHBOARD DATA
-// ==============================
 export const DashboardDataSchema = z.object({
   totalRevenue: z.number().nonnegative(),
   totalExpenses: z.number().nonnegative(),
@@ -223,9 +198,6 @@ export const DashboardDataSchema = z.object({
 
 export type DashboardData = z.infer<typeof DashboardDataSchema>;
 
-// ==============================
-// DEPARTMENT & PROJECT
-// ==============================
 export const DepartmentSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -252,9 +224,6 @@ export const ProjectSchema = z.object({
 
 export type Project = z.infer<typeof ProjectSchema>;
 
-// ==============================
-// CREATE / UPDATE SCHEMAS
-// ==============================
 export const CreateUserSchema = RegisterSchema.extend({
   departmentId: z.string().optional(),
 });

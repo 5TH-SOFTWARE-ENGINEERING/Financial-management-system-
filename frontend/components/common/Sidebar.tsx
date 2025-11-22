@@ -22,22 +22,18 @@ import {
     UserPlus,
     List,
 } from 'lucide-react';
-
-// RBAC + Auth
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { UserType } from '@/lib/rbac/models';
-// Assuming 'theme' is correctly imported from './theme'
 import { theme } from './theme'; 
 
-// --- Styled Component Interfaces (Corrected to use $ prefix) ---
 interface SidebarContainerProps {
     $collapsed: boolean;
 }
 
 const SidebarContainer = styled.div<SidebarContainerProps>`
-    width: ${props => (props.$collapsed ? '70px' : '270px')};
+    width: ${props => (props.$collapsed ? '70px' : '250px')};
     height: 100vh;
     background: ${theme.colors.background};
     border-right: 1px solid ${theme.colors.border};
@@ -173,7 +169,7 @@ const Sidebar: React.FC = () => {
         });
         setOpenSections(newOpen);
     }, [pathname]);
-  // the new added to fix the admin permission 
+  // the newly added to fix the admin permission 
     const isAdmin = hasUserType(UserType.ADMIN) || user?.userType?.toLowerCase() === "admin";
     const isFinanceAdmin = hasUserType(UserType.FINANCE_ADMIN) || user?.userType?.toLowerCase() === "finance_admin";
     

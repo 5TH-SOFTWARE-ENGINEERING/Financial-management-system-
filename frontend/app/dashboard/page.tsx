@@ -3,7 +3,6 @@ import React from 'react';
 import styled from 'styled-components';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
-// Assuming User model is available, although not directly used outside of type definition
 import {
   Users, DollarSign, TrendingUp, FileText, Shield, Calendar,
   CreditCard, Activity, Briefcase, UserCheck,
@@ -11,13 +10,10 @@ import {
 } from 'lucide-react';
 import Layout from '@/components/layout';
 
-/* ------------------ REFINED STYLED COMPONENTS ------------------ */
-
-// --- Colors & Shadows ---
-const PRIMARY_COLOR = '#4f46e5'; // Indigo-600
-const PRIMARY_LIGHT = '#eef2ff'; // Indigo-50
-const TEXT_COLOR_DARK = '#111827'; // Gray-900
-const TEXT_COLOR_MUTED = '#6b7280'; // Gray-500
+const PRIMARY_COLOR = '#4f46e5'; 
+const PRIMARY_LIGHT = '#eef2ff'; 
+const TEXT_COLOR_DARK = '#111827'; 
+const TEXT_COLOR_MUTED = '#6b7280'; 
 const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, #ffffff 100%)`;
 
 const CardShadow = `
@@ -31,7 +27,6 @@ const CardShadowHover = `
   inset 0 0 0 1px rgba(0, 0, 0, 0.05)
 `;
 
-// --- Layout & Structure ---
 const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -90,9 +85,6 @@ const DashboardGrid = styled.div`
   margin-bottom: 32px;
 `;
 
-// --- Stats Card ---
-
-// Helper to map icon color
 const getIconColor = (IconComponent) => {
   switch (IconComponent) {
     case Users:
@@ -176,7 +168,6 @@ const CardValue = styled.div`
   line-height: 1.1;
 `;
 
-// --- Table & Badge ---
 const TableContainer = styled.div`
   background: #ffffff;
   border-radius: 16px;
