@@ -1,7 +1,7 @@
 // app/auth/reset-password/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";

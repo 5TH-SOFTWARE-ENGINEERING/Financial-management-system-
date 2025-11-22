@@ -1,12 +1,13 @@
+// app/profile/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useAuth } from '/@/lib/rbac/auth-context';
-import { User, UserType } from '/@/lib/rbac/models';
-import { ComponentGate, ComponentId } from '/@/lib/rbac';
+import { useAuth } from '@/lib/rbac/auth-context';
+import { User, UserType } from '@/lib/rbac/models';
+import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { Camera, Mail, User as UserIcon, Users, Building, Phone, Briefcase, Calendar, Save, Edit, X, CheckCircle, AlertCircle } from 'lucide-react';
-import Button from '@/components/ui/button';;
+import {Button} from '@/components/ui/button';;
 
 
 // Styled components
@@ -56,11 +57,11 @@ const ProfileImage = styled.div`
   position: relative;
 `;
 
-const Avatar = styled.div<{ bgColor: string }>`
+const Avatar = styled.div<{ $bgColor: string }>`
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  background-color: ${props => props.bgColor};
+  background-color: ${(props) => props.$bgColor};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -243,19 +244,23 @@ interface ExtendedUser extends User {
 const getUserColor = (userType: UserType): string => {
   const colors: Record<UserType, string> = {
     [UserType.ADMIN]: '#2563eb', // Blue
-    [UserType.INSURANCE_ADMIN]: '#7c3aed', // Purple
-    [UserType.INSURANCE_STAFF]: '#8b5cf6', // Light purple
-    [UserType.CORPORATE_ADMIN]: '#db2777', // Pink
+    [UserType.FINANCE_ADMIN]: '#7c3aed', // Purple
+    [UserType.ACCANTANT]: '#8b5cf6', // Light purple
+    [UserType.EMPLOYEE]: '#db2777', // Pink
     [UserType.PROVIDER_ADMIN]: '#ea580c', // Orange
-    [UserType.STAFF]: '#0d9488', // Teal
-    [UserType.MEMBER]: '#16a34a', // Green
-    [UserType.PROVIDER]: '#ca8a04' // Yellow
   };
   return colors[userType] || '#4b5563'; // Default gray
 };
 
 // Format user type for display
-const formatUserType = (userType: UserType): string => {
+// app/profile/page.tsx
+
+const formatUserType = (userType: UserType | string | null | undefined): string => {
+  // FIX: Check if userType is a truthy string before attempting to split it.
+  if (!userType || typeof userType !== 'string') {
+    return 'Unknown Role'; // Return a safe default string
+  }
+  
   return userType
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -397,7 +402,12 @@ export default function ProfilePage() {
     setError(null);
   };
 
-  const getInitials = (name: string) => {
+  // FIX: Added a check for the 'name' argument to ensure it is a valid string
+  const getInitials = (name: string | null | undefined): string => {
+    if (!name || name.trim() === '') {
+      return '?'; // Return a default value if the name is missing or empty
+    }
+    // Now it is safe to call split()
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 

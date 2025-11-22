@@ -82,7 +82,20 @@ export type ExpenseInput = z.infer<typeof ExpenseSchema>;
 
 // ==============================
 // RESET PASSWORD (Multi-step)
+
 // ==============================
+export const ResetPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  otp: z.string().length(6, "OTP must be 6 digits"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
+
 export const ResetPasswordRequestSchema = z.object({
   email: z.string().email('Invalid email address'),
 });

@@ -1,4 +1,4 @@
-// components/common/Navbar.tsx
+//components/common/Navbar.tsx
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -10,7 +10,7 @@ import {
   Bell,
   FileSpreadsheet,
   Globe,
-  User,
+  User, 
   LogOut,
   Settings,
   HelpCircle,
@@ -20,7 +20,10 @@ import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { theme } from './theme';
 
-// =============== Styled Components ===============
+const PRIMARY_ACCENT = '#06b6d4'; 
+const PRIMARY_HOVER = '#0891b2';
+const DANGER_COLOR = '#ef4444'; 
+
 const HeaderContainer = styled.header`
   position: fixed;
   top: 0;
@@ -56,6 +59,7 @@ const SearchInput = styled.input`
   &:focus {
     outline: none;
     background: #eeeeee;
+    box-shadow: 0 0 0 2px ${PRIMARY_ACCENT}40; 
   }
 
   &::placeholder {
@@ -87,13 +91,13 @@ const AddButton = styled.button`
   height: 32px;
   border: none;
   border-radius: 50%;
-  background: ${props => props.theme.colors.textSecondary};
+  background: ${PRIMARY_ACCENT};
   color: ${props => props.theme.colors.background};
   cursor: pointer;
   transition: background-color ${props => props.theme.transitions.default};
 
   &:hover {
-    background: ${props => `${props.theme.colors.primary}dd`};
+    background: ${PRIMARY_HOVER};
   }
 
   svg {
@@ -117,6 +121,7 @@ const IconButton = styled.button`
 
   &:hover {
     background: ${theme.colors.inputBg};
+    color: ${PRIMARY_ACCENT}; 
   }
 
   svg {
@@ -133,7 +138,7 @@ const NotificationBadge = styled.div`
     position: absolute;
     top: -8px;
     right: -8px;
-    background: ${theme.colors.warning};
+    background: ${DANGER_COLOR}; 
     color: white;
     font-size: 8px;
     width: 14px;
@@ -145,24 +150,6 @@ const NotificationBadge = styled.div`
   }
 `;
 
-const LanguageSelector = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${theme.spacing.sm};
-  cursor: pointer;
-  padding: ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  transition: background-color ${theme.transitions.default};
-
-  &:hover {
-    background: ${theme.colors.inputBg};
-  }
-
-  span {
-    font-size: ${theme.typography.fontSizes.sm};
-    color: ${theme.colors.textSecondary};
-  }
-`;
 
 const MenuButton = styled.button`
   display: flex;
@@ -184,7 +171,6 @@ const MenuButton = styled.button`
     height: 24px;
   }
 `;
-
 const IconWrapper = styled.div`
   display: flex;
   align-items: center;
@@ -197,7 +183,33 @@ const IconWrapper = styled.div`
   }
 `;
 
-// New styled components for user profile dropdown
+const LanguageSelector = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  cursor: pointer;
+  padding: ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  transition: background-color ${theme.transitions.default};
+
+  &:hover {
+    background: ${theme.colors.inputBg};
+    color: ${PRIMARY_ACCENT};
+    
+    span {
+        color: ${PRIMARY_ACCENT};
+    }
+    ${IconWrapper} { 
+        svg {
+            color: ${PRIMARY_ACCENT};
+        }
+    }
+  }
+  span {
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${theme.colors.textSecondary};
+  }
+`;
 const UserProfileContainer = styled.div`
   position: relative;
   display: flex;
@@ -217,11 +229,11 @@ const UserAvatar = styled.div`
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: ${theme.colors.primaryLight};
+  background-color: ${PRIMARY_ACCENT}; 
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${theme.colors.primary};
+  color: ${props => props.theme.colors.background}; /* White text on accent color */
   font-weight: ${theme.typography.fontWeights.bold};
   font-size: ${theme.typography.fontSizes.sm};
 `;
@@ -241,8 +253,7 @@ const UserRole = styled.span`
   font-size: ${theme.typography.fontSizes.xs};
   color: ${theme.colors.textSecondary};
 `;
-
-const DropdownMenu = styled.div<{ isOpen: boolean }>`
+const DropdownMenu = styled.div<{ $isOpen: boolean }>`
   position: absolute;
   top: 100%;
   right: 0;
@@ -252,7 +263,7 @@ const DropdownMenu = styled.div<{ isOpen: boolean }>`
   border-radius: ${theme.borderRadius.md};
   box-shadow: ${theme.shadows.md};
   z-index: 100;
-  display: ${props => (props.isOpen ? 'block' : 'none')};
+  display: ${props => (props.$isOpen ? 'block' : 'none')}; 
   margin-top: ${theme.spacing.sm};
 `;
 
@@ -266,33 +277,41 @@ const DropdownItem = styled.div`
   cursor: pointer;
 
   &:hover {
-    background: ${theme.colors.inputBg};
-    color: ${theme.colors.textPrimary};
+    background: ${PRIMARY_ACCENT}10; 
+    color: ${PRIMARY_ACCENT}; 
+    
+    svg {
+        color: ${PRIMARY_ACCENT};
+    }
   }
 
   &:not(:last-child) {
     border-bottom: 1px solid ${theme.colors.border};
   }
-`;
-
-const SignOutItem = styled(DropdownItem)`
-  color: ${theme.colors.warning};
-
-  &:hover {
-    background: ${`${theme.colors.warning}10`};
-    color: ${theme.colors.warning};
+  
+  svg {
+    color: ${theme.colors.textSecondary};
   }
 `;
 
-// =============== Component ===============
+const SignOutItem = styled(DropdownItem)`
+  color: ${DANGER_COLOR}; 
+
+  &:hover {
+    background: ${DANGER_COLOR}10;
+    color: #b91c1c; 
+    
+    svg {
+        color: #b91c1c;
+    }
+  }
+`;
 export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
   const router = useRouter();
-
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -312,12 +331,10 @@ export default function Navbar() {
   };
 
   const handleNotificationsClick = () => {
-    // Handle notifications (e.g., open modal or navigate)
     console.log('Open notifications');
   };
 
   const handleLanguageClick = () => {
-    // Handle language toggle
     console.log('Toggle language');
   };
 
@@ -337,26 +354,24 @@ export default function Navbar() {
   };
   
   const handleSignOut = () => {
-    logout(); // Use the centralized logout function from auth context
+    logout();
   };
-
-  const initials = user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
+  const userName = user?.name || user?.username;
+  const initials = userName
+    ? userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+    : '?';
   const displayRole = user?.role ?? user?.userType ?? 'User';
 
   return (
     <HeaderContainer>
-      {/* Mobile Menu Button (hidden on desktop) */}
       <MenuButton
         onClick={() => {
-          // Toggle sidebar (integrate with sidebar state if needed)
           console.log('Toggle sidebar');
         }}
-        style={{ display: 'none' }} // Adjust for mobile: e.g., via media query or state
+        style={{ display: 'none' }} 
       >
         <Menu />
       </MenuButton>
-
-      {/* Search */}
       <SearchContainer>
         <SearchIcon>
           <Search size={16} />
@@ -369,14 +384,11 @@ export default function Navbar() {
       </SearchContainer>
 
       <ActionsContainer>
-        {/* Quick Action: Create Financial Entry */}
         <ComponentGate componentId={ComponentId.FINANCE_CREATE}>
           <AddButton onClick={handleAddClick}>
             <Plus />
           </AddButton>
         </ComponentGate>
-
-        {/* Notifications */}
         <ComponentGate componentId={ComponentId.DASHBOARD}>
           <NotificationBadge onClick={handleNotificationsClick}>
             <IconWrapper>
@@ -385,32 +397,25 @@ export default function Navbar() {
             <span>4</span>
           </NotificationBadge>
         </ComponentGate>
-
-        {/* Reports shortcut */}
         <ComponentGate componentId={ComponentId.REPORT_VIEW}>
           <IconButton onClick={handleReportsClick}>
             <FileSpreadsheet />
           </IconButton>
         </ComponentGate>
-
-        {/* Language Selector */}
         <LanguageSelector onClick={handleLanguageClick}>
           <IconWrapper>
             <Globe />
           </IconWrapper>
           <span>EN</span>
         </LanguageSelector>
-
-        {/* User Menu */}
         <UserProfileContainer ref={dropdownRef} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
           <UserAvatar>{initials}</UserAvatar>
           <UserInfo>
-            <UserName>{user?.name}</UserName>
+            <UserName>{userName}</UserName>
             <UserRole>{displayRole}</UserRole>
           </UserInfo>
         </UserProfileContainer>
-
-        <DropdownMenu isOpen={isDropdownOpen}>
+        <DropdownMenu $isOpen={isDropdownOpen}>
           <DropdownItem onClick={handleProfileClick}>
             <User size={16} />
             <span>Profile</span>
@@ -425,7 +430,7 @@ export default function Navbar() {
               <span>Role & Permission Management</span>
             </DropdownItem>
           </ComponentGate>
-          <SignOutItem onClick={logout}>
+          <SignOutItem onClick={handleSignOut}>
             <LogOut size={16} />
             <span>Sign Out</span>
           </SignOutItem>

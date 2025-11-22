@@ -781,3 +781,63 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-11-20 16:24:10,841 - app.main - INFO - Response: 200 in 16.6731s
 2025-11-20 16:32:36,328 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login
 2025-11-20 16:32:57,047 - app.main - INFO - Response: 200 in 20.9493s
+2025-11-20 19:19:01,186 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-20 19:25:15,375 - app.main - INFO - Celery configured successfully
+2025-11-20 19:25:16,521 - app.main - INFO - Starting Finance Management System Backend
+2025-11-20 19:25:17,181 - app.main - INFO - Database tables created successfully
+2025-11-20 19:25:17,357 - app.main - INFO - Directory uploads created/verified
+2025-11-20 19:25:18,205 - app.main - INFO - Directory reports created/verified
+2025-11-20 19:25:18,736 - app.main - INFO - Directory backups created/verified
+2025-11-20 19:25:19,473 - app.main - INFO - Directory logs created/verified
+2025-11-20 19:25:24,179 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-21 10:30:45,984 - app.main - INFO - Celery configured successfully
+2025-11-21 10:30:48,384 - app.main - INFO - Starting Finance Management System Backend
+2025-11-21 10:31:00,824 - app.main - INFO - Database tables created successfully
+2025-11-21 10:31:00,881 - app.main - INFO - Directory uploads created/verified
+2025-11-21 10:31:00,901 - app.main - INFO - Directory reports created/verified
+2025-11-21 10:31:00,963 - app.main - INFO - Directory backups created/verified
+2025-11-21 10:31:00,976 - app.main - INFO - Directory logs created/verified
+2025-11-21 10:31:02,063 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-21 14:34:17,519 - app.main - INFO - Celery configured successfully
+2025-11-21 14:34:17,632 - app.main - INFO - Starting Finance Management System Backend
+2025-11-21 14:34:17,794 - app.main - INFO - Database tables created successfully
+2025-11-21 14:34:17,799 - app.main - INFO - Directory uploads created/verified
+2025-11-21 14:34:17,802 - app.main - INFO - Directory reports created/verified
+2025-11-21 14:34:17,809 - app.main - INFO - Directory backups created/verified
+2025-11-21 14:34:17,814 - app.main - INFO - Directory logs created/verified
+2025-11-21 14:34:18,190 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-21 14:35:51,719 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-21 14:35:52,217 - app.main - INFO - Response: 200 in 0.4983s
+2025-11-21 14:35:56,553 - app.main - INFO - Request: GET http://127.0.0.1:8000/openapi.json
+2025-11-21 14:35:58,056 - app.main - INFO - Response: 200 in 1.5029s
+2025-11-21 14:36:38,636 - app.main - INFO - Request: POST http://127.0.0.1:8000/api/v1/auth/login
+2025-11-21 14:36:40,255 - app.main - INFO - Response: 200 in 1.6198s
+2025-11-21 14:46:15,579 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login
+2025-11-21 14:46:16,611 - app.main - INFO - Response: 200 in 1.0467s
+2025-11-21 14:46:16,655 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-21 14:46:16,664 - app.main - INFO - Response: 200 in 0.0087s
+2025-11-21 14:46:16,763 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-21 14:46:17,197 - app.main - INFO - Response: 200 in 0.4331s
+2025-11-22 01:00:02,832 - app.main - INFO - Celery configured successfully
+2025-11-22 01:00:03,609 - app.main - INFO - Starting Finance Management System Backend
+2025-11-22 01:00:07,025 - app.main - INFO - Database tables created successfully
+2025-11-22 01:00:07,025 - app.main - INFO - Directory uploads created/verified
+2025-11-22 01:00:07,041 - app.main - INFO - Directory reports created/verified
+2025-11-22 01:00:07,044 - app.main - INFO - Directory backups created/verified
+2025-11-22 01:00:07,044 - app.main - INFO - Directory logs created/verified
+2025-11-22 01:00:07,465 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-22 01:00:19,714 - app.main - INFO - Request: GET http://127.0.0.1:8000/docs
+2025-11-22 01:00:19,770 - app.main - INFO - Response: 200 in 0.0564s
+2025-11-22 01:00:24,550 - app.main - INFO - Request: GET http://127.0.0.1:8000/openapi.json
+2025-11-22 01:00:25,467 - app.main - INFO - Response: 200 in 0.9175s
+2025-11-22 01:03:12,100 - app.main - INFO - Request: POST http://127.0.0.1:8000/api/v1/auth/login
+2025-11-22 01:03:13,409 - app.main - WARNING - HTTP Exception: 401 - Incorrect username or password
+2025-11-22 01:03:13,412 - app.main - INFO - Response: 401 in 1.3117s
+2025-11-22 01:03:22,224 - app.main - INFO - Request: POST http://127.0.0.1:8000/api/v1/auth/login
+2025-11-22 01:03:24,896 - app.main - INFO - Response: 200 in 2.6714s
+2025-11-22 01:12:03,687 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login
+2025-11-22 01:12:06,318 - app.main - INFO - Response: 200 in 2.6313s
+2025-11-22 01:12:06,341 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-22 01:12:06,355 - app.main - INFO - Response: 200 in 0.0140s
+2025-11-22 01:12:06,488 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-22 01:12:06,876 - app.main - INFO - Response: 200 in 0.3881s

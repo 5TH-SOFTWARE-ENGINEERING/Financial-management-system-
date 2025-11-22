@@ -1,9 +1,10 @@
+//app/profile/layout.tsx
 'use client';
 
 import React from 'react';
 import styled from 'styled-components';
-import { Navbar } from '@/components/common/Navbar';
-import { Sidebar } from '@/components/common/Sidebar';
+import  Navbar  from '@/components/common/Navbar';
+import  Sidebar  from '@/components/common/Sidebar';
 
 const LayoutContainer = styled.div`
   display: flex;
