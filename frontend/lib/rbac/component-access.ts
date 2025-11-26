@@ -299,18 +299,38 @@ export const canAccessComponent = (
     userType: UserType | string,
     componentId: ComponentId
 ): boolean => {
-    const cacheKey = `${userType}:${componentId}`;
+    // Normalize userType to UserType enum
+    let normalizedUserType: UserType;
+    
+    if (typeof userType === 'string') {
+        // Map string to UserType enum
+        const typeMap: Record<string, UserType> = {
+            'admin': UserType.ADMIN,
+            'super_admin': UserType.ADMIN,
+            'finance_admin': UserType.FINANCE_ADMIN,
+            'finance_manager': UserType.FINANCE_ADMIN,
+            'manager': UserType.FINANCE_ADMIN,
+            'accountant': UserType.ACCOUNTANT,
+            'employee': UserType.EMPLOYEE,
+        };
+        normalizedUserType = typeMap[userType.toLowerCase()] || UserType.EMPLOYEE;
+    } else {
+        normalizedUserType = userType;
+    }
+    
+    const cacheKey = `${normalizedUserType}:${componentId}`;
     if (accessCache.has(cacheKey)) {
         return accessCache.get(cacheKey)!;
     }
-    const normalizedUserType = userType.toString().toLowerCase();
+    
     // Admin always gets access
-    if (normalizedUserType === UserType.ADMIN.toLowerCase()) {
+    if (normalizedUserType === UserType.ADMIN) {
         accessCache.set(cacheKey, true);
         return true;
     }
+    
     // Check mapping
-    const allowedComponents = USER_TYPE_COMPONENT_MAP[userType as UserType] ?? [];
+    const allowedComponents = USER_TYPE_COMPONENT_MAP[normalizedUserType] ?? [];
     const result = allowedComponents.includes(componentId);
 
     accessCache.set(cacheKey, result);

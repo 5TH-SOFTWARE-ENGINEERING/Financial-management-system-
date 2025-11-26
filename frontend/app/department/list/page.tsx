@@ -1,11 +1,170 @@
 'use client';
 import { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Building2, Plus, Edit, Trash2 } from 'lucide-react';
+import { AlertCircle, Building2, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// ──────────────────────────────────────────
+// Styled Components
+// ──────────────────────────────────────────
+const LayoutWrapper = styled.div`
+  display: flex;
+  background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
+  padding: 32px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-between;
+  align-items: center;
+  margin-bottom: 24px;
+`;
+
+const HeaderText = styled.div`
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  
+  p {
+    color: var(--muted-foreground);
+  }
+`;
+
+const MessageBox = styled.div<{ type: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+`;
+
+const Card = styled.div`
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 48px 24px;
+  
+  svg {
+    margin: 0 auto 16px;
+    color: var(--muted-foreground);
+  }
+  
+  p {
+    color: var(--muted-foreground);
+    margin-bottom: 16px;
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const TableHeader = styled.thead`
+  border-bottom: 1px solid var(--border);
+  
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: var(--foreground);
+    font-size: 14px;
+  }
+`;
+
+const TableBody = styled.tbody`
+  tr {
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background: var(--muted);
+    }
+    
+    td {
+      padding: 12px 16px;
+      color: var(--muted-foreground);
+      font-size: 14px;
+    }
+  }
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const LoadingContainer = styled.div`
+  padding: 32px;
+  text-align: center;
+  
+  p {
+    color: var(--muted-foreground);
+    margin-top: 16px;
+  }
+`;
+
+const Spinner = styled.div`
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
 
 interface Department {
   id: number;
@@ -36,7 +195,6 @@ export default function DepartmentListPage() {
       const response = await apiClient.getDepartments();
       setDepartments(response.data || []);
     } catch (err: any) {
-      // If endpoint doesn't exist yet, show empty state with helpful message
       if (err.response?.status === 404) {
         setError('Department API endpoint not yet implemented. Please implement backend endpoints.');
         setDepartments([]);
@@ -62,114 +220,123 @@ export default function DepartmentListPage() {
     }
   };
 
-
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading departments...</p>
-        </div>
-      </div>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <LoadingContainer>
+            <Spinner />
+            <p>Loading departments...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Departments</h1>
-          <p className="text-muted-foreground mt-1">Manage organizational departments</p>
-        </div>
-        <Link href="/department/create">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Department
-          </Button>
-        </Link>
-      </div>
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
-        {departments.length === 0 ? (
-          <div className="text-center py-12">
-            <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground mb-4">No departments found.</p>
+        <InnerContent>
+          <Header>
+            <HeaderText>
+              <h1>Departments</h1>
+              <p>Manage organizational departments</p>
+            </HeaderText>
             <Link href="/department/create">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Create First Department
+                Create Department
               </Button>
             </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Name</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Description</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Manager</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Employees</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Created</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {departments.map((dept) => (
-                  <tr key={dept.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium text-foreground">{dept.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {dept.description || 'N/A'}
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {dept.manager_name || 'Not assigned'}
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {dept.employee_count ?? 0}
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {dept.created_at 
-                        ? new Date(dept.created_at).toLocaleDateString()
-                        : 'N/A'}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <Link href={`/department/edit/${dept.id}`}>
-                          <Button size="sm" variant="secondary">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                        </Link>
-                        <Button 
-                          size="sm" 
-                          variant="destructive"
-                          onClick={() => handleDelete(dept.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+          </Header>
+
+          {error && (
+            <MessageBox type="error">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </MessageBox>
+          )}
+
+          <Card>
+            {departments.length === 0 ? (
+              <EmptyState>
+                <Building2 size={48} />
+                <p>No departments found.</p>
+                <Link href="/department/create">
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Department
+                  </Button>
+                </Link>
+              </EmptyState>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <Table>
+                  <TableHeader>
+                    <tr>
+                      <th>Name</th>
+                      <th>Description</th>
+                      <th>Manager</th>
+                      <th>Employees</th>
+                      <th>Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </TableHeader>
+                  <TableBody>
+                    {departments.map((dept) => (
+                      <tr key={dept.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Building2 size={16} style={{ color: 'var(--muted-foreground)' }} />
+                            <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                              {dept.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td>{dept.description || 'N/A'}</td>
+                        <td>{dept.manager_name || 'Not assigned'}</td>
+                        <td>{dept.employee_count ?? 0}</td>
+                        <td>
+                          {dept.created_at 
+                            ? new Date(dept.created_at).toLocaleDateString()
+                            : 'N/A'}
+                        </td>
+                        <td>
+                          <ActionButtons>
+                            <Link href={`/department/edit/${dept.id}`}>
+                              <Button size="sm" variant="secondary">
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                            </Link>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => handleDelete(dept.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </ActionButtons>
+                        </td>
+                      </tr>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </Card>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }
-

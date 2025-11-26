@@ -111,7 +111,21 @@ export default function FinanceListPage() {
 
       setFinanceManagers(managers);
     } catch (err: any) {
-      const message = err.response?.data?.detail || 'Failed to load finance managers';
+      console.error('Error loading finance managers:', err);
+      let message = 'Failed to load finance managers';
+      
+      if (err.response) {
+        if (err.response.status === 404) {
+          message = 'Users endpoint not found. Please check API configuration.';
+        } else if (err.response.status === 403) {
+          message = 'You do not have permission to view users. Only managers and admins can access this page.';
+        } else {
+          message = err.response?.data?.detail || err.response?.data?.message || message;
+        }
+      } else if (err.message) {
+        message = err.message;
+      }
+      
       setError(message);
       toast.error(message);
     } finally {
@@ -241,9 +255,9 @@ export default function FinanceListPage() {
                       <td>{m.phone || 'N/A'}</td>
                       <td>{m.department || 'N/A'}</td>
                       <td>
-                        <Badge active={m.is_active}>
-                          {m.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
+                      <Badge active={m.is_active}>
+                         {m.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
                       </td>
                       <td style={{ padding: '12px', display: 'flex', gap: 8 }}>
                         <Link href={`/finance/edit/${m.id}`}>

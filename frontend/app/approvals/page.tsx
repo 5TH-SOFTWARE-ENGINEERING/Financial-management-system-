@@ -46,6 +46,14 @@ export default function ApprovalsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { canApproveTransactions } = useUserStore();
+  
+  // Also check user from auth context for approval permissions
+  const canApprove = () => {
+    if (canApproveTransactions()) return true;
+    if (!user) return false;
+    const role = user.role?.toLowerCase();
+    return role === 'admin' || role === 'super_admin' || role === 'manager' || role === 'finance_manager';
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
@@ -132,7 +140,7 @@ export default function ApprovalsPage() {
   };
 
   const handleApprove = async (item: ApprovalItem) => {
-    if (!canApproveTransactions()) {
+    if (!canApprove()) {
       alert('You do not have permission to approve items');
       return;
     }
@@ -162,7 +170,7 @@ export default function ApprovalsPage() {
   };
 
   const handleReject = async (item: ApprovalItem, reason: string) => {
-    if (!canApproveTransactions()) {
+    if (!canApprove()) {
       alert('You do not have permission to reject items');
       return;
     }
@@ -376,7 +384,7 @@ export default function ApprovalsPage() {
                     </div>
                     
                     <div className="flex items-center gap-2 ml-4">
-                      {item.status === 'pending' && canApproveTransactions() && (
+                      {item.status === 'pending' && canApprove() && (
                         <>
                           <Button
                             size="sm"

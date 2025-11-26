@@ -1,0 +1,16 @@
+{
+  "title": "finance",
+  "period": {
+    "start_date": "2025-10-27T19:26:06.558387",
+    "end_date": "2025-11-26T19:26:06.558387"
+  },
+  "summary": {
+    "total_revenue": 0.0,
+    "total_expenses": 0.0,
+    "profit": 0.0,
+    "profit_margin": 0
+  },
+  "revenue_by_category": [],
+  "expenses_by_category": [],
+  "generated_at": "2025-11-26T19:26:06.559410"
+}

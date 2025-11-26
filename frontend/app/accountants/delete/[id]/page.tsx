@@ -2,93 +2,177 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import styled from 'styled-components'; // Import styled
+import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, ArrowLeft, Users, Loader2, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 
 /* --------------------------------- STYLED COMPONENTS ---------------------------------- */
 
-const PageContainer = styled.div`
-  padding: 32px;
-  max-width: 800px;
-  margin: 0 auto;
-`;
-
-const PageHeader = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 32px;
-`;
-
-const AlertBox = styled.div<{ status: 'error' | 'success' }>`
-  margin-bottom: 16px;
-  padding: 16px;
-  border-radius: 8px;
+const LayoutWrapper = styled.div`
   display: flex;
-  align-items: center;
-  gap: 8px;
-  
-  /* Conditional styling based on status */
-  ${({ status }) =>
-    status === 'error'
-      ? `
-        background: #FEF2F2; /* red-50 */
-        border: 1px solid #FECACA; /* red-200 */
-        color: #B91C1C; /* red-700 */
-      `
-      : `
-        background: #ECFDF5; /* green-50 */
-        border: 1px solid #A7F3D0; /* green-200 */
-        color: #047857; /* green-700 */
-      `}
+  background: #f5f6fa;
+  min-height: 100vh;
 `;
 
-const Card = styled.div`
-  background: var(--card, #ffffff);
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow */
-`;
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 
-const ConfirmationText = styled.p`
-  font-size: 1.125rem; /* lg */
-  font-weight: 600; /* semibold */
-  margin-bottom: 16px;
-  color: #B91C1C; /* red-700 */
-`;
-
-const UserDetails = styled.div`
-  background: #F9FAFB; /* gray-50 */
-  padding: 16px;
-  border-radius: 6px;
-  margin-bottom: 24px;
-  line-height: 1.5;
-  
-  strong {
-    font-weight: 700;
-    margin-right: 4px;
+  @media (max-width: 768px) {
+    width: auto;
   }
 `;
 
-const WarningText = styled.p`
-  margin-top: 16px;
-  font-size: 0.875rem; /* sm */
-  color: #4B5563; /* gray-600 */
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
+  padding: 32px;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+`;
+
+const BackLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-bottom: 16px;
+  transition: 0.2s;
+
+  &:hover {
+    color: var(--foreground);
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const Subtitle = styled.p`
+  color: var(--muted-foreground);
+  margin-bottom: 24px;
+`;
+
+const Card = styled.div`
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+`;
+
+const AlertBox = styled.div<{ status: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  background: ${(p) => (p.status === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.status === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.status === 'error' ? '#991b1b' : '#065f46')};
+`;
+
+const WarningSection = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+  
+  .icon-wrapper {
+    padding: 12px;
+    background: #fee2e2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--foreground);
+  }
+  
+  p {
+    color: var(--muted-foreground);
+    margin-bottom: 16px;
+  }
+`;
+
+const InfoBox = styled.div`
+  background: var(--muted);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  
+  div {
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    span:first-child {
+      font-weight: 500;
+      color: var(--foreground);
+      margin-right: 8px;
+    }
+    
+    span:last-child {
+      color: var(--muted-foreground);
+    }
+  }
+`;
+
+const StatusBadge = styled.span<{ active: boolean }>`
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${(p) => (p.active ? '#d1fae5' : '#fee2e2')};
+  color: ${(p) => (p.active ? '#065f46' : '#991b1b')};
 `;
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: 16px;
-  margin-top: 24px;
+  gap: 12px;
 `;
 
-const CenteredMessage = styled.div`
-  padding-top: 48px;
+const LoadingContainer = styled.div`
+  padding: 32px;
   text-align: center;
-  font-size: 1rem;
+  
+  p {
+    color: var(--muted-foreground);
+    margin-top: 16px;
+  }
 `;
 
 /* --------------------------------- PAGE ---------------------------------- */
@@ -163,89 +247,149 @@ export default function DeleteAccountantPage() {
 
   if (loadingUser) {
     return (
-      <PageContainer>
-        <CenteredMessage>
-          <p>Loading accountant...</p>
-        </CenteredMessage>
-      </PageContainer>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <LoadingContainer>
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p>Loading accountant...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   if (!accountant) {
     return (
-      <PageContainer>
-        <AlertBox status="error">
-          <AlertCircle size={16} />
-          <span>{error || 'Accountant not found'}</span>
-        </AlertBox>
-        <Button 
-          className="mt-4" 
-          variant="secondary"
-          onClick={() => router.push('/accountants')}
-        >
-          Back to Accountants
-        </Button>
-      </PageContainer>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <InnerContent>
+            <BackLink href="/accountants/list">
+              <ArrowLeft size={16} />
+              Back to Accountants
+            </BackLink>
+            <AlertBox status="error">
+              <AlertCircle size={18} />
+              {error || 'Accountant not found'}
+            </AlertBox>
+          </InnerContent>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <PageContainer>
-      <PageHeader>Delete Accountant</PageHeader>
-      
-      {/* Alerts */}
-      {error && (
-        <AlertBox status="error">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </AlertBox>
-      )}
-      
-      {success && (
-        <AlertBox status="success">
-          <CheckCircle size={16} />
-          <span>{success}</span>
-        </AlertBox>
-      )}
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
 
-      {/* Confirmation Card */}
-      <Card>
-        <ConfirmationText>
-          Are you sure you want to delete this accountant?
-        </ConfirmationText>
-        
-        <UserDetails>
-          <p><strong>Name:</strong> {accountant.full_name || 'N/A'}</p>
-          <p><strong>Email:</strong> {accountant.email}</p>
-          <p><strong>Username:</strong> {accountant.username}</p>
-          <p><strong>Department:</strong> {accountant.department || 'N/A'}</p>
-        </UserDetails>
-        
-        <WarningText>
-          This action cannot be undone. All data associated with this accountant will be permanently deleted.
-        </WarningText>
+        <InnerContent>
+          <BackLink href="/accountants/list">
+            <ArrowLeft size={16} />
+            Back to Accountants
+          </BackLink>
 
-        <ButtonRow>
-          <Button 
-            type="button" 
-            variant="secondary" 
-            onClick={() => router.push('/accountants')}
-            disabled={loading}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="button"
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={loading}
-            className="flex-1"
-          >
-            {loading ? 'Deleting...' : 'Delete Accountant'}
-          </Button>
-        </ButtonRow>
-      </Card>
-    </PageContainer>
+          <Title>
+            <Users className="h-8 w-8" style={{ color: '#dc2626' }} />
+            Delete Accountant
+          </Title>
+          <Subtitle>Confirm deletion of accountant</Subtitle>
+
+          {error && (
+            <AlertBox status="error">
+              <AlertCircle size={18} />
+              {error}
+            </AlertBox>
+          )}
+
+          {success && (
+            <AlertBox status="success">
+              <CheckCircle size={18} />
+              {success}
+            </AlertBox>
+          )}
+
+          <Card style={{ borderColor: '#fecaca' }}>
+            <WarningSection>
+              <div className="icon-wrapper">
+                <AlertTriangle size={24} style={{ color: '#dc2626' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h2>Are you sure you want to delete this accountant?</h2>
+                <p>
+                  This action cannot be undone. All data associated with this accountant will be permanently deleted.
+                </p>
+              </div>
+            </WarningSection>
+
+            <InfoBox>
+              <div>
+                <span>Name:</span>
+                <span>{accountant.full_name || 'N/A'}</span>
+              </div>
+              <div>
+                <span>Email:</span>
+                <span>{accountant.email}</span>
+              </div>
+              <div>
+                <span>Username:</span>
+                <span>{accountant.username}</span>
+              </div>
+              <div>
+                <span>Department:</span>
+                <span>{accountant.department || 'N/A'}</span>
+              </div>
+              <div>
+                <span>Status:</span>
+                <StatusBadge active={accountant.is_active ?? true}>
+                  {accountant.is_active ? 'Active' : 'Inactive'}
+                </StatusBadge>
+              </div>
+            </InfoBox>
+
+            <ButtonRow>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={() => router.push('/accountants/list')}
+                disabled={loading}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={loading}
+                className="flex-1"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Delete Accountant
+                  </>
+                )}
+              </Button>
+            </ButtonRow>
+          </Card>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }

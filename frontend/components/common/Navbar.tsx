@@ -22,6 +22,7 @@ import { useUserStore } from '@/store/userStore';
 import { theme } from './theme';
 import apiClient from '@/lib/api';
 import { usePathname } from 'next/navigation';
+import { toast } from 'sonner';
 
 const PRIMARY_ACCENT = '#06b6d4'; 
 const PRIMARY_HOVER = '#0891b2';
@@ -299,6 +300,8 @@ const DropdownItem = styled.div`
 
 const SignOutItem = styled(DropdownItem)`
   color: ${DANGER_COLOR}; 
+  cursor: pointer;
+  user-select: none;
 
   &:hover {
     background: ${DANGER_COLOR}10;
@@ -307,6 +310,10 @@ const SignOutItem = styled(DropdownItem)`
     svg {
         color: #b91c1c;
     }
+  }
+  
+  &:active {
+    background: ${DANGER_COLOR}20;
   }
 `;
 export default function Navbar() {
@@ -322,7 +329,12 @@ export default function Navbar() {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      // Don't close if clicking on the dropdown menu itself or signout
+      const target = e.target as HTMLElement;
+      const isSignOutClick = target?.closest('[data-signout]');
+      const isDropdownClick = target?.closest('[data-dropdown-menu]');
+      
+      if (dropdownRef.current && !dropdownRef.current.contains(target as Node) && !isSignOutClick && !isDropdownClick) {
         setIsDropdownOpen(false);
       }
     };
@@ -407,8 +419,111 @@ export default function Navbar() {
     setIsDropdownOpen(false);
   };
   
-  const handleSignOut = () => {
-    logout();
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Sign out clicked'); // Debug log
+    
+    // Close dropdown immediately
+    setIsDropdownOpen(false);
+    
+    // Show loading toast
+    toast.loading('Signing out...', { id: 'signout' });
+    
+    try {
+      // First, call backend logout API to invalidate session
+      try {
+        await apiClient.logout();
+        console.log('Backend logout successful');
+      } catch (apiErr: any) {
+        console.error('Backend logout error (continuing anyway):', apiErr);
+        // Continue with logout even if API call fails
+      }
+      
+      // Then clear store state (which also calls logout but we already did it)
+      try {
+        const store = useUserStore.getState();
+        if (store.logout) {
+          // Call store logout to clear state (it will try API again but that's ok)
+          await store.logout();
+        }
+      } catch (storeErr) {
+        console.error('Store logout error:', storeErr);
+        // Manually clear store state if logout fails - use the store's internal setter
+        useUserStore.setState({
+          user: null,
+          isAuthenticated: false,
+          subordinates: [],
+          allUsers: [],
+          isLoading: false,
+          error: null,
+        });
+      }
+      
+      // Try auth context logout
+      if (logout) {
+        try {
+          await logout();
+        } catch (authErr) {
+          console.error('Auth context logout error:', authErr);
+        }
+      }
+      
+      // Clear localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('language');
+      }
+      
+      // Show success
+      toast.success('Signed out successfully', { id: 'signout' });
+      
+      // Redirect after a short delay to show success message
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
+      
+    } catch (error) {
+      console.error('Sign out error:', error);
+      
+      // Even if everything fails, clear local storage and redirect
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('language');
+      }
+      
+      // Clear store state
+      try {
+        useUserStore.setState({
+          user: null,
+          isAuthenticated: false,
+          subordinates: [],
+          allUsers: [],
+          isLoading: false,
+          error: null,
+        });
+      } catch (err) {
+        console.error('Error clearing store:', err);
+      }
+      
+      toast.success('Signed out', { id: 'signout' });
+      
+      // Redirect to home page
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
+    }
+  };
+  
+  const handleSignOutMouseDown = (e: React.MouseEvent) => {
+    // Prevent dropdown from closing when clicking sign out
+    e.preventDefault();
+    e.stopPropagation();
+    // Execute signout immediately on mousedown
+    handleSignOut(e);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -505,7 +620,18 @@ export default function Navbar() {
             <UserRole>{displayRole}</UserRole>
           </UserInfo>
         </UserProfileContainer>
-        <DropdownMenu $isOpen={isDropdownOpen}>
+        <DropdownMenu 
+          data-dropdown-menu="true"
+          $isOpen={isDropdownOpen}
+          onClick={(e) => {
+            // Prevent clicks inside dropdown from closing it
+            e.stopPropagation();
+          }}
+          onMouseDown={(e) => {
+            // Prevent mousedown from closing dropdown
+            e.stopPropagation();
+          }}
+        >
           <DropdownItem onClick={handleProfileClick}>
             <User size={16} />
             <span>Profile</span>
@@ -520,7 +646,16 @@ export default function Navbar() {
               <span>Role & Permission Management</span>
             </DropdownItem>
           </ComponentGate>
-          <SignOutItem onClick={handleSignOut}>
+          <SignOutItem 
+            data-signout="true"
+            onMouseDown={handleSignOutMouseDown}
+            onClick={(e) => {
+              // Prevent default and stop propagation
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            style={{ cursor: 'pointer' }}
+          >
             <LogOut size={16} />
             <span>Sign Out</span>
           </SignOutItem>

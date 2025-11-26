@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateProjectSchema, type CreateProjectInput } from '@/lib/validation';
@@ -7,12 +8,193 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, FolderKanban, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
+
+// ──────────────────────────────────────────
+// Styled Components Layout
+// ──────────────────────────────────────────
+const LayoutWrapper = styled.div`
+  display: flex;
+  background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
+  padding: 32px;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+`;
+
+const BackLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-bottom: 16px;
+  transition: 0.2s;
+
+  &:hover {
+    color: var(--foreground);
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const Subtitle = styled.p`
+  color: var(--muted-foreground);
+  margin-bottom: 24px;
+`;
+
+const FormCard = styled.form`
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const FieldError = styled.p`
+  color: #dc2626;
+  font-size: 14px;
+  margin-top: 4px;
+`;
+
+const MessageBox = styled.div<{ type: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 12px;
+  padding-top: 12px;
+`;
+
+const GridRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--foreground);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const UsersList = styled.div`
+  max-height: 192px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+`;
+
+const CheckboxItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+  
+  label {
+    font-size: 14px;
+    cursor: pointer;
+    flex: 1;
+  }
+`;
+
+const LoadingContainer = styled.div`
+  padding: 32px;
+  text-align: center;
+  
+  p {
+    color: var(--muted-foreground);
+    margin-top: 16px;
+  }
+`;
 
 export default function EditProjectPage() {
   const router = useRouter();
@@ -140,198 +322,183 @@ export default function EditProjectPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-2xl mx-auto">
-        <div className="text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading project...</p>
-        </div>
-      </div>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <LoadingContainer>
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p>Loading project...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link 
-          href="/project/list"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Projects
-        </Link>
-        <div className="flex items-center gap-3 mb-2">
-          <FolderKanban className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold text-foreground">Edit Project</h1>
-        </div>
-        <p className="text-muted-foreground">Update project information</p>
-      </div>
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
+        <InnerContent>
+          <BackLink href="/project/list">
+            <ArrowLeft size={16} />
+            Back to Projects
+          </BackLink>
 
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center gap-2 text-green-700">
-          <CheckCircle size={16} />
-          <span>{success}</span>
-        </div>
-      )}
+          <Title>
+            <FolderKanban className="h-8 w-8 text-primary" />
+            Edit Project
+          </Title>
+          <Subtitle>Update project information</Subtitle>
 
-      <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <Label htmlFor="name">Project Name *</Label>
-            <Input
-              id="name"
-              {...register('name')}
-              placeholder="e.g., Website Redesign"
-              disabled={submitting}
-              className="mt-1"
-            />
-            {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{String(errors.name.message || '')}</p>
-            )}
-          </div>
+          {error && (
+            <MessageBox type="error">
+              <AlertCircle size={18} />
+              {error}
+            </MessageBox>
+          )}
 
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              {...register('description')}
-              placeholder="Project description"
-              disabled={submitting}
-              className="mt-1"
-              rows={3}
-            />
-            {errors.description && (
-              <p className="mt-1 text-sm text-red-600">{String(errors.description.message || '')}</p>
-            )}
-          </div>
+          {success && (
+            <MessageBox type="success">
+              <CheckCircle size={18} />
+              {success}
+            </MessageBox>
+          )}
 
-          <div>
-            <Label htmlFor="departmentId">Department *</Label>
-            <select
-              id="departmentId"
-              {...register('departmentId')}
-              disabled={submitting}
-              className="mt-1 w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Select department</option>
-              {departments.map(dept => (
-                <option key={dept.id} value={dept.id.toString()}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
-            {errors.departmentId && (
-              <p className="mt-1 text-sm text-red-600">{String(errors.departmentId.message || '')}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="budget">Budget (Optional)</Label>
-            <Input
-              id="budget"
-              type="number"
-              step="0.01"
-              min="0"
-              {...register('budget', { valueAsNumber: true })}
-              placeholder="0.00"
-              disabled={submitting}
-              className="mt-1"
-            />
-            {errors.budget && (
-              <p className="mt-1 text-sm text-red-600">{String(errors.budget.message || '')}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="startDate">Start Date *</Label>
+          <FormCard onSubmit={handleSubmit(onSubmit)}>
+            <FormGroup>
+              <Label htmlFor="name">Project Name *</Label>
               <Input
-                id="startDate"
-                type="date"
-                {...register('startDate')}
+                id="name"
+                {...register('name')}
+                placeholder="e.g., Website Redesign"
                 disabled={submitting}
-                className="mt-1"
               />
-              {errors.startDate && (
-                <p className="mt-1 text-sm text-red-600">{String(errors.startDate.message || '')}</p>
-              )}
-            </div>
+              {errors.name && <FieldError>{String(errors.name.message || '')}</FieldError>}
+            </FormGroup>
 
-            <div>
-              <Label htmlFor="endDate">End Date (Optional)</Label>
+            <FormGroup>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                {...register('description')}
+                placeholder="Project description"
+                disabled={submitting}
+                rows={3}
+              />
+              {errors.description && <FieldError>{String(errors.description.message || '')}</FieldError>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="departmentId">Department *</Label>
+              <Select
+                id="departmentId"
+                {...register('departmentId')}
+                disabled={submitting}
+              >
+                <option value="">Select department</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.id.toString()}>
+                    {dept.name}
+                  </option>
+                ))}
+              </Select>
+              {errors.departmentId && <FieldError>{String(errors.departmentId.message || '')}</FieldError>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="budget">Budget (Optional)</Label>
               <Input
-                id="endDate"
-                type="date"
-                {...register('endDate')}
+                id="budget"
+                type="number"
+                step="0.01"
+                min="0"
+                {...register('budget', { valueAsNumber: true })}
+                placeholder="0.00"
                 disabled={submitting}
-                className="mt-1"
               />
-              {errors.endDate && (
-                <p className="mt-1 text-sm text-red-600">{String(errors.endDate.message || '')}</p>
-              )}
-            </div>
-          </div>
+              {errors.budget && <FieldError>{String(errors.budget.message || '')}</FieldError>}
+            </FormGroup>
 
-          <div>
-            <Label>Assigned Users</Label>
-            <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
-              {allUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No users available</p>
-              ) : (
-                allUsers.map((user) => (
-                  <div key={user.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`user-${user.id}`}
-                      checked={selectedUsers.includes(user.id)}
-                      onChange={() => toggleUser(user.id)}
-                      disabled={submitting}
-                      className="h-4 w-4"
-                    />
-                    <label
-                      htmlFor={`user-${user.id}`}
-                      className="text-sm cursor-pointer flex-1"
-                    >
-                      {(user as any).full_name || user.email} ({user.role})
-                    </label>
-                  </div>
-                ))
-              )}
-            </div>
-            {errors.assignedUsers && (
-              <p className="mt-1 text-sm text-red-600">{String(errors.assignedUsers.message || '')}</p>
-            )}
-          </div>
+            <GridRow>
+              <FormGroup>
+                <Label htmlFor="startDate">Start Date *</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  {...register('startDate')}
+                  disabled={submitting}
+                />
+                {errors.startDate && <FieldError>{String(errors.startDate.message || '')}</FieldError>}
+              </FormGroup>
 
-          <div className="flex gap-4 pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => router.push('/project/list')}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting} className="flex-1">
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Project'
-              )}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+              <FormGroup>
+                <Label htmlFor="endDate">End Date (Optional)</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  {...register('endDate')}
+                  disabled={submitting}
+                />
+                {errors.endDate && <FieldError>{String(errors.endDate.message || '')}</FieldError>}
+              </FormGroup>
+            </GridRow>
+
+            <FormGroup>
+              <Label>Assigned Users</Label>
+              <UsersList>
+                {allUsers.length === 0 ? (
+                  <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>No users available</p>
+                ) : (
+                  allUsers.map((user) => (
+                    <CheckboxItem key={user.id}>
+                      <input
+                        type="checkbox"
+                        id={`user-${user.id}`}
+                        checked={selectedUsers.includes(user.id)}
+                        onChange={() => toggleUser(user.id)}
+                        disabled={submitting}
+                      />
+                      <label htmlFor={`user-${user.id}`}>
+                        {(user as any).full_name || user.email} ({user.role})
+                      </label>
+                    </CheckboxItem>
+                  ))
+                )}
+              </UsersList>
+              {errors.assignedUsers && <FieldError>{String(errors.assignedUsers.message || '')}</FieldError>}
+            </FormGroup>
+
+            <ButtonRow>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => router.push('/project/list')}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting} className="flex-1">
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Project'
+                )}
+              </Button>
+            </ButtonRow>
+          </FormCard>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }
 

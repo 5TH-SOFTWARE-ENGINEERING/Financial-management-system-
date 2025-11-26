@@ -43,15 +43,15 @@ const Nav = styled.nav`
   height: fit-content;
 `;
 
-const NavItem = styled.a<{ active: boolean }>`
+const NavItem = styled(Link)<{ $active: boolean }>`
   display: flex;
   align-items: center;
   padding: 12px 15px;
   margin-bottom: 5px;
   border-radius: 8px;
-  font-weight: ${props => props.active ? 700 : 500};
-  color: ${props => props.active ? '#10B981' : '#4b5563'};
-  background: ${props => props.active ? '#f0fdf4' : 'transparent'};
+  font-weight: ${props => props.$active ? 700 : 500};
+  color: ${props => props.$active ? '#10B981' : '#4b5563'};
+  background: ${props => props.$active ? '#f0fdf4' : 'transparent'};
   cursor: pointer;
   text-decoration: none;
   transition: background 0.2s;
@@ -94,26 +94,18 @@ const SettingsPage: React.FC = () => {
           </Title>
           <SettingsGrid>
             <Nav>
-              <Link href="/settings/general" passHref legacyBehavior>
-                <NavItem active={activeTab === 'general'}>
-                  <Globe /> General
-                </NavItem>
-              </Link>
-              <Link href="/settings/notifications" passHref legacyBehavior>
-                <NavItem active={activeTab === 'notifications'}>
-                  <Bell /> Notifications
-                </NavItem>
-              </Link>
-              <Link href="/settings/security" passHref legacyBehavior>
-                <NavItem active={activeTab === 'security'}>
-                  <Lock /> Security
-                </NavItem>
-              </Link>
-              <Link href="/settings/users-roles/user-roles" passHref legacyBehavior>
-                <NavItem active={activeTab === 'users-roles'}>
-                  <Users /> Users & Roles
-                </NavItem>
-              </Link>
+              <NavItem href="/settings/general" $active={activeTab === 'general'}>
+                <Globe /> General
+              </NavItem>
+              <NavItem href="/settings/notifications" $active={activeTab === 'notifications'}>
+                <Bell /> Notifications
+              </NavItem>
+              <NavItem href="/settings/security" $active={activeTab === 'security'}>
+                <Lock /> Security
+              </NavItem>
+              <NavItem href="/settings/users-roles/user-roles" $active={activeTab === 'users-roles'}>
+                <Users /> Users & Roles
+              </NavItem>
             </Nav>
 
             <SettingContent>

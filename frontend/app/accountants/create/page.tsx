@@ -14,8 +14,8 @@ import { RegisterSchema } from '@/lib/validation';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
-
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, ArrowLeft, Users, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 
 // ──────────────────────────────────────────
@@ -24,12 +24,27 @@ import { toast } from 'sonner';
 const LayoutWrapper = styled.div`
   display: flex;
   background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
   height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
 `;
 
 const ContentArea = styled.div`
   flex: 1;
-  padding-left: 260px; /* Sidebar width */
+  padding-left: 250px;
   display: flex;
   flex-direction: column;
 `;
@@ -41,9 +56,31 @@ const InnerContent = styled.div`
   margin: 0 auto;
 `;
 
+const BackLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-bottom: 16px;
+  transition: 0.2s;
+
+  &:hover {
+    color: var(--foreground);
+  }
+`;
+
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const Subtitle = styled.p`
+  color: var(--muted-foreground);
   margin-bottom: 24px;
 `;
 
@@ -58,10 +95,16 @@ const FormCard = styled.form`
   gap: 22px;
 `;
 
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
 const FieldError = styled.p`
   color: #dc2626;
   font-size: 14px;
-  margin-top: 6px;
+  margin-top: 4px;
 `;
 
 const MessageBox = styled.div<{ type: 'error' | 'success' }>`
@@ -77,6 +120,12 @@ const MessageBox = styled.div<{ type: 'error' | 'success' }>`
   color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
 `;
 
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 12px;
+  padding-top: 12px;
+`;
+
 type FormData = z.infer<typeof RegisterSchema>;
 
 // ──────────────────────────────────────────
@@ -84,7 +133,7 @@ type FormData = z.infer<typeof RegisterSchema>;
 // ──────────────────────────────────────────
 export default function CreateAccountantPage() {
   const router = useRouter();
-  const { createUser } = useUserStore();
+  const { user, fetchAllUsers } = useUserStore();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,23 +159,35 @@ export default function CreateAccountantPage() {
 
     try {
       const userData = {
-        full_name: data.full_name,
-        email: data.email,
-        username: data.username,
+        full_name: data.full_name.trim(),
+        email: data.email.toLowerCase().trim(),
+        username: data.username.trim(),
         password: data.password,
         role: 'accountant',
-        phone: data.phone || null,
-        department: data.department || null,
+        phone: data.phone?.trim() || null,
+        department: data.department?.trim() || null,
       };
 
-      await apiClient.createUser(userData);
-      await createUser(userData);
+      // Check user role to determine which endpoint to use
+      const userRole = user?.role?.toLowerCase();
+      
+      // Finance managers (manager) should use /subordinates endpoint
+      // Admins can use either endpoint, but /users is more appropriate for admins
+      if (userRole === 'manager' || userRole === 'finance_manager') {
+        await apiClient.createSubordinate(userData);
+      } else {
+        // Admin or super_admin uses the regular createUser endpoint
+        await apiClient.createUser(userData);
+      }
+
+      // Refresh the user list
+      await fetchAllUsers();
 
       setSuccess('Accountant created successfully!');
       toast.success('Accountant created successfully!');
       reset();
 
-      setTimeout(() => router.push('/accountants'), 1500);
+      setTimeout(() => router.push('/accountants/list'), 1500);
     } catch (err: any) {
       const message =
         err.response?.data?.detail ||
@@ -141,12 +202,23 @@ export default function CreateAccountantPage() {
 
   return (
     <LayoutWrapper>
-      <Sidebar />
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
       <ContentArea>
         <Navbar />
 
         <InnerContent>
-          <Title>Create Accountant</Title>
+          <BackLink href="/accountants/list">
+            <ArrowLeft size={16} />
+            Back to Accountants
+          </BackLink>
+
+          <Title>
+            <Users className="h-8 w-8 text-primary" />
+            Create Accountant
+          </Title>
+          <Subtitle>Add a new accountant to your organization</Subtitle>
 
           {error && (
             <MessageBox type="error">
@@ -163,54 +235,61 @@ export default function CreateAccountantPage() {
           )}
 
           <FormCard onSubmit={handleSubmit(onSubmit)}>
-            <div>
-              <Label>Full Name</Label>
-              <Input {...register('full_name')} />
+            <FormGroup>
+              <Label htmlFor="full_name">Full Name *</Label>
+              <Input id="full_name" {...register('full_name')} disabled={loading} />
               {errors.full_name && <FieldError>{errors.full_name.message}</FieldError>}
-            </div>
+            </FormGroup>
 
-            <div>
-              <Label>Email</Label>
-              <Input type="email" {...register('email')} />
+            <FormGroup>
+              <Label htmlFor="email">Email *</Label>
+              <Input id="email" type="email" {...register('email')} disabled={loading} />
               {errors.email && <FieldError>{errors.email.message}</FieldError>}
-            </div>
+            </FormGroup>
 
-            <div>
-              <Label>Username</Label>
-              <Input {...register('username')} />
+            <FormGroup>
+              <Label htmlFor="username">Username *</Label>
+              <Input id="username" {...register('username')} disabled={loading} />
               {errors.username && <FieldError>{errors.username.message}</FieldError>}
-            </div>
+            </FormGroup>
 
-            <div>
-              <Label>Password</Label>
-              <Input type="password" {...register('password')} />
+            <FormGroup>
+              <Label htmlFor="password">Password *</Label>
+              <Input id="password" type="password" {...register('password')} disabled={loading} />
               {errors.password && <FieldError>{errors.password.message}</FieldError>}
-            </div>
+            </FormGroup>
 
-            <div>
-              <Label>Phone (optional)</Label>
-              <Input {...register('phone')} />
-            </div>
+            <FormGroup>
+              <Label htmlFor="phone">Phone (Optional)</Label>
+              <Input id="phone" {...register('phone')} disabled={loading} />
+            </FormGroup>
 
-            <div>
-              <Label>Department (optional)</Label>
-              <Input {...register('department')} />
-            </div>
+            <FormGroup>
+              <Label htmlFor="department">Department (Optional)</Label>
+              <Input id="department" {...register('department')} disabled={loading} />
+            </FormGroup>
 
-            <div style={{ display: 'flex', gap: 12 }}>
+            <ButtonRow>
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => router.back()}
+                onClick={() => router.push('/accountants/list')}
                 disabled={loading}
               >
                 Cancel
               </Button>
 
-              <Button type="submit" disabled={loading} style={{ flex: 1 }}>
-                {loading ? 'Creating...' : 'Create Accountant'}
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Accountant'
+                )}
               </Button>
-            </div>
+            </ButtonRow>
           </FormCard>
         </InnerContent>
       </ContentArea>

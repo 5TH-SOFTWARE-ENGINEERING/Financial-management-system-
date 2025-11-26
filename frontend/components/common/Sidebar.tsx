@@ -226,13 +226,13 @@ const Sidebar: React.FC = () => {
                 {isOpen('expense') && (
                     <SubMenu $collapsed={collapsed}>
                         <ComponentGate componentId={ComponentId.EXPENSE_CREATE}>
-                            <NavItem href="/expense/create" $active={pathname === '/expense/create'} $collapsed={collapsed}>
+                            <NavItem href="/expenses/create" $active={pathname === '/expense/create'} $collapsed={collapsed}>
                                 <UserPlus size={16} /> {/* Added icon for Create */}
                                 {!collapsed && 'Add Expense'}
                             </NavItem>
                         </ComponentGate>
                         <ComponentGate componentId={ComponentId.EXPENSE_LIST}>
-                            <NavItem href="/expense/list" $active={pathname === '/expense/list'} $collapsed={collapsed}>
+                            <NavItem href="/expenses/list" $active={pathname === '/expense/list'} $collapsed={collapsed}>
                                 <List size={16} /> {/* Added icon for List */}
                                 {!collapsed && 'All Expenses'}
                             </NavItem>

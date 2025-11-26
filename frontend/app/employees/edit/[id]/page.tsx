@@ -1,17 +1,138 @@
 'use client';
 import { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
 import { useRouter, useParams } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { CheckCircle, AlertCircle, ArrowLeft, Users, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+
+// ──────────────────────────────────────────
+// Styled Components
+// ──────────────────────────────────────────
+const LayoutWrapper = styled.div`
+  display: flex;
+  background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
+  padding: 32px;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+`;
+
+const BackLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-bottom: 16px;
+  transition: 0.2s;
+
+  &:hover {
+    color: var(--foreground);
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const Subtitle = styled.p`
+  color: var(--muted-foreground);
+  margin-bottom: 24px;
+`;
+
+const FormCard = styled.form`
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const FieldError = styled.p`
+  color: #dc2626;
+  font-size: 14px;
+  margin-top: 4px;
+`;
+
+const MessageBox = styled.div<{ type: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 12px;
+  padding-top: 12px;
+`;
+
+const LoadingContainer = styled.div`
+  padding: 32px;
+  text-align: center;
+  
+  p {
+    color: var(--muted-foreground);
+    margin-top: 16px;
+  }
+`;
 
 const UpdateEmployeeSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -113,112 +234,120 @@ export default function EditEmployeePage() {
 
   if (loadingUser) {
     return (
-      <div className="p-8 max-w-2xl mx-auto">
-        <div className="text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading employee...</p>
-        </div>
-      </div>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <LoadingContainer>
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p>Loading employee...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link 
-          href="/employees/list"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Employees
-        </Link>
-        <div className="flex items-center gap-3 mb-2">
-          <Users className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold text-foreground">Edit Employee</h1>
-        </div>
-        <p className="text-muted-foreground">Update employee information</p>
-      </div>
-      
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
-      
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center gap-2 text-green-700">
-          <CheckCircle size={16} />
-          <span>{success}</span>
-        </div>
-      )}
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
 
-      <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <Label htmlFor="full_name">Full Name *</Label>
-            <Input id="full_name" {...register('full_name')} disabled={loading} className="mt-1" />
-            {errors.full_name && <p className="text-red-500 text-sm mt-1">{errors.full_name.message}</p>}
-          </div>
+        <InnerContent>
+          <BackLink href="/employees/list">
+            <ArrowLeft size={16} />
+            Back to Employees
+          </BackLink>
 
-          <div>
-            <Label htmlFor="email">Email *</Label>
-            <Input id="email" type="email" {...register('email')} disabled={loading} className="mt-1" />
-            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
-          </div>
+          <Title>
+            <Users className="h-8 w-8 text-primary" />
+            Edit Employee
+          </Title>
+          <Subtitle>Update employee information</Subtitle>
 
-          <div>
-            <Label htmlFor="username">Username *</Label>
-            <Input id="username" {...register('username')} disabled={loading} className="mt-1" />
-            {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>}
-          </div>
+          {error && (
+            <MessageBox type="error">
+              <AlertCircle size={18} />
+              {error}
+            </MessageBox>
+          )}
 
-          <div>
-            <Label htmlFor="phone">Phone (Optional)</Label>
-            <Input id="phone" {...register('phone')} disabled={loading} className="mt-1" />
-          </div>
+          {success && (
+            <MessageBox type="success">
+              <CheckCircle size={18} />
+              {success}
+            </MessageBox>
+          )}
 
-          <div>
-            <Label htmlFor="department">Department (Optional)</Label>
-            <Input id="department" {...register('department')} disabled={loading} className="mt-1" />
-          </div>
+          <FormCard onSubmit={handleSubmit(onSubmit)}>
+            <FormGroup>
+              <Label htmlFor="full_name">Full Name *</Label>
+              <Input id="full_name" {...register('full_name')} disabled={loading} />
+              {errors.full_name && <FieldError>{errors.full_name.message}</FieldError>}
+            </FormGroup>
 
-          <div>
-            <Label htmlFor="managerId">Manager ID (Optional)</Label>
-            <Input 
-              id="managerId" 
-              type="number" 
-              {...register('managerId')} 
-              disabled={loading} 
-              className="mt-1"
-              placeholder="Enter manager user ID"
-            />
-            {errors.managerId && <p className="text-red-500 text-sm mt-1">{errors.managerId.message}</p>}
-          </div>
+            <FormGroup>
+              <Label htmlFor="email">Email *</Label>
+              <Input id="email" type="email" {...register('email')} disabled={loading} />
+              {errors.email && <FieldError>{errors.email.message}</FieldError>}
+            </FormGroup>
 
-          <div className="flex gap-4 pt-4">
-            <Button 
-              type="button" 
-              variant="secondary" 
-              onClick={() => router.push('/employees/list')}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Employee'
-              )}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <FormGroup>
+              <Label htmlFor="username">Username *</Label>
+              <Input id="username" {...register('username')} disabled={loading} />
+              {errors.username && <FieldError>{errors.username.message}</FieldError>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="phone">Phone (Optional)</Label>
+              <Input id="phone" {...register('phone')} disabled={loading} />
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="department">Department (Optional)</Label>
+              <Input id="department" {...register('department')} disabled={loading} />
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="managerId">Manager ID (Optional)</Label>
+              <Input 
+                id="managerId" 
+                type="number" 
+                {...register('managerId')} 
+                disabled={loading} 
+                placeholder="Enter manager user ID"
+              />
+              {errors.managerId && <FieldError>{errors.managerId.message}</FieldError>}
+            </FormGroup>
+
+            <ButtonRow>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={() => router.push('/employees/list')}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Employee'
+                )}
+              </Button>
+            </ButtonRow>
+          </FormCard>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }
 

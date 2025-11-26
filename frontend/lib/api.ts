@@ -66,13 +66,31 @@ class ApiClient {
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
+        
+        // Handle 401 Unauthorized - redirect to home page (not login, as per user preference)
         if (error.response?.status === 401 && !originalRequest?._retry) {
           originalRequest._retry = true;
           if (typeof window !== 'undefined') {
             localStorage.removeItem('access_token');
-            window.location.href = '/auth/login';
+            localStorage.removeItem('refresh_token');
+            // Redirect to home page instead of login page
+            window.location.href = '/';
           }
         }
+        
+        // Handle 403 Forbidden - user doesn't have permission
+        if (error.response?.status === 403) {
+          if (typeof window !== 'undefined') {
+            // Could redirect to unauthorized page if needed
+            console.warn('Access forbidden:', error.response?.data?.detail || 'Insufficient permissions');
+          }
+        }
+        
+        // Handle network errors
+        if (!error.response) {
+          console.error('Network error:', error.message);
+        }
+        
         return Promise.reject(error);
       },
     );
@@ -172,7 +190,7 @@ class ApiClient {
   }
 
   async getUsers(): Promise<ApiResponse<User[]>> {
-    return this.get('/users');
+    return this.get('/users/');
   }
 
   async getSubordinates(userId: number): Promise<ApiResponse<User[]>> {
@@ -181,6 +199,14 @@ class ApiClient {
 
   async createUser(userData: any): Promise<ApiResponse<User>> {
     return this.post('/users', userData);
+  }
+
+  /**
+   * Create a subordinate (accountant or employee)
+   * Used by finance managers to create accountants/employees
+   */
+  async createSubordinate(userData: any): Promise<ApiResponse<User>> {
+    return this.post('/users/subordinates', userData);
   }
 
   async updateUser(userId: number, userData: any): Promise<ApiResponse<User>> {
@@ -230,6 +256,40 @@ class ApiClient {
 
   async deleteExpense(expenseId: number): Promise<ApiResponse<{ message: string }>> {
     return this.delete(`/expenses/${expenseId}`);
+  }
+
+  // Transactions (combined revenues and expenses)
+  async getTransactions(): Promise<ApiResponse<any[]>> {
+    try {
+      const [revenuesResponse, expensesResponse] = await Promise.all([
+        this.getRevenues(),
+        this.getExpenses(),
+      ]);
+
+      const revenues = (revenuesResponse.data || []).map((r: any) => ({
+        ...r,
+        transaction_type: 'revenue',
+        id: `revenue-${r.id}`,
+      }));
+
+      const expenses = (expensesResponse.data || []).map((e: any) => ({
+        ...e,
+        transaction_type: 'expense',
+        id: `expense-${e.id}`,
+        amount: -Math.abs(e.amount), // Make expenses negative
+      }));
+
+      const transactions = [...revenues, ...expenses].sort((a, b) => {
+        const dateA = new Date(a.date || a.created_at || 0).getTime();
+        const dateB = new Date(b.date || b.created_at || 0).getTime();
+        return dateB - dateA; // Most recent first
+      });
+
+      return { data: transactions };
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      throw error;
+    }
   }
 
   // Dashboard

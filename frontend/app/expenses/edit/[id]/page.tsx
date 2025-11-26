@@ -197,13 +197,24 @@ export default function EditExpensePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="category">Category *</Label>
-              <Input
+              <select
                 id="category"
                 {...register('category')}
-                placeholder="e.g., Office, Travel, Utilities"
                 disabled={submitting}
-                className="mt-1"
-              />
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <option value="">Select a category</option>
+                <option value="salary">Salary</option>
+                <option value="rent">Rent</option>
+                <option value="utilities">Utilities</option>
+                <option value="marketing">Marketing</option>
+                <option value="equipment">Equipment</option>
+                <option value="travel">Travel</option>
+                <option value="supplies">Supplies</option>
+                <option value="insurance">Insurance</option>
+                <option value="taxes">Taxes</option>
+                <option value="other">Other</option>
+              </select>
               {errors.category && (
                 <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
               )}

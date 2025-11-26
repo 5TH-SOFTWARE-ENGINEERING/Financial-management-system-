@@ -6,6 +6,7 @@ import { theme } from '@/components/common/theme';
 import { useRouter } from 'next/navigation';
 import { Resource, Action, UserType } from '@/lib/rbac/models';
 import { PermissionGate } from '@/lib/rbac/permission-gate';
+import { useAuth } from '@/lib/rbac/auth-context';
 import { Button } from '@/components/ui/button';
 import { 
   Table, 
@@ -194,19 +195,18 @@ const UserRolesPage: React.FC = () => {
     router.push('/settings/users-roles/roles');
   };
 
+  const { user } = useAuth();
+  const isAdmin = user?.userType === UserType.ADMIN || user?.role === 'admin' || user?.role === 'super_admin';
+
   return (
     <Container>
       <Title>User Role Assignment</Title>
       
-      <PermissionGate 
-        resource={Resource.SETTINGS} 
-        action={Action.UPDATE}
-        fallback={
-          <Message>
-            You do not have permission to access the user role assignment settings.
-          </Message>
-        }
-      >
+      {!isAdmin ? (
+        <Message>
+          You do not have permission to access the user role assignment settings.
+        </Message>
+      ) : (
         <Card>
           <Button onClick={navigateToRoles} style={{ marginBottom: '16px' }}>
             Manage Roles
@@ -282,7 +282,7 @@ const UserRolesPage: React.FC = () => {
             </TableBody>
           </Table>
         </Card>
-      </PermissionGate>
+      )}
     </Container>
   );
 };

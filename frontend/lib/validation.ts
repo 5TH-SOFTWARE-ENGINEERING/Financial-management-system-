@@ -70,7 +70,7 @@ export type RevenueInput = z.infer<typeof RevenueSchema>;
 export const ExpenseSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  category: z.string().min(1, 'Category is required'),
+  category: z.enum(['salary', 'rent', 'utilities', 'marketing', 'equipment', 'travel', 'supplies', 'insurance', 'taxes', 'other']),
   amount: z.number().positive('Amount must be positive'),
   vendor: z.string().optional(),
   date: z.string().min(1, 'Date is required'),

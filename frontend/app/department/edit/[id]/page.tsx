@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateDepartmentSchema, type CreateDepartmentInput } from '@/lib/validation';
@@ -7,12 +8,153 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, Building2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Building2, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useUserStore } from '@/store/userStore';
+
+// ──────────────────────────────────────────
+// Styled Components Layout
+// ──────────────────────────────────────────
+const LayoutWrapper = styled.div`
+  display: flex;
+  background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
+  padding: 32px;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+`;
+
+const BackLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-bottom: 16px;
+  transition: 0.2s;
+
+  &:hover {
+    color: var(--foreground);
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const Subtitle = styled.p`
+  color: var(--muted-foreground);
+  margin-bottom: 24px;
+`;
+
+const FormCard = styled.form`
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const FieldError = styled.p`
+  color: #dc2626;
+  font-size: 14px;
+  margin-top: 4px;
+`;
+
+const MessageBox = styled.div<{ type: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 12px;
+  padding-top: 12px;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--foreground);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const LoadingContainer = styled.div`
+  padding: 32px;
+  text-align: center;
+  
+  p {
+    color: var(--muted-foreground);
+    margin-top: 16px;
+  }
+`;
 
 export default function EditDepartmentPage() {
   const router = useRouter();
@@ -95,117 +237,118 @@ export default function EditDepartmentPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-2xl mx-auto">
-        <div className="text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading department...</p>
-        </div>
-      </div>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <LoadingContainer>
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p>Loading department...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link 
-          href="/department/list"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Departments
-        </Link>
-        <div className="flex items-center gap-3 mb-2">
-          <Building2 className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold text-foreground">Edit Department</h1>
-        </div>
-        <p className="text-muted-foreground">Update department information</p>
-      </div>
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
-          {error}
-        </div>
-      )}
+        <InnerContent>
+          <BackLink href="/department/list">
+            <ArrowLeft size={16} />
+            Back to Departments
+          </BackLink>
 
-      <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <Label htmlFor="name">Department Name *</Label>
-            <Input
-              id="name"
-              {...register('name')}
-              placeholder="e.g., Finance, HR, IT"
-              disabled={submitting}
-              className="mt-1"
-            />
-            {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-            )}
-          </div>
+          <Title>
+            <Building2 className="h-8 w-8 text-primary" />
+            Edit Department
+          </Title>
+          <Subtitle>Update department information</Subtitle>
 
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              {...register('description')}
-              placeholder="Brief description of the department"
-              disabled={submitting}
-              className="mt-1"
-              rows={4}
-            />
-            {errors.description && (
-              <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
-            )}
-          </div>
+          {error && (
+            <MessageBox type="error">
+              <AlertCircle size={18} />
+              {error}
+            </MessageBox>
+          )}
 
-          <div>
-            <Label htmlFor="managerId">Manager</Label>
-            <select
-              id="managerId"
-              {...register('managerId')}
-              disabled={submitting}
-              className="mt-1 w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Select a manager (optional)</option>
-              {managers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {manager.name} ({manager.email})
-                </option>
-              ))}
-            </select>
-            {errors.managerId && (
-              <p className="mt-1 text-sm text-red-600">{errors.managerId.message}</p>
-            )}
-            {managers.length === 0 && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                No managers available. Create a manager user first.
-              </p>
-            )}
-          </div>
+          <FormCard onSubmit={handleSubmit(onSubmit)}>
+            <FormGroup>
+              <Label htmlFor="name">Department Name *</Label>
+              <Input
+                id="name"
+                {...register('name')}
+                placeholder="e.g., Finance, HR, IT"
+                disabled={submitting}
+              />
+              {errors.name && <FieldError>{errors.name.message}</FieldError>}
+            </FormGroup>
 
-          <div className="flex gap-4 pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => router.push('/department/list')}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Department'
+            <FormGroup>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                {...register('description')}
+                placeholder="Brief description of the department"
+                disabled={submitting}
+                rows={4}
+              />
+              {errors.description && <FieldError>{errors.description.message}</FieldError>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="managerId">Manager</Label>
+              <Select
+                id="managerId"
+                {...register('managerId')}
+                disabled={submitting}
+              >
+                <option value="">Select a manager (optional)</option>
+                {managers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.name} ({manager.email})
+                  </option>
+                ))}
+              </Select>
+              {errors.managerId && <FieldError>{errors.managerId.message}</FieldError>}
+              {managers.length === 0 && (
+                <p style={{ fontSize: '14px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
+                  No managers available. Create a manager user first.
+                </p>
               )}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+            </FormGroup>
+
+            <ButtonRow>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => router.push('/department/list')}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting} className="flex-1">
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Department'
+                )}
+              </Button>
+            </ButtonRow>
+          </FormCard>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }
 

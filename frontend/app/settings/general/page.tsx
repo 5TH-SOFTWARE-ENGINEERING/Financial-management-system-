@@ -168,12 +168,12 @@ const ThemeOptions = styled.div`
   gap: 1rem;
 `;
 
-const ThemeOption = styled.div<{ isSelected: boolean }>`
+const ThemeOption = styled.div<{ $isSelected: boolean }>`
   padding: 0.75rem;
-  border: 1px solid ${props => props.isSelected ? '#3b82f6' : '#d1d5db'};
+  border: 1px solid ${props => props.$isSelected ? '#3b82f6' : '#d1d5db'};
   border-radius: 0.375rem;
   cursor: pointer;
-  background-color: ${props => props.isSelected ? '#eff6ff' : 'white'};
+  background-color: ${props => props.$isSelected ? '#eff6ff' : 'white'};
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -392,7 +392,7 @@ export default function GeneralSettingsPage() {
               <Label>Theme</Label>
               <ThemeOptions>
                 <ThemeOption 
-                  isSelected={settings.theme === 'light'}
+                  $isSelected={settings.theme === 'light'}
                   onClick={() => handleThemeChange('light')}
                 >
                   <ThemeIcon>
@@ -401,7 +401,7 @@ export default function GeneralSettingsPage() {
                   <ThemeLabel>Light</ThemeLabel>
                 </ThemeOption>
                 <ThemeOption 
-                  isSelected={settings.theme === 'dark'}
+                  $isSelected={settings.theme === 'dark'}
                   onClick={() => handleThemeChange('dark')}
                 >
                   <ThemeIcon>
@@ -410,7 +410,7 @@ export default function GeneralSettingsPage() {
                   <ThemeLabel>Dark</ThemeLabel>
                 </ThemeOption>
                 <ThemeOption 
-                  isSelected={settings.theme === 'system'}
+                  $isSelected={settings.theme === 'system'}
                   onClick={() => handleThemeChange('system')}
                 >
                   <ThemeIcon>

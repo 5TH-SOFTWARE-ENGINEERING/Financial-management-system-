@@ -27,32 +27,38 @@ import { Button } from '@/components/ui/button';
 /*                             GLOBAL PAGE LAYOUT                             */
 /* -------------------------------------------------------------------------- */
 
-const Layout = styled.div`
+const LayoutWrapper = styled.div`
   display: flex;
-  width: 100%;
+  background: #f5f6fa;
   min-height: 100vh;
-  background: var(--background);
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
   background: var(--card);
   border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
 `;
 
-const MainWrapper = styled.div`
+const ContentArea = styled.div`
   flex: 1;
+  padding-left: 250px;
   display: flex;
   flex-direction: column;
 `;
 
-const ContentWrapper = styled.div`
-  flex: 1;
+const InnerContent = styled.div`
   padding: 32px;
-`;
-
-const PageWrapper = styled.div`
-  max-width: 720px;
+  width: 100%;
+  max-width: 700px;
   margin: 0 auto;
 `;
 
@@ -74,24 +80,18 @@ const BackLink = styled(Link)`
   }
 `;
 
-const PageHeader = styled.div`
-  margin-bottom: 24px;
-`;
-
-const HeaderRow = styled.div`
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 6px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 700;
 `;
 
 const Subtitle = styled.p`
   color: var(--muted-foreground);
+  margin-bottom: 24px;
 `;
 
 const AlertBox = styled.div<{ status: 'error' | 'success' }>`
@@ -112,60 +112,90 @@ const AlertBox = styled.div<{ status: 'error' | 'success' }>`
 `;
 
 const Card = styled.div`
-  background: var(--card);
-  padding: 24px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 `;
 
-const DangerInfo = styled.div`
+const WarningSection = styled.div`
   display: flex;
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 24px;
+  
+  .icon-wrapper {
+    padding: 12px;
+    background: #fee2e2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--foreground);
+  }
+  
+  p {
+    color: var(--muted-foreground);
+    margin-bottom: 16px;
+  }
 `;
 
-const IconContainer = styled.div`
-  padding: 12px;
-  background: #fee2e2;
-  border-radius: 999px;
-`;
-
-const UserInfoBox = styled.div`
+const InfoBox = styled.div`
   background: var(--muted);
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
-`;
-
-const UserInfoRow = styled.div`
-  margin-bottom: 8px;
-
-  span:first-child {
-    font-weight: 600;
-    color: var(--foreground);
-  }
-
-  span:last-child {
-    color: var(--muted-foreground);
+  
+  div {
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    span:first-child {
+      font-weight: 500;
+      color: var(--foreground);
+      margin-right: 8px;
+    }
+    
+    span:last-child {
+      color: var(--muted-foreground);
+    }
   }
 `;
 
 const StatusBadge = styled.span<{ active?: boolean }>`
-  padding: 3px 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
   font-size: 12px;
-  border-radius: 6px;
-
+  font-weight: 500;
   background: ${({ active }) =>
-    active ? '#DCFCE7' : '#FEE2E2'};
+    active ? '#d1fae5' : '#fee2e2'};
   color: ${({ active }) =>
-    active ? '#166534' : '#B91C1C'};
+    active ? '#065f46' : '#991b1b'};
 `;
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: 16px;
+  gap: 12px;
+`;
+
+const LoadingContainer = styled.div`
+  padding: 32px;
+  text-align: center;
+  
+  p {
+    color: var(--muted-foreground);
+    margin-top: 16px;
+  }
 `;
 
 /* -------------------------------------------------------------------------- */
@@ -256,178 +286,151 @@ export default function DeleteFinancePage() {
   /* ------------------------------ Loading state ------------------------------ */
   if (loadingUser) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <SidebarWrapper>
           <Sidebar />
         </SidebarWrapper>
-
-        <MainWrapper>
+        <ContentArea>
           <Navbar />
-          <ContentWrapper>
-            <PageWrapper>
-              <div style={{ textAlign: 'center', padding: '70px' }}>
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                <p className="text-muted-foreground">
-                  Loading finance manager...
-                </p>
-              </div>
-            </PageWrapper>
-          </ContentWrapper>
-        </MainWrapper>
-      </Layout>
+          <LoadingContainer>
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p>Loading finance manager...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   /* ---------------------------- Not found / error --------------------------- */
   if (!financeManager) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <SidebarWrapper>
           <Sidebar />
         </SidebarWrapper>
-
-        <MainWrapper>
+        <ContentArea>
           <Navbar />
-          <ContentWrapper>
-            <PageWrapper>
-              <BackLink href="/finance/list">
-                <ArrowLeft size={16} />
-                Back to Finance Managers
-              </BackLink>
-
+          <InnerContent>
+            <BackLink href="/finance/list">
+              <ArrowLeft size={16} />
+              Back to Finance Managers
+            </BackLink>
+            <Card>
               <AlertBox status="error">
-                <AlertCircle size={16} />
+                <AlertCircle size={18} />
                 {error || 'Finance manager not found'}
               </AlertBox>
-            </PageWrapper>
-          </ContentWrapper>
-        </MainWrapper>
-      </Layout>
+            </Card>
+          </InnerContent>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   /* ------------------------------ Main content ------------------------------ */
   return (
-    <Layout>
+    <LayoutWrapper>
       <SidebarWrapper>
         <Sidebar />
       </SidebarWrapper>
-
-      <MainWrapper>
+      <ContentArea>
         <Navbar />
 
-        <ContentWrapper>
-          <PageWrapper>
-            {/* Back */}
-            <BackLink href="/finance/list">
-              <ArrowLeft size={16} />
-              Back to Finance Managers
-            </BackLink>
+        <InnerContent>
+          <BackLink href="/finance/list">
+            <ArrowLeft size={16} />
+            Back to Finance Managers
+          </BackLink>
 
-            {/* Header */}
-            <PageHeader>
-              <HeaderRow>
-                <Briefcase className="h-8 w-8 text-red-600" />
-                <Title>Delete Finance Manager</Title>
-              </HeaderRow>
-              <Subtitle>Confirm deletion of finance manager</Subtitle>
-            </PageHeader>
+          <Title>
+            <Briefcase className="h-8 w-8 text-red-600" />
+            Delete Finance Manager
+          </Title>
+          <Subtitle>Confirm deletion of finance manager</Subtitle>
 
-            {/* Alerts */}
-            {error && (
-              <AlertBox status="error">
-                <AlertCircle size={16} />
-                {error}
-              </AlertBox>
-            )}
+          {error && (
+            <AlertBox status="error">
+              <AlertCircle size={18} />
+              {error}
+            </AlertBox>
+          )}
 
-            {success && (
-              <AlertBox status="success">
-                <CheckCircle size={16} />
-                {success}
-              </AlertBox>
-            )}
+          {success && (
+            <AlertBox status="success">
+              <CheckCircle size={18} />
+              {success}
+            </AlertBox>
+          )}
 
-            <Card>
-              {/* Warning box */}
-              <DangerInfo>
-                <IconContainer>
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                </IconContainer>
+          <Card>
+            <WarningSection>
+              <div className="icon-wrapper">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h2>Are you sure you want to delete this finance manager?</h2>
+                <p>This action cannot be undone. All associated data will be permanently deleted.</p>
+              </div>
+            </WarningSection>
 
-                <div>
-                  <h2 className="text-lg font-semibold mb-2">
-                    Are you sure you want to delete this finance manager?
-                  </h2>
-                  <p className="text-muted-foreground">
-                    This action cannot be undone. All associated data will be
-                    permanently deleted.
-                  </p>
-                </div>
-              </DangerInfo>
+            <InfoBox>
+              <div>
+                <span>Name:</span>
+                <span>{financeManager.full_name}</span>
+              </div>
+              <div>
+                <span>Email:</span>
+                <span>{financeManager.email}</span>
+              </div>
+              <div>
+                <span>Username:</span>
+                <span>{financeManager.username}</span>
+              </div>
+              <div>
+                <span>Department:</span>
+                <span>{financeManager.department || 'N/A'}</span>
+              </div>
+              <div>
+                <span>Status:</span>
+                <StatusBadge active={financeManager.is_active}>
+                  {financeManager.is_active ? 'Active' : 'Inactive'}
+                </StatusBadge>
+              </div>
+            </InfoBox>
 
-              {/* User Info */}
-              <UserInfoBox>
-                <UserInfoRow>
-                  <span>Name:</span> <span>{financeManager.full_name}</span>
-                </UserInfoRow>
-
-                <UserInfoRow>
-                  <span>Email:</span> <span>{financeManager.email}</span>
-                </UserInfoRow>
-
-                <UserInfoRow>
-                  <span>Username:</span>{' '}
-                  <span>{financeManager.username}</span>
-                </UserInfoRow>
-
-                <UserInfoRow>
-                  <span>Department:</span>{' '}
-                  <span>{financeManager.department || 'N/A'}</span>
-                </UserInfoRow>
-
-                <UserInfoRow>
-                  <span>Status:</span>
-                  <StatusBadge active={financeManager.is_active}>
-                    {financeManager.is_active ? 'Active' : 'Inactive'}
-                  </StatusBadge>
-                </UserInfoRow>
-              </UserInfoBox>
-
-              {/* Buttons */}
-              <ButtonRow>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={loading}
-                  onClick={() => router.push('/finance/list')}
-                >
-                  Cancel
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={loading}
-                  onClick={handleDelete}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Delete Finance Manager
-                    </>
-                  )}
-                </Button>
-              </ButtonRow>
-            </Card>
-          </PageWrapper>
-        </ContentWrapper>
-      </MainWrapper>
-    </Layout>
+            <ButtonRow>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={loading}
+                onClick={() => router.push('/finance/list')}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={loading}
+                onClick={handleDelete}
+                className="flex-1"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Delete Finance Manager
+                  </>
+                )}
+              </Button>
+            </ButtonRow>
+          </Card>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }

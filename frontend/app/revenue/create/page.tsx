@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RevenueSchema, type RevenueInput } from '@/lib/validation';
@@ -7,11 +8,164 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, DollarSign, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+
+// ──────────────────────────────────────────
+// Styled Components Layout
+// ──────────────────────────────────────────
+const LayoutWrapper = styled.div`
+  display: flex;
+  background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
+  padding: 32px;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+`;
+
+const BackLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-bottom: 16px;
+  transition: 0.2s;
+
+  &:hover {
+    color: var(--foreground);
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const Subtitle = styled.p`
+  color: var(--muted-foreground);
+  margin-bottom: 24px;
+`;
+
+const FormCard = styled.form`
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const FieldError = styled.p`
+  color: #dc2626;
+  font-size: 14px;
+  margin-top: 4px;
+`;
+
+const MessageBox = styled.div<{ type: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 12px;
+  padding-top: 12px;
+`;
+
+const GridRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--foreground);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const CheckboxWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+`;
 
 export default function CreateRevenuePage() {
   const router = useRouter();
@@ -66,7 +220,36 @@ export default function CreateRevenuePage() {
         router.push('/revenue/list');
       }, 2000);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to create revenue entry';
+      let errorMessage = 'Failed to create revenue entry';
+      
+      // Handle different error formats
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        
+        // If it's an array of validation errors (Pydantic format)
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((e: any) => {
+            if (typeof e === 'string') return e;
+            if (e.msg) return `${e.loc?.join('.') || 'Field'}: ${e.msg}`;
+            return JSON.stringify(e);
+          }).join(', ');
+        }
+        // If it's a single validation error object
+        else if (typeof detail === 'object' && detail.msg) {
+          errorMessage = `${detail.loc?.join('.') || 'Field'}: ${detail.msg}`;
+        }
+        // If it's a string
+        else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+        // Otherwise stringify it
+        else {
+          errorMessage = JSON.stringify(detail);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -75,200 +258,180 @@ export default function CreateRevenuePage() {
   };
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link 
-          href="/revenue/list"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Revenue
-        </Link>
-        <div className="flex items-center gap-3 mb-2">
-          <DollarSign className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold text-foreground">Create Revenue Entry</h1>
-        </div>
-        <p className="text-muted-foreground">Add a new revenue entry</p>
-      </div>
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
+        <InnerContent>
+          <BackLink href="/revenue/list">
+            <ArrowLeft size={16} />
+            Back to Revenue
+          </BackLink>
 
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center gap-2 text-green-700">
-          <CheckCircle size={16} />
-          <span>{success}</span>
-        </div>
-      )}
+          <Title>
+            <DollarSign className="h-8 w-8 text-primary" />
+            Create Revenue Entry
+          </Title>
+          <Subtitle>Add a new revenue entry</Subtitle>
 
-      <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              {...register('title')}
-              placeholder="e.g., Product Sales"
-              disabled={loading}
-              className="mt-1"
-            />
-            {errors.title && (
-              <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description (Optional)</Label>
-            <Textarea
-              id="description"
-              {...register('description')}
-              placeholder="Brief description of the revenue"
-              disabled={loading}
-              className="mt-1"
-              rows={3}
-            />
-            {errors.description && (
-              <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="category">Category *</Label>
-              <select
-                id="category"
-                {...register('category')}
-                disabled={loading}
-                className="mt-1 w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="sales">Sales</option>
-                <option value="services">Services</option>
-                <option value="investment">Investment</option>
-                <option value="rental">Rental</option>
-                <option value="other">Other</option>
-              </select>
-              {errors.category && (
-                <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="amount">Amount *</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0.01"
-                {...register('amount', { valueAsNumber: true })}
-                placeholder="0.00"
-                disabled={loading}
-                className="mt-1"
-              />
-              {errors.amount && (
-                <p className="mt-1 text-sm text-red-600">{errors.amount.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="source">Source (Optional)</Label>
-            <Input
-              id="source"
-              {...register('source')}
-              placeholder="e.g., Customer name or company"
-              disabled={loading}
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="date">Date *</Label>
-            <Input
-              id="date"
-              type="date"
-              {...register('date')}
-              disabled={loading}
-              className="mt-1"
-            />
-            {errors.date && (
-              <p className="mt-1 text-sm text-red-600">{errors.date.message as string}</p>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              id="isRecurring"
-              type="checkbox"
-              {...register('isRecurring')}
-              disabled={loading}
-              className="h-4 w-4"
-            />
-            <Label htmlFor="isRecurring" className="cursor-pointer">
-              Recurring revenue
-            </Label>
-          </div>
-
-          {isRecurring && (
-            <div>
-              <Label htmlFor="recurringFrequency">Recurring Frequency *</Label>
-              <select
-                id="recurringFrequency"
-                {...register('recurringFrequency')}
-                disabled={loading}
-                className="mt-1 w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Select frequency</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-              {errors.recurringFrequency && (
-                <p className="mt-1 text-sm text-red-600">{errors.recurringFrequency.message}</p>
-              )}
-            </div>
+          {error && (
+            <MessageBox type="error">
+              <AlertCircle size={18} />
+              {error}
+            </MessageBox>
           )}
 
-          <div>
-            <Label htmlFor="attachmentUrl">Attachment URL (Optional)</Label>
-            <Input
-              id="attachmentUrl"
-              type="url"
-              {...register('attachmentUrl')}
-              placeholder="https://example.com/invoice.pdf"
-              disabled={loading}
-              className="mt-1"
-            />
-            {errors.attachmentUrl && (
-              <p className="mt-1 text-sm text-red-600">{errors.attachmentUrl.message}</p>
-            )}
-          </div>
+          {success && (
+            <MessageBox type="success">
+              <CheckCircle size={18} />
+              {success}
+            </MessageBox>
+          )}
 
-          <div className="flex gap-4 pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => router.push('/revenue/list')}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create Revenue Entry'
-              )}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <FormCard onSubmit={handleSubmit(onSubmit)}>
+            <FormGroup>
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                {...register('title')}
+                placeholder="e.g., Product Sales"
+                disabled={loading}
+              />
+              {errors.title && <FieldError>{errors.title.message}</FieldError>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                {...register('description')}
+                placeholder="Brief description of the revenue"
+                disabled={loading}
+                rows={3}
+              />
+              {errors.description && <FieldError>{errors.description.message}</FieldError>}
+            </FormGroup>
+
+            <GridRow>
+              <FormGroup>
+                <Label htmlFor="category">Category *</Label>
+                <Select
+                  id="category"
+                  {...register('category')}
+                  disabled={loading}
+                >
+                  <option value="sales">Sales</option>
+                  <option value="services">Services</option>
+                  <option value="investment">Investment</option>
+                  <option value="rental">Rental</option>
+                  <option value="other">Other</option>
+                </Select>
+                {errors.category && <FieldError>{errors.category.message}</FieldError>}
+              </FormGroup>
+
+              <FormGroup>
+                <Label htmlFor="amount">Amount *</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  {...register('amount', { valueAsNumber: true })}
+                  placeholder="0.00"
+                  disabled={loading}
+                />
+                {errors.amount && <FieldError>{errors.amount.message}</FieldError>}
+              </FormGroup>
+            </GridRow>
+
+            <FormGroup>
+              <Label htmlFor="source">Source (Optional)</Label>
+              <Input
+                id="source"
+                {...register('source')}
+                placeholder="e.g., Customer name or company"
+                disabled={loading}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="date">Date *</Label>
+              <Input
+                id="date"
+                type="date"
+                {...register('date')}
+                disabled={loading}
+              />
+              {errors.date && <FieldError>{errors.date.message as string}</FieldError>}
+            </FormGroup>
+
+            <CheckboxWrapper>
+              <input
+                id="isRecurring"
+                type="checkbox"
+                {...register('isRecurring')}
+                disabled={loading}
+              />
+              <Label htmlFor="isRecurring" style={{ cursor: 'pointer', margin: 0 }}>
+                Recurring revenue
+              </Label>
+            </CheckboxWrapper>
+
+            {isRecurring && (
+              <FormGroup>
+                <Label htmlFor="recurringFrequency">Recurring Frequency *</Label>
+                <Select
+                  id="recurringFrequency"
+                  {...register('recurringFrequency')}
+                  disabled={loading}
+                >
+                  <option value="">Select frequency</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </Select>
+                {errors.recurringFrequency && <FieldError>{errors.recurringFrequency.message}</FieldError>}
+              </FormGroup>
+            )}
+
+            <FormGroup>
+              <Label htmlFor="attachmentUrl">Attachment URL (Optional)</Label>
+              <Input
+                id="attachmentUrl"
+                type="url"
+                {...register('attachmentUrl')}
+                placeholder="https://example.com/invoice.pdf"
+                disabled={loading}
+              />
+              {errors.attachmentUrl && <FieldError>{errors.attachmentUrl.message}</FieldError>}
+            </FormGroup>
+
+            <ButtonRow>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => router.push('/revenue/list')}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Revenue Entry'
+                )}
+              </Button>
+            </ButtonRow>
+          </FormCard>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }

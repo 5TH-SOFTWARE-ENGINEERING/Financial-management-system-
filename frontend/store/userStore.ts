@@ -284,7 +284,10 @@ export const useUserStore = create<UserState>()(
 
       canApproveTransactions: () => {
         const { user } = get();
-        return user?.role === 'admin' || user?.role === 'finance_manager';
+        if (!user) return false;
+        // Allow admin, finance_manager, and manager roles to approve
+        const role = user.role?.toLowerCase();
+        return role === 'admin' || role === 'super_admin' || role === 'finance_manager' || role === 'manager';
       },
 
       canSubmitTransactions: () => {

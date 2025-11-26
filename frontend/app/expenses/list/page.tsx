@@ -1,13 +1,243 @@
 'use client';
 import { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Plus, Edit, Trash2, DollarSign, Search, Filter } from 'lucide-react';
+import { AlertCircle, Plus, Edit, Trash2, DollarSign, Search, Filter, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useAuth } from '@/lib/rbac/auth-context';
+import { useUserStore } from '@/store/userStore';
+
+// ──────────────────────────────────────────
+// Styled Components
+// ──────────────────────────────────────────
+const LayoutWrapper = styled.div`
+  display: flex;
+  background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
+  padding: 32px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-between;
+  align-items: center;
+  margin-bottom: 24px;
+`;
+
+const HeaderText = styled.div`
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  
+  p {
+    color: var(--muted-foreground);
+  }
+`;
+
+const MessageBox = styled.div<{ type: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+`;
+
+const Card = styled.div`
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+`;
+
+const FiltersCard = styled.div`
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+  
+  svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted-foreground);
+  }
+  
+  input {
+    padding-left: 40px;
+  }
+`;
+
+const Select = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--foreground);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 48px 24px;
+  
+  svg {
+    margin: 0 auto 16px;
+    color: var(--muted-foreground);
+  }
+  
+  p {
+    color: var(--muted-foreground);
+    margin-bottom: 16px;
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const TableHeader = styled.thead`
+  border-bottom: 1px solid var(--border);
+  
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: var(--foreground);
+    font-size: 14px;
+  }
+`;
+
+const TableBody = styled.tbody`
+  tr {
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background: var(--muted);
+    }
+    
+    td {
+      padding: 12px 16px;
+      color: var(--muted-foreground);
+      font-size: 14px;
+    }
+  }
+`;
+
+const StatusBadge = styled.span<{ $approved: boolean }>`
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${(p) => (p.$approved ? '#d1fae5' : '#fef3c7')};
+  color: ${(p) => (p.$approved ? '#065f46' : '#92400e')};
+  margin-right: 8px;
+`;
+
+const RecurringBadge = styled.span`
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #dbeafe;
+  color: #1e40af;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const LoadingContainer = styled.div`
+  padding: 32px;
+  text-align: center;
+  
+  p {
+    color: var(--muted-foreground);
+    margin-top: 16px;
+  }
+`;
+
+const Spinner = styled.div`
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
 
 interface Expense {
   id: number;
@@ -27,12 +257,26 @@ interface Expense {
 
 export default function ExpenseListPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { canApproveTransactions } = useUserStore();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [approvingId, setApprovingId] = useState<number | null>(null);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string>('');
+  
+  // Check if user can approve transactions
+  const canApprove = () => {
+    if (canApproveTransactions()) return true;
+    if (!user) return false;
+    const role = user.role?.toLowerCase();
+    return role === 'admin' || role === 'super_admin' || role === 'manager' || role === 'finance_manager';
+  };
 
   useEffect(() => {
     loadExpenses();
@@ -67,6 +311,71 @@ export default function ExpenseListPage() {
     }
   };
 
+  const handleApprove = async (id: number) => {
+    if (!canApprove()) {
+      toast.error('You do not have permission to approve expenses');
+      return;
+    }
+
+    setApprovingId(id);
+    try {
+      await apiClient.approveItem(id, 'expense');
+      toast.success('Expense approved successfully');
+      loadExpenses();
+    } catch (err: any) {
+      let errorMessage = 'Failed to approve expense';
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (Array.isArray(detail)) {
+          errorMessage = detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
+        } else if (typeof detail === 'object' && detail.msg) {
+          errorMessage = detail.msg;
+        }
+      }
+      toast.error(errorMessage);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleReject = async (id: number, reason: string) => {
+    if (!canApprove()) {
+      toast.error('You do not have permission to reject expenses');
+      return;
+    }
+
+    if (!reason.trim()) {
+      toast.error('Please provide a rejection reason');
+      return;
+    }
+
+    setRejectingId(id);
+    try {
+      await apiClient.rejectItem(id, 'expense', reason);
+      toast.success('Expense rejected successfully');
+      setShowRejectModal(null);
+      setRejectionReason('');
+      loadExpenses();
+    } catch (err: any) {
+      let errorMessage = 'Failed to reject expense';
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (Array.isArray(detail)) {
+          errorMessage = detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
+        } else if (typeof detail === 'object' && detail.msg) {
+          errorMessage = detail.msg;
+        }
+      }
+      toast.error(errorMessage);
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   // Get unique categories from expenses
   const categories = Array.from(new Set(expenses.map(e => e.category).filter(Boolean)));
 
@@ -87,168 +396,188 @@ export default function ExpenseListPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading expenses...</p>
-        </div>
-      </div>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <LoadingContainer>
+            <Spinner />
+            <p>Loading expenses...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Expenses</h1>
-          <p className="text-muted-foreground mt-1">Manage expense entries</p>
-        </div>
-        <Link href="/expenses/create">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Expense
-          </Button>
-        </Link>
-      </div>
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
+        <InnerContent>
+          <Header>
+            <HeaderText>
+              <h1>Expenses</h1>
+              <p>Manage expense entries</p>
+            </HeaderText>
+            <Link href="/expenses/create">
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Expense
+              </Button>
+            </Link>
+          </Header>
 
-      {/* Filters */}
-      <div className="bg-card p-4 rounded-lg border border-border mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search expenses..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="all">All Categories</option>
-            {categories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-          
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="all">All Statuses</option>
-            <option value="approved">Approved</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
-      </div>
+          {error && (
+            <MessageBox type="error">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </MessageBox>
+          )}
 
-      <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
-        {filteredExpenses.length === 0 ? (
-          <div className="text-center py-12">
-            <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground mb-4">
-              {expenses.length === 0 ? 'No expenses found.' : 'No expenses match your filters.'}
-            </p>
-            {expenses.length === 0 && (
-              <Link href="/expenses/create">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Expense
-                </Button>
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Title</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Category</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Amount</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Vendor</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Date</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredExpenses.map((expense) => (
-                  <tr key={expense.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <span className="font-medium text-foreground">{expense.title}</span>
-                          {expense.description && (
-                            <p className="text-sm text-muted-foreground">{expense.description}</p>
+          <FiltersCard>
+            <SearchWrapper>
+              <Search size={16} />
+              <Input
+                type="text"
+                placeholder="Search expenses..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </SearchWrapper>
+            
+            <Select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="all">All Categories</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </Select>
+            
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All Statuses</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+            </Select>
+          </FiltersCard>
+
+          <Card>
+            {filteredExpenses.length === 0 ? (
+              <EmptyState>
+                <DollarSign size={48} />
+                <p>
+                  {expenses.length === 0 ? 'No expenses found.' : 'No expenses match your filters.'}
+                </p>
+                {expenses.length === 0 && (
+                  <Link href="/expenses/create">
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create First Expense
+                    </Button>
+                  </Link>
+                )}
+              </EmptyState>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <Table>
+                  <TableHeader>
+                    <tr>
+                      <th>Title</th>
+                      <th>Category</th>
+                      <th>Amount</th>
+                      <th>Vendor</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredExpenses.map((expense) => (
+                      <tr key={expense.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <DollarSign size={16} style={{ color: 'var(--muted-foreground)' }} />
+                            <div>
+                              <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                                {expense.title}
+                              </span>
+                              {expense.description && (
+                                <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
+                                  {expense.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ textTransform: 'capitalize' }}>{expense.category || 'N/A'}</td>
+                        <td>
+                          <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
+                            {formatCurrency(expense.amount)}
+                          </span>
+                        </td>
+                        <td>{expense.vendor || 'N/A'}</td>
+                        <td>{formatDate(expense.date)}</td>
+                        <td>
+                          <StatusBadge $approved={expense.is_approved}>
+                            {expense.is_approved ? 'Approved' : 'Pending'}
+                          </StatusBadge>
+                          {expense.is_recurring && (
+                            <RecurringBadge>Recurring</RecurringBadge>
                           )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground capitalize">{expense.category || 'N/A'}</td>
-                    <td className="py-3 px-4">
-                      <span className="font-semibold text-foreground">
-                        {formatCurrency(expense.amount)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">{expense.vendor || 'N/A'}</td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {formatDate(expense.date)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        expense.is_approved 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {expense.is_approved ? 'Approved' : 'Pending'}
-                      </span>
-                      {expense.is_recurring && (
-                        <span className="ml-2 px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
-                          Recurring
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <Link href={`/expenses/edit/${expense.id}`}>
-                          <Button size="sm" variant="secondary">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                        </Link>
-                        <Button 
-                          size="sm" 
-                          variant="destructive"
-                          onClick={() => handleDelete(expense.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+                        </td>
+                        <td>
+                          <ActionButtons>
+                            <Link href={`/expenses/edit/${expense.id}`}>
+                              <Button size="sm" variant="secondary">
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                            </Link>
+                            {!expense.is_approved && canApprove() && (
+                              <Button 
+                                size="sm" 
+                                variant="default"
+                                onClick={() => handleApprove(expense.id)}
+                                disabled={approvingId === expense.id}
+                              >
+                                {approvingId === expense.id ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                )}
+                                Approve
+                              </Button>
+                            )}
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => handleDelete(expense.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </ActionButtons>
+                        </td>
+                      </tr>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </Card>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }
 

@@ -1,3 +1,5 @@
+// lib/services/permission-service.ts
+
 import { Permission, DEFAULT_PERMISSIONS, Resource, Action } from '../rbac/models';
 
 interface PermissionServiceInterface {
@@ -8,36 +10,54 @@ interface PermissionServiceInterface {
   deletePermission(id: string): Promise<boolean>;
   getPermissionsByResource(resource: Resource): Promise<Permission[]>;
   getPermissionsByAction(action: Action): Promise<Permission[]>;
+  getPermissionByResourceAndAction(resource: Resource, action: Action): Promise<Permission | null>;
+  hasPermission(resource: Resource, action: Action): Promise<boolean>;
 }
 
-// Mock storage
-let permissions = [...DEFAULT_PERMISSIONS];
+// In-memory cache for permissions (since backend doesn't have permission endpoints)
+let permissionsCache: Permission[] | null = null;
 
 export class PermissionService implements PermissionServiceInterface {
-
-  // get all permissions
+  /**
+   * Get all available permissions
+   * Uses DEFAULT_PERMISSIONS since backend doesn't have permission endpoints
+   */
   async getAllPermissions(): Promise<Permission[]> {
-    return [...permissions];
+    if (permissionsCache) {
+      return [...permissionsCache];
+    }
+    permissionsCache = [...DEFAULT_PERMISSIONS];
+    return [...permissionsCache];
   }
 
-  // get permission by ID 
+  /**
+   * Get permission by ID
+   */
   async getPermissionById(id: string): Promise<Permission | null> {
+    const permissions = await this.getAllPermissions();
     const permission = permissions.find(p => p.id === id);
     return permission ? { ...permission } : null;
   }
 
-  // create a new permission
+  /**
+   * Create a new permission (in-memory only, since backend doesn't support this)
+   */
   async createPermission(permission: Omit<Permission, 'id'>): Promise<Permission> {
+    const permissions = await this.getAllPermissions();
     const newPermission: Permission = {
       ...permission,
       id: `permission-${Date.now()}`
     };
     permissions.push(newPermission);
+    permissionsCache = permissions;
     return { ...newPermission };
   }
 
-  //update an existing permission
+  /**
+   * Update an existing permission (in-memory only)
+   */
   async updatePermission(id: string, permissionUpdate: Partial<Permission>): Promise<Permission | null> {
+    const permissions = await this.getAllPermissions();
     const index = permissions.findIndex(p => p.id === id);
     if (index === -1) return null;
 
@@ -48,34 +68,54 @@ export class PermissionService implements PermissionServiceInterface {
     };
     
     permissions[index] = updatedPermission;
+    permissionsCache = permissions;
     return { ...updatedPermission };
   }
 
-  // delete a permission by id
+  /**
+   * Delete a permission by id (in-memory only)
+   */
   async deletePermission(id: string): Promise<boolean> {
+    const permissions = await this.getAllPermissions();
     const initialLength = permissions.length;
-    permissions = permissions.filter(p => p.id !== id);
-    return permissions.length < initialLength;
+    const filtered = permissions.filter(p => p.id !== id);
+    if (filtered.length < initialLength) {
+      permissionsCache = filtered;
+      return true;
+    }
+    return false;
   }
 
-  //get permissions by resource
+  /**
+   * Get permissions by resource
+   */
   async getPermissionsByResource(resource: Resource): Promise<Permission[]> {
+    const permissions = await this.getAllPermissions();
     return permissions.filter(p => p.resource === resource);
   }
 
-  //get permissions by actions
+  /**
+   * Get permissions by action
+   */
   async getPermissionsByAction(action: Action): Promise<Permission[]> {
+    const permissions = await this.getAllPermissions();
     return permissions.filter(p => p.action === action);
   }
 
-  //get permissions by resource and actions 
+  /**
+   * Get permission by resource and action
+   */
   async getPermissionByResourceAndAction(resource: Resource, action: Action): Promise<Permission | null> {
+    const permissions = await this.getAllPermissions();
     const permission = permissions.find(p => p.resource === resource && p.action === action);
     return permission ? { ...permission } : null;
   }
- 
-  //check if a permission exists
+
+  /**
+   * Check if a permission exists
+   */
   async hasPermission(resource: Resource, action: Action): Promise<boolean> {
+    const permissions = await this.getAllPermissions();
     return permissions.some(p => p.resource === resource && p.action === action);
   }
 }

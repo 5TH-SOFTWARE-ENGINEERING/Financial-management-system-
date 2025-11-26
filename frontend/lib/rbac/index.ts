@@ -1,4 +1,4 @@
-// lib/rabc/index.ts
+// lib/rbac/index.ts
 export * from './models';
 
 // Authentication
@@ -11,4 +11,7 @@ export * from './use-authorization';
 export * from './permission-gate';
 export * from './protected-route';
 export * from './component-access';
-export * from './component-gate'; 
+export * from './component-gate';
+
+// User types
+export * from './user'; 

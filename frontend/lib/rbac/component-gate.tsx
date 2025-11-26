@@ -28,21 +28,22 @@ export const ComponentGate: React.FC<ComponentGateProps> = ({
     if (debug) {
       console.log('ComponentGate Debug:', {
         componentId,
+        userType: user?.userType,
         role: user?.role,
-        hasAccess: user ? canAccessComponent(user.role, componentId) : false
+        hasAccess: user ? canAccessComponent(user.userType, componentId) : false
       });
     }
   }, [componentId, user, debug]);
   
-  if (!user || !user.role) {
+  if (!user || !user.userType) {
     if (debug) {
-      console.warn('ComponentGate: No user or role found', { componentId });
+      console.warn('ComponentGate: No user or userType found', { componentId });
     }
     return fallback ? <>{fallback}</> : null;
   }
   
   const hasAccess = canAccessComponent(
-    user.role,
+    user.userType,
     componentId
   );
   
@@ -50,6 +51,7 @@ export const ComponentGate: React.FC<ComponentGateProps> = ({
     if (debug) {
       console.warn('ComponentGate: Access denied', {
         componentId,
+        userType: user.userType,
         role: user.role
       });
     }

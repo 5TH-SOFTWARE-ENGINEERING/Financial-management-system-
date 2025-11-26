@@ -80,7 +80,7 @@ export const RoleBasedRoute = ({
   const router = useRouter();
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <TextLoading text="Authenticating..." />;
   }
 
   if (!isAuthenticated) {
@@ -123,7 +123,7 @@ export const UserTypeBasedRoute = ({
   const router = useRouter();
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <TextLoading text="Authenticating..." />;
   }
 
   if (!isAuthenticated) {

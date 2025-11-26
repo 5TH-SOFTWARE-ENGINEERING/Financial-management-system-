@@ -1,13 +1,239 @@
 'use client';
 import { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, FolderKanban, Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { AlertCircle, FolderKanban, Plus, Edit, Trash2, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/utils';
+
+// ──────────────────────────────────────────
+// Styled Components
+// ──────────────────────────────────────────
+const LayoutWrapper = styled.div`
+  display: flex;
+  background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
+  padding: 32px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-between;
+  align-items: center;
+  margin-bottom: 24px;
+`;
+
+const HeaderText = styled.div`
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  
+  p {
+    color: var(--muted-foreground);
+  }
+`;
+
+const MessageBox = styled.div<{ type: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+`;
+
+const Card = styled.div`
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+`;
+
+const FiltersCard = styled.div`
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+  
+  svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted-foreground);
+  }
+  
+  input {
+    padding-left: 40px;
+  }
+`;
+
+const Select = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--foreground);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 48px 24px;
+  
+  svg {
+    margin: 0 auto 16px;
+    color: var(--muted-foreground);
+  }
+  
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--foreground);
+  }
+  
+  p {
+    color: var(--muted-foreground);
+    margin-bottom: 16px;
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const TableHeader = styled.thead`
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+  
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: var(--foreground);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+`;
+
+const TableBody = styled.tbody`
+  tr {
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background: var(--muted);
+    }
+    
+    td {
+      padding: 12px 16px;
+      color: var(--muted-foreground);
+      font-size: 14px;
+    }
+  }
+`;
+
+const StatusBadge = styled.span<{ active: boolean }>`
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${(p) => (p.active ? '#d1fae5' : '#f3f4f6')};
+  color: ${(p) => (p.active ? '#065f46' : '#374151')};
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const LoadingContainer = styled.div`
+  padding: 32px;
+  text-align: center;
+  
+  p {
+    color: var(--muted-foreground);
+    margin-top: 16px;
+  }
+`;
+
+const Spinner = styled.div`
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
 
 interface Project {
   id: number;
@@ -102,171 +328,173 @@ export default function ProjectListPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading projects...</p>
-        </div>
-      </div>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <LoadingContainer>
+            <Spinner />
+            <p>Loading projects...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Projects</h1>
-          <p className="text-muted-foreground">Manage your projects</p>
-        </div>
-        <Link href="/project/create">
-          <Button className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Project
-          </Button>
-        </Link>
-      </div>
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Search and Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search by name, description, or department..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="all">All Departments</option>
-            {departments.map(dept => (
-              <option key={dept.id} value={dept.id.toString()}>
-                {dept.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Projects Table */}
-      {filteredProjects.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border p-12 text-center">
-          <FolderKanban className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">No projects</h3>
-          <p className="text-muted-foreground mb-4">
-            {searchTerm || departmentFilter !== 'all' || statusFilter !== 'all'
-              ? 'No projects match your filters'
-              : 'Get started by adding your first project'}
-          </p>
-          {!searchTerm && departmentFilter === 'all' && statusFilter === 'all' && (
+        <InnerContent>
+          <Header>
+            <HeaderText>
+              <h1>Projects</h1>
+              <p>Manage your projects</p>
+            </HeaderText>
             <Link href="/project/create">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Project
               </Button>
             </Link>
+          </Header>
+
+          {error && (
+            <MessageBox type="error">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </MessageBox>
           )}
-        </div>
-      ) : (
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Department</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Budget</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Start Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">End Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredProjects.map((project) => (
-                  <tr key={project.id} className="hover:bg-muted/30">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-foreground">{project.name}</div>
-                      {project.description && (
-                        <div className="text-sm text-muted-foreground truncate max-w-xs">
-                          {project.description}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                      {project.department_name || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {project.budget ? (
-                        <div className="text-sm font-semibold text-foreground">
-                          ${project.budget.toLocaleString()}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                      {formatDate(project.start_date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                      {project.end_date ? formatDate(project.end_date) : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        project.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {project.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        <Link href={`/project/edit/${project.id}`}>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(project.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
+
+          <FiltersCard>
+            <SearchWrapper>
+              <Search size={16} />
+              <Input
+                type="text"
+                placeholder="Search by name, description, or department..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </SearchWrapper>
+            <Select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+            >
+              <option value="all">All Departments</option>
+              {departments.map(dept => (
+                <option key={dept.id} value={dept.id.toString()}>
+                  {dept.name}
+                </option>
+              ))}
+            </Select>
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </Select>
+          </FiltersCard>
+
+          <Card>
+            {filteredProjects.length === 0 ? (
+              <EmptyState>
+                <FolderKanban size={48} />
+                <h3>No projects</h3>
+                <p>
+                  {searchTerm || departmentFilter !== 'all' || statusFilter !== 'all'
+                    ? 'No projects match your filters'
+                    : 'Get started by adding your first project'}
+                </p>
+                {!searchTerm && departmentFilter === 'all' && statusFilter === 'all' && (
+                  <Link href="/project/create">
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Project
+                    </Button>
+                  </Link>
+                )}
+              </EmptyState>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <Table>
+                  <TableHeader>
+                    <tr>
+                      <th>Name</th>
+                      <th>Department</th>
+                      <th>Budget</th>
+                      <th>Start Date</th>
+                      <th>End Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProjects.map((project) => (
+                      <tr key={project.id}>
+                        <td>
+                          <div style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                            {project.name}
+                          </div>
+                          {project.description && (
+                            <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '4px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {project.description}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{project.department_name || '-'}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {project.budget ? (
+                            <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
+                              ${project.budget.toLocaleString()}
+                            </span>
+                          ) : (
+                            <span>-</span>
+                          )}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{formatDate(project.start_date)}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {project.end_date ? formatDate(project.end_date) : '-'}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <StatusBadge active={project.is_active}>
+                            {project.is_active ? 'Active' : 'Inactive'}
+                          </StatusBadge>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <ActionButtons>
+                            <Link href={`/project/edit/${project.id}`}>
+                              <Button variant="ghost" size="sm" style={{ height: '32px', width: '32px', padding: 0 }}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              style={{ height: '32px', width: '32px', padding: 0, color: 'var(--destructive)' }}
+                              onClick={() => handleDelete(project.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </ActionButtons>
+                        </td>
+                      </tr>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </Card>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }
 

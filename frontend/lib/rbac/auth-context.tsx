@@ -4,6 +4,13 @@ import React, { createContext, useContext, useEffect, useMemo, ReactNode } from 
 import { User, Resource, Action, UserType } from './models';
 import useUserStore from '@/store/userStore';
 
+// Only redirect on client side
+const redirectToHome = () => {
+  if (typeof window !== 'undefined') {
+    window.location.href = '/';
+  }
+};
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -44,13 +51,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const mappedUser = useMemo<User | null>(() => {
     if (!storeUser) return null;
+    const userType = mapStoreRoleToUserType(storeUser.role);
     return {
       id: storeUser.id,
       username: storeUser.name,
       email: storeUser.email,
       full_name: storeUser.name,
       phone: storeUser.phone ?? null,
-      role: mapStoreRoleToUserType(storeUser.role),
+      userType: userType,
+      role: storeUser.role,
       is_active: storeUser.isActive,
       created_at: storeUser.createdAt ? new Date(storeUser.createdAt) : new Date(),
       updated_at: new Date(),
@@ -58,36 +67,104 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [storeUser]);
 
+  // Auto-fetch user if token exists but user is not loaded
   useEffect(() => {
-    if (!mappedUser && typeof window !== 'undefined' && localStorage.getItem('access_token')) {
-      getCurrentUser();
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token && !mappedUser && !isLoading) {
+        getCurrentUser().catch((error) => {
+          console.error('Failed to get current user:', error);
+          // If token is invalid, clear it
+          if (error.response?.status === 401) {
+            localStorage.removeItem('access_token');
+          }
+        });
+      }
     }
-  }, [mappedUser, getCurrentUser]);
+  }, [mappedUser, isLoading, getCurrentUser]);
 
   const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
       await storeLogin(identifier, password);
       return true;
-    } catch {
+    } catch (error) {
+      console.error('Login error:', error);
       return false;
     }
   };
 
   const logout = async () => {
-    await storeLogout();
+    try {
+      // Call store logout which handles API call and state clearing
+      await storeLogout();
+      
+      // Clear any additional localStorage items
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('language');
+      }
+      
+      // Redirect to home page after logout
+      redirectToHome();
+    } catch (error) {
+      console.error('Logout error:', error);
+      
+      // Even if logout fails, clear local storage and redirect
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('language');
+      }
+      
+      // Still redirect to home page
+      redirectToHome();
+    }
   };
 
   const hasPermission = (resource: Resource, _action?: Action): boolean => {
-    if (!mappedUser) return false;
+    if (!mappedUser || !mappedUser.is_active) return false;
 
     const rolePermissions: Record<UserType, Resource[]> = {
-      [UserType.ADMIN]: [Resource.DASHBOARD, Resource.USERS, Resource.ROLES, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS, Resource.SETTINGS],
-      [UserType.FINANCE_ADMIN]: [Resource.DASHBOARD, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS],
-      [UserType.ACCOUNTANT]: [Resource.DASHBOARD, Resource.REVENUES, Resource.EXPENSES, Resource.REPORTS],
-      [UserType.EMPLOYEE]: [Resource.DASHBOARD, Resource.PROFILE],
+      [UserType.ADMIN]: [
+        Resource.DASHBOARD,
+        Resource.USERS,
+        Resource.ROLES,
+        Resource.REVENUES,
+        Resource.EXPENSES,
+        Resource.TRANSACTIONS,
+        Resource.REPORTS,
+        Resource.SETTINGS,
+        Resource.DEPARTMENTS,
+        Resource.PROJECTS,
+        Resource.PROFILE,
+        Resource.FINANCIAL_PLANS,
+      ],
+      [UserType.FINANCE_ADMIN]: [
+        Resource.DASHBOARD,
+        Resource.REVENUES,
+        Resource.EXPENSES,
+        Resource.TRANSACTIONS,
+        Resource.REPORTS,
+        Resource.DEPARTMENTS,
+        Resource.PROJECTS,
+        Resource.PROFILE,
+      ],
+      [UserType.ACCOUNTANT]: [
+        Resource.DASHBOARD,
+        Resource.REVENUES,
+        Resource.EXPENSES,
+        Resource.REPORTS,
+        Resource.PROFILE,
+      ],
+      [UserType.EMPLOYEE]: [
+        Resource.DASHBOARD,
+        Resource.PROFILE,
+      ],
     };
 
-    const allowedResources = rolePermissions[mappedUser.role] || [];
+    const userType = mappedUser.userType;
+    const allowedResources = rolePermissions[userType] || [];
     return allowedResources.includes(resource);
   };
 
@@ -97,7 +174,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshUser = async (): Promise<void> => {
-    await getCurrentUser();
+    try {
+      await getCurrentUser();
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      // If refresh fails with 401, user is not authenticated
+      if (error && typeof error === 'object' && 'response' in error) {
+        const httpError = error as { response?: { status?: number } };
+        if (httpError.response?.status === 401) {
+          // Clear invalid token
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('access_token');
+          }
+        }
+      }
+      throw error;
+    }
   };
 
   return (

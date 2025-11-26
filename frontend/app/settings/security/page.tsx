@@ -264,11 +264,11 @@ const VerificationHistoryMeta = styled.div`
   margin-top: 0.25rem;
 `;
 
-const VerificationHistoryStatus = styled.span<{ success: boolean }>`
+const VerificationHistoryStatus = styled.span<{ $success: boolean }>`
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: ${props => props.success ? '#22c55e' : '#ef4444'};
+  color: ${props => props.$success ? '#22c55e' : '#ef4444'};
   font-size: 0.75rem;
   font-weight: 500;
 `;
@@ -791,7 +791,7 @@ export default function SecuritySettingsPage() {
                 <VerificationHistoryItem key={entry.id}>
                   <VerificationHistoryDetails>
                     <VerificationHistoryDevice>{entry.device}</VerificationHistoryDevice>
-                    <VerificationHistoryStatus success={entry.success}>
+                    <VerificationHistoryStatus $success={entry.success}>
                       {entry.success ? (
                         <>
                           <CheckCircle size={12} />

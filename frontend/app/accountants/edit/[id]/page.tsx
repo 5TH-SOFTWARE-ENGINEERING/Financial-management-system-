@@ -4,14 +4,17 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import styled from 'styled-components'; // Import styled
+import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
 import { useRouter, useParams } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, ArrowLeft, Users, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 
 /* --------------------------------- ZOD SCHEMA ---------------------------------- */
@@ -28,72 +31,119 @@ type FormData = z.infer<typeof UpdateAccountantSchema>;
 
 /* --------------------------------- STYLED COMPONENTS ---------------------------------- */
 
-const PageContainer = styled.div`
+const LayoutWrapper = styled.div`
+  display: flex;
+  background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
   padding: 32px;
-  max-width: 800px;
+  width: 100%;
+  max-width: 700px;
   margin: 0 auto;
 `;
 
-const PageHeader = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 32px;
-`;
-
-const AlertBox = styled.div<{ status: 'error' | 'success' }>`
-  margin-bottom: 16px;
-  padding: 16px;
-  border-radius: 6px;
-  display: flex;
+const BackLink = styled(Link)`
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  
-  /* Conditional styling based on status */
-  ${({ status }) =>
-    status === 'error'
-      ? `
-        background: #FEF2F2; /* red-50 */
-        border: 1px solid #FECACA; /* red-200 */
-        color: #B91C1C; /* red-700 */
-      `
-      : `
-        background: #ECFDF5; /* green-50 */
-        border: 1px solid #A7F3D0; /* green-200 */
-        color: #047857; /* green-700 */
-      `}
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-bottom: 16px;
+  transition: 0.2s;
+
+  &:hover {
+    color: var(--foreground);
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const Subtitle = styled.p`
+  color: var(--muted-foreground);
+  margin-bottom: 24px;
 `;
 
 const FormWrapper = styled.form`
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  gap: 24px; /* space-y-6 */
-  background: var(--card, #ffffff);
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow */
+  gap: 22px;
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
+  gap: 8px;
 `;
 
 const ErrorText = styled.p`
-  color: #EF4444; /* red-500 */
-  font-size: 0.875rem; /* text-sm */
+  color: #dc2626;
+  font-size: 14px;
   margin-top: 4px;
+`;
+
+const AlertBox = styled.div<{ status: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  background: ${(p) => (p.status === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.status === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.status === 'error' ? '#991b1b' : '#065f46')};
 `;
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: 16px;
-  padding-top: 8px;
+  gap: 12px;
+  padding-top: 12px;
 `;
 
-const CenteredMessage = styled.div`
-  padding-top: 48px;
+const LoadingContainer = styled.div`
+  padding: 32px;
   text-align: center;
-  font-size: 1rem;
+  
+  p {
+    color: var(--muted-foreground);
+    margin-top: 16px;
+  }
 `;
 
 /* --------------------------------- PAGE ---------------------------------- */
@@ -172,7 +222,7 @@ export default function EditAccountantPage() {
       
       // Redirect after 2 seconds
       setTimeout(() => {
-        router.push('/accountants');
+        router.push('/accountants/list');
       }, 2000);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Failed to update accountant';
@@ -185,77 +235,107 @@ export default function EditAccountantPage() {
 
   if (loadingUser) {
     return (
-      <PageContainer>
-        <CenteredMessage>
-          <p>Loading accountant...</p>
-        </CenteredMessage>
-      </PageContainer>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <LoadingContainer>
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p>Loading accountant...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <PageContainer>
-      <PageHeader>Edit Accountant</PageHeader>
-      
-      {/* Alerts */}
-      {error && (
-        <AlertBox status="error">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </AlertBox>
-      )}
-      
-      {success && (
-        <AlertBox status="success">
-          <CheckCircle size={16} />
-          <span>{success}</span>
-        </AlertBox>
-      )}
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
 
-      {/* Form */}
-      <FormWrapper onSubmit={handleSubmit(onSubmit)}>
-        <FormGroup>
-          <Label htmlFor="full_name">Full Name</Label>
-          <Input id="full_name" {...register('full_name')} disabled={loading} />
-          {errors.full_name && <ErrorText>{errors.full_name.message}</ErrorText>}
-        </FormGroup>
+        <InnerContent>
+          <BackLink href="/accountants/list">
+            <ArrowLeft size={16} />
+            Back to Accountants
+          </BackLink>
 
-        <FormGroup>
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" {...register('email')} disabled={loading} />
-          {errors.email && <ErrorText>{errors.email.message}</ErrorText>}
-        </FormGroup>
+          <Title>
+            <Users className="h-8 w-8 text-primary" />
+            Edit Accountant
+          </Title>
+          <Subtitle>Update accountant information</Subtitle>
 
-        <FormGroup>
-          <Label htmlFor="username">Username</Label>
-          <Input id="username" {...register('username')} disabled={loading} />
-          {errors.username && <ErrorText>{errors.username.message}</ErrorText>}
-        </FormGroup>
+          {error && (
+            <AlertBox status="error">
+              <AlertCircle size={18} />
+              {error}
+            </AlertBox>
+          )}
 
-        <FormGroup>
-          <Label htmlFor="phone">Phone (Optional)</Label>
-          <Input id="phone" {...register('phone')} disabled={loading} />
-        </FormGroup>
+          {success && (
+            <AlertBox status="success">
+              <CheckCircle size={18} />
+              {success}
+            </AlertBox>
+          )}
 
-        <FormGroup>
-          <Label htmlFor="department">Department (Optional)</Label>
-          <Input id="department" {...register('department')} disabled={loading} />
-        </FormGroup>
+          <FormWrapper onSubmit={handleSubmit(onSubmit)}>
+            <FormGroup>
+              <Label htmlFor="full_name">Full Name *</Label>
+              <Input id="full_name" {...register('full_name')} disabled={loading} />
+              {errors.full_name && <ErrorText>{errors.full_name.message}</ErrorText>}
+            </FormGroup>
 
-        <ButtonRow>
-          <Button 
-            type="button" 
-            variant="secondary" 
-            onClick={() => router.push('/accountants')}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={loading} className="flex-1">
-            {loading ? 'Updating...' : 'Update Accountant'}
-          </Button>
-        </ButtonRow>
-      </FormWrapper>
-    </PageContainer>
+            <FormGroup>
+              <Label htmlFor="email">Email *</Label>
+              <Input id="email" type="email" {...register('email')} disabled={loading} />
+              {errors.email && <ErrorText>{errors.email.message}</ErrorText>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="username">Username *</Label>
+              <Input id="username" {...register('username')} disabled={loading} />
+              {errors.username && <ErrorText>{errors.username.message}</ErrorText>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="phone">Phone (Optional)</Label>
+              <Input id="phone" {...register('phone')} disabled={loading} />
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="department">Department (Optional)</Label>
+              <Input id="department" {...register('department')} disabled={loading} />
+            </FormGroup>
+
+            <ButtonRow>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={() => router.push('/accountants/list')}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Accountant'
+                )}
+              </Button>
+            </ButtonRow>
+          </FormWrapper>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }
