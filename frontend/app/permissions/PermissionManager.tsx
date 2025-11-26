@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { theme } from '../../styles/theme';
-import Button from '../common/Button';
-import Checkbox from '../common/Checkbox';
+import { theme } from '@/components/common/theme';
+import {Button} from '@/components/ui/button';
+import {Checkbox} from '@/components/ui/checkbox';
 import { Save, Filter, Copy, Check } from 'lucide-react';
-import { Resource, Action, UserType } from '../lib/rbac/models';
+import { Resource, Action, UserType } from '@/lib/rbac/models';
 import { 
   Table, 
   TableHeader, 
@@ -14,7 +14,10 @@ import {
   TableRow, 
   TableHead, 
   TableCell 
-} from '../common/Table';
+} from '@/components/ui/table';
+import apiClient from '@/lib/api';
+import { useUserStore } from '@/store/userStore';
+import { useAuth } from '@/lib/rbac/auth-context';
 
 // Styled components
 const Container = styled.div`
@@ -24,14 +27,14 @@ const Container = styled.div`
 const Title = styled.h1`
   font-size: 24px;
   margin-bottom: 24px;
-  color: ${theme.colors.textPrimary};
+  color: #111827;
 `;
 
 const Subtitle = styled.h2`
   font-size: 18px;
   margin-bottom: 16px;
   margin-top: 24px;
-  color: ${theme.colors.textPrimary};
+  color: #111827;
 `;
 
 const Card = styled.div`
@@ -159,7 +162,7 @@ interface UserPermissions {
 
 interface PermissionManagerProps {
   title: string;
-  adminType: UserType.ADMIN | UserType.INSURANCE_ADMIN | UserType.PROVIDER_ADMIN | UserType.CORPORATE_ADMIN;
+  adminType: UserType.ADMIN | UserType.FINANCE_ADMIN;
   managedUserTypes: UserType[];
 }
 
@@ -175,6 +178,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   adminType,
   managedUserTypes
 }) => {
+  const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [userPermissions, setUserPermissions] = useState<UserPermissions[]>([]);
@@ -183,137 +187,152 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [newTemplateName, setNewTemplateName] = useState<string>('');
   const [showSavedMessage, setShowSavedMessage] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Mock users based on the managedUserTypes
-  useEffect(() => {
-    // In a real app, you would fetch this data from API
-    const mockUsers: UserPermissions[] = [
-      {
-        userId: '1',
-        userName: 'John Smith',
-        email: 'john@acmeinsurance.com',
-        userType: UserType.INSURANCE_ADMIN,
-        isActive: true,
-        permissions: [
-          {
-            resource: Resource.INSURANCE_COMPANIES,
+  // Map backend role to frontend UserType
+  const mapRoleToUserType = (role: string): UserType => {
+    const normalized = role?.toLowerCase();
+    if (normalized === 'admin') return UserType.ADMIN;
+    if (normalized === 'manager' || normalized === 'finance_manager') return UserType.FINANCE_ADMIN;
+    if (normalized === 'accountant') return UserType.ACCOUNTANT;
+    return UserType.EMPLOYEE;
+  };
+
+  // Get default permissions based on user type
+  const getDefaultPermissions = (userType: UserType): PermissionItem[] => {
+    const defaultPerms: PermissionItem[] = [];
+    
+    // All users can view their profile
+    defaultPerms.push({
+      resource: Resource.PROFILE,
+      actions: {
+        [Action.READ]: true,
+        [Action.UPDATE]: true,
+      }
+    });
+
+    // Role-specific defaults
+    switch (userType) {
+      case UserType.ADMIN:
+        // Admin gets all permissions
+        Object.values(Resource).forEach(resource => {
+          defaultPerms.push({
+            resource,
+            actions: {
+              [Action.READ]: true,
+              [Action.CREATE]: true,
+              [Action.UPDATE]: true,
+              [Action.DELETE]: true,
+              [Action.MANAGE]: true,
+            }
+          });
+        });
+        break;
+      case UserType.FINANCE_ADMIN:
+        // Finance Manager gets financial and user management
+        [Resource.USERS, Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS].forEach(resource => {
+          defaultPerms.push({
+            resource,
+            actions: {
+              [Action.READ]: true,
+              [Action.CREATE]: true,
+              [Action.UPDATE]: true,
+              [Action.DELETE]: false,
+              [Action.MANAGE]: true,
+            }
+          });
+        });
+        break;
+      case UserType.ACCOUNTANT:
+        // Accountant gets read/write on financial data
+        [Resource.REVENUES, Resource.EXPENSES, Resource.TRANSACTIONS, Resource.REPORTS].forEach(resource => {
+          defaultPerms.push({
+            resource,
             actions: {
               [Action.READ]: true,
               [Action.CREATE]: true,
               [Action.UPDATE]: true,
               [Action.DELETE]: false,
             }
-          },
-          {
-            resource: Resource.USERS,
+          });
+        });
+        break;
+      case UserType.EMPLOYEE:
+        // Employee gets limited permissions
+        [Resource.REVENUES, Resource.EXPENSES].forEach(resource => {
+          defaultPerms.push({
+            resource,
             actions: {
               [Action.READ]: true,
               [Action.CREATE]: true,
-              [Action.UPDATE]: true,
-              [Action.DELETE]: false,
-            }
-          },
-        ]
-      },
-      {
-        userId: '2',
-        userName: 'Sarah Johnson',
-        email: 'sarah@healthplus.com',
-        userType: UserType.PROVIDER_ADMIN,
-        isActive: true,
-        permissions: [
-          {
-            resource: Resource.USERS,
-            actions: {
-              [Action.READ]: true,
-              [Action.CREATE]: true,
-              [Action.UPDATE]: true,
-              [Action.DELETE]: false,
-            }
-          },
-        ]
-      },
-      {
-        userId: '3',
-        userName: 'Alex Thompson',
-        email: 'alex@company.com',
-        userType: UserType.CORPORATE_ADMIN,
-        isActive: true,
-        permissions: [
-          {
-            resource: Resource.CORPORATE_CLIENTS,
-            actions: {
-              [Action.READ]: true,
-              [Action.CREATE]: true,
-              [Action.UPDATE]: true,
-              [Action.DELETE]: false,
-            }
-          },
-        ]
-      },
-      {
-        userId: '4',
-        userName: 'Lisa Taylor',
-        email: 'lisa@health.com',
-        userType: UserType.INSURANCE_STAFF,
-        isActive: true,
-        permissions: [
-          {
-            resource: Resource.COVERAGE_PLANS,
-            actions: {
-              [Action.READ]: true,
-              [Action.CREATE]: false,
               [Action.UPDATE]: false,
               [Action.DELETE]: false,
             }
-          },
-        ]
-      },
-      {
-        userId: '5',
-        userName: 'Mark Wilson',
-        email: 'mark@provider.com',
-        userType: UserType.PROVIDER,
-        isActive: true,
-        permissions: [
-          {
-            resource: Resource.PROFILE,
-            actions: {
-              [Action.READ]: true,
-              [Action.UPDATE]: true,
-            }
-          },
-        ]
-      },
-      {
-        userId: '6',
-        userName: 'Emily Brown',
-        email: 'emily@member.com',
-        userType: UserType.MEMBER,
-        isActive: true,
-        permissions: [
-          {
-            resource: Resource.PROFILE,
-            actions: {
-              [Action.READ]: true,
-              [Action.UPDATE]: true,
-            }
-          },
-        ]
-      },
-    ];
-
-    // Filter users based on managedUserTypes
-    const filteredUsers = mockUsers.filter(user => 
-      managedUserTypes.includes(user.userType)
-    );
-    
-    setUserPermissions(filteredUsers);
-    if (filteredUsers.length > 0) {
-      setSelectedUser(filteredUsers[0].userId);
+          });
+        });
+        break;
     }
-  }, [managedUserTypes]);
+    
+    return defaultPerms;
+  };
+
+  // Load users from API
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!currentUser) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await apiClient.getUsers();
+        const apiUsers = response.data || [];
+        
+        // Load saved permissions from localStorage (or could be from backend)
+        const savedPermissionsKey = 'user_permissions';
+        const savedPermissions = typeof window !== 'undefined' 
+          ? JSON.parse(localStorage.getItem(savedPermissionsKey) || '{}')
+          : {};
+        
+        // Convert API users to UserPermissions format
+        const users: UserPermissions[] = apiUsers.map((apiUser: any) => {
+          const userType = mapRoleToUserType(apiUser.role);
+          
+          // Check if we have saved permissions for this user, otherwise use defaults
+          const savedPerms = savedPermissions[apiUser.id.toString()];
+          const permissions = savedPerms || getDefaultPermissions(userType);
+          
+          return {
+            userId: apiUser.id.toString(),
+            userName: apiUser.full_name || apiUser.username || apiUser.email,
+            email: apiUser.email,
+            userType: userType,
+            isActive: apiUser.is_active,
+            permissions: permissions,
+          };
+        });
+        
+        // Filter users based on managedUserTypes
+        const filteredUsers = users.filter(user => 
+          managedUserTypes.includes(user.userType)
+        );
+        
+        setUserPermissions(filteredUsers);
+        if (filteredUsers.length > 0 && !selectedUser) {
+          setSelectedUser(filteredUsers[0].userId);
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.detail || 'Failed to load users');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, [currentUser, managedUserTypes]);
 
   // Handlers
   const handlePermissionChange = (
@@ -411,9 +430,39 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     );
   };
 
-  const handleSavePermissions = () => {
-    // In a real app, you would send the updated permissions to your API
-    alert('Permissions saved successfully!');
+  const handleSavePermissions = async () => {
+    if (!selectedUser) return;
+    
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const selectedUserData = userPermissions.find(u => u.userId === selectedUser);
+      if (!selectedUserData) {
+        throw new Error('Selected user not found');
+      }
+      
+      // Save permissions to localStorage
+      // In a production app, this would be sent to a backend API endpoint
+      const savedPermissionsKey = 'user_permissions';
+      const savedPermissions = typeof window !== 'undefined' 
+        ? JSON.parse(localStorage.getItem(savedPermissionsKey) || '{}')
+        : {};
+      
+      savedPermissions[selectedUser] = selectedUserData.permissions;
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(savedPermissionsKey, JSON.stringify(savedPermissions));
+      }
+      
+      setSuccess('Permissions saved successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save permissions');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Template handlers
@@ -492,9 +541,46 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     return matchesSearch && matchesType;
   });
 
+  if (loading && userPermissions.length === 0) {
+    return (
+      <Container>
+        <Title>{title}</Title>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p>Loading users...</p>
+        </div>
+      </Container>
+    );
+  }
+
   return (
     <Container>
       <Title>{title}</Title>
+      
+      {error && (
+        <div style={{
+          backgroundColor: '#fee2e2',
+          color: '#b91c1c',
+          padding: '0.75rem',
+          borderRadius: '0.25rem',
+          marginBottom: '1.25rem',
+          fontSize: '0.875rem'
+        }}>
+          {error}
+        </div>
+      )}
+      
+      {success && (
+        <div style={{
+          backgroundColor: '#dcfce7',
+          color: '#166534',
+          padding: '0.75rem',
+          borderRadius: '0.25rem',
+          marginBottom: '1.25rem',
+          fontSize: '0.875rem'
+        }}>
+          {success}
+        </div>
+      )}
       
       <FilterContainer>
         <SearchInput 
@@ -539,7 +625,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                 <TableCell>{user.isActive ? 'Active' : 'Inactive'}</TableCell>
                 <TableCell>
                   <Button 
-                    size="small" 
+                    size="sm" 
                     variant="secondary"
                     onClick={() => setSelectedUser(user.userId)}
                   >
@@ -570,10 +656,10 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
               />
               <Button 
                 variant="secondary" 
-                icon={<Copy size={16} />}
                 onClick={handleSaveTemplate}
                 disabled={!newTemplateName.trim()}
               >
+                <Copy size={16} />
                 Save as Template
               </Button>
               
@@ -636,65 +722,65 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                     <TableCell>
                       <Checkbox 
                         checked={resourcePermission?.actions[Action.READ] || false}
-                        onChange={(e) => handlePermissionChange(
+                        onCheckedChange={(checked) => handlePermissionChange(
                           selectedUserData.userId, 
                           resource, 
                           Action.READ, 
-                          e.target.checked
+                          checked === true
                         )}
                       />
                     </TableCell>
                     <TableCell>
                       <Checkbox 
                         checked={resourcePermission?.actions[Action.CREATE] || false}
-                        onChange={(e) => handlePermissionChange(
+                        onCheckedChange={(checked) => handlePermissionChange(
                           selectedUserData.userId, 
                           resource, 
                           Action.CREATE, 
-                          e.target.checked
+                          checked === true
                         )}
                       />
                     </TableCell>
                     <TableCell>
                       <Checkbox 
                         checked={resourcePermission?.actions[Action.UPDATE] || false}
-                        onChange={(e) => handlePermissionChange(
+                        onCheckedChange={(checked) => handlePermissionChange(
                           selectedUserData.userId, 
                           resource, 
                           Action.UPDATE, 
-                          e.target.checked
+                          checked === true
                         )}
                       />
                     </TableCell>
                     <TableCell>
                       <Checkbox 
                         checked={resourcePermission?.actions[Action.DELETE] || false}
-                        onChange={(e) => handlePermissionChange(
+                        onCheckedChange={(checked) => handlePermissionChange(
                           selectedUserData.userId, 
                           resource, 
                           Action.DELETE, 
-                          e.target.checked
+                          checked === true
                         )}
                       />
                     </TableCell>
                     <TableCell>
                       <Checkbox 
                         checked={resourcePermission?.actions[Action.MANAGE] || false}
-                        onChange={(e) => handlePermissionChange(
+                        onCheckedChange={(checked) => handlePermissionChange(
                           selectedUserData.userId, 
                           resource, 
                           Action.MANAGE, 
-                          e.target.checked
+                          checked === true
                         )}
                       />
                     </TableCell>
                     <TableCell>
                       <Checkbox 
                         checked={allSelected}
-                        onChange={(e) => handleToggleAllForResource(
+                        onCheckedChange={(checked) => handleToggleAllForResource(
                           selectedUserData.userId,
                           resource,
-                          e.target.checked
+                          checked === true
                         )}
                       />
                     </TableCell>
@@ -708,7 +794,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             <Button variant="secondary" onClick={() => setSelectedUser(null)}>
               Cancel
             </Button>
-            <Button icon={<Save size={16} />} onClick={handleSavePermissions}>
+            <Button onClick={handleSavePermissions} disabled={loading}>
+              <Save size={16} />
               Save Permissions
             </Button>
           </ButtonGroup>

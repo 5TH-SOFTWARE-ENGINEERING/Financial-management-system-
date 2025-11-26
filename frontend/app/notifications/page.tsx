@@ -15,20 +15,25 @@ import {
   Calendar,
   Trash2,
   CheckSquare,
-  Settings
+  Settings,
+  RefreshCw
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import apiClient from '@/lib/api';
+import { toast } from 'sonner';
 
 interface Notification {
-  id: string;
+  id: number;
   type: 'success' | 'error' | 'warning' | 'info';
   title: string;
   message: string;
-  read: boolean;
-  createdAt: string;
-  actionUrl?: string;
+  is_read: boolean;
+  created_at: string;
+  action_url?: string | null;
+  notification_type?: string;
+  priority?: string;
 }
 
 export default function NotificationsPage() {
@@ -36,6 +41,9 @@ export default function NotificationsPage() {
   const { user, isAuthenticated, isLoading } = useUserStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filterType, setFilterType] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -50,103 +58,184 @@ export default function NotificationsPage() {
   }, [isAuthenticated, user]);
 
   const fetchNotifications = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      // Mock notifications based on user role
-      const mockNotifications: Notification[] = [
-        {
-          id: '1',
-          type: 'success',
-          title: 'Transaction Approved',
-          message: 'Your expense submission for $1,200 has been approved.',
-          read: false,
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-          actionUrl: '/expenses'
-        },
-        {
-          id: '2',
-          type: 'warning',
-          title: 'Pending Approvals',
-          message: 'You have 3 transactions pending approval.',
-          read: false,
-          createdAt: new Date(Date.now() - 7200000).toISOString(),
-          actionUrl: '/approvals'
-        },
-        {
-          id: '3',
-          type: 'info',
-          title: 'New Report Available',
-          message: 'Monthly financial report for October 2024 is now available.',
-          read: true,
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          actionUrl: '/reports'
-        },
-        {
-          id: '4',
-          type: 'error',
-          title: 'Transaction Rejected',
-          message: 'Your expense submission was rejected: Budget exceeded.',
-          read: true,
-          createdAt: new Date(Date.now() - 172800000).toISOString(),
-          actionUrl: '/expenses'
-        },
-        {
-          id: '5',
-          type: 'info',
-          title: 'System Update',
-          message: 'The system will be updated tonight at 2:00 AM EST.',
-          read: false,
-          createdAt: new Date(Date.now() - 259200000).toISOString()
-        }
-      ];
+      const response = await apiClient.getNotifications();
+      const apiNotifications = (response.data || []).map((notif: any) => ({
+        id: notif.id,
+        type: mapNotificationType(notif.notification_type || notif.type || 'info'),
+        title: notif.title || 'Notification',
+        message: notif.message || notif.content || '',
+        is_read: notif.is_read || notif.read || false,
+        created_at: notif.created_at || notif.createdAt || new Date().toISOString(),
+        action_url: notif.action_url || notif.actionUrl || null,
+        notification_type: notif.notification_type,
+        priority: notif.priority,
+      }));
       
-      // Filter notifications based on user role
-      const filteredNotifications = mockNotifications.filter(notification => {
-        if (user?.role === 'employee') {
-          return !notification.title.includes('Pending Approvals');
-        }
-        return true;
-      });
+      // Sort by created_at (newest first)
+      apiNotifications.sort((a: Notification, b: Notification) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
       
-      setNotifications(filteredNotifications);
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      setNotifications(apiNotifications);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to load notifications';
+      setError(errorMessage);
+      console.error('Failed to fetch notifications:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+  const mapNotificationType = (type: string): 'success' | 'error' | 'warning' | 'info' => {
+    const normalized = type?.toLowerCase() || 'info';
+    // Map backend notification types to frontend types
+    if (normalized.includes('approval_decision') || normalized.includes('approved') || normalized.includes('success')) {
+      return 'success';
+    }
+    if (normalized.includes('rejected') || normalized.includes('error') || normalized.includes('failed') || normalized.includes('budget_exceeded')) {
+      return 'error';
+    }
+    if (normalized.includes('approval_request') || normalized.includes('pending') || normalized.includes('warning') || normalized.includes('deadline')) {
+      return 'warning';
+    }
+    return 'info';
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+  const markAsRead = async (notificationId: number) => {
+    if (processingIds.has(notificationId)) return;
+    
+    setProcessingIds(prev => new Set(prev).add(notificationId));
+    
+    try {
+      await apiClient.markNotificationAsRead(notificationId);
+      
+      // Optimistically update UI
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === notificationId 
+            ? { ...notification, is_read: true }
+            : notification
+        )
+      );
+      
+      toast.success('Notification marked as read');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to mark notification as read';
+      toast.error(errorMessage);
+      // Reload notifications on error
+      fetchNotifications();
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
+    }
   };
 
-  const deleteNotification = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.filter(notification => notification.id !== notificationId)
-    );
+  const markAllAsRead = async () => {
+    if (processingIds.has(-1)) return; // -1 indicates "all" operation
+    
+    setProcessingIds(prev => new Set(prev).add(-1));
+    
+    try {
+      await apiClient.markAllNotificationsAsRead();
+      
+      // Optimistically update UI
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, is_read: true }))
+      );
+      
+      toast.success('All notifications marked as read');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to mark all notifications as read';
+      toast.error(errorMessage);
+      // Reload notifications on error
+      fetchNotifications();
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(-1);
+        return newSet;
+      });
+    }
+  };
+
+  const deleteNotification = async (notificationId: number) => {
+    if (processingIds.has(notificationId)) return;
+    
+    if (!confirm('Are you sure you want to delete this notification?')) {
+      return;
+    }
+    
+    setProcessingIds(prev => new Set(prev).add(notificationId));
+    
+    try {
+      await apiClient.deleteNotification(notificationId);
+      
+      // Optimistically update UI
+      setNotifications(prev => 
+        prev.filter(notification => notification.id !== notificationId)
+      );
+      
+      toast.success('Notification deleted');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to delete notification';
+      toast.error(errorMessage);
+      // Reload notifications on error
+      fetchNotifications();
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
+    }
   };
 
   const filteredNotifications = notifications.filter(notification => {
     if (filterType === 'all') return true;
-    if (filterType === 'unread') return !notification.read;
+    if (filterType === 'unread') return !notification.is_read;
     return notification.type === filterType;
   });
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+  
+  // Calculate stats
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayCount = notifications.filter(n => {
+    const notifDate = new Date(n.created_at);
+    notifDate.setHours(0, 0, 0, 0);
+    return notifDate.getTime() === today.getTime();
+  }).length;
+  
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekCount = notifications.filter(n => {
+    const notifDate = new Date(n.created_at);
+    return notifDate >= weekAgo;
+  }).length;
 
   if (isLoading || !isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading notifications...</p>
+        </div>
       </div>
     );
   }
@@ -192,16 +281,29 @@ export default function NotificationsPage() {
               <p className="text-muted-foreground">Stay updated with important alerts and updates</p>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={fetchNotifications}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                title="Refresh notifications"
+              >
+                <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+                Refresh
+              </button>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:text-primary/80"
+                  disabled={processingIds.has(-1)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <CheckSquare className="h-4 w-4" />
                   Mark All as Read
                 </button>
               )}
-              <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <button 
+                onClick={() => router.push('/settings/notifications')}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
                 <Settings className="h-4 w-4" />
                 Settings
               </button>
@@ -209,6 +311,15 @@ export default function NotificationsPage() {
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2 text-red-700">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="px-4 sm:px-6 lg:px-8 py-6">
@@ -241,7 +352,7 @@ export default function NotificationsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Today</p>
-                <p className="text-2xl font-bold text-green-600">3</p>
+                <p className="text-2xl font-bold text-green-600">{todayCount}</p>
               </div>
               <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
                 <Calendar className="h-4 w-4 text-green-600" />
@@ -253,7 +364,7 @@ export default function NotificationsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">This Week</p>
-                <p className="text-2xl font-bold text-purple-600">8</p>
+                <p className="text-2xl font-bold text-purple-600">{weekCount}</p>
               </div>
               <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
                 <FileText className="h-4 w-4 text-purple-600" />
@@ -294,7 +405,7 @@ export default function NotificationsPage() {
                 key={notification.id}
                 className={cn(
                   "bg-card rounded-lg border border-border p-6 transition-all",
-                  !notification.read && "border-l-4 border-l-primary",
+                  !notification.is_read && "border-l-4 border-l-primary",
                   getNotificationColor(notification.type)
                 )}
               >
@@ -307,11 +418,11 @@ export default function NotificationsPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className={cn(
                           "text-sm font-medium text-foreground",
-                          !notification.read && "font-semibold"
+                          !notification.is_read && "font-semibold"
                         )}>
                           {notification.title}
                         </h3>
-                        {!notification.read && (
+                        {!notification.is_read && (
                           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary text-primary-foreground">
                             New
                           </span>
@@ -322,11 +433,11 @@ export default function NotificationsPage() {
                       </p>
                       <div className="flex items-center gap-4">
                         <span className="text-xs text-muted-foreground">
-                          {formatDate(notification.createdAt)}
+                          {formatDate(notification.created_at)}
                         </span>
-                        {notification.actionUrl && (
+                        {notification.action_url && (
                           <button
-                            onClick={() => router.push(notification.actionUrl!)}
+                            onClick={() => router.push(notification.action_url!)}
                             className="text-xs text-primary hover:text-primary/80 font-medium"
                           >
                             View Details
@@ -336,10 +447,11 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    {!notification.read && (
+                    {!notification.is_read && (
                       <button
                         onClick={() => markAsRead(notification.id)}
-                        className="p-1 text-muted-foreground hover:text-foreground"
+                        disabled={processingIds.has(notification.id)}
+                        className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Mark as read"
                       >
                         <CheckSquare className="h-4 w-4" />
@@ -347,7 +459,8 @@ export default function NotificationsPage() {
                     )}
                     <button
                       onClick={() => deleteNotification(notification.id)}
-                      className="p-1 text-muted-foreground hover:text-destructive"
+                      disabled={processingIds.has(notification.id)}
+                      className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Delete"
                     >
                       <Trash2 className="h-4 w-4" />

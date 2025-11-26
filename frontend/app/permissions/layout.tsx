@@ -2,8 +2,8 @@
 
 import React from 'react';
 import styled from 'styled-components';
-import Header from '../common/Header';
-import Sidebar from '../common/Sidebar';
+import  Navbar  from '@/components/common/Navbar';
+import Sidebar  from '@/components/common/Sidebar';
 
 const LayoutContainer = styled.div`
   display: flex;
@@ -31,7 +31,7 @@ export default function PermissionsLayout({ children }: PermissionsLayoutProps) 
     <LayoutContainer>
       <Sidebar />
       <MainContent>
-        <Header />
+        <Navbar />
         <ContentWrapper>
           {children}
         </ContentWrapper>

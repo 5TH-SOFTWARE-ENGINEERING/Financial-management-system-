@@ -20,7 +20,8 @@ export interface User {
   email: string;
   full_name: string;
   phone?: string | null;
-  role: UserType;
+  userType: UserType;
+  role: string;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;

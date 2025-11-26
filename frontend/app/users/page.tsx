@@ -25,6 +25,8 @@ import { useUserStore } from '@/store/userStore';
 import { type User } from '@/lib/validation';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import apiClient from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -32,7 +34,6 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -60,16 +61,18 @@ export default function UsersPage() {
   };
 
   const getSubordinates = (userId: string) => {
-    return allUsers.filter(u => u.managerId === userId);
+    return allUsers.filter((u: any) => (u.managerId === userId) || (u.manager_id?.toString() === userId));
   };
 
-  const filteredUsers = allUsers.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
+  const filteredUsers = allUsers.filter((userItem: any) => {
+    const userRole = (userItem.role || '').toLowerCase();
+    const userName = userItem.full_name || userItem.name || userItem.email || '';
+    const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (userItem.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = filterRole === 'all' || userRole === filterRole;
     const matchesStatus = filterStatus === 'all' || 
-                          (filterStatus === 'active' && user.isActive) ||
-                          (filterStatus === 'inactive' && !user.isActive);
+                          (filterStatus === 'active' && (userItem.is_active !== false)) ||
+                          (filterStatus === 'inactive' && (userItem.is_active === false));
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -113,19 +116,21 @@ export default function UsersPage() {
     return roleNames[role as keyof typeof roleNames] || role;
   };
 
-  const renderUserHierarchy = (users: User[], level = 0) => {
-    return users.map(user => {
-      const subordinates = getSubordinates(user.id);
-      const isExpanded = expandedUsers.has(user.id);
+  const renderUserHierarchy = (users: any[], level = 0) => {
+    return users.map((userItem: any) => {
+      const userRole = (userItem.role || '').toLowerCase();
+      const userId = userItem.id?.toString() || userItem.id;
+      const subordinates = getSubordinates(userId);
+      const isExpanded = expandedUsers.has(userId);
       
       return (
-        <div key={user.id} className="select-none">
+        <div key={userId} className="select-none">
           <div 
             className={cn(
               "flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer",
               level > 0 && `ml-${Math.min(level * 8, 24)}`
             )}
-            onClick={() => subordinates.length > 0 && toggleUserExpansion(user.id)}
+            onClick={() => subordinates.length > 0 && toggleUserExpansion(userId)}
           >
             {subordinates.length > 0 && (
               <div className="flex items-center">
@@ -138,42 +143,44 @@ export default function UsersPage() {
             )}
             
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              {getRoleIcon(user.role)}
+              {getRoleIcon(userRole)}
             </div>
             
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium text-foreground truncate">
-                  {user.name}
+                  {userItem.full_name || userItem.name || userItem.email}
                 </p>
                 <span className={cn(
                   "inline-flex px-2 py-1 text-xs font-semibold rounded-full",
-                  getRoleColor(user.role)
+                  getRoleColor(userRole)
                 )}>
-                  {getRoleDisplayName(user.role)}
+                  {getRoleDisplayName(userRole)}
                 </span>
                 <span className={cn(
                   "inline-flex px-2 py-1 text-xs font-semibold rounded-full",
-                  user.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                  (userItem.is_active !== false) ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                 )}>
-                  {user.isActive ? 'Active' : 'Inactive'}
+                  {(userItem.is_active !== false) ? 'Active' : 'Inactive'}
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-1">
                 <div className="flex items-center text-xs text-muted-foreground">
                   <Mail className="h-3 w-3 mr-1" />
-                  {user.email}
+                  {userItem.email}
                 </div>
-                {user.phoneNumber && (
+                {userItem.phone && (
                   <div className="flex items-center text-xs text-muted-foreground">
                     <Phone className="h-3 w-3 mr-1" />
-                    {user.phoneNumber}
+                    {userItem.phone}
                   </div>
                 )}
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Calendar className="h-3 w-3 mr-1" />
-                  Joined {formatDate(user.createdAt)}
-                </div>
+                {userItem.created_at && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    Joined {formatDate(userItem.created_at)}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -186,28 +193,49 @@ export default function UsersPage() {
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  // View user details
+                  router.push(`/users/${userItem.id}`);
                 }}
                 className="p-1 text-muted-foreground hover:text-foreground"
+                title="View details"
               >
                 <Eye className="h-4 w-4" />
               </button>
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Edit user
+                  const role = userRole;
+                  if (role === 'employee') {
+                    router.push(`/employees/edit/${userItem.id}`);
+                  } else if (role === 'accountant') {
+                    router.push(`/accountants/edit/${userItem.id}`);
+                  } else if (role === 'finance_manager' || role === 'manager' || role === 'finance_admin') {
+                    router.push(`/finance/edit/${userItem.id}`);
+                  } else {
+                    router.push(`/users/${userItem.id}/edit`);
+                  }
                 }}
                 className="p-1 text-muted-foreground hover:text-foreground"
+                title="Edit user"
               >
                 <Edit className="h-4 w-4" />
               </button>
-              {user.role === 'admin' && (
+              {(userRole === 'admin' || (userRole === 'finance_manager' && user?.id !== userId)) && (
                 <button 
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    // Delete user
+                    const userName = userItem.full_name || userItem.name || userItem.email;
+                    if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+                      try {
+                        await apiClient.deleteUser(typeof userItem.id === 'string' ? parseInt(userItem.id) : userItem.id);
+                        toast.success('User deleted successfully');
+                        fetchAllUsers();
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.detail || 'Failed to delete user');
+                      }
+                    }
                   }}
                   className="p-1 text-destructive hover:text-destructive/80"
+                  title="Delete user"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -246,8 +274,8 @@ export default function UsersPage() {
   }
 
   const totalUsers = allUsers.length;
-  const activeUsers = allUsers.filter(u => u.isActive).length;
-  const inactiveUsers = allUsers.filter(u => !u.isActive).length;
+  const activeUsers = allUsers.filter((u: any) => u.is_active !== false).length;
+  const inactiveUsers = allUsers.filter((u: any) => u.is_active === false).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -260,7 +288,7 @@ export default function UsersPage() {
               <p className="text-muted-foreground">Manage users and team hierarchy</p>
             </div>
             <button
-              onClick={() => setShowAddUserModal(true)}
+              onClick={() => router.push('/employees/create')}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
               <UserPlus className="h-4 w-4" />
@@ -381,8 +409,8 @@ export default function UsersPage() {
               <div className="p-4 space-y-1">
                 {renderUserHierarchy(
                   user.role === 'admin' 
-                    ? filteredUsers.filter(u => !u.managerId)
-                    : filteredUsers.filter(u => u.managerId === user.id || u.id === user.id)
+                    ? filteredUsers.filter((u: any) => !u.managerId && !u.manager_id)
+                    : filteredUsers.filter((u: any) => (u.managerId === user.id || u.manager_id?.toString() === user.id) || u.id === user.id)
                 )}
               </div>
             ) : (
@@ -395,29 +423,6 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Add User Modal - Simplified for now */}
-      {showAddUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-card rounded-lg border border-border w-full max-w-md mx-4">
-            <div className="p-6 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">Add New User</h2>
-            </div>
-            <div className="p-6">
-              <p className="text-muted-foreground text-center">
-                User creation form would go here. This is a placeholder for the demo.
-              </p>
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={() => setShowAddUserModal(false)}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

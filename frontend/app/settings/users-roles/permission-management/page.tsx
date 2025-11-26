@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { theme } from '/@components/common/theme';
+import { theme } from '@/components/common/theme';
 import PermissionManager from '../../../permissions/PermissionManager';
-import { Resource, Action, UserType } from '/@/lib/rbac/models';
-import { PermissionGate } from '/@/lib/rbac/permission-gate';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '/@/components/common/Tabs';
-import Button from '/@components/ui/button';
+import { Resource, Action, UserType } from '@/lib/rbac/models';
+import { PermissionGate } from '@/lib/rbac/permission-gate';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/common/Tabs';
+import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
 // Styled components
@@ -18,7 +18,7 @@ const Container = styled.div`
 const Title = styled.h1`
   font-size: 24px;
   margin-bottom: 24px;
-  color: ${theme.colors.textPrimary};
+  color: #333;
 `;
 
 const ButtonGroup = styled.div`
@@ -45,7 +45,7 @@ const Message = styled.div`
 `;
 
 const PermissionManagementPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('system');
+  const [activeTab, setActiveTab] = useState('admin');
   const router = useRouter();
   
   const handleTabChange = (value: string) => {
@@ -85,60 +85,51 @@ const PermissionManagementPage: React.FC = () => {
           
           <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList>
-              <TabsTrigger value="system">System Admin</TabsTrigger>
-              <TabsTrigger value="insurance">Insurance Admin</TabsTrigger>
-              <TabsTrigger value="provider">Provider Admin</TabsTrigger>
-              <TabsTrigger value="corporate">Corporate Admin</TabsTrigger>
+              <TabsTrigger value="admin">Admin</TabsTrigger>
+              <TabsTrigger value="finance">Finance Admin</TabsTrigger>
+              <TabsTrigger value="accountant">Accountant</TabsTrigger>
+              <TabsTrigger value="employee">Employee</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="system">
+            <TabsContent value="admin">
               <PermissionManager 
-                title="System Admin Permission Management" 
+                title="Admin Permission Management" 
                 adminType={UserType.ADMIN}
                 managedUserTypes={[
                   UserType.ADMIN,
-                  UserType.INSURANCE_ADMIN,
-                  UserType.PROVIDER_ADMIN,
-                  UserType.CORPORATE_ADMIN,
-                  UserType.STAFF,
-                  UserType.INSURANCE_STAFF,
-                  UserType.PROVIDER,
-                  UserType.MEMBER
+                  UserType.FINANCE_ADMIN,
+                  UserType.ACCOUNTANT,
+                  UserType.EMPLOYEE
                 ]}
               />
             </TabsContent>
             
-            <TabsContent value="insurance">
+            <TabsContent value="finance">
               <PermissionManager 
-                title="Insurance Admin Permission Management" 
-                adminType={UserType.INSURANCE_ADMIN}
+                title="Finance Admin Permission Management" 
+                adminType={UserType.FINANCE_ADMIN}
                 managedUserTypes={[
-                  UserType.INSURANCE_STAFF,
-                  UserType.MEMBER
+                  UserType.ACCOUNTANT,
+                  UserType.EMPLOYEE
                 ]}
               />
             </TabsContent>
             
-            <TabsContent value="provider">
+            <TabsContent value="accountant">
               <PermissionManager 
-                title="Provider Admin Permission Management" 
-                adminType={UserType.PROVIDER_ADMIN}
+                title="Accountant Permission Management" 
+                adminType={UserType.FINANCE_ADMIN}
                 managedUserTypes={[
-                  UserType.PROVIDER,
-                  UserType.STAFF
+                  UserType.ACCOUNTANT,
+                  UserType.EMPLOYEE
                 ]}
               />
             </TabsContent>
             
-            <TabsContent value="corporate">
-              <PermissionManager 
-                title="Corporate Admin Permission Management" 
-                adminType={UserType.CORPORATE_ADMIN}
-                managedUserTypes={[
-                  UserType.MEMBER,
-                  UserType.STAFF
-                ]}
-              />
+            <TabsContent value="employee">
+              <div style={{ padding: '24px', textAlign: 'center', color: theme.colors.textSecondary }}>
+                <p>Employees have limited permissions and cannot manage other users.</p>
+              </div>
             </TabsContent>
           </Tabs>
         </Card>

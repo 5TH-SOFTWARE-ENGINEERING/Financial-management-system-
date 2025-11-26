@@ -5,25 +5,17 @@ from sqlalchemy.orm import Session
 
 from ...core.database import get_db
 from ...crud.user import user as user_crud
-from ...schemas.user import UserCreate, UserOut, UserUpdate
+from ...schemas.user import UserCreate, UserOut, UserUpdate, UserChangePassword
 from ...models.user import User, UserRole
 from ...api.deps import get_current_active_user, require_min_role
 
 
 router = APIRouter()
-
-
-# ------------------------------------------------------------------
 # GET /me
-# ------------------------------------------------------------------
 @router.get("/me", response_model=UserOut)
 def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
-
-
-# ------------------------------------------------------------------
 # PUT /me
-# ------------------------------------------------------------------
 @router.put("/me", response_model=UserOut)
 def update_user_me(
     user_update: UserUpdate,
@@ -36,6 +28,35 @@ def update_user_me(
         raise HTTPException(status_code=403, detail="Cannot change your own active status")
 
     return user_crud.update(db, db_obj=current_user, obj_in=user_update)
+
+
+# ------------------------------------------------------------------
+# POST /me/change-password
+# ------------------------------------------------------------------
+@router.post("/me/change-password", response_model=dict)
+def change_password(
+    current_password: str,
+    new_password: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Change user password"""
+    from ...core.security import verify_password, get_password_hash
+    
+    # Verify current password
+    if not verify_password(current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    # Validate new password
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    
+    # Update password
+    current_user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    db.refresh(current_user)
+    
+    return {"message": "Password changed successfully"}
 
 
 # ------------------------------------------------------------------

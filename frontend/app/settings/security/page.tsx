@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { ComponentGate, ComponentId } from '/@/lib/rbac';
-import { useAuth } from '/@/lib/rbac/auth-context';
+import { ComponentGate, ComponentId } from '@/lib/rbac';
+import { useAuth } from '@/lib/rbac/auth-context';
 import { Save, Lock, Shield, Key, AlertTriangle, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
-import Button from '/@/components/ui/button';
+import { Button } from '@/components/ui/button';
+import apiClient from '@/lib/api';
 
 // Styled components
 const Container = styled.div`
@@ -459,11 +460,8 @@ export default function SecuritySettingsPage() {
     setSuccess(null);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // In a real app, this would call an API to change the password
-      console.log('Saving new password:', passwordForm);
+      // Call API to change password
+      await apiClient.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
       
       // Reset form
       setPasswordForm({
@@ -479,8 +477,9 @@ export default function SecuritySettingsPage() {
       setTimeout(() => {
         setSuccess(null);
       }, 3000);
-    } catch (err) {
-      setError('Failed to update password. Please try again.');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Failed to update password. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -492,11 +491,10 @@ export default function SecuritySettingsPage() {
     setSuccess(null);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // In a real app, this would save the security settings to the backend
-      console.log('Saving security settings:', securitySettings);
+      // Save to localStorage (these are client-side preferences)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user_security_settings', JSON.stringify(securitySettings));
+      }
       
       setSuccess('Security settings updated successfully');
       
@@ -510,6 +508,20 @@ export default function SecuritySettingsPage() {
       setLoading(false);
     }
   };
+
+  // Load security settings from localStorage on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('user_security_settings');
+        if (stored) {
+          setSecuritySettings(prev => ({ ...prev, ...JSON.parse(stored) }));
+        }
+      } catch (error) {
+        console.error('Failed to load security settings:', error);
+      }
+    }
+  }, []);
 
   if (!user) {
     return (
@@ -632,7 +644,7 @@ export default function SecuritySettingsPage() {
 
             <ActionButtons>
               <Button 
-                variant="primary" 
+                variant="default" 
                 onClick={handleSavePassword} 
                 disabled={loading}
               >
@@ -754,7 +766,7 @@ export default function SecuritySettingsPage() {
 
             <ActionButtons>
               <Button 
-                variant="primary" 
+                variant="default" 
                 onClick={handleSaveSecuritySettings} 
                 disabled={loading}
               >

@@ -163,6 +163,14 @@ class ApiClient {
     return this.get('/users/me');
   }
 
+  async updateCurrentUser(userData: Partial<User>): Promise<ApiResponse<User>> {
+    return this.put('/users/me', userData);
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post('/users/me/change-password', { current_password: currentPassword, new_password: newPassword });
+  }
+
   async getUsers(): Promise<ApiResponse<User[]>> {
     return this.get('/users');
   }
@@ -188,6 +196,10 @@ class ApiClient {
     return this.get('/revenue', { params: filters });
   }
 
+  async getRevenue(revenueId: number): Promise<ApiResponse<any>> {
+    return this.get(`/revenue/${revenueId}`);
+  }
+
   async createRevenue(revenueData: any): Promise<ApiResponse<any>> {
     return this.post('/revenue', revenueData);
   }
@@ -202,6 +214,10 @@ class ApiClient {
 
   async getExpenses(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
     return this.get('/expenses', { params: filters });
+  }
+
+  async getExpense(expenseId: number): Promise<ApiResponse<any>> {
+    return this.get(`/expenses/${expenseId}`);
   }
 
   async createExpense(expenseData: any): Promise<ApiResponse<any>> {
@@ -234,12 +250,32 @@ class ApiClient {
     return this.get('/reports', { params: filters });
   }
 
-  async generateReport(reportData: any): Promise<ApiResponse<any>> {
-    return this.post('/reports/generate', reportData);
+  async getReport(reportId: number): Promise<ApiResponse<any>> {
+    return this.get(`/reports/${reportId}`);
   }
 
-  async exportReport(format: 'pdf' | 'excel' | 'csv', filters?: Record<string, any>): Promise<ApiResponse<{ download_url: string }>> {
-    return this.get(`/reports/export/${format}`, { params: filters });
+  async createReport(reportData: any): Promise<ApiResponse<any>> {
+    return this.post('/reports', reportData);
+  }
+
+  async updateReport(reportId: number, reportData: any): Promise<ApiResponse<any>> {
+    return this.put(`/reports/${reportId}`, reportData);
+  }
+
+  async deleteReport(reportId: number): Promise<ApiResponse<{ message: string }>> {
+    return this.delete(`/reports/${reportId}`);
+  }
+
+  async downloadReport(reportId: number): Promise<ApiResponse<{ download_url: string; file_size: number; filename: string }>> {
+    return this.post(`/reports/${reportId}/download`);
+  }
+
+  async regenerateReport(reportId: number): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/reports/${reportId}/regenerate`);
+  }
+
+  async getAvailableReportTypes(): Promise<ApiResponse<{ report_types: Array<{ type: string; name: string; description: string }> }>> {
+    return this.get('/reports/types/available');
   }
 
   // Approvals
@@ -248,16 +284,50 @@ class ApiClient {
   }
 
   async approveItem(itemId: number, itemType: 'revenue' | 'expense'): Promise<ApiResponse<any>> {
-    return this.post(`/approvals/${itemType}/${itemId}/approve`);
+    if (itemType === 'revenue') {
+      return this.post(`/revenue/${itemId}/approve`);
+    } else {
+      return this.post(`/expenses/${itemId}/approve`);
+    }
   }
 
   async rejectItem(itemId: number, itemType: 'revenue' | 'expense', reason?: string): Promise<ApiResponse<any>> {
+    // Note: Backend may not have reject endpoints for revenue/expense directly
+    // This might need to go through approval workflows
     return this.post(`/approvals/${itemType}/${itemId}/reject`, { reason });
   }
 
+  async approveWorkflow(workflowId: number): Promise<ApiResponse<any>> {
+    return this.post(`/approvals/${workflowId}/approve`);
+  }
+
+  async rejectWorkflow(workflowId: number, reason: string): Promise<ApiResponse<any>> {
+    return this.post(`/approvals/${workflowId}/reject`, { rejection_reason: reason });
+  }
+
   // Notifications
-  async getNotifications(): Promise<ApiResponse<any[]>> {
-    return this.get('/notifications');
+  async getNotifications(unreadOnly?: boolean): Promise<ApiResponse<any[]>> {
+    return this.get('/notifications', { params: { unread_only: unreadOnly } });
+  }
+
+  async getNotification(notificationId: number): Promise<ApiResponse<any>> {
+    return this.get(`/notifications/${notificationId}`);
+  }
+
+  async markNotificationAsRead(notificationId: number): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/notifications/${notificationId}/mark-read`);
+  }
+
+  async markAllNotificationsAsRead(): Promise<ApiResponse<{ message: string }>> {
+    return this.post('/notifications/mark-all-read');
+  }
+
+  async deleteNotification(notificationId: number): Promise<ApiResponse<{ message: string }>> {
+    return this.delete(`/notifications/${notificationId}`);
+  }
+
+  async getUnreadCount(): Promise<ApiResponse<{ unread_count: number }>> {
+    return this.get('/notifications/unread/count');
   }
 
   // Admin endpoints
@@ -271,6 +341,48 @@ class ApiClient {
 
   async triggerBackup(includeFiles = false): Promise<ApiResponse<{ message: string }>> {
     return this.post('/admin/backup/create', undefined, { params: { include_files: includeFiles } });
+  }
+
+  // Department endpoints
+  async getDepartments(): Promise<ApiResponse<any[]>> {
+    return this.get('/departments');
+  }
+
+  async getDepartment(departmentId: number): Promise<ApiResponse<any>> {
+    return this.get(`/departments/${departmentId}`);
+  }
+
+  async createDepartment(departmentData: any): Promise<ApiResponse<any>> {
+    return this.post('/departments', departmentData);
+  }
+
+  async updateDepartment(departmentId: number, departmentData: any): Promise<ApiResponse<any>> {
+    return this.put(`/departments/${departmentId}`, departmentData);
+  }
+
+  async deleteDepartment(departmentId: number): Promise<ApiResponse<{ message: string }>> {
+    return this.delete(`/departments/${departmentId}`);
+  }
+
+  // Project endpoints
+  async getProjects(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
+    return this.get('/projects', { params: filters });
+  }
+
+  async getProject(projectId: number): Promise<ApiResponse<any>> {
+    return this.get(`/projects/${projectId}`);
+  }
+
+  async createProject(projectData: any): Promise<ApiResponse<any>> {
+    return this.post('/projects', projectData);
+  }
+
+  async updateProject(projectId: number, projectData: any): Promise<ApiResponse<any>> {
+    return this.put(`/projects/${projectId}`, projectData);
+  }
+
+  async deleteProject(projectId: number): Promise<ApiResponse<{ message: string }>> {
+    return this.delete(`/projects/${projectId}`);
   }
 
   // Generic request method

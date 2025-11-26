@@ -54,12 +54,15 @@ export type RegisterInput = z.infer<typeof RegisterSchema>;
 
 // REVENUE & EXPENSE
 export const RevenueSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
   amount: z.number().positive('Amount must be positive'),
-  description: z.string().min(1, 'Description is required'),
-  category: z.string().min(1, 'Category is required'),
-  date: z.string().pipe(z.coerce.date()),
-  isRecurring: z.boolean().default(false),
-  recurringInterval: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional(),
+  category: z.enum(['sales', 'services', 'investment', 'rental', 'other']),
+  source: z.string().optional(),
+  date: z.string().min(1, 'Date is required'),
+  isRecurring: z.boolean(),
+  recurringFrequency: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+  attachmentUrl: z.string().url('Invalid attachment URL').optional().or(z.literal('')),
 });
 
 export type RevenueInput = z.infer<typeof RevenueSchema>;
@@ -236,7 +239,7 @@ export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export const CreateDepartmentSchema = z.object({
   name: z.string().min(2, 'Department name must be at least 2 characters'),
   description: z.string().optional(),
-  managerId: z.string(),
+  managerId: z.string().optional(),
 });
 export type CreateDepartmentInput = z.infer<typeof CreateDepartmentSchema>;
 

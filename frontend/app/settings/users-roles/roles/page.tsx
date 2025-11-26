@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { theme } from '/@components/common/theme';
-import { Resource, Action } from '/@/lib/rbac/models';
-import { PermissionGate } from '/@/lib/rbac/permission-gate';
-import Button from '/@/components/ui/button';
+import { theme } from '@/components/common/theme';
+import { Resource, Action } from '@/lib/rbac/models';
+import { PermissionGate } from '@/lib/rbac/permission-gate';
+import { Button } from '@/components/ui/button';
 import { 
   Table, 
   TableHeader, 
@@ -13,7 +13,7 @@ import {
   TableRow, 
   TableHead, 
   TableCell 
-} from '../../../common/Table';
+} from '@/components/common/Table';
 import { useRouter } from 'next/navigation';
 import { 
   Search, 
@@ -31,7 +31,7 @@ const Container = styled.div`
 const Title = styled.h1`
   font-size: 24px;
   margin-bottom: 24px;
-  color: ${theme.colors.textPrimary};
+  color: #333;
 `;
 
 const Card = styled.div`
@@ -182,8 +182,8 @@ const RolesPage: React.FC = () => {
           <ButtonGroup>
             <Button 
               onClick={handleCreateRole}
-              icon={<Plus size={16} />}
             >
+              <Plus size={16} className="mr-2" />
               Create New Role
             </Button>
             <Button onClick={navigateToUserRoles}>
@@ -219,27 +219,27 @@ const RolesPage: React.FC = () => {
                   <TableCell>
                     <ActionButtons>
                       <Button 
-                        size="small" 
+                        size="sm" 
                         variant="secondary"
                         onClick={() => handleEditRole(role.id)}
-                        icon={<Edit size={14} />}
                       >
+                        <Edit size={14} className="mr-1" />
                         Edit
                       </Button>
                       <Button 
-                        size="small" 
+                        size="sm" 
                         variant="secondary"
                         onClick={() => handleDuplicateRole(role.id)}
-                        icon={<Copy size={14} />}
                       >
+                        <Copy size={14} className="mr-1" />
                         Duplicate
                       </Button>
                       <Button 
-                        size="small" 
-                        variant="danger"
+                        size="sm" 
+                        variant="destructive"
                         onClick={() => handleDeleteRole(role.id)}
-                        icon={<Trash2 size={14} />}
                       >
+                        <Trash2 size={14} className="mr-1" />
                         Delete
                       </Button>
                     </ActionButtons>

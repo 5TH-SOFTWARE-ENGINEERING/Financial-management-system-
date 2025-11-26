@@ -2,7 +2,7 @@
 
 import React from 'react';
 import styled from 'styled-components';
-import { theme } from '../../styles/theme';
+import { theme } from '@/components/common/theme';
 
 const TableContainer = styled.table`
   width: 100%;
@@ -25,8 +25,8 @@ const TableHeaderRow = styled.tr`
 const TableHeaderCell = styled.th`
   padding: 12px 16px;
   text-align: left;
-  font-weight: ${theme.typography.fontWeights.semibold};
-  color: ${theme.colors.textPrimary};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: #333;
   border-bottom: 1px solid ${theme.colors.border};
   white-space: nowrap;
 `;

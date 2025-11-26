@@ -5,22 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styled from 'styled-components';
 import {
-    Home,
-    ArrowDownCircle,
-    ArrowUpCircle,
-    Receipt,
-    PieChart,
-    Building,
-    Briefcase,
-    Users,
-    UserCog,
-    Settings,
-    ChevronDown,
-    Menu,
-    Wallet,
-    Shield,
-    UserPlus,
-    List,
+    Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
+    UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List,
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -33,11 +19,11 @@ interface SidebarContainerProps {
 }
 
 const SidebarContainer = styled.div<SidebarContainerProps>`
-    width: ${props => (props.$collapsed ? '70px' : '250px')};
+    width: ${props => (props.$collapsed ? '70px' : '230px')};
     height: 100vh;
     background: ${theme.colors.background};
     border-right: 1px solid ${theme.colors.border};
-    padding: ${theme.spacing.md} 0;
+    padding: ${theme.spacing.xs} 0;
     position: fixed;
     left: 0;
     top: 0;
@@ -70,8 +56,8 @@ const Logo = styled.div<{ $collapsed: boolean }>`
     display: flex;
     align-items: center;
     justify-content: ${props => (props.$collapsed ? 'center' : 'flex-start')}; 
-    padding: 0 ${theme.spacing.xl};
-    margin-bottom: ${theme.spacing.xl};
+    padding: 0 ${theme.spacing.sm};
+    margin-bottom: ${theme.spacing.sm};
     font-size: ${theme.typography.fontSizes.xxl};
     font-weight: ${theme.typography.fontWeights.bold};
     color: ${theme.colors.primary};
@@ -143,7 +129,6 @@ const SubMenu = styled.div<{$collapsed: boolean}>`
         border-left: none;
     }
 `;
-// --- End Styled Component Fixes ---
 
 const Sidebar: React.FC = () => {
     const pathname = usePathname();
@@ -161,7 +146,6 @@ const Sidebar: React.FC = () => {
     const isOpen = (key: string) => openSections[key] || pathname.includes(`/${key}`);
 
     useEffect(() => {
-        // Paths to check if a section should be initially open
         const paths = ['revenue', 'expense', 'transaction', 'report', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
         const newOpen = { ...openSections };
         paths.forEach(p => {
@@ -169,7 +153,6 @@ const Sidebar: React.FC = () => {
         });
         setOpenSections(newOpen);
     }, [pathname]);
-  // the newly added to fix the admin permission 
     const isAdmin = hasUserType(UserType.ADMIN) || user?.userType?.toLowerCase() === "admin";
     const isFinanceAdmin = hasUserType(UserType.FINANCE_ADMIN) || user?.userType?.toLowerCase() === "finance_admin";
     
@@ -182,8 +165,6 @@ const Sidebar: React.FC = () => {
         <Logo $collapsed={collapsed}> 
         {!collapsed ? 'FinancePro' : 'FP'}
         </Logo>
-
-        {/* ========== MAIN NAVIGATION ========== */}
         <SectionTitle $collapsed={collapsed}>Main</SectionTitle>
 
         <ComponentGate componentId={ComponentId.SIDEBAR_DASHBOARD}>
@@ -283,7 +264,7 @@ const Sidebar: React.FC = () => {
         */}
         {(isAdmin || isFinanceAdmin) && (
             <>
-                <SectionTitle $collapsed={collapsed}>Administration</SectionTitle>
+                <SectionTitle $collapsed={collapsed}>Admin</SectionTitle>
 
                 {/* 1. Finance Managers (Create, List) */}
                 {isAdmin && ( // Only show the main dropdown if Admin
@@ -297,7 +278,7 @@ const Sidebar: React.FC = () => {
                         >
                             <div style={{ display: 'flex', alignItems: 'center' }}>
                                 <Shield style={{ color: '#e74c3c' }} />
-                                {!collapsed && <span style={{ marginLeft: '12px' }}>Finance Managers</span>}
+                                {!collapsed && <span style={{ marginLeft: '12px' }}>Finance</span>}
                             </div>
                             {!collapsed && <ChevronDown size={16} />}
                         </DropdownHeader>
@@ -305,14 +286,14 @@ const Sidebar: React.FC = () => {
                             <SubMenu $collapsed={collapsed}>
                                 {/* Finance Create Link */}
                                 <ComponentGate componentId={ComponentId.FINANCE_MANAGER_CREATE}>
-                                    <NavItem href="/finance-admin/create" $active={pathname === '/finance-admin/create'} $collapsed={collapsed}>
+                                    <NavItem href="/finance/create" $active={pathname === '/finance-admin/create'} $collapsed={collapsed}>
                                         <UserPlus size={16} />
                                         {!collapsed && 'Add Finance Manager'}
                                     </NavItem>
                                 </ComponentGate>
                                 {/* Finance List Link */}
                                 <ComponentGate componentId={ComponentId.FINANCE_MANAGER_LIST}>
-                                    <NavItem href="/finance-admin/list" $active={pathname === '/finance-admin/list'} $collapsed={collapsed}>
+                                    <NavItem href="/finance/list" $active={pathname === '/finance-admin/list'} $collapsed={collapsed}>
                                         <List size={16} />
                                         {!collapsed && 'All Finance Managers'}
                                     </NavItem>
@@ -342,14 +323,14 @@ const Sidebar: React.FC = () => {
                         <SubMenu $collapsed={collapsed}>
                             {/* Accountant Create Link */}
                             <ComponentGate componentId={ComponentId.ACCOUNTANT_CREATE}>
-                                <NavItem href="/accountant/create" $active={pathname === '/accountant/create'} $collapsed={collapsed}>
+                                <NavItem href="/accountants/create" $active={pathname === '/accountant/create'} $collapsed={collapsed}>
                                     <UserPlus size={16} />
                                     {!collapsed && 'Add Accountant'}
                                 </NavItem>
                             </ComponentGate>
                             {/* Accountant List Link */}
                             <ComponentGate componentId={ComponentId.ACCOUNTANT_LIST}>
-                                <NavItem href="/accountant/list" $active={pathname === '/accountant/list'} $collapsed={collapsed}>
+                                <NavItem href="/accountants/list" $active={pathname === '/accountant/list'} $collapsed={collapsed}>
                                     <List size={16} />
                                     {!collapsed && 'All Accountants'}
                                 </NavItem>
@@ -378,14 +359,14 @@ const Sidebar: React.FC = () => {
                         <SubMenu $collapsed={collapsed}>
                             {/* Employee Create Link */}
                             <ComponentGate componentId={ComponentId.EMPLOYEE_CREATE}>
-                                <NavItem href="/employee/create" $active={pathname === '/employee/create'} $collapsed={collapsed}>
+                                <NavItem href="/employees/create" $active={pathname === '/employee/create'} $collapsed={collapsed}>
                                     <UserPlus size={16} />
                                     {!collapsed && 'Add Employee'}
                                 </NavItem>
                             </ComponentGate>
                             {/* Employee List Link */}
                             <ComponentGate componentId={ComponentId.EMPLOYEE_LIST}>
-                                <NavItem href="/employee/list" $active={pathname === '/employee/list'} $collapsed={collapsed}>
+                                <NavItem href="/employees/list" $active={pathname === '/employee/list'} $collapsed={collapsed}>
                                     <List size={16} />
                                     {!collapsed && 'All Employees'}
                                 </NavItem>

@@ -25,7 +25,8 @@ import {
   FileText,
   Activity,
   Database,
-  Key
+  Key,
+  Clock
 } from 'lucide-react';
 import { useUserStore, type StoreUser } from '@/store/userStore';
 import { cn } from '@/lib/utils';
@@ -46,7 +47,6 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
@@ -69,17 +69,23 @@ export default function AdminPage() {
     setStatsError(null);
     try {
       const response = await apiClient.getAdminSystemStats();
-      const data = response.data;
+      const data = response.data || response;
+      
+      // Handle different response structures
+      const usersData = data.users || {};
+      const financialsData = data.financials || {};
+      
       setSystemStats({
-        totalUsers: data.users?.total ?? 0,
-        activeUsers: data.users?.active ?? 0,
-        totalRevenue: data.financials?.total_revenue ?? 0,
-        totalExpenses: data.financials?.total_expenses ?? 0,
+        totalUsers: usersData.total ?? data.total_users ?? 0,
+        activeUsers: usersData.active ?? data.active_users ?? 0,
+        totalRevenue: financialsData.total_revenue ?? data.total_revenue ?? 0,
+        totalExpenses: financialsData.total_expenses ?? data.total_expenses ?? 0,
         pendingApprovals: data.pending_approvals ?? 0,
-        systemHealth: (data.system_health as SystemStats['systemHealth']) || 'healthy',
+        systemHealth: (data.system_health || data.health || 'healthy') as SystemStats['systemHealth'],
       });
     } catch (error: any) {
-      setStatsError(error.response?.data?.detail || 'Failed to load system stats');
+      console.error('Failed to fetch system stats:', error);
+      setStatsError(error.response?.data?.detail || error.message || 'Failed to load system stats');
     } finally {
       setStatsLoading(false);
     }
@@ -99,6 +105,40 @@ export default function AdminPage() {
 
   const getSubordinates = (userId: string) => {
     return allUsers.filter(u => u.managerId === userId);
+  };
+
+  const handleExportUsers = async () => {
+    try {
+      // Export users data as CSV
+      const csvHeaders = ['Name', 'Email', 'Username', 'Role', 'Department', 'Status', 'Created At'];
+      const csvRows = allUsers.map(user => [
+        user.name,
+        user.email,
+        user.name, // username
+        user.role,
+        user.department || 'N/A',
+        user.isActive ? 'Active' : 'Inactive',
+        user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'
+      ]);
+      
+      const csvContent = [
+        csvHeaders.join(','),
+        ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to export users:', error);
+      alert('Failed to export users. Please try again.');
+    }
   };
 
   const filteredUsers = allUsers.filter(user => {
@@ -201,10 +241,31 @@ const getHealthColor = (health: string) => {
                   {subordinates.length} {subordinates.length === 1 ? 'subordinate' : 'subordinates'}
                 </span>
               )}
-              <button className="p-1 text-muted-foreground hover:text-foreground">
+              <button 
+                className="p-1 text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/users/${user.id}`);
+                }}
+                title="View User"
+              >
                 <Eye className="h-4 w-4" />
               </button>
-              <button className="p-1 text-muted-foreground hover:text-foreground">
+              <button 
+                className="p-1 text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Determine edit route based on role
+                  if (user.role === 'accountant') {
+                    router.push(`/accountants/edit/${user.id}`);
+                  } else if (user.role === 'employee') {
+                    router.push(`/employees/edit/${user.id}`);
+                  } else {
+                    router.push(`/users/${user.id}/edit`);
+                  }
+                }}
+                title="Edit User"
+              >
                 <Edit className="h-4 w-4" />
               </button>
             </div>
@@ -254,12 +315,15 @@ const getHealthColor = (health: string) => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-md hover:bg-muted transition-colors">
+              <button 
+                className="flex items-center gap-2 px-4 py-2 border border-border rounded-md hover:bg-muted transition-colors"
+                onClick={handleExportUsers}
+              >
                 <Download className="h-4 w-4" />
                 Export
               </button>
               <button 
-                onClick={() => setShowAddUserModal(true)}
+                onClick={() => router.push('/users/create')}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
               >
                 <UserPlus className="h-4 w-4" />
@@ -390,7 +454,10 @@ const getHealthColor = (health: string) => {
       {/* Quick Actions */}
       <div className="px-4 sm:px-6 lg:px-8 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:bg-muted transition-colors">
+          <button 
+            className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+            onClick={() => router.push('/settings')}
+          >
             <Database className="h-5 w-5 text-primary" />
             <div className="text-left">
               <p className="font-medium text-foreground">Database</p>
@@ -398,7 +465,10 @@ const getHealthColor = (health: string) => {
             </div>
           </button>
           
-          <button className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:bg-muted transition-colors">
+          <button 
+            className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+            onClick={() => router.push('/reports')}
+          >
             <FileText className="h-5 w-5 text-primary" />
             <div className="text-left">
               <p className="font-medium text-foreground">Reports</p>
@@ -406,7 +476,10 @@ const getHealthColor = (health: string) => {
             </div>
           </button>
           
-          <button className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:bg-muted transition-colors">
+          <button 
+            className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+            onClick={() => router.push('/settings')}
+          >
             <Settings className="h-5 w-5 text-primary" />
             <div className="text-left">
               <p className="font-medium text-foreground">Settings</p>
@@ -414,7 +487,10 @@ const getHealthColor = (health: string) => {
             </div>
           </button>
           
-          <button className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:bg-muted transition-colors">
+          <button 
+            className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+            onClick={() => router.push('/permissions')}
+          >
             <Key className="h-5 w-5 text-primary" />
             <div className="text-left">
               <p className="font-medium text-foreground">Security</p>
@@ -424,14 +500,5 @@ const getHealthColor = (health: string) => {
         </div>
       </div>
     </div>
-  );
-}
-
-function Clock({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <circle cx="12" cy="12" r="10" strokeWidth="2" />
-      <path strokeWidth="2" d="M12 6v6l4 2" />
-    </svg>
   );
 }

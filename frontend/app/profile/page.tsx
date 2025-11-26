@@ -7,7 +7,9 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import { User, UserType } from '@/lib/rbac/models';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { Camera, Mail, User as UserIcon, Users, Building, Phone, Briefcase, Calendar, Save, Edit, X, CheckCircle, AlertCircle } from 'lucide-react';
-import {Button} from '@/components/ui/button';;
+import {Button} from '@/components/ui/button';
+import apiClient from '@/lib/api';
+import { useUserStore } from '@/store/userStore';
 
 
 // Styled components
@@ -231,29 +233,35 @@ const Message = styled.div<{ type: 'error' | 'success' }>`
 `;
 
 // Enhanced user data interface
-interface ExtendedUser extends User {
+interface ExtendedUser {
+  id: string;
+  name: string;
+  email: string;
+  username: string;
   phoneNumber?: string;
   address?: string;
   bio?: string;
   department?: string;
   position?: string;
   joinDate?: string;
+  userType: UserType;
+  role: string;
+  isActive: boolean;
+  createdAt?: string;
 }
 
 // Get a color based on user type
-const getUserColor = (userType: UserType): string => {
-  const colors: Record<UserType, string> = {
+const getUserColor = (userType: UserType | string): string => {
+  const userTypeStr = typeof userType === 'string' ? userType.toUpperCase() : userType;
+  const colors: Record<string, string> = {
     [UserType.ADMIN]: '#2563eb', // Blue
     [UserType.FINANCE_ADMIN]: '#7c3aed', // Purple
-    [UserType.ACCANTANT]: '#8b5cf6', // Light purple
+    [UserType.ACCOUNTANT]: '#8b5cf6', // Light purple
     [UserType.EMPLOYEE]: '#db2777', // Pink
-    [UserType.PROVIDER_ADMIN]: '#ea580c', // Orange
   };
-  return colors[userType] || '#4b5563'; // Default gray
+  return colors[userTypeStr] || '#4b5563'; // Default gray
 };
 
-// Format user type for display
-// app/profile/page.tsx
 
 const formatUserType = (userType: UserType | string | null | undefined): string => {
   // FIX: Check if userType is a truthy string before attempting to split it.
@@ -267,99 +275,83 @@ const formatUserType = (userType: UserType | string | null | undefined): string 
     .join(' ');
 };
 
-// Mock data for different user types
-const getMockUserData = (user: User): ExtendedUser => {
-  const baseData = {
-    ...user,
-    phoneNumber: '',
-    address: '',
-    bio: '',
-    department: '',
-    position: '',
-    joinDate: ''
-  };
+// Map backend role to frontend UserType
+const mapRoleToUserType = (role: string | undefined | null): UserType => {
+  if (!role) return UserType.EMPLOYEE;
+  const roleUpper = role.toUpperCase();
+  if (roleUpper === 'ADMIN' || roleUpper === 'SUPER_ADMIN') return UserType.ADMIN;
+  if (roleUpper === 'MANAGER' || roleUpper === 'FINANCE_MANAGER' || roleUpper === 'FINANCE_ADMIN') return UserType.FINANCE_ADMIN;
+  if (roleUpper === 'ACCOUNTANT') return UserType.ACCOUNTANT;
+  return UserType.EMPLOYEE;
+};
 
-  switch (user.userType) {
-    case UserType.ADMIN:
-      return {
-        ...baseData,
-        phoneNumber: '(555) 123-4567',
-        address: '123 Admin Ave, San Francisco, CA 94105',
-        bio: 'System administrator responsible for platform management and security.',
-        joinDate: '2020-01-15'
-      };
-    case UserType.INSURANCE_ADMIN:
-      return {
-        ...baseData,
-        phoneNumber: '(555) 234-5678',
-        address: '456 Insurance Blvd, New York, NY 10001',
-        bio: 'Insurance administrator overseeing policy management and claims processing.',
-        department: 'Insurance Operations',
-        position: 'Senior Administrator',
-        joinDate: '2021-03-10'
-      };
-    case UserType.INSURANCE_STAFF:
-      return {
-        ...baseData,
-        phoneNumber: '(555) 345-6789',
-        address: '789 Staff St, Chicago, IL 60601',
-        bio: 'Insurance staff member handling day-to-day operations and customer inquiries.',
-        department: 'Claims Processing',
-        position: 'Claims Specialist',
-        joinDate: '2022-05-22'
-      };
-    case UserType.PROVIDER_ADMIN:
-      return {
-        ...baseData,
-        phoneNumber: '(555) 456-7890',
-        address: '101 Provider Pkwy, Boston, MA 02108',
-        bio: 'Healthcare provider administrator managing facility operations and staff.',
-        department: 'Provider Management',
-        position: 'Facility Director',
-        joinDate: '2021-08-15'
-      };
-    case UserType.STAFF:
-      return {
-        ...baseData,
-        phoneNumber: '(555) 567-8901',
-        address: '202 Employee Dr, Seattle, WA 98101',
-        bio: 'Staff member supporting organizational operations and service delivery.',
-        department: 'Administration',
-        position: 'Administrative Assistant',
-        joinDate: '2022-11-03'
-      };
-    case UserType.MEMBER:
-      return {
-        ...baseData,
-        phoneNumber: '(555) 678-9012',
-        address: '303 Member Ln, Austin, TX 78701',
-        bio: 'Health insurance plan member since 2022.',
-        joinDate: '2022-06-15'
-      };
-    default:
-      return baseData;
-  }
+// Map API user to ExtendedUser
+const mapApiUserToExtended = (apiUser: any): ExtendedUser => {
+  const backendRole = apiUser.role || '';
+  const userType = mapRoleToUserType(backendRole);
+  
+  return {
+    id: apiUser.id?.toString() || '',
+    name: apiUser.full_name || apiUser.username || '',
+    email: apiUser.email || '',
+    username: apiUser.username || '',
+    phoneNumber: apiUser.phone || '',
+    address: '', // Not in backend schema
+    bio: '', // Not in backend schema
+    department: apiUser.department || '',
+    position: '', // Not in backend schema
+    joinDate: apiUser.created_at ? new Date(apiUser.created_at).toISOString().split('T')[0] : '',
+    userType: userType,
+    role: backendRole,
+    isActive: apiUser.is_active !== undefined ? apiUser.is_active : true,
+    createdAt: apiUser.created_at ? new Date(apiUser.created_at).toISOString() : undefined,
+  };
 };
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const { getCurrentUser: fetchCurrentUser } = useUserStore();
   const [isEditing, setIsEditing] = useState(false);
   const [userData, setUserData] = useState<ExtendedUser | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      // Initialize with mock data based on user type
-      setUserData(getMockUserData(user));
-    }
+    const loadUserProfile = async () => {
+      if (!user) {
+        setInitialLoading(false);
+        return;
+      }
+
+      setInitialLoading(true);
+      setError(null);
+      try {
+        // Fetch fresh user data from API
+        const response = await apiClient.getCurrentUser();
+        const extendedUser = mapApiUserToExtended(response.data);
+        setUserData(extendedUser);
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Failed to load profile data';
+        setError(errorMessage);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadUserProfile();
   }, [user]);
 
-  if (!user || !userData) {
+  if (initialLoading || !user || !userData) {
     return (
       <Container>
-        <p>Loading profile data...</p>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4" />
+            <p>Loading profile data...</p>
+          </div>
+        </div>
       </Container>
     );
   }
@@ -370,15 +362,37 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    if (!userData) return;
+
     try {
       setLoading(true);
       setError(null);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Prepare update payload - only include fields that are in the backend schema
+      const updatePayload: any = {
+        full_name: userData.name,
+        email: userData.email,
+        phone: userData.phoneNumber || null,
+        department: userData.department || null,
+      };
+
+      // Remove undefined/null values
+      Object.keys(updatePayload).forEach(key => {
+        if (updatePayload[key] === undefined || updatePayload[key] === '') {
+          updatePayload[key] = null;
+        }
+      });
+
+      // Call API to update profile
+      const response = await apiClient.updateCurrentUser(updatePayload);
       
-      // In a real app, this would call an API to update the user profile
-      console.log('Saving profile changes:', userData);
+      // Update local state with response
+      const updatedUser = mapApiUserToExtended(response.data);
+      setUserData(updatedUser);
+      
+      // Refresh user store
+      await fetchCurrentUser();
+      
       setSuccess('Profile updated successfully');
       setIsEditing(false);
       
@@ -386,20 +400,26 @@ export default function ProfilePage() {
       setTimeout(() => {
         setSuccess(null);
       }, 3000);
-    } catch (err) {
-      setError('Failed to update profile. Please try again.');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Failed to update profile. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    // Reset to original data
-    if (user) {
-      setUserData(getMockUserData(user));
+  const handleCancel = async () => {
+    // Reset to original data by fetching from API again
+    try {
+      setError(null);
+      const response = await apiClient.getCurrentUser();
+      const extendedUser = mapApiUserToExtended(response.data);
+      setUserData(extendedUser);
+    } catch (err: any) {
+      // If API fails, just reset editing mode
+      console.error('Failed to reload user data:', err);
     }
     setIsEditing(false);
-    setError(null);
   };
 
   // FIX: Added a check for the 'name' argument to ensure it is a valid string
@@ -432,17 +452,17 @@ export default function ProfilePage() {
           <Title>Profile</Title>
           <ComponentGate componentId={ComponentId.PROFILE_EDIT}>
             {!isEditing ? (
-              <Button onClick={() => setIsEditing(true)} size="medium">
+              <Button onClick={() => setIsEditing(true)}>
                 <Edit size={16} />
                 Edit Profile
               </Button>
             ) : (
               <ActionButtons>
-                <Button variant="secondary" onClick={handleCancel} size="medium">
+                <Button variant="secondary" onClick={handleCancel}>
                   <X size={16} />
                   Discard changes
                 </Button>
-                <Button onClick={handleSave} disabled={loading} size="medium">
+                <Button onClick={handleSave} disabled={loading}>
                   <Save size={16} />
                   Save changes
                 </Button>
@@ -454,7 +474,7 @@ export default function ProfilePage() {
         <ProfileGrid>
           <ProfileSidebar>
             <ProfileImage>
-              <Avatar bgColor={getUserColor(userData.userType)}>
+              <Avatar $bgColor={getUserColor(userData.userType)}>
                 {getInitials(userData.name)}
               </Avatar>
               {isEditing && (
@@ -602,40 +622,25 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
             
-            {(userData.userType === UserType.STAFF || 
-              userData.userType === UserType.INSURANCE_STAFF || 
-              userData.userType === UserType.INSURANCE_ADMIN ||
-              userData.userType === UserType.PROVIDER_ADMIN) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Professional Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FormGrid>
-                    <FormGroup>
-                      <Label htmlFor="department">Department</Label>
-                      <Input
-                        id="department"
-                        name="department"
-                        value={userData.department || ''}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                        placeholder={isEditing ? "Enter department" : ""}
-                      />
-                    </FormGroup>
-                    
-                    <FormGroup>
-                      <Label htmlFor="position">Position</Label>
-                      <Input
-                        id="position"
-                        name="position"
-                        value={userData.position || ''}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                        placeholder={isEditing ? "Enter position" : ""}
-                      />
-                    </FormGroup>
-                    
+            <Card>
+              <CardHeader>
+                <CardTitle>Professional Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FormGrid>
+                  <FormGroup>
+                    <Label htmlFor="department">Department</Label>
+                    <Input
+                      id="department"
+                      name="department"
+                      value={userData.department || ''}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      placeholder={isEditing ? "Enter department" : ""}
+                    />
+                  </FormGroup>
+                  
+                  {userData.joinDate && (
                     <FormGroup>
                       <Label htmlFor="joinDate">Join Date</Label>
                       <Input
@@ -644,13 +649,13 @@ export default function ProfilePage() {
                         type="date"
                         value={userData.joinDate || ''}
                         onChange={handleInputChange}
-                        disabled={!isEditing}
+                        disabled={true} // Join date is read-only
                       />
                     </FormGroup>
-                  </FormGrid>
-                </CardContent>
-              </Card>
-            )}
+                  )}
+                </FormGrid>
+              </CardContent>
+            </Card>
             
             <Card>
               <CardHeader>

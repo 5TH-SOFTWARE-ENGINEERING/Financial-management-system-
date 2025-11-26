@@ -265,7 +265,7 @@ const RoleBadge = styled.span<{ $role: string }>`
   /* Dynamic colors for the badge */
   background-color: ${props => {
     const role = props.$role.toLowerCase();
-    if (role.includes('admin')) return 'rgba(236, 72, 153, 0.15)'; // Pink
+    if (role.includes('admin')) return 'rgba(25, 219, 44, 0.15)'; // Pink
     if (role.includes('manager') || role.includes('finance')) return 'rgba(34, 197, 94, 0.15)'; // Green
     if (role.includes('accountant')) return 'rgba(59, 130, 246, 0.15)'; // Blue
     return 'rgba(251, 191, 36, 0.15)'; // Yellow/Default

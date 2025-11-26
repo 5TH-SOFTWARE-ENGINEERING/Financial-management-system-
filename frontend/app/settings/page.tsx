@@ -2,10 +2,10 @@
 'use client';
 import React from 'react';
 import styled from 'styled-components';
-import Layout from '@/components/common/Layout';
-import { ComponentGate } from '@/lib/rbac/use-authorization';
-import { ComponentId } from '@/lib/rbac/models';
-import { Settings, Users, Globe, Lock } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { ComponentGate, ComponentId } from '@/lib/rbac';
+import { Settings, Users, Globe, Lock, Bell } from 'lucide-react';
 
 const PageContainer = styled.div`
   background: #f8fafc;
@@ -83,48 +83,91 @@ const ContentHeader = styled.h2`
 `;
 
 const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState('general');
+  const pathname = usePathname();
+  const activeTab = pathname?.split('/').pop() || 'general';
 
   return (
-    <Layout>
-      <ComponentGate componentId={ComponentId.SETTINGS_PAGE}>
+    <ComponentGate componentId={ComponentId.SETTINGS_VIEW}>
         <PageContainer>
+          <Title>
+            <Settings /> Settings
+          </Title>
           <SettingsGrid>
             <Nav>
-              <NavItem active={activeTab === 'general'} onClick={() => setActiveTab('general')}>
-                <Globe /> General
-              </NavItem>
-              <NavItem active={activeTab === 'users'} onClick={() => setActiveTab('users')}>
-                <Users /> Permissions
-              </NavItem>
-              <NavItem active={activeTab === 'security'} onClick={() => setActiveTab('security')}>
-                <Lock /> Security
-              </NavItem>
+              <Link href="/settings/general" passHref legacyBehavior>
+                <NavItem active={activeTab === 'general'}>
+                  <Globe /> General
+                </NavItem>
+              </Link>
+              <Link href="/settings/notifications" passHref legacyBehavior>
+                <NavItem active={activeTab === 'notifications'}>
+                  <Bell /> Notifications
+                </NavItem>
+              </Link>
+              <Link href="/settings/security" passHref legacyBehavior>
+                <NavItem active={activeTab === 'security'}>
+                  <Lock /> Security
+                </NavItem>
+              </Link>
+              <Link href="/settings/users-roles/user-roles" passHref legacyBehavior>
+                <NavItem active={activeTab === 'users-roles'}>
+                  <Users /> Users & Roles
+                </NavItem>
+              </Link>
             </Nav>
 
             <SettingContent>
               <ContentHeader>
-                {activeTab === 'general' && 'General System Settings'}
-                {activeTab === 'users' && 'User Permissions & Roles'}
-                {activeTab === 'security' && 'Security Configuration'}
+                {activeTab === 'general' && 'General Settings'}
+                {activeTab === 'notifications' && 'Notification Settings'}
+                {activeTab === 'security' && 'Security Settings'}
+                {activeTab === 'users-roles' && 'Users & Roles Management'}
               </ContentHeader>
               
-              {activeTab === 'general' && <p>System name, currency, and financial year setup.</p>}
-              {activeTab === 'users' && <p>Manage user roles and component access (requires ADMIN). This uses the RBAC logic.</p>}
-              {activeTab === 'security' && <p>Configure two-factor authentication and password policies.</p>}
+              {activeTab === 'general' && (
+                <div>
+                  <p style={{ marginBottom: '1rem', color: '#6b7280' }}>
+                    Configure your personal preferences including language, timezone, theme, and display options.
+                  </p>
+                  <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                    Navigate to the General page to manage these settings.
+                  </p>
+                </div>
+              )}
+              {activeTab === 'notifications' && (
+                <div>
+                  <p style={{ marginBottom: '1rem', color: '#6b7280' }}>
+                    Manage your notification preferences for different types of alerts and communications.
+                  </p>
+                  <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                    Navigate to the Notifications page to configure these settings.
+                  </p>
+                </div>
+              )}
+              {activeTab === 'security' && (
+                <div>
+                  <p style={{ marginBottom: '1rem', color: '#6b7280' }}>
+                    Configure security settings including password change, two-factor authentication, and login activity.
+                  </p>
+                  <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                    Navigate to the Security page to manage these settings.
+                  </p>
+                </div>
+              )}
+              {activeTab === 'users-roles' && (
+                <div>
+                  <p style={{ marginBottom: '1rem', color: '#6b7280' }}>
+                    Manage user roles and component access (requires ADMIN). This uses the RBAC logic.
+                  </p>
+                  <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                    Navigate to the Users & Roles page to manage these settings.
+                  </p>
+                </div>
+              )}
             </SettingContent>
           </SettingsGrid>
         </PageContainer>
       </ComponentGate>
-      <ComponentGate componentId={ComponentId.SETTINGS_PAGE} fallback={
-        <PageContainer>
-          <Title><Lock /> Access Denied</Title>
-          <p>You do not have the necessary **ADMIN** permissions to view system settings.</p>
-        </PageContainer>
-      }>
-        {/* Rendered only if permission is granted */}
-      </ComponentGate>
-    </Layout>
   );
 };
 

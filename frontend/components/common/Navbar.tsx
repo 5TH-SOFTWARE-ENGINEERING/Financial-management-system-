@@ -18,7 +18,10 @@ import {
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
+import { useUserStore } from '@/store/userStore';
 import { theme } from './theme';
+import apiClient from '@/lib/api';
+import { usePathname } from 'next/navigation';
 
 const PRIMARY_ACCENT = '#06b6d4'; 
 const PRIMARY_HOVER = '#0891b2';
@@ -54,7 +57,7 @@ const SearchInput = styled.input`
   border-radius: ${theme.borderRadius.md};
   background: #f5f5f5;
   font-size: ${theme.typography.fontSizes.sm};
-  color: ${theme.colors.textPrimary};
+  color: #333;
 
   &:focus {
     outline: none;
@@ -92,9 +95,9 @@ const AddButton = styled.button`
   border: none;
   border-radius: 50%;
   background: ${PRIMARY_ACCENT};
-  color: ${props => props.theme.colors.background};
+  color: white;
   cursor: pointer;
-  transition: background-color ${props => props.theme.transitions.default};
+  transition: background-color ${theme.transitions.default};
 
   &:hover {
     background: ${PRIMARY_HOVER};
@@ -120,7 +123,7 @@ const IconButton = styled.button`
   transition: background-color ${theme.transitions.default};
 
   &:hover {
-    background: ${theme.colors.inputBg};
+    background: ${theme.colors.backgroundSecondary};
     color: ${PRIMARY_ACCENT}; 
   }
 
@@ -163,7 +166,7 @@ const MenuButton = styled.button`
   color: ${theme.colors.textSecondary};
 
   &:hover {
-    color: ${theme.colors.textPrimary};
+    color: #333;
   }
 
   svg {
@@ -193,7 +196,7 @@ const LanguageSelector = styled.div`
   transition: background-color ${theme.transitions.default};
 
   &:hover {
-    background: ${theme.colors.inputBg};
+    background: ${theme.colors.backgroundSecondary};
     color: ${PRIMARY_ACCENT};
     
     span {
@@ -221,7 +224,7 @@ const UserProfileContainer = styled.div`
   transition: background-color ${theme.transitions.default};
 
   &:hover {
-    background: ${theme.colors.inputBg};
+    background: ${theme.colors.backgroundSecondary};
   }
 `;
 
@@ -233,7 +236,7 @@ const UserAvatar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.theme.colors.background}; /* White text on accent color */
+  color: white;
   font-weight: ${theme.typography.fontWeights.bold};
   font-size: ${theme.typography.fontSizes.sm};
 `;
@@ -246,7 +249,7 @@ const UserInfo = styled.div`
 const UserName = styled.span`
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
-  color: ${theme.colors.textPrimary};
+  color: #333;
 `;
 
 const UserRole = styled.span`
@@ -309,9 +312,14 @@ const SignOutItem = styled(DropdownItem)`
 export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [language, setLanguage] = useState('EN');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
+  const { user: storeUser } = useUserStore();
   const router = useRouter();
+  const pathname = usePathname();
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -322,45 +330,118 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Load unread notification count
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const response = await apiClient.getUnreadCount();
+        setUnreadCount(response.data?.unread_count || 0);
+      } catch (err) {
+        console.error('Failed to load unread count:', err);
+      }
+    };
+
+    if (user) {
+      loadUnreadCount();
+      // Refresh every 30 seconds
+      const interval = setInterval(loadUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  // Load language preference from localStorage
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('language') || 'EN';
+    setLanguage(savedLanguage);
+  }, []);
+
   const handleAddClick = () => {
-    router.push('/finance/entries/create');
+    // Context-aware routing based on current path
+    if (pathname?.includes('/app/expenses')) {
+      router.push('/app/expenses/create');
+    } else if (pathname?.includes('/app/revenue')) {
+      router.push('/app/revenue/create');
+    } else if (pathname?.includes('/app/project')) {
+      router.push('/app/project/create');
+    } else if (pathname?.includes('/app/employees')) {
+      router.push('/app/employees/create');
+    } else if (pathname?.includes('/app/finance')) {
+      router.push('/app/finance/create');
+    } else if (pathname?.includes('/app/accountants')) {
+      router.push('/app/accountants/create');
+    } else if (pathname?.includes('/app/department')) {
+      router.push('/app/department/create');
+    } else {
+      // Default to expenses create
+      router.push('/app/expenses/create');
+    }
   };
 
   const handleReportsClick = () => {
-    router.push('/finance/reports');
+    router.push('/app/report');
   };
 
   const handleNotificationsClick = () => {
-    console.log('Open notifications');
+    router.push('/app/notifications');
   };
 
   const handleLanguageClick = () => {
-    console.log('Toggle language');
+    const newLanguage = language === 'EN' ? 'AR' : 'EN';
+    setLanguage(newLanguage);
+    localStorage.setItem('language', newLanguage);
+    // Could trigger a language change event here
   };
 
   const handleProfileClick = () => {
-    router.push('/profile');
+    router.push('/app/profile');
     setIsDropdownOpen(false);
   };
 
   const handleSettingsClick = () => {
-    router.push('/settings');
+    router.push('/app/settings');
     setIsDropdownOpen(false);
   };
 
   const handleRolesClick = () => {
-    router.push('/settings/roles');
+    router.push('/app/permissions');
     setIsDropdownOpen(false);
   };
   
   const handleSignOut = () => {
     logout();
   };
-  const userName = user?.name || user?.username;
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (search.trim()) {
+      // Navigate to a search results page or filter current page
+      // For now, we'll just clear and show a message
+      // In a full implementation, this would route to a search page
+      router.push(`/search?q=${encodeURIComponent(search)}`);
+    }
+  };
+
+  // Get user data from either auth context or store
+  const currentUser = storeUser || user;
+  const userName = (currentUser as any)?.name || (currentUser as any)?.username || (currentUser as any)?.email || 'User';
   const initials = userName
-    ? userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+    ? userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2)
     : '?';
-  const displayRole = user?.role ?? user?.userType ?? 'User';
+  
+  // Get role display name
+  const getRoleDisplayName = (role?: string) => {
+    const roleMap: Record<string, string> = {
+      admin: 'Administrator',
+      finance_manager: 'Finance Manager',
+      manager: 'Manager',
+      accountant: 'Accountant',
+      employee: 'Employee',
+    };
+    const normalizedRole = (role || '').toLowerCase();
+    return roleMap[normalizedRole] || role || 'User';
+  };
+  
+  const displayRole = getRoleDisplayName(currentUser?.role);
 
   return (
     <HeaderContainer>
@@ -373,19 +454,26 @@ export default function Navbar() {
         <Menu />
       </MenuButton>
       <SearchContainer>
-        <SearchIcon>
-          <Search size={16} />
-        </SearchIcon>
-        <SearchInput
-          placeholder="Search finance data..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+        <form onSubmit={handleSearch} style={{ width: '100%' }}>
+          <SearchIcon>
+            <Search size={16} />
+          </SearchIcon>
+          <SearchInput
+            placeholder="Search..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch(e);
+              }
+            }}
+          />
+        </form>
       </SearchContainer>
 
       <ActionsContainer>
-        <ComponentGate componentId={ComponentId.FINANCE_CREATE}>
-          <AddButton onClick={handleAddClick}>
+        <ComponentGate componentId={ComponentId.EXPENSE_CREATE}>
+          <AddButton onClick={handleAddClick} title="Add new item">
             <Plus />
           </AddButton>
         </ComponentGate>
@@ -394,19 +482,21 @@ export default function Navbar() {
             <IconWrapper>
               <Bell />
             </IconWrapper>
-            <span>4</span>
+            {unreadCount > 0 && (
+              <span>{unreadCount > 99 ? '99+' : unreadCount}</span>
+            )}
           </NotificationBadge>
         </ComponentGate>
-        <ComponentGate componentId={ComponentId.REPORT_VIEW}>
-          <IconButton onClick={handleReportsClick}>
+        <ComponentGate componentId={ComponentId.REPORT_LIST}>
+          <IconButton onClick={handleReportsClick} title="View reports">
             <FileSpreadsheet />
           </IconButton>
         </ComponentGate>
-        <LanguageSelector onClick={handleLanguageClick}>
+        <LanguageSelector onClick={handleLanguageClick} title="Toggle language">
           <IconWrapper>
             <Globe />
           </IconWrapper>
-          <span>EN</span>
+          <span>{language}</span>
         </LanguageSelector>
         <UserProfileContainer ref={dropdownRef} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
           <UserAvatar>{initials}</UserAvatar>
@@ -424,7 +514,7 @@ export default function Navbar() {
             <Settings size={16} />
             <span>Settings</span>
           </DropdownItem>
-          <ComponentGate componentId={ComponentId.PERMISSIONS_MANAGE}>
+          <ComponentGate componentId={ComponentId.PERMISSION_EDIT}>
             <DropdownItem onClick={handleRolesClick}>
               <HelpCircle size={16} />
               <span>Role & Permission Management</span>

@@ -1,99 +1,113 @@
 'use client';
 
 import React from 'react';
-import styled from 'styled-components';
-import { theme } from '@/components/common/theme';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShieldOff, ArrowLeft } from 'lucide-react';
-
-const UnauthorizedContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh; /* Use full height again since we have our own layout */
-  background: ${theme.colors.background};
-  padding: ${theme.spacing.xl};
-  text-align: center;
-`;
-
-const IconWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: ${theme.colors.warning}20;
-  margin-bottom: ${theme.spacing.xl};
-
-  svg {
-    width: 40px;
-    height: 40px;
-    color: ${theme.colors.warning};
-  }
-`;
-
-const Title = styled.h1`
-  font-size: ${theme.typography.fontSizes.xl};
-  color: ${theme.colors.textPrimary};
-  margin-bottom: ${theme.spacing.md};
-`;
-
-const Message = styled.p`
-  font-size: ${theme.typography.fontSizes.md};
-  color: ${theme.colors.textSecondary};
-  max-width: 600px;
-  margin-bottom: ${theme.spacing.xl};
-`;
-
-const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: ${theme.spacing.sm};
-  padding: ${theme.spacing.sm} ${theme.spacing.lg};
-  background-color: ${theme.colors.primary};
-  color: ${theme.colors.background};
-  border: none;
-  border-radius: ${theme.borderRadius.md};
-  font-size: ${theme.typography.fontSizes.md};
-  cursor: pointer;
-  transition: all ${theme.transitions.default};
-
-  &:hover {
-    background-color: ${props => {
-      const color = theme.colors.primary;
-      return `${color}dd`;
-    }};
-  }
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-`;
+import { ShieldOff, ArrowLeft, Home, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useUserStore } from '@/store/userStore';
+import Link from 'next/link';
 
 export default function UnauthorizedPage() {
   const router = useRouter();
+  const { user, isAuthenticated } = useUserStore();
 
   const handleGoBack = () => {
-    router.back();
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
+  const handleGoHome = () => {
+    router.push('/dashboard');
   };
 
   return (
-    <UnauthorizedContainer>
-      <IconWrapper>
-        <ShieldOff />
-      </IconWrapper>
-      <Title>Access Denied</Title>
-      <Message>
-        You do not have permission to access this page. If you believe this is an error, please contact your administrator.
-      </Message>
-      <BackButton onClick={handleGoBack}>
-        <ArrowLeft />
-        Go Back
-      </BackButton>
-    </UnauthorizedContainer>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="max-w-2xl w-full text-center">
+        <div className="mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-yellow-100 mb-6">
+            <ShieldOff className="h-10 w-10 text-yellow-600" />
+          </div>
+          <h1 className="text-4xl font-bold text-foreground mb-4">
+            Access Denied
+          </h1>
+          <div className="flex items-center justify-center gap-2 text-muted-foreground mb-6">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-lg">
+              You do not have permission to access this page.
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-card rounded-lg border border-border p-8 mb-8 shadow-sm">
+          <div className="space-y-4 text-left">
+            <div>
+              <h2 className="font-semibold text-foreground mb-2">What happened?</h2>
+              <p className="text-muted-foreground">
+                You tried to access a page or resource that requires specific permissions. 
+                Your current role may not have the necessary access rights.
+              </p>
+            </div>
+
+            {user && (
+              <div className="mt-6 pt-6 border-t border-border">
+                <p className="text-sm text-muted-foreground mb-2">Current User:</p>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-foreground">{user.name || user.email}</span>
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 pt-6 border-t border-border">
+              <h3 className="font-semibold text-foreground mb-2">What can you do?</h3>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground text-sm">
+                <li>Contact your administrator to request access</li>
+                <li>Verify that you're logged in with the correct account</li>
+                <li>Return to the dashboard and navigate to accessible pages</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button
+            onClick={handleGoBack}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Go Back
+          </Button>
+          <Button
+            onClick={handleGoHome}
+            className="flex items-center gap-2"
+          >
+            <Home className="h-4 w-4" />
+            Go to Dashboard
+          </Button>
+          {!isAuthenticated && (
+            <Link href="/auth/login">
+              <Button variant="secondary" className="flex items-center gap-2">
+                Go to Login
+              </Button>
+            </Link>
+          )}
+        </div>
+
+        {isAuthenticated && (
+          <div className="mt-8 text-sm text-muted-foreground">
+            <p>
+              If you believe this is an error, please contact your system administrator 
+              or submit a support request.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
   );
-} 
+}

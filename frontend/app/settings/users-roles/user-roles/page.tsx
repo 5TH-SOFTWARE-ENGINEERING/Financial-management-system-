@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { theme } from '/@/components/common/theme';
+import { theme } from '@/components/common/theme';
 import { useRouter } from 'next/navigation';
-import { Resource, Action, UserType } from '/@/lib/rbac/models';
-import { PermissionGate } from '/@/lib/rbac/permission-gate';
-import Button from '/@/components/ui/button';
+import { Resource, Action, UserType } from '@/lib/rbac/models';
+import { PermissionGate } from '@/lib/rbac/permission-gate';
+import { Button } from '@/components/ui/button';
 import { 
   Table, 
   TableHeader, 
@@ -14,8 +14,11 @@ import {
   TableRow, 
   TableHead, 
   TableCell 
-} from '../../../common/Table';
+} from '@/components/common/Table';
 import { Search, Filter, Save, Check, User } from 'lucide-react';
+import apiClient from '@/lib/api';
+import { useUserStore } from '@/store/userStore';
+import { toast } from 'sonner';
 
 // Styled components
 const Container = styled.div`
@@ -25,7 +28,7 @@ const Container = styled.div`
 const Title = styled.h1`
   font-size: 24px;
   margin-bottom: 24px;
-  color: ${theme.colors.textPrimary};
+  color: #333;
 `;
 
 const Card = styled.div`
@@ -81,7 +84,7 @@ const ButtonGroup = styled.div`
 `;
 
 const RoleChip = styled.div`
-  background-color: ${theme.colors.primaryLight};
+  background-color: ${theme.colors.primary}15;
   color: ${theme.colors.primary};
   font-size: ${theme.typography.fontSizes.xs};
   padding: 4px 8px;
@@ -100,77 +103,64 @@ const Message = styled.div`
   color: ${theme.colors.textSecondary};
 `;
 
-// Mock data interfaces
-interface Role {
-  id: string;
-  name: string;
-  description: string;
-}
-
+// Data interfaces
 interface UserData {
   id: string;
   name: string;
   email: string;
   userType: UserType;
-  roles: Role[];
+  role: string;
 }
+
+const roleMap: Record<string, UserType> = {
+  'admin': UserType.ADMIN,
+  'super_admin': UserType.ADMIN,
+  'manager': UserType.FINANCE_ADMIN,
+  'finance_manager': UserType.FINANCE_ADMIN,
+  'accountant': UserType.ACCOUNTANT,
+  'employee': UserType.EMPLOYEE,
+};
+
+const mapRoleToUserType = (role?: string): UserType => {
+  if (!role) return UserType.EMPLOYEE;
+  return roleMap[role.toLowerCase()] || UserType.EMPLOYEE;
+};
 
 const UserRolesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [userTypeFilter, setUserTypeFilter] = useState<string>('all');
   const [users, setUsers] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { allUsers, fetchAllUsers } = useUserStore();
   
-  // Mock data for demonstration
+  // Load users from API
   useEffect(() => {
-    const mockRoles = [
-      { id: '1', name: 'Admin', description: 'Full system access' },
-      { id: '2', name: 'Manager', description: 'Can manage specific areas' },
-      { id: '3', name: 'User', description: 'Basic user access' },
-      { id: '4', name: 'Guest', description: 'Limited view-only access' },
-      { id: '5', name: 'Support', description: 'Customer support role' }
-    ];
-    
-    const mockUsers: UserData[] = [
-      {
-        id: '1',
-        name: 'John Smith',
-        email: 'john@example.com',
-        userType: UserType.ADMIN,
-        roles: [mockRoles[0], mockRoles[1]]
-      },
-      {
-        id: '2',
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-        userType: UserType.INSURANCE_ADMIN,
-        roles: [mockRoles[1]]
-      },
-      {
-        id: '3',
-        name: 'Bob Johnson',
-        email: 'bob@example.com',
-        userType: UserType.PROVIDER_ADMIN,
-        roles: [mockRoles[2], mockRoles[4]]
-      },
-      {
-        id: '4',
-        name: 'Alice Brown',
-        email: 'alice@example.com',
-        userType: UserType.CORPORATE_ADMIN,
-        roles: [mockRoles[3]]
-      },
-      {
-        id: '5',
-        name: 'Charlie Wilson',
-        email: 'charlie@example.com',
-        userType: UserType.MEMBER,
-        roles: [mockRoles[3]]
-      }
-    ];
-    
-    setUsers(mockUsers);
+    loadUsers();
   }, []);
+  
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      await fetchAllUsers();
+      
+      const response = await apiClient.getUsers();
+      const userList = (response.data || []).map((user: any) => ({
+        id: user.id.toString(),
+        name: user.full_name || user.username || user.email,
+        email: user.email,
+        userType: mapRoleToUserType(user.role),
+        role: user.role || 'employee'
+      }));
+      
+      setUsers(userList);
+    } catch (err: any) {
+      toast.error('Failed to load users');
+      console.error('Error loading users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Filter users by search term and user type
   const filteredUsers = users.filter(user => {
@@ -184,8 +174,20 @@ const UserRolesPage: React.FC = () => {
   });
   
   const handleAssignRoles = (userId: string) => {
-    // Navigate to a page to assign roles to this specific user
-    router.push(`/settings/users-roles/user-roles/assign/${userId}`);
+    // Navigate to permissions page for this user
+    router.push(`/permissions?userId=${userId}`);
+  };
+  
+  const getRoleDisplayName = (role: string): string => {
+    const roleNames: Record<string, string> = {
+      'admin': 'Admin',
+      'super_admin': 'Super Admin',
+      'manager': 'Finance Manager',
+      'finance_manager': 'Finance Manager',
+      'accountant': 'Accountant',
+      'employee': 'Employee'
+    };
+    return roleNames[role.toLowerCase()] || role;
   };
   
   const navigateToRoles = () => {
@@ -244,27 +246,39 @@ const UserRolesPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map(user => (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
+                    Loading users...
+                  </TableCell>
+                </TableRow>
+              ) : filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
+                    No users found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredUsers.map(user => (
                 <TableRow key={user.id}>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.userType}</TableCell>
                   <TableCell>
-                    {user.roles.map(role => (
-                      <RoleChip key={role.id}>{role.name}</RoleChip>
-                    ))}
+                    <RoleChip>{getRoleDisplayName(user.role)}</RoleChip>
                   </TableCell>
                   <TableCell>
                     <Button 
-                      size="small" 
+                      size="sm" 
                       variant="secondary"
                       onClick={() => handleAssignRoles(user.id)}
                     >
-                      Assign Roles
+                      Manage Permissions
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              ))
+              )}
             </TableBody>
           </Table>
         </Card>

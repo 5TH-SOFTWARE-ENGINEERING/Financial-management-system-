@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { ComponentGate, ComponentId } from '/@/lib/rbac';
-import { useAuth } from '/@/lib/rbac/auth-context';
+import { ComponentGate, ComponentId } from '@/lib/rbac';
+import { useAuth } from '@/lib/rbac/auth-context';
 import { Save, Mail, MessageSquare, Bell, BellRing, PhoneCall, BellOff } from 'lucide-react';
-import Button from '/@/components/ui/button';
+import { Button } from '@/components/ui/button';
 
 // Styled components
 const Container = styled.div`
@@ -227,12 +227,36 @@ interface NotificationSettings {
 export default function NotificationsSettingsPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
   const [doNotDisturb, setDoNotDisturb] = useState(false);
   const [quietHours, setQuietHours] = useState({
     enabled: false,
     startTime: '22:00',
     endTime: '08:00'
   });
+  
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('user_notification_settings');
+        if (stored) {
+          const settings = JSON.parse(stored);
+          if (settings.notificationPreferences) {
+            setNotificationPreferences(settings.notificationPreferences);
+          }
+          if (settings.doNotDisturb !== undefined) {
+            setDoNotDisturb(settings.doNotDisturb);
+          }
+          if (settings.quietHours) {
+            setQuietHours(settings.quietHours);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load notification settings:', error);
+      }
+    }
+  }, []);
   
   // Initialize notification preferences for each type and channel
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationSettings>({
@@ -307,18 +331,26 @@ export default function NotificationsSettingsPage() {
 
   const handleSave = async () => {
     setLoading(true);
+    setSuccess(null);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // In a real app, this would save the notification settings to the backend
-    console.log('Saving notification settings:', {
-      notificationPreferences,
-      doNotDisturb,
-      quietHours
-    });
-    
-    setLoading(false);
+    try {
+      // Save to localStorage (client-side preferences)
+      if (typeof window !== 'undefined') {
+        const settings = {
+          notificationPreferences,
+          doNotDisturb,
+          quietHours
+        };
+        localStorage.setItem('user_notification_settings', JSON.stringify(settings));
+      }
+      
+      setSuccess('Notification settings saved successfully');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Failed to save notification settings:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!user) {
@@ -335,6 +367,19 @@ export default function NotificationsSettingsPage() {
         <Header>
           <Title>Notification Settings</Title>
         </Header>
+
+        {success && (
+          <div style={{
+            backgroundColor: '#dcfce7',
+            color: '#166534',
+            padding: '0.75rem',
+            borderRadius: '0.25rem',
+            marginBottom: '1.25rem',
+            fontSize: '0.875rem'
+          }}>
+            {success}
+          </div>
+        )}
 
         <Card>
           <CardHeader>
@@ -668,7 +713,7 @@ export default function NotificationsSettingsPage() {
 
         <ActionButtons>
           <Button 
-            variant="primary" 
+            variant="default" 
             onClick={handleSave} 
             disabled={loading}
           >

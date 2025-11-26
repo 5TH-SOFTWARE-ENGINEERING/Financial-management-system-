@@ -2946,3 +2946,610 @@ ValueError: password cannot be longer than 72 bytes, truncate manually if necess
 2025-11-26 07:18:38,948 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
 2025-11-26 07:18:38,951 - app.main - INFO - Response: 200 in 0.0088s
 2025-11-26 07:18:38,956 - app.main - INFO - Response: 200 in 0.0085s
+2025-11-26 07:40:11,929 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 07:40:11,931 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 07:40:11,932 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 07:40:11,933 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 07:40:11,934 - app.main - INFO - Response: 200 in 0.0049s
+2025-11-26 07:40:11,936 - app.main - INFO - Response: 200 in 0.0037s
+2025-11-26 07:40:11,936 - app.main - INFO - Response: 200 in 0.0042s
+2025-11-26 07:40:11,938 - app.main - INFO - Response: 200 in 0.0050s
+2025-11-26 07:40:11,941 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 07:40:11,942 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 07:40:11,954 - app.main - INFO - Response: 200 in 0.0126s
+2025-11-26 07:40:11,957 - app.main - INFO - Response: 200 in 0.0167s
+2025-11-26 07:40:11,959 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 07:40:11,961 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 07:40:11,972 - app.main - INFO - Response: 200 in 0.0128s
+2025-11-26 07:40:11,973 - app.main - INFO - Response: 200 in 0.0121s
+2025-11-26 08:14:33,915 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-26 08:45:45,172 - app.main - INFO - Celery configured successfully
+2025-11-26 08:45:45,172 - app.main - INFO - Starting Finance Management System Backend
+2025-11-26 08:45:45,188 - app.main - INFO - Database tables created successfully
+2025-11-26 08:45:45,188 - app.main - INFO - Directory uploads created/verified
+2025-11-26 08:45:45,188 - app.main - INFO - Directory reports created/verified
+2025-11-26 08:45:45,188 - app.main - INFO - Directory backups created/verified
+2025-11-26 08:45:45,188 - app.main - INFO - Directory logs created/verified
+2025-11-26 08:45:45,218 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-26 08:46:00,807 - app.main - INFO - Request: GET http://localhost:8000/docs
+2025-11-26 08:46:00,809 - app.main - INFO - Response: 200 in 0.0020s
+2025-11-26 08:46:00,933 - app.main - INFO - Request: GET http://localhost:8000/openapi.json
+2025-11-26 08:46:01,055 - app.main - INFO - Response: 200 in 0.1221s
+2025-11-26 08:46:01,296 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 08:46:01,298 - app.main - INFO - Response: 200 in 0.0020s
+2025-11-26 08:46:01,300 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 08:46:01,313 - app.main - WARNING - HTTP Exception: 401 - Could not validate credentials
+2025-11-26 08:46:01,313 - app.main - INFO - Response: 401 in 0.0130s
+2025-11-26 08:46:22,495 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/auth/login-json
+2025-11-26 08:46:22,495 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 08:46:22,495 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login-json
+2025-11-26 08:46:22,747 - app.main - INFO - Response: 200 in 0.2519s
+2025-11-26 08:46:23,375 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 08:46:23,376 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 08:46:23,377 - app.main - INFO - Response: 200 in 0.0010s
+2025-11-26 08:46:23,378 - app.main - INFO - Response: 200 in 0.0021s
+2025-11-26 08:46:23,379 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 08:46:23,379 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 08:46:23,379 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 08:46:23,379 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 08:46:23,379 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 08:46:23,379 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 08:46:23,407 - app.main - INFO - Response: 200 in 0.0290s
+2025-11-26 08:46:23,407 - app.main - INFO - Response: 200 in 0.0290s
+2025-11-26 08:46:23,411 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 08:46:23,411 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 08:46:23,411 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 08:46:23,411 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 10:28:21,183 - app.main - INFO - Celery configured successfully
+2025-11-26 10:28:21,183 - app.main - INFO - Starting Finance Management System Backend
+2025-11-26 10:28:21,205 - app.main - INFO - Database tables created successfully
+2025-11-26 10:28:21,205 - app.main - INFO - Directory uploads created/verified
+2025-11-26 10:28:21,205 - app.main - INFO - Directory reports created/verified
+2025-11-26 10:28:21,207 - app.main - INFO - Directory backups created/verified
+2025-11-26 10:28:21,208 - app.main - INFO - Directory logs created/verified
+2025-11-26 10:28:21,241 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-26 10:29:45,575 - app.main - INFO - Request: GET http://localhost:8000/docs
+2025-11-26 10:29:45,582 - app.main - INFO - Response: 200 in 0.0069s
+2025-11-26 10:29:45,782 - app.main - INFO - Request: GET http://localhost:8000/openapi.json
+2025-11-26 10:29:46,016 - app.main - INFO - Response: 200 in 0.2342s
+2025-11-26 10:29:54,384 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 10:29:54,384 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 10:29:54,392 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 10:29:54,417 - app.main - WARNING - HTTP Exception: 401 - Could not validate credentials
+2025-11-26 10:29:54,432 - app.main - INFO - Response: 401 in 0.0401s
+2025-11-26 10:30:04,693 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/auth/login-json
+2025-11-26 10:30:04,695 - app.main - INFO - Response: 200 in 0.0023s
+2025-11-26 10:30:04,699 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login-json
+2025-11-26 10:30:05,567 - app.main - INFO - Response: 200 in 0.8684s
+2025-11-26 10:30:07,164 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 10:30:07,170 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 10:30:07,170 - app.main - INFO - Response: 200 in 0.0058s
+2025-11-26 10:30:07,170 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 10:30:07,178 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 10:30:07,179 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 10:30:07,182 - app.main - INFO - Response: 200 in 0.0032s
+2025-11-26 10:30:07,182 - app.main - INFO - Response: 200 in 0.0027s
+2025-11-26 10:30:07,188 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 10:30:07,188 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 10:30:07,249 - app.main - INFO - Response: 200 in 0.0616s
+2025-11-26 10:30:07,252 - app.main - INFO - Response: 200 in 0.0639s
+2025-11-26 10:30:07,257 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 10:30:07,257 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 10:30:07,273 - app.main - INFO - Response: 200 in 0.0159s
+2025-11-26 10:30:07,283 - app.main - INFO - Response: 200 in 0.0265s
+2025-11-26 10:33:55,295 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 10:33:55,331 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 10:33:55,339 - app.main - INFO - Response: 200 in 0.0441s
+2025-11-26 10:33:55,351 - app.main - INFO - Response: 200 in 0.0203s
+2025-11-26 10:33:55,352 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 10:33:55,366 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 10:33:55,376 - app.main - INFO - Response: 200 in 0.0238s
+2025-11-26 10:33:55,380 - app.main - INFO - Response: 200 in 0.0145s
+2025-11-26 10:46:29,472 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 10:46:29,472 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 10:46:29,476 - app.main - INFO - Response: 200 in 0.0042s
+2025-11-26 10:46:29,476 - app.main - INFO - Response: 200 in 0.0042s
+2025-11-26 10:46:29,487 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 10:46:29,524 - app.main - INFO - Response: 200 in 0.0368s
+2025-11-26 10:46:29,530 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 10:46:29,542 - app.main - INFO - Response: 200 in 0.0115s
+2025-11-26 10:46:54,895 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 10:46:54,902 - app.main - INFO - Response: 200 in 0.0075s
+2025-11-26 10:53:44,565 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-26 10:53:49,900 - app.main - INFO - Celery configured successfully
+2025-11-26 10:53:49,905 - app.main - INFO - Starting Finance Management System Backend
+2025-11-26 10:53:49,918 - app.main - INFO - Database tables created successfully
+2025-11-26 10:53:49,918 - app.main - INFO - Directory uploads created/verified
+2025-11-26 10:53:49,918 - app.main - INFO - Directory reports created/verified
+2025-11-26 10:53:49,918 - app.main - INFO - Directory backups created/verified
+2025-11-26 10:53:49,918 - app.main - INFO - Directory logs created/verified
+2025-11-26 10:53:50,039 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-26 10:53:50,052 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 10:53:50,085 - app.main - INFO - Response: 200 in 0.0324s
+2025-11-26 10:53:50,085 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 10:53:50,102 - app.main - INFO - Response: 200 in 0.0179s
+2025-11-26 10:53:53,280 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-26 10:53:58,416 - app.main - INFO - Celery configured successfully
+2025-11-26 10:53:58,424 - app.main - INFO - Starting Finance Management System Backend
+2025-11-26 10:53:58,433 - app.main - INFO - Database tables created successfully
+2025-11-26 10:53:58,433 - app.main - INFO - Directory uploads created/verified
+2025-11-26 10:53:58,433 - app.main - INFO - Directory reports created/verified
+2025-11-26 10:53:58,440 - app.main - INFO - Directory backups created/verified
+2025-11-26 10:53:58,440 - app.main - INFO - Directory logs created/verified
+2025-11-26 10:53:58,498 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-26 10:54:24,119 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-26 10:54:29,261 - app.main - INFO - Celery configured successfully
+2025-11-26 10:54:29,266 - app.main - INFO - Starting Finance Management System Backend
+2025-11-26 10:54:29,281 - app.main - INFO - Database tables created successfully
+2025-11-26 10:54:29,282 - app.main - INFO - Directory uploads created/verified
+2025-11-26 10:54:29,282 - app.main - INFO - Directory reports created/verified
+2025-11-26 10:54:29,282 - app.main - INFO - Directory backups created/verified
+2025-11-26 10:54:29,282 - app.main - INFO - Directory logs created/verified
+2025-11-26 10:54:29,382 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-26 10:54:53,596 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-26 10:54:56,821 - app.main - INFO - Celery configured successfully
+2025-11-26 10:54:56,833 - app.main - INFO - Starting Finance Management System Backend
+2025-11-26 10:54:56,842 - app.main - INFO - Database tables created successfully
+2025-11-26 10:54:56,842 - app.main - INFO - Directory uploads created/verified
+2025-11-26 10:54:56,844 - app.main - INFO - Directory reports created/verified
+2025-11-26 10:54:56,845 - app.main - INFO - Directory backups created/verified
+2025-11-26 10:54:56,846 - app.main - INFO - Directory logs created/verified
+2025-11-26 10:54:56,913 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-26 11:00:48,964 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-26 11:00:52,672 - app.main - INFO - Celery configured successfully
+2025-11-26 11:00:52,676 - app.main - INFO - Starting Finance Management System Backend
+2025-11-26 11:00:52,687 - app.main - INFO - Database tables created successfully
+2025-11-26 11:00:52,687 - app.main - INFO - Directory uploads created/verified
+2025-11-26 11:00:52,687 - app.main - INFO - Directory reports created/verified
+2025-11-26 11:00:52,687 - app.main - INFO - Directory backups created/verified
+2025-11-26 11:00:52,691 - app.main - INFO - Directory logs created/verified
+2025-11-26 11:00:52,773 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-26 11:20:51,968 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 11:20:51,968 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 11:20:51,968 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 11:20:51,968 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 11:20:51,977 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 11:20:51,986 - app.main - WARNING - HTTP Exception: 401 - Could not validate credentials
+2025-11-26 11:20:51,991 - app.main - INFO - Response: 401 in 0.0140s
+2025-11-26 11:20:51,993 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 11:20:51,997 - app.main - WARNING - HTTP Exception: 401 - Could not validate credentials
+2025-11-26 11:20:51,997 - app.main - INFO - Response: 401 in 0.0038s
+2025-11-26 12:29:34,377 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/auth/login-json
+2025-11-26 12:29:34,380 - app.main - INFO - Response: 200 in 0.0057s
+2025-11-26 12:29:34,390 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login-json
+2025-11-26 12:29:35,526 - app.main - INFO - Response: 200 in 1.1360s
+2025-11-26 12:29:36,431 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 12:29:36,446 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 12:29:36,446 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 12:29:36,455 - app.main - INFO - Response: 200 in 0.0242s
+2025-11-26 12:29:36,461 - app.main - INFO - Response: 200 in 0.0148s
+2025-11-26 12:29:36,462 - app.main - INFO - Response: 200 in 0.0163s
+2025-11-26 12:29:36,484 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 12:29:36,491 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 12:29:36,491 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 12:29:36,524 - app.main - INFO - Response: 200 in 0.0399s
+2025-11-26 12:29:36,781 - app.main - INFO - Response: 200 in 0.2894s
+2025-11-26 12:29:36,781 - app.main - INFO - Response: 200 in 0.2894s
+2025-11-26 12:29:36,790 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 12:29:36,794 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 12:29:36,826 - app.main - INFO - Response: 200 in 0.0355s
+2025-11-26 12:29:36,826 - app.main - INFO - Response: 200 in 0.0319s
+2025-11-26 12:31:25,689 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:31:25,717 - app.main - INFO - Response: 200 in 0.0277s
+2025-11-26 12:31:25,805 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:31:25,821 - app.main - INFO - Response: 200 in 0.0163s
+2025-11-26 12:31:56,053 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:31:56,062 - app.main - INFO - Response: 200 in 0.0091s
+2025-11-26 12:32:26,362 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:32:26,369 - app.main - INFO - Response: 200 in 0.0072s
+2025-11-26 12:32:56,061 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:32:56,062 - app.main - INFO - Response: 200 in 0.0014s
+2025-11-26 12:33:26,364 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:33:26,368 - app.main - INFO - Response: 200 in 0.0036s
+2025-11-26 12:33:56,060 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:33:56,064 - app.main - INFO - Response: 200 in 0.0041s
+2025-11-26 12:34:25,678 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:34:25,691 - app.main - INFO - Response: 200 in 0.0129s
+2025-11-26 12:34:56,419 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:34:56,428 - app.main - INFO - Response: 200 in 0.0092s
+2025-11-26 12:35:26,364 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:35:26,370 - app.main - INFO - Response: 200 in 0.0065s
+2025-11-26 12:35:55,370 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:35:55,371 - app.main - INFO - Response: 200 in 0.0010s
+2025-11-26 12:36:26,369 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:36:26,369 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 12:36:56,051 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:36:56,055 - app.main - INFO - Response: 200 in 0.0035s
+2025-11-26 12:37:37,373 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:37:37,383 - app.main - INFO - Response: 200 in 0.0101s
+2025-11-26 12:38:37,066 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:38:37,072 - app.main - INFO - Response: 200 in 0.0063s
+2025-11-26 12:39:37,376 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:39:37,386 - app.main - INFO - Response: 200 in 0.0098s
+2025-11-26 12:40:37,061 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:40:37,072 - app.main - INFO - Response: 200 in 0.0128s
+2025-11-26 12:41:37,372 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:41:37,372 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 12:41:37,372 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:41:37,388 - app.main - INFO - Response: 200 in 0.0159s
+2025-11-26 12:41:55,369 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:41:55,374 - app.main - INFO - Response: 200 in 0.0054s
+2025-11-26 12:42:26,369 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:42:26,370 - app.main - INFO - Response: 200 in 0.0015s
+2025-11-26 12:42:56,044 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:42:56,050 - app.main - INFO - Response: 200 in 0.0060s
+2025-11-26 12:43:26,365 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:43:26,370 - app.main - INFO - Response: 200 in 0.0054s
+2025-11-26 12:44:37,362 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:44:37,362 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 12:45:37,054 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:45:37,061 - app.main - INFO - Response: 200 in 0.0078s
+2025-11-26 12:46:37,373 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:46:37,373 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 12:47:37,059 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:47:37,060 - app.main - INFO - Response: 200 in 0.0012s
+2025-11-26 12:48:37,361 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:48:37,369 - app.main - INFO - Response: 200 in 0.0082s
+2025-11-26 12:49:37,057 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:49:37,068 - app.main - INFO - Response: 200 in 0.0072s
+2025-11-26 12:50:24,879 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 12:50:24,879 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 12:50:39,045 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/revenue
+2025-11-26 12:50:39,052 - app.main - INFO - Response: 200 in 0.0076s
+2025-11-26 12:50:39,065 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/revenue
+2025-11-26 12:50:39,079 - app.main - INFO - Response: 200 in 0.0137s
+2025-11-26 12:50:39,087 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue
+2025-11-26 12:50:39,088 - app.main - INFO - Response: 307 in 0.0015s
+2025-11-26 12:50:39,095 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue
+2025-11-26 12:50:39,100 - app.main - INFO - Response: 307 in 0.0045s
+2025-11-26 12:50:39,112 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/revenue/
+2025-11-26 12:50:39,115 - app.main - INFO - Response: 200 in 0.0014s
+2025-11-26 12:50:39,120 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/revenue/
+2025-11-26 12:50:39,120 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 12:50:39,132 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/
+2025-11-26 12:50:39,149 - app.main - INFO - Response: 200 in 0.0166s
+2025-11-26 12:50:39,167 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/
+2025-11-26 12:50:39,183 - app.main - INFO - Response: 200 in 0.0156s
+2025-11-26 12:50:56,792 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue
+2025-11-26 12:50:56,796 - app.main - INFO - Response: 307 in 0.0039s
+2025-11-26 12:50:56,806 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue
+2025-11-26 12:50:56,809 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/
+2025-11-26 12:50:56,812 - app.main - INFO - Response: 307 in 0.0059s
+2025-11-26 12:50:56,820 - app.main - INFO - Response: 200 in 0.0112s
+2025-11-26 12:50:56,831 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/
+2025-11-26 12:50:56,838 - app.main - INFO - Response: 200 in 0.0078s
+2025-11-26 12:51:11,268 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 12:51:11,277 - app.main - INFO - Response: 200 in 0.0095s
+2025-11-26 12:51:11,282 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 12:51:11,317 - app.main - INFO - Response: 200 in 0.0354s
+2025-11-26 12:51:21,299 - app.main - INFO - Shutting down Finance Management System Backend
+2025-11-26 15:30:07,376 - app.main - INFO - Celery configured successfully
+2025-11-26 15:30:07,376 - app.main - INFO - Starting Finance Management System Backend
+2025-11-26 15:30:07,400 - app.main - INFO - Database tables created successfully
+2025-11-26 15:30:07,400 - app.main - INFO - Directory uploads created/verified
+2025-11-26 15:30:07,400 - app.main - INFO - Directory reports created/verified
+2025-11-26 15:30:07,400 - app.main - INFO - Directory backups created/verified
+2025-11-26 15:30:07,400 - app.main - INFO - Directory logs created/verified
+2025-11-26 15:30:07,441 - app.main - INFO - Default admin already exists: admin@expense.com
+2025-11-26 15:30:17,939 - app.main - INFO - Request: GET http://localhost:8000/docs
+2025-11-26 15:30:17,942 - app.main - INFO - Response: 200 in 0.0034s
+2025-11-26 15:30:18,044 - app.main - INFO - Request: GET http://localhost:8000/openapi.json
+2025-11-26 15:30:18,275 - app.main - INFO - Response: 200 in 0.2310s
+2025-11-26 15:30:26,383 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 15:30:26,383 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:30:26,383 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 15:30:26,407 - app.main - WARNING - HTTP Exception: 401 - Could not validate credentials
+2025-11-26 15:30:26,409 - app.main - INFO - Response: 401 in 0.0250s
+2025-11-26 15:30:30,222 - app.main - INFO - Request: GET http://localhost:8000/docs
+2025-11-26 15:30:30,224 - app.main - INFO - Response: 200 in 0.0046s
+2025-11-26 15:30:53,326 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/auth/login-json
+2025-11-26 15:30:53,329 - app.main - INFO - Response: 200 in 0.0030s
+2025-11-26 15:30:53,330 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login-json
+2025-11-26 15:30:54,158 - app.main - INFO - Response: 200 in 0.8272s
+2025-11-26 15:30:55,739 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:30:55,744 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:30:55,744 - app.main - INFO - Response: 200 in 0.0053s
+2025-11-26 15:30:55,749 - app.main - INFO - Response: 200 in 0.0049s
+2025-11-26 15:30:55,751 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:30:55,757 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:30:55,757 - app.main - INFO - Response: 200 in 0.0062s
+2025-11-26 15:30:55,757 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:30:55,767 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:30:55,767 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:30:55,773 - app.main - INFO - Response: 200 in 0.0068s
+2025-11-26 15:30:55,779 - app.main - INFO - Response: 200 in 0.0120s
+2025-11-26 15:30:55,782 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:30:55,782 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:30:55,830 - app.main - INFO - Response: 200 in 0.0482s
+2025-11-26 15:30:55,851 - app.main - INFO - Response: 200 in 0.0687s
+2025-11-26 15:30:55,855 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:30:55,861 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:30:55,890 - app.main - INFO - Response: 200 in 0.0338s
+2025-11-26 15:30:55,898 - app.main - INFO - Response: 200 in 0.0372s
+2025-11-26 15:30:55,903 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:30:55,907 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:30:55,926 - app.main - INFO - Response: 200 in 0.0227s
+2025-11-26 15:30:55,926 - app.main - INFO - Response: 200 in 0.0187s
+2025-11-26 15:31:06,743 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 15:31:06,773 - app.main - INFO - Response: 200 in 0.0300s
+2025-11-26 15:31:12,130 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 15:31:12,130 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:31:12,130 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:31:12,150 - app.main - INFO - Response: 200 in 0.0199s
+2025-11-26 15:31:12,162 - app.main - INFO - Response: 200 in 0.0325s
+2025-11-26 15:31:12,165 - app.main - INFO - Response: 200 in 0.0353s
+2025-11-26 15:31:12,177 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:31:12,188 - app.main - INFO - Response: 200 in 0.0112s
+2025-11-26 15:31:12,193 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:31:12,198 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:31:12,212 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:31:12,226 - app.main - INFO - Response: 200 in 0.0287s
+2025-11-26 15:31:12,229 - app.main - INFO - Response: 200 in 0.0363s
+2025-11-26 15:31:12,242 - app.main - INFO - Response: 200 in 0.0300s
+2025-11-26 15:31:42,420 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:31:42,428 - app.main - INFO - Response: 200 in 0.0073s
+2025-11-26 15:35:15,385 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users
+2025-11-26 15:35:15,385 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:35:15,395 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users
+2025-11-26 15:35:15,396 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users
+2025-11-26 15:35:15,396 - app.main - INFO - Response: 307 in 0.0014s
+2025-11-26 15:35:15,404 - app.main - INFO - Response: 200 in 0.0078s
+2025-11-26 15:35:15,407 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/
+2025-11-26 15:35:15,411 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users
+2025-11-26 15:35:15,413 - app.main - INFO - Response: 200 in 0.0057s
+2025-11-26 15:35:15,415 - app.main - INFO - Response: 307 in 0.0041s
+2025-11-26 15:35:15,454 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/
+2025-11-26 15:35:15,485 - app.main - INFO - Response: 200 in 0.0303s
+2025-11-26 15:35:15,630 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/
+2025-11-26 15:35:15,639 - app.main - INFO - Response: 200 in 0.0089s
+2025-11-26 15:40:15,330 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:40:15,330 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:40:15,330 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:40:15,343 - app.main - INFO - Response: 200 in 0.0122s
+2025-11-26 15:40:45,419 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:40:45,419 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:41:15,329 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:41:15,330 - app.main - INFO - Response: 200 in 0.0010s
+2025-11-26 15:41:15,330 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:41:15,338 - app.main - INFO - Response: 200 in 0.0082s
+2025-11-26 15:41:45,418 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:41:45,426 - app.main - INFO - Response: 200 in 0.0087s
+2025-11-26 15:42:15,726 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:42:15,734 - app.main - INFO - Response: 200 in 0.0080s
+2025-11-26 15:42:45,426 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:42:45,432 - app.main - INFO - Response: 200 in 0.0055s
+2025-11-26 15:43:15,728 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:43:15,728 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:43:45,420 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:43:45,422 - app.main - INFO - Response: 200 in 0.0019s
+2025-11-26 15:44:15,726 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:44:15,734 - app.main - INFO - Response: 200 in 0.0079s
+2025-11-26 15:45:32,716 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:45:32,721 - app.main - INFO - Response: 200 in 0.0043s
+2025-11-26 15:46:32,420 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:46:32,429 - app.main - INFO - Response: 200 in 0.0086s
+2025-11-26 15:46:45,318 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:46:45,326 - app.main - INFO - Response: 200 in 0.0080s
+2025-11-26 15:46:45,787 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:46:45,790 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:46:45,791 - app.main - INFO - Response: 200 in 0.0040s
+2025-11-26 15:46:45,797 - app.main - INFO - Response: 200 in 0.0071s
+2025-11-26 15:46:45,801 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:46:45,808 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:46:45,815 - app.main - INFO - Response: 200 in 0.0068s
+2025-11-26 15:46:45,824 - app.main - INFO - Response: 200 in 0.0225s
+2025-11-26 15:46:45,824 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:46:45,830 - app.main - INFO - Response: 200 in 0.0063s
+2025-11-26 15:46:45,831 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:46:45,831 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:46:45,862 - app.main - INFO - Response: 200 in 0.0309s
+2025-11-26 15:46:45,866 - app.main - INFO - Response: 200 in 0.0343s
+2025-11-26 15:46:45,869 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:46:45,869 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 15:46:45,882 - app.main - INFO - Response: 200 in 0.0128s
+2025-11-26 15:46:45,896 - app.main - INFO - Response: 200 in 0.0277s
+2025-11-26 15:46:45,901 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 15:46:45,914 - app.main - INFO - Response: 200 in 0.0135s
+2025-11-26 15:47:16,420 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:47:16,432 - app.main - INFO - Response: 200 in 0.0114s
+2025-11-26 15:47:46,727 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:47:46,727 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:48:16,412 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:48:16,413 - app.main - INFO - Response: 200 in 0.0008s
+2025-11-26 15:48:46,730 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:48:46,730 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:49:16,415 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:49:16,422 - app.main - INFO - Response: 200 in 0.0074s
+2025-11-26 15:49:46,722 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:49:46,730 - app.main - INFO - Response: 200 in 0.0080s
+2025-11-26 15:50:32,419 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:50:32,427 - app.main - INFO - Response: 200 in 0.0077s
+2025-11-26 15:51:32,721 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:51:32,721 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:51:32,721 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:51:32,736 - app.main - INFO - Response: 200 in 0.0158s
+2025-11-26 15:52:32,415 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:52:32,421 - app.main - INFO - Response: 200 in 0.0054s
+2025-11-26 15:53:32,729 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:53:32,729 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:54:32,427 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:54:32,428 - app.main - INFO - Response: 200 in 0.0010s
+2025-11-26 15:55:32,738 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:55:32,739 - app.main - INFO - Response: 200 in 0.0006s
+2025-11-26 15:56:29,499 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:56:29,515 - app.main - INFO - Response: 200 in 0.0155s
+2025-11-26 15:56:46,103 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:56:46,106 - app.main - INFO - Response: 200 in 0.0024s
+2025-11-26 15:56:49,428 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 15:56:49,428 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 15:56:49,430 - app.main - INFO - Response: 200 in 0.0027s
+2025-11-26 15:56:49,432 - app.main - INFO - Response: 200 in 0.0034s
+2025-11-26 15:56:49,435 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:56:49,449 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 15:56:49,468 - app.main - INFO - Response: 200 in 0.0227s
+2025-11-26 15:56:49,475 - app.main - INFO - Response: 200 in 0.0251s
+2025-11-26 15:56:49,480 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 15:56:49,480 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:56:49,488 - app.main - INFO - Response: 200 in 0.0079s
+2025-11-26 15:56:49,509 - app.main - INFO - Response: 200 in 0.0283s
+2025-11-26 15:57:54,232 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 15:57:54,232 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:57:54,232 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:57:54,242 - app.main - INFO - Response: 200 in 0.0099s
+2025-11-26 15:57:54,300 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:57:54,300 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:58:24,299 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:58:24,308 - app.main - INFO - Response: 200 in 0.0085s
+2025-11-26 15:58:54,611 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:58:54,611 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:59:24,310 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:59:24,310 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 15:59:36,837 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 15:59:36,845 - app.main - INFO - Response: 200 in 0.0081s
+2025-11-26 15:59:43,494 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 15:59:43,504 - app.main - INFO - Response: 200 in 0.0100s
+2025-11-26 15:59:43,509 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:59:43,514 - app.main - INFO - Response: 200 in 0.0054s
+2025-11-26 15:59:43,535 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 15:59:43,549 - app.main - INFO - Response: 200 in 0.0141s
+2025-11-26 16:00:14,416 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:00:14,416 - app.main - INFO - Response: 200 in 0.0006s
+2025-11-26 16:00:44,738 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:00:44,744 - app.main - INFO - Response: 200 in 0.0059s
+2025-11-26 16:01:14,424 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:01:14,428 - app.main - WARNING - HTTP Exception: 401 - Could not validate credentials
+2025-11-26 16:01:14,428 - app.main - INFO - Response: 401 in 0.0039s
+2025-11-26 16:06:04,277 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/auth/login-json
+2025-11-26 16:06:04,277 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 16:06:04,284 - app.main - INFO - Request: POST http://localhost:8000/api/v1/auth/login-json
+2025-11-26 16:06:05,085 - app.main - INFO - Response: 200 in 0.8005s
+2025-11-26 16:06:05,312 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:06:05,324 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 16:06:05,328 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 16:06:05,328 - app.main - INFO - Response: 200 in 0.0162s
+2025-11-26 16:06:05,333 - app.main - INFO - Response: 200 in 0.0093s
+2025-11-26 16:06:05,333 - app.main - INFO - Response: 200 in 0.0056s
+2025-11-26 16:06:05,336 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:06:05,336 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 16:06:05,336 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 16:06:05,345 - app.main - INFO - Response: 200 in 0.0094s
+2025-11-26 16:06:05,352 - app.main - INFO - Response: 200 in 0.0161s
+2025-11-26 16:06:05,354 - app.main - INFO - Response: 200 in 0.0181s
+2025-11-26 16:06:05,362 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:06:05,362 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 16:06:05,362 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 16:06:05,384 - app.main - INFO - Response: 200 in 0.0223s
+2025-11-26 16:06:05,398 - app.main - INFO - Response: 200 in 0.0355s
+2025-11-26 16:06:05,406 - app.main - INFO - Response: 200 in 0.0441s
+2025-11-26 16:06:05,414 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:06:05,422 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 16:06:05,427 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 16:06:05,427 - app.main - INFO - Response: 200 in 0.0131s
+2025-11-26 16:06:05,445 - app.main - INFO - Response: 200 in 0.0232s
+2025-11-26 16:06:05,455 - app.main - INFO - Response: 200 in 0.0282s
+2025-11-26 16:06:23,856 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:06:23,864 - app.main - INFO - Response: 200 in 0.0082s
+2025-11-26 16:06:23,872 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:06:23,880 - app.main - INFO - Response: 200 in 0.0083s
+2025-11-26 16:06:29,899 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users
+2025-11-26 16:06:29,900 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users
+2025-11-26 16:06:29,902 - app.main - INFO - Response: 200 in 0.0035s
+2025-11-26 16:06:29,910 - app.main - INFO - Response: 200 in 0.0094s
+2025-11-26 16:06:29,915 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users
+2025-11-26 16:06:29,919 - app.main - INFO - Response: 307 in 0.0042s
+2025-11-26 16:06:29,928 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users
+2025-11-26 16:06:29,928 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/
+2025-11-26 16:06:29,928 - app.main - INFO - Response: 307 in 0.0000s
+2025-11-26 16:06:29,928 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 16:06:29,928 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/
+2025-11-26 16:06:29,928 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/
+2025-11-26 16:06:29,943 - app.main - INFO - Response: 200 in 0.0153s
+2025-11-26 16:06:29,958 - app.main - INFO - Response: 200 in 0.0297s
+2025-11-26 16:06:29,967 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/
+2025-11-26 16:06:29,983 - app.main - INFO - Response: 200 in 0.0163s
+2025-11-26 16:06:29,990 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users
+2025-11-26 16:06:29,992 - app.main - INFO - Response: 307 in 0.0017s
+2025-11-26 16:06:30,017 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users
+2025-11-26 16:06:30,018 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/
+2025-11-26 16:06:30,018 - app.main - INFO - Response: 307 in 0.0007s
+2025-11-26 16:06:30,031 - app.main - INFO - Response: 200 in 0.0135s
+2025-11-26 16:06:30,031 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/
+2025-11-26 16:06:30,045 - app.main - INFO - Response: 200 in 0.0132s
+2025-11-26 16:06:52,501 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:06:52,513 - app.main - INFO - Response: 200 in 0.0116s
+2025-11-26 16:06:52,530 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users
+2025-11-26 16:06:52,534 - app.main - INFO - Response: 307 in 0.0041s
+2025-11-26 16:06:52,540 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:06:52,551 - app.main - INFO - Response: 200 in 0.0104s
+2025-11-26 16:06:52,551 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users
+2025-11-26 16:06:52,558 - app.main - INFO - Response: 307 in 0.0072s
+2025-11-26 16:06:52,562 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/
+2025-11-26 16:06:52,571 - app.main - INFO - Response: 200 in 0.0090s
+2025-11-26 16:06:52,579 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/
+2025-11-26 16:06:52,580 - app.main - INFO - Response: 200 in 0.0088s
+2025-11-26 16:07:09,436 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 16:07:09,438 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:07:09,438 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/users/me
+2025-11-26 16:07:09,442 - app.main - INFO - Response: 200 in 0.0060s
+2025-11-26 16:07:09,447 - app.main - INFO - Response: 200 in 0.0091s
+2025-11-26 16:07:09,454 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 16:07:09,507 - app.main - INFO - Response: 200 in 0.0698s
+2025-11-26 16:07:09,533 - app.main - INFO - Response: 200 in 0.0793s
+2025-11-26 16:07:09,569 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:07:09,580 - app.main - INFO - Request: GET http://localhost:8000/api/v1/users/me
+2025-11-26 16:07:09,644 - app.main - INFO - Response: 200 in 0.0735s
+2025-11-26 16:07:09,711 - app.main - INFO - Response: 200 in 0.1308s
+2025-11-26 16:07:14,287 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:07:14,291 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 16:07:14,292 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 16:07:14,311 - app.main - INFO - Response: 200 in 0.0192s
+2025-11-26 16:07:14,325 - app.main - INFO - Response: 200 in 0.0374s
+2025-11-26 16:07:14,328 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/recent-activity?limit=8
+2025-11-26 16:07:14,330 - app.main - INFO - Response: 200 in 0.0382s
+2025-11-26 16:07:14,342 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:07:14,342 - app.main - INFO - Request: GET http://localhost:8000/api/v1/dashboard/overview
+2025-11-26 16:07:14,351 - app.main - INFO - Response: 200 in 0.0223s
+2025-11-26 16:07:14,371 - app.main - INFO - Response: 200 in 0.0291s
+2025-11-26 16:07:14,379 - app.main - INFO - Response: 200 in 0.0371s
+2025-11-26 16:07:44,728 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:07:44,729 - app.main - INFO - Response: 200 in 0.0011s
+2025-11-26 16:08:14,427 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:08:14,431 - app.main - INFO - Response: 200 in 0.0038s
+2025-11-26 16:08:44,741 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:08:44,741 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 16:09:14,287 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:09:14,287 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 16:09:44,725 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:09:44,733 - app.main - INFO - Response: 200 in 0.0086s
+2025-11-26 16:10:14,423 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:10:14,432 - app.main - INFO - Response: 200 in 0.0093s
+2025-11-26 16:11:32,737 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:11:32,746 - app.main - INFO - Response: 200 in 0.0087s
+2025-11-26 16:12:32,410 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:12:32,418 - app.main - INFO - Response: 200 in 0.0081s
+2025-11-26 16:13:32,724 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:13:32,732 - app.main - INFO - Response: 200 in 0.0081s
+2025-11-26 16:14:32,412 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:14:32,421 - app.main - INFO - Response: 200 in 0.0092s
+2025-11-26 16:15:32,727 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:15:32,734 - app.main - INFO - Response: 200 in 0.0073s
+2025-11-26 16:16:32,439 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:16:32,439 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 16:16:32,446 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:16:32,458 - app.main - INFO - Response: 200 in 0.0128s
+2025-11-26 16:17:32,742 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:17:32,747 - app.main - INFO - Response: 200 in 0.0051s
+2025-11-26 16:18:32,411 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:18:32,419 - app.main - INFO - Response: 200 in 0.0080s
+2025-11-26 16:19:32,732 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:19:32,741 - app.main - INFO - Response: 200 in 0.0091s
+2025-11-26 16:20:32,418 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:20:32,418 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 16:21:32,718 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:21:32,718 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 16:22:32,410 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:22:32,410 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 16:23:32,730 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:23:32,730 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-26 16:24:32,418 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-26 16:24:32,430 - app.main - INFO - Response: 200 in 0.0111s
