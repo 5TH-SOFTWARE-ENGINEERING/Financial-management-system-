@@ -2,13 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Background
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ...core.database import get_db
 from ...crud.user import user as user_crud
 from ...crud.audit import audit_log as audit_crud
 from ...crud.notification import notification as notification_crud
 from ...crud.report import report as report_crud
+from ...crud.revenue import revenue as revenue_crud
+from ...crud.expense import expense as expense_crud
+from ...crud.approval import approval as approval_crud
 from ...models.user import User, UserRole
 from ...api.deps import get_current_active_user, require_min_role
 from ...services.backup import BackupService
@@ -32,6 +35,14 @@ def get_system_stats(
     for role in UserRole:
         count = db.query(User).filter(User.role == role).count()
         role_stats[role.value] = count
+
+    # Financial snapshot (last 30 days)
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=30)
+    total_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
+    total_expenses = expense_crud.get_total_by_period(db, start_date, end_date)
+    pending_approvals = len(approval_crud.get_pending(db))
+    net_profit = total_revenue - total_expenses
     
     # Database statistics
     try:
@@ -68,12 +79,26 @@ def get_system_stats(
     recent_audits = audit_crud.get_multi(db, skip=0, limit=10)
     recent_reports = report_crud.get_recent(db, days=7, skip=0, limit=10)
     
+    # Basic DB health check
+    try:
+        db.execute(text("SELECT 1"))
+        system_health = "healthy"
+    except Exception:
+        system_health = "unhealthy"
+
     return {
         "users": {
             "total": total_users,
             "active": active_users,
             "by_role": role_stats
         },
+        "financials": {
+            "total_revenue": total_revenue,
+            "total_expenses": total_expenses,
+            "net_profit": net_profit
+        },
+        "pending_approvals": pending_approvals,
+        "system_health": system_health,
         "database": db_stats,
         "activity": {
             "recent_audits": len(recent_audits),

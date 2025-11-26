@@ -130,6 +130,7 @@ def get_dashboard_overview(
 
 
 @router.get("/kpi")
+@router.get("/kpis")
 def get_kpi_metrics(
     period: str = Query("month", regex="^(week|month|quarter|year)$"),
     current_user: User = Depends(get_current_active_user),

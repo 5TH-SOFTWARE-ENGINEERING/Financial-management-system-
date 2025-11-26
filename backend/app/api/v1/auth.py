@@ -113,7 +113,10 @@ class UserCRUD:
 
     @staticmethod
     def authenticate(db: Session, username: str, password: str) -> Optional[User]:
+        # Support username or email input
         user = UserCRUD.get_by_username(db, username)
+        if not user:
+            user = UserCRUD.get_by_email(db, username)
         if not user or not verify_password(password, user.hashed_password):
             return None
         return user

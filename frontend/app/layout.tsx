@@ -42,7 +42,7 @@ export default function RootLayout({
                   <ContentWrapper>{children}</ContentWrapper>
                 </MainContent>
               </LayoutContainer>
-              <Toaster position="top-right" reverseOrder={false} />
+              <Toaster position="top-right" />
             </AuthProvider>
           </ThemeProvider>
         </StyledComponentsRegistry>

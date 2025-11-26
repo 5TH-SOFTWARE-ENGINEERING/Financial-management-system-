@@ -27,10 +27,9 @@ import {
   Database,
   Key
 } from 'lucide-react';
-import { useUserStore } from '@/store/userStore';
-import { type User, UserRole } from '@/lib/validation';
-import { formatDate } from '@/lib/utils';
+import { useUserStore, type StoreUser } from '@/store/userStore';
 import { cn } from '@/lib/utils';
+import apiClient from '@/lib/api';
 
 interface SystemStats {
   totalUsers: number;
@@ -38,7 +37,7 @@ interface SystemStats {
   totalRevenue: number;
   totalExpenses: number;
   pendingApprovals: number;
-  systemHealth: 'healthy' | 'warning' | 'error';
+  systemHealth: 'healthy' | 'warning' | 'error' | 'unhealthy';
 }
 
 export default function AdminPage() {
@@ -48,14 +47,9 @@ export default function AdminPage() {
   const [filterRole, setFilterRole] = useState<string>('all');
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [systemStats, setSystemStats] = useState<SystemStats>({
-    totalUsers: 0,
-    activeUsers: 0,
-    totalRevenue: 0,
-    totalExpenses: 0,
-    pendingApprovals: 0,
-    systemHealth: 'healthy'
-  });
+  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || user?.role !== 'admin')) {
@@ -71,18 +65,23 @@ export default function AdminPage() {
   }, [isAuthenticated, user]);
 
   const fetchSystemStats = async () => {
+    setStatsLoading(true);
+    setStatsError(null);
     try {
-      // Mock system stats
+      const response = await apiClient.getAdminSystemStats();
+      const data = response.data;
       setSystemStats({
-        totalUsers: allUsers.length || 24,
-        activeUsers: allUsers.filter(u => u.isActive).length || 20,
-        totalRevenue: 125000,
-        totalExpenses: 87000,
-        pendingApprovals: 12,
-        systemHealth: 'healthy'
+        totalUsers: data.users?.total ?? 0,
+        activeUsers: data.users?.active ?? 0,
+        totalRevenue: data.financials?.total_revenue ?? 0,
+        totalExpenses: data.financials?.total_expenses ?? 0,
+        pendingApprovals: data.pending_approvals ?? 0,
+        systemHealth: (data.system_health as SystemStats['systemHealth']) || 'healthy',
       });
-    } catch (error) {
-      console.error('Failed to fetch system stats:', error);
+    } catch (error: any) {
+      setStatsError(error.response?.data?.detail || 'Failed to load system stats');
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -124,10 +123,12 @@ export default function AdminPage() {
     }
   };
 
-  const getHealthColor = (health: string) => {
+const getHealthColor = (health: string) => {
     switch (health) {
       case 'healthy':
         return 'text-green-600 bg-green-100';
+    case 'unhealthy':
+      return 'text-red-600 bg-red-100';
       case 'warning':
         return 'text-yellow-600 bg-yellow-100';
       case 'error':
@@ -137,7 +138,13 @@ export default function AdminPage() {
     }
   };
 
-  const renderUserHierarchy = (users: User[], level = 0) => {
+  const statsReady = !!systemStats;
+  const totalRevenue = systemStats?.totalRevenue ?? 0;
+  const totalExpenses = systemStats?.totalExpenses ?? 0;
+  const netProfit = totalRevenue - totalExpenses;
+  const activeUsersCount = systemStats?.activeUsers ?? 0;
+
+  const renderUserHierarchy = (users: StoreUser[], level = 0) => {
     return users.map(user => {
       const subordinates = getSubordinates(user.id);
       const isExpanded = expandedUsers.has(user.id);
@@ -264,14 +271,25 @@ export default function AdminPage() {
       </div>
 
       {/* System Stats */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        {statsError && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive">
+            {statsError}
+          </div>
+        )}
+        {!statsReady && statsLoading && (
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+            Loading system statistics...
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-card rounded-lg border border-border p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold text-foreground">{systemStats.totalUsers}</p>
-                <p className="text-xs text-muted-foreground">{systemStats.activeUsers} active</p>
+                <p className="text-2xl font-bold text-foreground">{systemStats?.totalUsers ?? '--'}</p>
+                <p className="text-xs text-muted-foreground">{activeUsersCount} active</p>
               </div>
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
                 <Users className="h-4 w-4 text-blue-600" />
@@ -283,11 +301,11 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">System Health</p>
-                <p className="text-2xl font-bold text-foreground capitalize">{systemStats.systemHealth}</p>
+                <p className="text-2xl font-bold text-foreground capitalize">{systemStats?.systemHealth ?? 'unknown'}</p>
               </div>
               <div className={cn(
                 "h-8 w-8 rounded-full flex items-center justify-center",
-                getHealthColor(systemStats.systemHealth)
+                getHealthColor(systemStats?.systemHealth ?? 'unknown')
               )}>
                 <Activity className="h-4 w-4" />
               </div>
@@ -298,7 +316,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
-                <p className="text-2xl font-bold text-foreground">{systemStats.pendingApprovals}</p>
+                <p className="text-2xl font-bold text-foreground">{systemStats?.pendingApprovals ?? '--'}</p>
               </div>
               <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
                 <Clock className="h-4 w-4 text-orange-600" />
@@ -311,7 +329,7 @@ export default function AdminPage() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Net Profit</p>
                 <p className="text-2xl font-bold text-foreground">
-                  ${(systemStats.totalRevenue - systemStats.totalExpenses).toLocaleString()}
+                  {statsReady ? `$${netProfit.toLocaleString()}` : '--'}
                 </p>
               </div>
               <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">

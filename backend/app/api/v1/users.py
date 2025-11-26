@@ -54,6 +54,26 @@ def list_users(
 # ------------------------------------------------------------------
 # GET /{user_id}
 # ------------------------------------------------------------------
+@router.get("/{user_id}/subordinates", response_model=List[UserOut])
+def read_user_subordinates(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Return direct subordinates for a user."""
+    target_user = user_crud.get(db, id=user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    is_self = current_user.id == user_id
+    is_admin = current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
+
+    if not (is_self or is_admin):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    return user_crud.get_subordinates(db, user_id)
+
+
 @router.get("/{user_id}", response_model=UserOut)
 def read_user(
     user_id: int,
@@ -103,7 +123,10 @@ def create_user(
     else:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    return user_crud.create(db=db, obj_in=user_in)
+    try:
+        return user_crud.create(db=db, obj_in=user_in)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 # ------------------------------------------------------------------
@@ -130,7 +153,10 @@ def create_subordinate(
     else:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    return user_crud.create(db=db, obj_in=user_in)
+    try:
+        return user_crud.create(db=db, obj_in=user_in)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 # ------------------------------------------------------------------

@@ -128,12 +128,11 @@ export const DEFAULT_PERMISSIONS: Permission[] = [
     { id: '38', name: 'Manage Settings',      description: 'Can manage settings',       resource: Resource.SETTINGS, action: Action.MANAGE },
 ];
 export const DEFAULT_ROLES: Role[] = [
-
   {
     id: 'role-admin',
     name: UserType.ADMIN,
     permissions: [...DEFAULT_PERMISSIONS],
-    description: "Full unrestricted access"
+    description: "Administrator"
   },
 
   {

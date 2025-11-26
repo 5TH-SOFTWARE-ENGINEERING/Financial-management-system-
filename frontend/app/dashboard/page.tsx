@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
@@ -9,6 +9,7 @@ import {
   ClipboardList, BarChart3, Wallet
 } from 'lucide-react';
 import Layout from '@/components/layout';
+import apiClient from '@/lib/api';
 
 const PRIMARY_COLOR = '#4f46e5'; 
 const PRIMARY_LIGHT = '#eef2ff'; 
@@ -85,7 +86,7 @@ const DashboardGrid = styled.div`
   margin-bottom: 32px;
 `;
 
-const getIconColor = (IconComponent) => {
+const getIconColor = (IconComponent: React.FC<any>) => {
   switch (IconComponent) {
     case Users:
     case TrendingUp:
@@ -251,7 +252,7 @@ const Badge = styled.span<{ $type: 'success' | 'warning' | 'danger' | 'info' }>`
 `;
 
 // Within the '--- Layout & Structure ---' or similar section
-const RoleBadge = styled.span`
+const RoleBadge = styled.span<{ $role: string }>`
   display: inline-block;
   padding: 4px 12px;
   margin-left: 12px;
@@ -279,8 +280,67 @@ const RoleBadge = styled.span`
 `;
 /* --------------------------------------------------------------- */
 
+interface ActivityItem {
+  id: string;
+  type: string;
+  title?: string;
+  amount?: number;
+  date?: string;
+  status?: string;
+}
+
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [overview, setOverview] = useState<any | null>(null);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setOverview(null);
+      setRecentActivity([]);
+      setLoading(false);
+      return;
+    }
+
+    const loadDashboard = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [overviewRes, activityRes] = await Promise.all([
+          apiClient.getDashboardOverview(),
+          apiClient.getDashboardRecentActivity(8),
+        ]);
+        setOverview(overviewRes.data);
+        const activity = (activityRes.data || []).map((entry: any, index: number): ActivityItem => ({
+          id: entry.id?.toString() ?? `activity-${index}`,
+          type: entry.type ?? 'activity',
+          title: entry.title ?? entry.type,
+          amount: entry.amount !== undefined ? Number(entry.amount) : undefined,
+          date: entry.date ?? entry.created_at,
+          status: entry.status ?? (entry.is_approved ? 'approved' : 'pending'),
+        }));
+        setRecentActivity(activity);
+      } catch (err: any) {
+        setError(err.response?.data?.detail || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, [user]);
+
+  const totalRevenue = overview?.financials?.total_revenue ?? 0;
+  const totalExpenses = overview?.financials?.total_expenses ?? 0;
+  const netProfit = overview?.financials?.profit ?? (totalRevenue - totalExpenses);
+  const pendingApprovals =
+    overview?.pending_approvals ??
+    overview?.team_stats?.pending_approvals ??
+    overview?.personal_stats?.pending_approvals ??
+    0;
+
   const renderWelcomeHeader = () => {
     if (!user) return <HeaderContent><h1>Dashboard</h1></HeaderContent>;
     
@@ -300,6 +360,19 @@ const AdminDashboard: React.FC = () => {
     </StatsCard>
   );
 
+  if (loading) {
+    return (
+      <Layout>
+        <PageContainer className="items-center justify-center">
+          <div className="flex flex-col items-center justify-center py-24">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-4" />
+            <p className="text-muted-foreground">Loading dashboard...</p>
+          </div>
+        </PageContainer>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <PageContainer>
@@ -308,40 +381,18 @@ const AdminDashboard: React.FC = () => {
         </HeaderContainer>
 
         <ContentContainer>
+          {error && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive mb-6">
+              {error}
+            </div>
+          )}
           <ComponentGate componentId={ComponentId.DASHBOARD}>
             <SectionTitle>System Overview</SectionTitle>
             <DashboardGrid>
-              {createStatsCard(Users, 'Total Users', '1,248')}
-              {createStatsCard(DollarSign, 'Total Revenue', '$1.2M')}
-              {createStatsCard(FileText, 'Active Transactions', '843')}
-              {createStatsCard(TrendingUp, 'Growth Rate', '15%')}
-            </DashboardGrid>
-          </ComponentGate>
-          <ComponentGate componentId={ComponentId.FINANCE_MANAGER_DASHBOARD}>
-            <SectionTitle>Department Performance</SectionTitle>
-            <DashboardGrid>
-              {createStatsCard(DollarSign, 'Department Revenue', '$450K')}
-              {createStatsCard(Activity, 'Expense Ratio', '42%')}
-              {createStatsCard(ClipboardList, 'Pending Approvals', '12')}
-              {createStatsCard(BarChart3, 'Quarterly Targets', '85%')}
-            </DashboardGrid>
-          </ComponentGate>
-          <ComponentGate componentId={ComponentId.ACCOUNTANT_DASHBOARD}>
-            <SectionTitle>Financial Records</SectionTitle>
-            <DashboardGrid>
-              {createStatsCard(CreditCard, 'Outstanding Invoices', '37')}
-              {createStatsCard(FileText, 'Pending Audits', '5')}
-              {createStatsCard(Wallet, 'Current Balance', '$250K')}
-              {createStatsCard(Shield, 'Compliance Score', '98%')}
-            </DashboardGrid>
-          </ComponentGate>
-          <ComponentGate componentId={ComponentId.EMPLOYEE_DASHBOARD}>
-            <SectionTitle>Personal Finance Overview</SectionTitle>
-            <DashboardGrid>
-              {createStatsCard(Wallet, 'Personal Balance', '$5,200')}
-              {createStatsCard(DollarSign, 'Monthly Expenses', '$1,800')}
-              {createStatsCard(ClipboardList, 'Pending Requests', '3')}
-              {createStatsCard(TrendingUp, 'Savings Goal', '75%')}
+              {createStatsCard(DollarSign, 'Total Revenue', `$${totalRevenue.toLocaleString()}`)}
+              {createStatsCard(CreditCard, 'Total Expenses', `$${totalExpenses.toLocaleString()}`)}
+              {createStatsCard(TrendingUp, 'Net Profit', `$${netProfit.toLocaleString()}`)}
+              {createStatsCard(ClipboardList, 'Pending Approvals', pendingApprovals.toString())}
             </DashboardGrid>
           </ComponentGate>
           <SectionTitle>Recent Transactions</SectionTitle>
@@ -357,33 +408,40 @@ const AdminDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>2023-11-10</td>
-                  <td>Salary Deposit</td>
-                  <AmountCell $isPositive={true}>+$2,500</AmountCell>
-                  <td><Badge $type="success">Completed</Badge></td>
-                </tr>
+                {recentActivity.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                      No recent activity recorded.
+                    </td>
+                  </tr>
+                )}
+                {recentActivity.map((item) => {
+                  const isPositive = item.type === 'revenue';
+                  const amount = Number(item.amount || 0);
+                  const statusType =
+                    item.status === 'approved'
+                      ? 'success'
+                      : item.status === 'pending'
+                      ? 'warning'
+                      : item.status === 'rejected'
+                      ? 'danger'
+                      : 'info';
 
-                <tr>
-                  <td>2023-11-09</td>
-                  <td>Utility Bill Payment</td>
-                  <AmountCell $isPositive={false}>-$150</AmountCell>
-                  <td><Badge $type="success">Completed</Badge></td>
-                </tr>
-
-                <tr>
-                  <td>2023-11-08</td>
-                  <td>Grocery Purchase</td>
-                  <AmountCell $isPositive={false}>-$89</AmountCell>
-                  <td><Badge $type="warning">Pending</Badge></td>
-                </tr>
-
-                <tr>
-                  <td>2023-11-07</td>
-                  <td>Client Invoice</td>
-                  <AmountCell $isPositive={true}>+$1,200</AmountCell>
-                  <td><Badge $type="danger">Overdue</Badge></td>
-                </tr>
+                  return (
+                    <tr key={`${item.type}-${item.id}-${item.date}`}>
+                      <td>{item.date ? new Date(item.date).toLocaleDateString() : '—'}</td>
+                      <td>{item.title || item.type}</td>
+                      <AmountCell $isPositive={isPositive}>
+                        {isPositive ? '+' : '-'}${Math.abs(amount).toLocaleString()}
+                      </AmountCell>
+                      <td>
+                        <Badge $type={statusType as 'success' | 'warning' | 'danger' | 'info'}>
+                          {(item.status || 'pending').toString().toUpperCase()}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </Table>
           </TableContainer>

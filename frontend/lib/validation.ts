@@ -65,11 +65,15 @@ export const RevenueSchema = z.object({
 export type RevenueInput = z.infer<typeof RevenueSchema>;
 
 export const ExpenseSchema = z.object({
-  amount: z.number().positive('Amount must be positive'),
+  title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
   category: z.string().min(1, 'Category is required'),
-  date: z.string().pipe(z.coerce.date()),
-  receipt: z.string().url('Invalid receipt URL').optional().or(z.literal('')),
+  amount: z.number().positive('Amount must be positive'),
+  vendor: z.string().optional(),
+  date: z.string().min(1, 'Date is required'),
+  isRecurring: z.boolean().default(false),
+  recurringFrequency: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+  attachmentUrl: z.string().url('Invalid attachment URL').optional().or(z.literal('')),
 });
 
 export type ExpenseInput = z.infer<typeof ExpenseSchema>;
