@@ -4,293 +4,250 @@ import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import Navbar from '@/components/common/Navbar';
-import Sidebar from '@/components/common/Sidebar';
+import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
-import { useUserStore } from '@/store/userStore';
+import { useAuth } from '@/lib/rbac/auth-context';
 import { toast } from 'sonner';
 import { 
-  FileText, 
-  Plus, 
-  Download, 
-  RefreshCw, 
-  Trash2, 
-  Loader2, 
-  CheckCircle, 
-  XCircle, 
-  Clock,
-  AlertCircle,
-  Filter
+  DollarSign, 
+  TrendingUp, 
+  TrendingDown,
+  Calendar,
+  Download,
+  RefreshCw,
+  Loader2,
+  ArrowUpRight,
+  ArrowDownRight,
+  FileText,
+  BarChart3
 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
 
 // ──────────────────────────────────────────
 // Styled Components
 // ──────────────────────────────────────────
-const LayoutWrapper = styled.div`
-  display: flex;
-  background: #f5f6fa;
-  min-height: 100vh;
-`;
-
-const SidebarWrapper = styled.div`
-  width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    width: auto;
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding-left: 250px;
-  display: flex;
-  flex-direction: column;
-`;
-
-const InnerContent = styled.div`
+const PageContainer = styled.div`
   padding: 32px;
-  width: 100%;
-  max-width: 1400px;
+  max-width: 800px;
   margin: 0 auto;
 `;
 
 const Header = styled.div`
-  display: flex;
-  justify-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const HeaderText = styled.div`
+  margin-bottom: 32px;
+  
   h1 {
     font-size: 32px;
     font-weight: 700;
-    margin-bottom: 4px;
-  }
-  
-  p {
-    color: var(--muted-foreground);
-  }
-`;
-
-const MessageBox = styled.div<{ type: 'error' | 'success' }>`
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
-`;
-
-const Card = styled.div`
-  background: #fff;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  margin-bottom: 20px;
-`;
-
-const FormCard = styled.form`
-  background: #fff;
-  padding: 28px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  margin-bottom: 20px;
-`;
-
-const FormGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const FiltersCard = styled.div`
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  margin-bottom: 20px;
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 16px;
-  align-items: center;
-  
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const SearchWrapper = styled.div`
-  position: relative;
-  
-  svg {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted-foreground);
-  }
-  
-  input {
-    padding-left: 40px;
-  }
-`;
-
-const Select = styled.select`
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 14px;
-  color: var(--foreground);
-  
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-`;
-
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 48px 24px;
-  
-  svg {
-    margin: 0 auto 16px;
-    color: var(--muted-foreground);
-  }
-  
-  h3 {
-    font-size: 18px;
-    font-weight: 600;
     margin-bottom: 8px;
     color: var(--foreground);
   }
   
   p {
     color: var(--muted-foreground);
-    margin-bottom: 16px;
+    font-size: 16px;
   }
 `;
 
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
+const DateFilterCard = styled.div`
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
 `;
 
-const TableHeader = styled.thead`
-  border-bottom: 1px solid var(--border);
-  background: var(--muted);
+const DateInputGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 200px;
+`;
+
+const ReportSection = styled.div`
+  margin-bottom: 32px;
+`;
+
+const ReportCard = styled.div`
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+`;
+
+const ReportHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e5e7eb;
   
-  th {
-    text-align: left;
-    padding: 12px 16px;
+  h2 {
+    font-size: 24px;
     font-weight: 600;
     color: var(--foreground);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  p {
+    color: var(--muted-foreground);
     font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    margin-top: 4px;
   }
 `;
 
-const TableBody = styled.tbody`
-  tr {
-    border-bottom: 1px solid var(--border);
-    transition: background-color 0.2s;
-    
-    &:hover {
-      background: var(--muted);
-    }
-    
-    td {
-      padding: 12px 16px;
-      color: var(--muted-foreground);
-      font-size: 14px;
-    }
-  }
+const SummaryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
 `;
 
-const TypeBadge = styled.span`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  background: #dbeafe;
-  color: #1e40af;
-`;
-
-const StatusBadge = styled.span<{ status: string }>`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'profit' | 'cash' }>`
   background: ${(p) => {
-    switch (p.status) {
-      case 'completed': return '#d1fae5';
-      case 'failed': return '#fee2e2';
-      case 'generating': return '#dbeafe';
-      case 'scheduled': return '#fef3c7';
-      default: return '#f3f4f6';
-    }
+    if (p.$type === 'revenue') return '#f0fdf4';
+    if (p.$type === 'expense') return '#fef2f2';
+    if (p.$type === 'profit') return '#eff6ff';
+    return '#f9fafb';
   }};
-  color: ${(p) => {
-    switch (p.status) {
-      case 'completed': return '#065f46';
-      case 'failed': return '#991b1b';
-      case 'generating': return '#1e40af';
-      case 'scheduled': return '#92400e';
-      default: return '#374151';
-    }
+  border: 1px solid ${(p) => {
+    if (p.$type === 'revenue') return '#bbf7d0';
+    if (p.$type === 'expense') return '#fecaca';
+    if (p.$type === 'profit') return '#bfdbfe';
+    return '#e5e7eb';
   }};
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const CheckboxWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  padding: 20px;
+  border-radius: 8px;
   
-  input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
+  .label {
+    font-size: 14px;
+    color: var(--muted-foreground);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   
-  label {
-    cursor: pointer;
+  .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--foreground);
+  }
+  
+  .sub-value {
+    font-size: 14px;
+    color: var(--muted-foreground);
+    margin-top: 4px;
   }
 `;
 
-const ButtonRow = styled.div`
-  display: flex;
-  gap: 12px;
+const CategoryTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  
+  thead {
+    background: var(--muted);
+    border-bottom: 2px solid var(--border);
+    
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-weight: 600;
+      color: var(--foreground);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+  
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--border);
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background: var(--muted);
+      }
+      
+      td {
+        padding: 12px 16px;
+        color: var(--muted-foreground);
+        font-size: 14px;
+        
+        &:last-child {
+          font-weight: 600;
+          color: var(--foreground);
+        }
+      }
+    }
+  }
+`;
+
+const CashFlowTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  
+  thead {
+    background: var(--muted);
+    border-bottom: 2px solid var(--border);
+    
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-weight: 600;
+      color: var(--foreground);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+  
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--border);
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background: var(--muted);
+      }
+      
+      td {
+        padding: 12px 16px;
+        color: var(--muted-foreground);
+        font-size: 14px;
+        
+        &:nth-child(2) {
+          color: #059669;
+          font-weight: 500;
+        }
+        
+        &:nth-child(3) {
+          color: #dc2626;
+          font-weight: 500;
+        }
+        
+        &:last-child {
+          font-weight: 600;
+          color: var(--foreground);
+        }
+      }
+    }
+  }
 `;
 
 const LoadingContainer = styled.div`
-  padding: 32px;
+  padding: 48px;
   text-align: center;
   
   p {
@@ -313,73 +270,222 @@ const Spinner = styled.div`
   }
 `;
 
-const StatusIconWrapper = styled.div`
+const ErrorMessage = styled.div`
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 `;
 
-interface Report {
-  id: number;
-  title: string;
-  description?: string | null;
-  type: string;
-  status: 'generating' | 'completed' | 'failed' | 'scheduled';
-  file_url?: string | null;
-  file_size?: number | null;
-  created_at: string;
-  generated_at?: string | null;
-  download_count: number;
-  is_public: boolean;
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--muted-foreground);
+  
+  svg {
+    margin: 0 auto 16px;
+    color: var(--muted-foreground);
+  }
+  
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--foreground);
+  }
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+`;
+
+interface IncomeStatement {
+  period: { start_date?: string; end_date?: string };
+  revenue: {
+    total: number;
+    by_category: Record<string, number>;
+  };
+  expenses: {
+    total: number;
+    by_category: Record<string, number>;
+  };
+  profit: number;
+  profit_margin: number;
 }
 
-interface ReportType {
-  type: string;
-  name: string;
-  description: string;
+interface CashFlow {
+  period: { start_date?: string; end_date?: string };
+  summary: {
+    total_inflow: number;
+    total_outflow: number;
+    net_cash_flow: number;
+  };
+  daily_cash_flow: Record<string, { inflow: number; outflow: number; net: number }>;
+}
+
+interface FinancialSummary {
+  period: { start_date?: string; end_date?: string };
+  financials: {
+    total_revenue: number;
+    total_expenses: number;
+    profit: number;
+    profit_margin: number;
+  };
+  revenue_by_category: Record<string, number>;
+  expenses_by_category: Record<string, number>;
+  transaction_counts: {
+    revenue: number;
+    expenses: number;
+    total: number;
+  };
+  generated_at: string;
 }
 
 export default function ReportPage() {
-  const { user, isAuthenticated } = useUserStore();
-  const [reports, setReports] = useState<Report[]>([]);
-  const [availableTypes, setAvailableTypes] = useState<ReportType[]>([]);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Form state
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    type: '',
-    parameters: '',
-    is_public: false,
+  
+  // Date filters - Default to last 6 months to ensure we capture all recent data
+  const [startDate, setStartDate] = useState<string>(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 6);
+    date.setDate(1); // Start of month
+    return date.toISOString().split('T')[0];
   });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1); // Include today
+    return tomorrow.toISOString().split('T')[0];
+  });
+  
+  // Report data
+  const [financialSummary, setFinancialSummary] = useState<FinancialSummary | null>(null);
+  const [incomeStatement, setIncomeStatement] = useState<IncomeStatement | null>(null);
+  const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
       loadReports();
-      loadAvailableTypes();
     }
-  }, [isAuthenticated]);
+  }, [user, startDate, endDate]);
 
-  const loadReports = async () => {
+  const loadReports = async (useDateFilter: boolean = true) => {
     setLoading(true);
     setError(null);
     
     try {
-      const filters: Record<string, any> = {};
-      if (filterType !== 'all') filters.report_type = filterType;
-      if (filterStatus !== 'all') filters.status = filterStatus;
+      console.log('Loading reports...', { startDate, endDate, useDateFilter });
       
-      const response = await apiClient.getReports(filters);
-      setReports(response.data || []);
+      // Load reports - optionally without date filters to get all data
+      const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
+      
+      // Use Promise.allSettled to handle partial failures gracefully
+      const [summaryResult, incomeResult, cashFlowResult] = await Promise.allSettled([
+        apiClient.getFinancialSummary(dateParams.startDate, dateParams.endDate),
+        apiClient.getIncomeStatement(dateParams.startDate, dateParams.endDate),
+        apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
+      ]);
+      
+      console.log('Report results:', {
+        summary: summaryResult.status === 'fulfilled' ? summaryResult.value.data : summaryResult.reason,
+        income: incomeResult.status === 'fulfilled' ? incomeResult.value.data : incomeResult.reason,
+        cashFlow: cashFlowResult.status === 'fulfilled' ? cashFlowResult.value.data : cashFlowResult.reason,
+      });
+      
+      // Handle summary result
+      if (summaryResult.status === 'fulfilled') {
+        setFinancialSummary(summaryResult.value.data);
+      } else {
+        console.error('Failed to load financial summary:', summaryResult.reason);
+        // Try to load income statement as fallback
+        if (incomeResult.status === 'fulfilled') {
+          const incomeData = incomeResult.value.data;
+          // Estimate transaction counts from category data (approximate)
+          const revenueCategories = Object.keys(incomeData.revenue.by_category).length;
+          const expenseCategories = Object.keys(incomeData.expenses.by_category).length;
+          setFinancialSummary({
+            period: { start_date: startDate, end_date: endDate },
+            financials: {
+              total_revenue: incomeData.revenue.total,
+              total_expenses: incomeData.expenses.total,
+              profit: incomeData.profit,
+              profit_margin: incomeData.profit_margin,
+            },
+            revenue_by_category: incomeData.revenue.by_category,
+            expenses_by_category: incomeData.expenses.by_category,
+            transaction_counts: {
+              revenue: revenueCategories > 0 ? revenueCategories : 0,
+              expenses: expenseCategories > 0 ? expenseCategories : 0,
+              total: revenueCategories + expenseCategories,
+            },
+            generated_at: new Date().toISOString(),
+          });
+        }
+      }
+      
+      // Handle income statement result
+      if (incomeResult.status === 'fulfilled') {
+        setIncomeStatement(incomeResult.value.data);
+      } else {
+        console.error('Failed to load income statement:', incomeResult.reason);
+      }
+      
+      // Handle cash flow result
+      if (cashFlowResult.status === 'fulfilled') {
+        setCashFlow(cashFlowResult.value.data);
+      } else {
+        console.error('Failed to load cash flow:', cashFlowResult.reason);
+      }
+      
+      // If all failed, throw the first error
+      if (summaryResult.status === 'rejected' && incomeResult.status === 'rejected' && cashFlowResult.status === 'rejected') {
+        const firstError = summaryResult.reason || incomeResult.reason || cashFlowResult.reason;
+        throw firstError;
+      }
+      
+      // Log success for debugging
+      if (summaryResult.status === 'fulfilled' || incomeResult.status === 'fulfilled') {
+        console.log('Reports loaded successfully');
+      }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load reports';
+      let errorMessage = 'Failed to load reports';
+      
+      // Handle different error formats
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        
+        // If it's an array of validation errors (Pydantic format)
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((e: any) => {
+            if (typeof e === 'string') return e;
+            if (e.msg) return `${e.loc?.join('.') || 'Field'}: ${e.msg}`;
+            return JSON.stringify(e);
+          }).join(', ');
+        }
+        // If it's a single validation error object
+        else if (typeof detail === 'object' && detail.msg) {
+          errorMessage = `${detail.loc?.join('.') || 'Field'}: ${detail.msg}`;
+        }
+        // If it's a string
+        else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+        // Otherwise stringify it
+        else {
+          errorMessage = JSON.stringify(detail);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -387,419 +493,487 @@ export default function ReportPage() {
     }
   };
 
-  const loadAvailableTypes = async () => {
-    try {
-      const response = await apiClient.getAvailableReportTypes();
-      setAvailableTypes(response.data?.report_types || []);
-    } catch (err: any) {
-      console.error('Failed to load available report types:', err);
-    }
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   };
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadReports();
-    }
-  }, [filterType, filterStatus, isAuthenticated]);
-
-  const handleCreateReport = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-    setError(null);
-
-    try {
-      const reportData = {
-        title: formData.title,
-        description: formData.description || null,
-        type: formData.type,
-        parameters: formData.parameters || null,
-        is_public: formData.is_public,
-      };
-
-      await apiClient.createReport(reportData);
-      toast.success('Report generation started!');
-      setShowCreateForm(false);
-      setFormData({
-        title: '',
-        description: '',
-        type: '',
-        parameters: '',
-        is_public: false,
-      });
-      loadReports();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to create report';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setCreating(false);
-    }
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return '—';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
-  const handleDownload = async (reportId: number) => {
-    try {
-      const response = await apiClient.downloadReport(reportId);
-      const { download_url, filename } = response.data;
-      
-      // Open download URL in new tab
-      window.open(download_url, '_blank');
-      toast.success('Report download started');
-      loadReports(); // Refresh to update download count
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to download report';
-      toast.error(errorMessage);
-    }
+  const capitalize = (str: string): string => {
+    return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ');
   };
 
-  const handleRegenerate = async (reportId: number) => {
-    try {
-      await apiClient.regenerateReport(reportId);
-      toast.success('Report regeneration started');
-      loadReports();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to regenerate report';
-      toast.error(errorMessage);
-    }
-  };
-
-  const handleDelete = async (reportId: number) => {
-    if (!confirm('Are you sure you want to delete this report?')) {
-      return;
-    }
-
-    try {
-      await apiClient.deleteReport(reportId);
-      toast.success('Report deleted successfully');
-      loadReports();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete report';
-      toast.error(errorMessage);
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'generating':
-        return <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />;
-      case 'scheduled':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'generating':
-        return 'bg-blue-100 text-blue-800';
-      case 'scheduled':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const filteredReports = reports.filter(report => {
-    const matchesSearch = 
-      report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.type.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
-  });
-
-  if (!isAuthenticated) {
+  if (!user) {
     return (
-      <LayoutWrapper>
-        <SidebarWrapper>
-          <Sidebar />
-        </SidebarWrapper>
-        <ContentArea>
-          <Navbar />
-          <InnerContent>
-            <EmptyState>
-              <p>Please log in to view reports</p>
-            </EmptyState>
-          </InnerContent>
-        </ContentArea>
-      </LayoutWrapper>
+      <Layout>
+        <PageContainer>
+          <EmptyState>
+            <FileText size={48} />
+            <h3>Please log in to view reports</h3>
+          </EmptyState>
+        </PageContainer>
+      </Layout>
     );
   }
 
   return (
-    <LayoutWrapper>
-      <SidebarWrapper>
-        <Sidebar />
-      </SidebarWrapper>
-      <ContentArea>
-        <Navbar />
+    <Layout>
+      <PageContainer>
+        <Header>
+          <h1>Financial Reports</h1>
+          <p>Income Statement and Cash Flow Analysis</p>
+        </Header>
 
-        <InnerContent>
-          <Header>
-            <HeaderText>
-              <h1>Reports</h1>
-              <p>Generate and manage financial reports</p>
-            </HeaderText>
-            <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {showCreateForm ? 'Cancel' : 'Create Report'}
+        {/* Date Filters */}
+        <DateFilterCard>
+          <DateInputGroup>
+            <Label htmlFor="startDate">Start Date</Label>
+            <Input
+              id="startDate"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </DateInputGroup>
+          <DateInputGroup>
+            <Label htmlFor="endDate">End Date</Label>
+            <Input
+              id="endDate"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </DateInputGroup>
+          <ButtonRow>
+            <Button 
+              onClick={() => {
+                // Set date range to last year to show all data
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                oneYearAgo.setDate(1); // Start of month
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                setStartDate(oneYearAgo.toISOString().split('T')[0]);
+                setEndDate(tomorrow.toISOString().split('T')[0]);
+                loadReports(true);
+              }}
+              variant="outline"
+              disabled={loading}
+            >
+              Show All Data (1 Year)
             </Button>
-          </Header>
-
-          {error && (
-            <MessageBox type="error">
-              <AlertCircle size={18} />
-              <span>{error}</span>
-            </MessageBox>
-          )}
-
-          {/* Create Report Form */}
-          {showCreateForm && (
-            <Card>
-              <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px' }}>Create New Report</h2>
-              <FormCard onSubmit={handleCreateReport}>
-                <FormGroup>
-                  <Label htmlFor="title">Title *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g., Monthly Financial Summary"
-                    required
-                    disabled={creating}
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Optional description"
-                    disabled={creating}
-                    rows={2}
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <Label htmlFor="type">Report Type *</Label>
-                  <Select
-                    id="type"
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    required
-                    disabled={creating}
-                  >
-                    <option value="">Select report type</option>
-                    {availableTypes.map((type) => (
-                      <option key={type.type} value={type.type}>
-                        {type.name} - {type.description}
-                      </option>
-                    ))}
-                  </Select>
-                </FormGroup>
-
-                <FormGroup>
-                  <Label htmlFor="parameters">Parameters (JSON, Optional)</Label>
-                  <Textarea
-                    id="parameters"
-                    value={formData.parameters}
-                    onChange={(e) => setFormData({ ...formData, parameters: e.target.value })}
-                    placeholder='{"start_date": "2024-01-01", "end_date": "2024-01-31"}'
-                    disabled={creating}
-                    style={{ fontFamily: 'monospace', fontSize: '14px' }}
-                    rows={3}
-                  />
-                </FormGroup>
-
-                <CheckboxWrapper>
-                  <input
-                    id="is_public"
-                    type="checkbox"
-                    checked={formData.is_public}
-                    onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
-                    disabled={creating}
-                  />
-                  <Label htmlFor="is_public">Make this report public (visible to managers)</Label>
-                </CheckboxWrapper>
-
-                <ButtonRow>
-                  <Button type="submit" disabled={creating}>
-                    {creating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      'Create Report'
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowCreateForm(false)}
-                    disabled={creating}
-                  >
-                    Cancel
-                  </Button>
-                </ButtonRow>
-              </FormCard>
-            </Card>
-          )}
-
-          {/* Filters */}
-          <FiltersCard>
-            <SearchWrapper>
-              <Filter size={16} />
-              <Input
-                type="text"
-                placeholder="Search reports..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </SearchWrapper>
-            <Select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
+            <Button 
+              onClick={(e) => {
+                e.preventDefault();
+                loadReports(false);
+              }}
+              variant="outline"
+              disabled={loading}
             >
-              <option value="all">All Types</option>
-              {availableTypes.map((type) => (
-                <option key={type.type} value={type.type}>
-                  {type.name}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="generating">Generating</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
-              <option value="scheduled">Scheduled</option>
-            </Select>
-          </FiltersCard>
+              Load Without Date Filter
+            </Button>
+            <Button onClick={() => loadReports(true)} disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </>
+              )}
+            </Button>
+          </ButtonRow>
+        </DateFilterCard>
 
-          {/* Reports List */}
-          {loading ? (
-            <Card>
-              <LoadingContainer>
-                <Spinner />
-                <p>Loading reports...</p>
-              </LoadingContainer>
-            </Card>
-          ) : filteredReports.length === 0 ? (
-            <Card>
-              <EmptyState>
-                <FileText size={48} />
-                <h3>No reports found</h3>
-                <p>
-                  {searchTerm || filterType !== 'all' || filterStatus !== 'all'
-                    ? 'No reports match your filters'
-                    : 'Get started by creating your first report'}
-                </p>
-                {!searchTerm && filterType === 'all' && filterStatus === 'all' && (
-                  <Button onClick={() => setShowCreateForm(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Report
-                  </Button>
+        {error && (
+          <ErrorMessage>
+            <BarChart3 size={18} />
+            <span>{error}</span>
+          </ErrorMessage>
+        )}
+
+        {loading ? (
+          <LoadingContainer>
+            <Spinner />
+            <p>Loading financial reports...</p>
+          </LoadingContainer>
+        ) : (
+          <>
+            {/* Financial Summary Report */}
+            <ReportSection>
+              <ReportCard>
+                <ReportHeader>
+                  <div>
+                    <h2>
+                      <BarChart3 size={24} />
+                      Financial Summary Report
+                    </h2>
+                    <p>
+                      Period: {formatDate(startDate)} - {formatDate(endDate)}
+                      {financialSummary?.generated_at && (
+                        <> • Generated: {formatDate(financialSummary.generated_at)}</>
+                      )}
+                    </p>
+                  </div>
+                </ReportHeader>
+
+                {financialSummary ? (
+                  <>
+                    <SummaryGrid>
+                      <SummaryCard $type="revenue">
+                        <div className="label">
+                          <ArrowUpRight size={16} />
+                          Total Revenue
+                        </div>
+                        <div className="value">{formatCurrency(financialSummary.financials.total_revenue)}</div>
+                        <div className="sub-value">
+                          {financialSummary.transaction_counts.revenue} revenue transactions
+                        </div>
+                      </SummaryCard>
+                      <SummaryCard $type="expense">
+                        <div className="label">
+                          <ArrowDownRight size={16} />
+                          Total Expenses
+                        </div>
+                        <div className="value">{formatCurrency(financialSummary.financials.total_expenses)}</div>
+                        <div className="sub-value">
+                          {financialSummary.transaction_counts.expenses} expense transactions
+                        </div>
+                      </SummaryCard>
+                      <SummaryCard $type="profit">
+                        <div className="label">
+                          <TrendingUp size={16} />
+                          Net Profit
+                        </div>
+                        <div className="value">
+                          {formatCurrency(financialSummary.financials.profit)}
+                        </div>
+                        <div className="sub-value">
+                          Profit Margin: {financialSummary.financials.profit_margin.toFixed(2)}%
+                        </div>
+                      </SummaryCard>
+                      <SummaryCard>
+                        <div className="label">
+                          <FileText size={16} />
+                          Total Transactions
+                        </div>
+                        <div className="value">{financialSummary.transaction_counts.total}</div>
+                        <div className="sub-value">
+                          {financialSummary.transaction_counts.revenue} revenue + {financialSummary.transaction_counts.expenses} expenses
+                        </div>
+                      </SummaryCard>
+                    </SummaryGrid>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginTop: '32px' }}>
+                      <div>
+                        <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
+                          Top Revenue Categories
+                        </h3>
+                        <CategoryTable>
+                          <thead>
+                            <tr>
+                              <th>Category</th>
+                              <th style={{ textAlign: 'right' }}>Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(financialSummary.revenue_by_category).length > 0 ? (
+                              Object.entries(financialSummary.revenue_by_category)
+                                .sort(([, a], [, b]) => b - a)
+                                .slice(0, 5)
+                                .map(([category, amount]) => (
+                                  <tr key={category}>
+                                    <td>{capitalize(category)}</td>
+                                    <td style={{ textAlign: 'right' }}>{formatCurrency(amount)}</td>
+                                  </tr>
+                                ))
+                            ) : (
+                              <tr>
+                                <td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                                  No revenue data
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </CategoryTable>
+                      </div>
+
+                      <div>
+                        <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
+                          Top Expense Categories
+                        </h3>
+                        <CategoryTable>
+                          <thead>
+                            <tr>
+                              <th>Category</th>
+                              <th style={{ textAlign: 'right' }}>Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(financialSummary.expenses_by_category).length > 0 ? (
+                              Object.entries(financialSummary.expenses_by_category)
+                                .sort(([, a], [, b]) => b - a)
+                                .slice(0, 5)
+                                .map(([category, amount]) => (
+                                  <tr key={category}>
+                                    <td>{capitalize(category)}</td>
+                                    <td style={{ textAlign: 'right' }}>{formatCurrency(amount)}</td>
+                                  </tr>
+                                ))
+                            ) : (
+                              <tr>
+                                <td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                                  No expense data
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </CategoryTable>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState>
+                    <BarChart3 size={48} />
+                    <h3>No summary data available</h3>
+                  </EmptyState>
                 )}
-              </EmptyState>
-            </Card>
-          ) : (
-            <Card>
-              <div style={{ overflowX: 'auto' }}>
-                <Table>
-                  <TableHeader>
-                    <tr>
-                      <th>Title</th>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Created</th>
-                      <th>Downloads</th>
-                      <th>Actions</th>
-                    </tr>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredReports.map((report) => (
-                      <tr key={report.id}>
-                        <td>
-                          <div style={{ fontWeight: 500, color: 'var(--foreground)' }}>
-                            {report.title}
-                          </div>
-                          {report.description && (
-                            <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '4px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {report.description}
-                            </div>
+              </ReportCard>
+            </ReportSection>
+
+            {/* Income Statement (Profit & Loss) */}
+            <ReportSection>
+              <ReportCard>
+                <ReportHeader>
+                  <div>
+                    <h2>
+                      <FileText size={24} />
+                      Income Statement (Profit & Loss)
+                    </h2>
+                    <p>
+                      Period: {formatDate(startDate)} - {formatDate(endDate)}
+                    </p>
+                  </div>
+                </ReportHeader>
+
+                {incomeStatement ? (
+                  <>
+                    <SummaryGrid>
+                      <SummaryCard $type="revenue">
+                        <div className="label">
+                          <ArrowUpRight size={16} />
+                          Total Revenue
+                        </div>
+                        <div className="value">{formatCurrency(incomeStatement.revenue.total)}</div>
+                      </SummaryCard>
+                      <SummaryCard $type="expense">
+                        <div className="label">
+                          <ArrowDownRight size={16} />
+                          Total Expenses
+                        </div>
+                        <div className="value">{formatCurrency(incomeStatement.expenses.total)}</div>
+                      </SummaryCard>
+                      <SummaryCard $type="profit">
+                        <div className="label">
+                          <TrendingUp size={16} />
+                          Net Profit
+                        </div>
+                        <div className="value">
+                          {formatCurrency(incomeStatement.profit)}
+                        </div>
+                        <div className="sub-value">
+                          Profit Margin: {incomeStatement.profit_margin.toFixed(2)}%
+                        </div>
+                      </SummaryCard>
+                    </SummaryGrid>
+
+                    <div style={{ marginTop: '32px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
+                        Revenue by Category
+                      </h3>
+                      <CategoryTable>
+                        <thead>
+                          <tr>
+                            <th>Category</th>
+                            <th style={{ textAlign: 'right' }}>Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(incomeStatement.revenue.by_category).length > 0 ? (
+                            Object.entries(incomeStatement.revenue.by_category)
+                              .sort(([, a], [, b]) => b - a)
+                              .map(([category, amount]) => (
+                                <tr key={category}>
+                                  <td>{capitalize(category)}</td>
+                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount)}</td>
+                                </tr>
+                              ))
+                          ) : (
+                            <tr>
+                              <td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                                No revenue data for this period
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <TypeBadge>{report.type.replace('_', ' ')}</TypeBadge>
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <StatusIconWrapper>
-                            {getStatusIcon(report.status)}
-                            <StatusBadge status={report.status}>
-                              {report.status}
-                            </StatusBadge>
-                          </StatusIconWrapper>
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{formatDate(report.created_at)}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{report.download_count || 0}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <ActionButtons>
-                            {report.status === 'completed' && report.file_url && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownload(report.id)}
-                                style={{ height: '32px', width: '32px', padding: 0 }}
-                                title="Download"
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {report.status !== 'generating' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRegenerate(report.id)}
-                                style={{ height: '32px', width: '32px', padding: 0 }}
-                                title="Regenerate"
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(report.id)}
-                              style={{ height: '32px', width: '32px', padding: 0, color: 'var(--destructive)' }}
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </ActionButtons>
-                        </td>
-                      </tr>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-          )}
-        </InnerContent>
-      </ContentArea>
-    </LayoutWrapper>
+                        </tbody>
+                      </CategoryTable>
+                    </div>
+
+                    <div style={{ marginTop: '32px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
+                        Expenses by Category
+                      </h3>
+                      <CategoryTable>
+                        <thead>
+                          <tr>
+                            <th>Category</th>
+                            <th style={{ textAlign: 'right' }}>Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(incomeStatement.expenses.by_category).length > 0 ? (
+                            Object.entries(incomeStatement.expenses.by_category)
+                              .sort(([, a], [, b]) => b - a)
+                              .map(([category, amount]) => (
+                                <tr key={category}>
+                                  <td>{capitalize(category)}</td>
+                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount)}</td>
+                                </tr>
+                              ))
+                          ) : (
+                            <tr>
+                              <td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                                No expense data for this period
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </CategoryTable>
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState>
+                    <FileText size={48} />
+                    <h3>No income statement data available</h3>
+                  </EmptyState>
+                )}
+              </ReportCard>
+            </ReportSection>
+
+            {/* Cash Flow Statement */}
+            <ReportSection>
+              <ReportCard>
+                <ReportHeader>
+                  <div>
+                    <h2>
+                      <BarChart3 size={24} />
+                      Cash Flow Statement
+                    </h2>
+                    <p>
+                      Period: {formatDate(startDate)} - {formatDate(endDate)}
+                    </p>
+                  </div>
+                </ReportHeader>
+
+                {cashFlow ? (
+                  <>
+                    <SummaryGrid>
+                      <SummaryCard $type="revenue">
+                        <div className="label">
+                          <ArrowUpRight size={16} />
+                          Cash Inflow
+                        </div>
+                        <div className="value">{formatCurrency(cashFlow.summary.total_inflow)}</div>
+                        <div className="sub-value">Money coming in</div>
+                      </SummaryCard>
+                      <SummaryCard $type="expense">
+                        <div className="label">
+                          <ArrowDownRight size={16} />
+                          Cash Outflow
+                        </div>
+                        <div className="value">{formatCurrency(cashFlow.summary.total_outflow)}</div>
+                        <div className="sub-value">Money going out</div>
+                      </SummaryCard>
+                      <SummaryCard $type="profit">
+                        <div className="label">
+                          <TrendingUp size={16} />
+                          Net Cash Flow
+                        </div>
+                        <div className="value">
+                          {formatCurrency(cashFlow.summary.net_cash_flow)}
+                        </div>
+                        <div className="sub-value">Actual cash available</div>
+                      </SummaryCard>
+                    </SummaryGrid>
+
+                    <div style={{ marginTop: '32px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
+                        Daily Cash Flow
+                      </h3>
+                      <CashFlowTable>
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th style={{ textAlign: 'right' }}>Inflow</th>
+                            <th style={{ textAlign: 'right' }}>Outflow</th>
+                            <th style={{ textAlign: 'right' }}>Net</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(cashFlow.daily_cash_flow).length > 0 ? (
+                            Object.entries(cashFlow.daily_cash_flow)
+                              .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+                              .map(([date, flow]) => (
+                                <tr key={date}>
+                                  <td>{formatDate(date)}</td>
+                                  <td style={{ textAlign: 'right' }}>
+                                    {flow.inflow > 0 ? formatCurrency(flow.inflow) : '—'}
+                                  </td>
+                                  <td style={{ textAlign: 'right' }}>
+                                    {flow.outflow > 0 ? formatCurrency(flow.outflow) : '—'}
+                                  </td>
+                                  <td style={{ textAlign: 'right' }}>
+                                    {formatCurrency(flow.net)}
+                                  </td>
+                                </tr>
+                              ))
+                          ) : (
+                            <tr>
+                              <td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                                No cash flow data for this period
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </CashFlowTable>
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState>
+                    <BarChart3 size={48} />
+                    <h3>No cash flow data available</h3>
+                  </EmptyState>
+                )}
+              </ReportCard>
+            </ReportSection>
+          </>
+        )}
+      </PageContainer>
+    </Layout>
   );
 }

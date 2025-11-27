@@ -192,14 +192,17 @@ def get_expense_total(
     db: Session = Depends(get_db)
 ):
     """Get total expenses for a period"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]:
+    # Allow admin, super_admin, manager, and finance_manager roles
+    allowed_roles = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]
+    role_value = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    if current_user.role not in allowed_roles and role_value not in ["manager", "finance_manager", "finance_admin"]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     total = expense_crud.get_total_by_period(db, start_date, end_date)
-    return {"total": total, "start_date": start_date, "end_date": end_date}
+    return {"total": float(total), "start_date": start_date.isoformat(), "end_date": end_date.isoformat()}
 
 
-@router.get("/summary/by-category", response_model=List[ExpenseSummary])
+@router.get("/summary/by-category")
 def get_expense_summary_by_category(
     start_date: datetime = Query(...),
     end_date: datetime = Query(...),
@@ -207,11 +210,31 @@ def get_expense_summary_by_category(
     db: Session = Depends(get_db)
 ):
     """Get expense summary by category for a period"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]:
+    # Allow admin, super_admin, manager, and finance_manager roles
+    allowed_roles = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]
+    role_value = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    if current_user.role not in allowed_roles and role_value not in ["manager", "finance_manager", "finance_admin"]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     summary = expense_crud.get_summary_by_category(db, start_date, end_date)
-    return summary
+    # Convert category enum to string and ensure total is a float
+    result = []
+    for item in summary:
+        category = item["category"]
+        # Handle enum category
+        if hasattr(category, "value"):
+            category_str = category.value
+        elif isinstance(category, str):
+            category_str = category
+        else:
+            category_str = str(category)
+        
+        result.append({
+            "category": category_str,
+            "total": float(item["total"]) if item["total"] is not None else 0.0,
+            "count": int(item["count"]) if item["count"] is not None else 0
+        })
+    return result
 
 
 @router.get("/summary/by-vendor", response_model=List[ExpenseSummary])

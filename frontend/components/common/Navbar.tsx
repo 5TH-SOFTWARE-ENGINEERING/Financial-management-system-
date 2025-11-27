@@ -369,32 +369,32 @@ export default function Navbar() {
 
   const handleAddClick = () => {
     // Context-aware routing based on current path
-    if (pathname?.includes('/app/expenses')) {
-      router.push('/app/expenses/create');
-    } else if (pathname?.includes('/app/revenue')) {
-      router.push('/app/revenue/create');
-    } else if (pathname?.includes('/app/project')) {
-      router.push('/app/project/create');
-    } else if (pathname?.includes('/app/employees')) {
+    if (pathname?.includes('/expenses')) {
+      router.push('/expenses/create');
+    } else if (pathname?.includes('/revenue')) {
+      router.push('/revenue/create');
+    } else if (pathname?.includes('/project')) {
+      router.push('/project/create');
+    } else if (pathname?.includes('/employees')) {
       router.push('/app/employees/create');
-    } else if (pathname?.includes('/app/finance')) {
-      router.push('/app/finance/create');
-    } else if (pathname?.includes('/app/accountants')) {
-      router.push('/app/accountants/create');
-    } else if (pathname?.includes('/app/department')) {
-      router.push('/app/department/create');
+    } else if (pathname?.includes('/finance')) {
+      router.push('/finance/create');
+    } else if (pathname?.includes('/accountants')) {
+      router.push('/accountants/create');
+    } else if (pathname?.includes('/department')) {
+      router.push('/department/create');
     } else {
       // Default to expenses create
-      router.push('/app/expenses/create');
+      router.push('/expenses/create');
     }
   };
 
   const handleReportsClick = () => {
-    router.push('/app/report');
+    router.push('/report');
   };
 
   const handleNotificationsClick = () => {
-    router.push('/app/notifications');
+    router.push('/notifications');
   };
 
   const handleLanguageClick = () => {
@@ -405,17 +405,17 @@ export default function Navbar() {
   };
 
   const handleProfileClick = () => {
-    router.push('/app/profile');
+    router.push('/profile');
     setIsDropdownOpen(false);
   };
 
   const handleSettingsClick = () => {
-    router.push('/app/settings');
+    router.push('/settings');
     setIsDropdownOpen(false);
   };
 
   const handleRolesClick = () => {
-    router.push('/app/permissions');
+    router.push('/permissions');
     setIsDropdownOpen(false);
   };
   

@@ -219,7 +219,9 @@ class ApiClient {
 
   // Financial endpoints
   async getRevenues(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
-    return this.get('/revenue', { params: filters });
+    // For reports, we need all data, so increase limit significantly
+    const params = { ...filters, limit: 10000, skip: 0 };
+    return this.get('/revenue', { params });
   }
 
   async getRevenue(revenueId: number): Promise<ApiResponse<any>> {
@@ -239,7 +241,9 @@ class ApiClient {
   }
 
   async getExpenses(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
-    return this.get('/expenses', { params: filters });
+    // For reports, we need all data, so increase limit significantly
+    const params = { ...filters, limit: 10000, skip: 0 };
+    return this.get('/expenses', { params });
   }
 
   async getExpense(expenseId: number): Promise<ApiResponse<any>> {
@@ -337,6 +341,466 @@ class ApiClient {
   async getAvailableReportTypes(): Promise<ApiResponse<{ report_types: Array<{ type: string; name: string; description: string }> }>> {
     return this.get('/reports/types/available');
   }
+
+  // Financial Reports - Direct data fetching
+  async getIncomeStatement(startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
+    const params: Record<string, any> = {};
+    // Convert date strings to ISO datetime format (YYYY-MM-DD -> YYYY-MM-DDTHH:mm:ss)
+    if (startDate) {
+      const start = new Date(startDate + 'T00:00:00');
+      params.start_date = start.toISOString();
+    }
+    if (endDate) {
+      // Set end date to end of day
+      const end = new Date(endDate + 'T23:59:59');
+      params.end_date = end.toISOString();
+    }
+    
+    // Fetch revenue and expense data to calculate income statement
+    // Always fetch all data first, then filter client-side if needed
+    const [revenuesRes, expensesRes] = await Promise.all([
+      this.getRevenues(),
+      this.getExpenses(),
+    ]);
+
+    let revenues = revenuesRes.data || [];
+    let expenses = expensesRes.data || [];
+    
+    console.log('Fetched all income statement data:', {
+      revenueCount: revenues.length,
+      expenseCount: expenses.length,
+      sampleRevenue: revenues[0],
+      sampleExpense: expenses[0],
+    });
+    
+    // Filter by date range if provided (client-side filtering)
+    if (startDate && endDate) {
+      const start = new Date(startDate + 'T00:00:00').getTime();
+      const end = new Date(endDate + 'T23:59:59').getTime();
+      
+      const beforeFilterRevenue = revenues.length;
+      const beforeFilterExpense = expenses.length;
+      
+      revenues = revenues.filter((r: any) => {
+        const dateStr = r.date || r.created_at;
+        if (!dateStr) return true; // Include entries without dates
+        try {
+          const entryDate = new Date(dateStr).getTime();
+          return entryDate >= start && entryDate <= end;
+        } catch {
+          return true; // Include if date parsing fails
+        }
+      });
+      
+      expenses = expenses.filter((e: any) => {
+        const dateStr = e.date || e.created_at;
+        if (!dateStr) return true; // Include entries without dates
+        try {
+          const entryDate = new Date(dateStr).getTime();
+          return entryDate >= start && entryDate <= end;
+        } catch {
+          return true; // Include if date parsing fails
+        }
+      });
+      
+      console.log('After date filtering:', {
+        beforeRevenue: beforeFilterRevenue,
+        afterRevenue: revenues.length,
+        beforeExpense: beforeFilterExpense,
+        afterExpense: expenses.length,
+        dateRange: { startDate, endDate }
+      });
+    }
+    
+    console.log('Income Statement Data:', {
+      totalRevenues: revenues.length,
+      totalExpenses: expenses.length,
+      dateRange: { startDate, endDate },
+      sampleRevenue: revenues[0],
+      sampleExpense: expenses[0],
+    });
+
+    // Calculate totals
+    const totalRevenue = revenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
+    const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    const profit = totalRevenue - totalExpenses;
+
+    // Group by category - handle both enum and string categories
+    const revenueByCategory: Record<string, number> = {};
+    revenues.forEach((r: any) => {
+      let cat = r.category;
+      if (cat && typeof cat === 'object' && cat.value) {
+        cat = cat.value;
+      } else if (typeof cat !== 'string') {
+        cat = String(cat || 'other');
+      }
+      cat = cat || 'other';
+      revenueByCategory[cat] = (revenueByCategory[cat] || 0) + Number(r.amount || 0);
+    });
+
+    const expenseByCategory: Record<string, number> = {};
+    expenses.forEach((e: any) => {
+      let cat = e.category;
+      if (cat && typeof cat === 'object' && cat.value) {
+        cat = cat.value;
+      } else if (typeof cat !== 'string') {
+        cat = String(cat || 'other');
+      }
+      cat = cat || 'other';
+      expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(e.amount || 0);
+    });
+
+    return {
+      data: {
+        period: { start_date: startDate, end_date: endDate },
+        revenue: {
+          total: totalRevenue,
+          by_category: revenueByCategory,
+        },
+        expenses: {
+          total: totalExpenses,
+          by_category: expenseByCategory,
+        },
+        profit,
+        profit_margin: totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0,
+      },
+    };
+  }
+
+  async getCashFlow(startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
+    const params: Record<string, any> = {};
+    // Convert date strings to ISO datetime format (YYYY-MM-DD -> YYYY-MM-DDTHH:mm:ss)
+    if (startDate) {
+      const start = new Date(startDate + 'T00:00:00');
+      params.start_date = start.toISOString();
+    }
+    if (endDate) {
+      // Set end date to end of day
+      const end = new Date(endDate + 'T23:59:59');
+      params.end_date = end.toISOString();
+    }
+    
+    // Fetch revenue and expense data to calculate cash flow
+    // Always fetch all data first, then filter client-side if needed
+    const [revenuesRes, expensesRes] = await Promise.all([
+      this.getRevenues(),
+      this.getExpenses(),
+    ]);
+
+    let revenues = revenuesRes.data || [];
+    let expenses = expensesRes.data || [];
+    
+    console.log('Fetched all cash flow data:', {
+      revenueCount: revenues.length,
+      expenseCount: expenses.length,
+    });
+    
+    // Filter by date range if provided (client-side filtering)
+    if (startDate && endDate) {
+      const start = new Date(startDate + 'T00:00:00').getTime();
+      const end = new Date(endDate + 'T23:59:59').getTime();
+      
+      revenues = revenues.filter((r: any) => {
+        const dateStr = r.date || r.created_at;
+        if (!dateStr) return true; // Include entries without dates
+        try {
+          const entryDate = new Date(dateStr).getTime();
+          return entryDate >= start && entryDate <= end;
+        } catch {
+          return true; // Include if date parsing fails
+        }
+      });
+      
+      expenses = expenses.filter((e: any) => {
+        const dateStr = e.date || e.created_at;
+        if (!dateStr) return true; // Include entries without dates
+        try {
+          const entryDate = new Date(dateStr).getTime();
+          return entryDate >= start && entryDate <= end;
+        } catch {
+          return true; // Include if date parsing fails
+        }
+      });
+    }
+    
+    console.log('Cash Flow Data:', {
+      totalRevenues: revenues.length,
+      totalExpenses: expenses.length,
+      dateRange: { startDate, endDate },
+    });
+
+    // Calculate daily cash flow
+    const cashFlowByDay: Record<string, { inflow: number; outflow: number; net: number }> = {};
+    
+    revenues.forEach((r: any) => {
+      // Handle different date formats - try date, created_at, or use current date
+      let dateStr = r.date || r.created_at;
+      const day = dateStr ? new Date(dateStr).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      if (!cashFlowByDay[day]) {
+        cashFlowByDay[day] = { inflow: 0, outflow: 0, net: 0 };
+      }
+      const amount = Number(r.amount || 0);
+      cashFlowByDay[day].inflow += amount;
+      cashFlowByDay[day].net += amount;
+    });
+
+    expenses.forEach((e: any) => {
+      // Handle different date formats - try date, created_at, or use current date
+      let dateStr = e.date || e.created_at;
+      const day = dateStr ? new Date(dateStr).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      if (!cashFlowByDay[day]) {
+        cashFlowByDay[day] = { inflow: 0, outflow: 0, net: 0 };
+      }
+      const amount = Number(e.amount || 0);
+      cashFlowByDay[day].outflow += amount;
+      cashFlowByDay[day].net -= amount;
+    });
+
+    const totalInflow = Object.values(cashFlowByDay).reduce((sum, day) => sum + day.inflow, 0);
+    const totalOutflow = Object.values(cashFlowByDay).reduce((sum, day) => sum + day.outflow, 0);
+    const netCashFlow = totalInflow - totalOutflow;
+
+    return {
+      data: {
+        period: { start_date: startDate, end_date: endDate },
+        summary: {
+          total_inflow: totalInflow,
+          total_outflow: totalOutflow,
+          net_cash_flow: netCashFlow,
+        },
+        daily_cash_flow: cashFlowByDay,
+      },
+    };
+  }
+
+  // Financial Summary Report
+  async getFinancialSummary(startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
+    console.log('getFinancialSummary called with:', { startDate, endDate });
+    
+    // Always fetch all data first, then calculate summary
+    const [allRevenuesRes, allExpensesRes] = await Promise.all([
+      this.getRevenues(),
+      this.getExpenses(),
+    ]);
+
+    let revenues = allRevenuesRes.data || [];
+    let expenses = allExpensesRes.data || [];
+    
+    // Filter by date range if provided (client-side filtering)
+    if (startDate && endDate) {
+      const start = new Date(startDate + 'T00:00:00').getTime();
+      const end = new Date(endDate + 'T23:59:59').getTime();
+      
+      revenues = revenues.filter((r: any) => {
+        const dateStr = r.date || r.created_at;
+        if (!dateStr) return true; // Include entries without dates
+        try {
+          const entryDate = new Date(dateStr).getTime();
+          return entryDate >= start && entryDate <= end;
+        } catch {
+          return true; // Include if date parsing fails
+        }
+      });
+      
+      expenses = expenses.filter((e: any) => {
+        const dateStr = e.date || e.created_at;
+        if (!dateStr) return true; // Include entries without dates
+        try {
+          const entryDate = new Date(dateStr).getTime();
+          return entryDate >= start && entryDate <= end;
+        } catch {
+          return true; // Include if date parsing fails
+        }
+      });
+      
+      console.log('After date filtering financial summary:', {
+        revenueCount: revenues.length,
+        expenseCount: expenses.length,
+      });
+    }
+    
+    // Calculate totals from filtered data
+    const totalRevenue = revenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
+    const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    const profit = totalRevenue - totalExpenses;
+    const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+
+    // Process category summaries
+    const revenueByCategory: Record<string, number> = {};
+    revenues.forEach((r: any) => {
+      let cat = r.category;
+      if (cat && typeof cat === 'object' && cat.value) {
+        cat = cat.value;
+      } else if (typeof cat !== 'string') {
+        cat = String(cat || 'other');
+      }
+      cat = cat || 'other';
+      revenueByCategory[cat] = (revenueByCategory[cat] || 0) + Number(r.amount || 0);
+    });
+
+    const expenseByCategory: Record<string, number> = {};
+    expenses.forEach((e: any) => {
+      let cat = e.category;
+      if (cat && typeof cat === 'object' && cat.value) {
+        cat = cat.value;
+      } else if (typeof cat !== 'string') {
+        cat = String(cat || 'other');
+      }
+      cat = cat || 'other';
+      expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(e.amount || 0);
+    });
+
+    return {
+      data: {
+        period: { start_date: startDate, end_date: endDate },
+        financials: {
+          total_revenue: totalRevenue,
+          total_expenses: totalExpenses,
+          profit,
+          profit_margin: profitMargin,
+        },
+        revenue_by_category: revenueByCategory,
+        expenses_by_category: expenseByCategory,
+        transaction_counts: {
+          revenue: revenues.length,
+          expenses: expenses.length,
+          total: revenues.length + expenses.length,
+        },
+        generated_at: new Date().toISOString(),
+      },
+    };
+  }
+  
+  /* OLD CODE - Try backend summary endpoints first, fallback to calculated
+  async getFinancialSummary_OLD(startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
+    try {
+      // Convert date strings to ISO datetime format
+      const startDateTime = startDate ? new Date(startDate + 'T00:00:00').toISOString() : undefined;
+      const endDateTime = endDate ? new Date(endDate + 'T23:59:59').toISOString() : undefined;
+
+      // Fetch summary data from backend endpoints
+      const [revenueTotalRes, expenseTotalRes, revenueCategoryRes, expenseCategoryRes] = await Promise.all([
+        startDateTime && endDateTime
+          ? this.get<{ total: number }>('/revenue/summary/total', { params: { start_date: startDateTime, end_date: endDateTime } })
+          : Promise.resolve<ApiResponse<{ total: number }>>({ data: { total: 0 } }),
+        startDateTime && endDateTime
+          ? this.get<{ total: number }>('/expenses/summary/total', { params: { start_date: startDateTime, end_date: endDateTime } })
+          : Promise.resolve<ApiResponse<{ total: number }>>({ data: { total: 0 } }),
+        startDateTime && endDateTime
+          ? this.get<Array<{ category: string; total: number }>>('/revenue/summary/by-category', { params: { start_date: startDateTime, end_date: endDateTime } })
+          : Promise.resolve<ApiResponse<Array<{ category: string; total: number }>>>({ data: [] }),
+        startDateTime && endDateTime
+          ? this.get<Array<{ category: string; total: number }>>('/expenses/summary/by-category', { params: { start_date: startDateTime, end_date: endDateTime } })
+          : Promise.resolve<ApiResponse<Array<{ category: string; total: number }>>>({ data: [] }),
+      ]);
+
+      const totalRevenue = revenueTotalRes.data?.total || 0;
+      const totalExpenses = expenseTotalRes.data?.total || 0;
+      const profit = totalRevenue - totalExpenses;
+      const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+
+      // Process category summaries
+      const revenueByCategory: Record<string, number> = {};
+      (revenueCategoryRes.data || []).forEach((item: { category: string; total: number }) => {
+        revenueByCategory[item.category || 'other'] = Number(item.total || 0);
+      });
+
+      const expenseByCategory: Record<string, number> = {};
+      (expenseCategoryRes.data || []).forEach((item: { category: string; total: number }) => {
+        expenseByCategory[item.category || 'other'] = Number(item.total || 0);
+      });
+
+      // Get transaction counts - use same date params if available
+      const revenueParams: Record<string, any> = {};
+      const expenseParams: Record<string, any> = {};
+      if (startDateTime) revenueParams.start_date = startDateTime;
+      if (endDateTime) revenueParams.end_date = endDateTime;
+      if (startDateTime) expenseParams.start_date = startDateTime;
+      if (endDateTime) expenseParams.end_date = endDateTime;
+
+      const [revenuesRes, expensesRes] = await Promise.all([
+        Object.keys(revenueParams).length > 0 ? this.getRevenues(revenueParams) : this.getRevenues(),
+        Object.keys(expenseParams).length > 0 ? this.getExpenses(expenseParams) : this.getExpenses(),
+      ]);
+
+      const revenueCount = (revenuesRes.data || []).length;
+      const expenseCount = (expensesRes.data || []).length;
+
+      return {
+        data: {
+          period: { start_date: startDate, end_date: endDate },
+          financials: {
+            total_revenue: totalRevenue,
+            total_expenses: totalExpenses,
+            profit,
+            profit_margin: profitMargin,
+          },
+          revenue_by_category: revenueByCategory,
+          expenses_by_category: expenseByCategory,
+          transaction_counts: {
+            revenue: revenueCount,
+            expenses: expenseCount,
+            total: revenueCount + expenseCount,
+          },
+          generated_at: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      // Fallback to calculating from full data if summary endpoints fail
+      const params: Record<string, any> = {};
+      if (startDateTime) params.start_date = startDateTime;
+      if (endDateTime) params.end_date = endDateTime;
+
+      const [revenuesRes, expensesRes] = await Promise.all([
+        this.getRevenues(params),
+        this.getExpenses(params),
+      ]);
+
+      const revenues = revenuesRes.data || [];
+      const expenses = expensesRes.data || [];
+
+      const totalRevenue = revenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
+      const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+      const profit = totalRevenue - totalExpenses;
+      const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+
+      const revenueByCategory: Record<string, number> = {};
+      revenues.forEach((r: any) => {
+        const cat = r.category || 'other';
+        revenueByCategory[cat] = (revenueByCategory[cat] || 0) + Number(r.amount || 0);
+      });
+
+      const expenseByCategory: Record<string, number> = {};
+      expenses.forEach((e: any) => {
+        const cat = e.category || 'other';
+        expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(e.amount || 0);
+      });
+
+      return {
+        data: {
+          period: { start_date: startDate, end_date: endDate },
+          financials: {
+            total_revenue: totalRevenue,
+            total_expenses: totalExpenses,
+            profit,
+            profit_margin: profitMargin,
+          },
+          revenue_by_category: revenueByCategory,
+          expenses_by_category: expenseByCategory,
+          transaction_counts: {
+            revenue: revenues.length,
+            expenses: expenses.length,
+            total: revenues.length + expenses.length,
+          },
+          generated_at: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      // Fallback handled in new implementation
+      throw error;
+    }
+  }
+  */
 
   // Approvals
   async getApprovals(): Promise<ApiResponse<any[]>> {
