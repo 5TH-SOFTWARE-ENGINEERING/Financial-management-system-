@@ -425,36 +425,42 @@ const AdminDashboard: React.FC = () => {
         const overviewData = overviewRes.data || {};
         setOverview(overviewData);
         
-        // Calculate pending approvals count from overview data
-        let count = 0;
-        const overviewCount = overviewData.pending_approvals ?? 
-                             overviewData.team_stats?.pending_approvals ?? 
-                             overviewData.personal_stats?.pending_approvals;
-        
-        if (overviewCount !== undefined && overviewCount !== null) {
-          count = Number(overviewCount) || 0;
-        }
-        
-        // Also fetch approvals directly to get accurate count including pending revenue/expenses
+        // Fetch all pending approvals in real-time (workflows, revenue, expenses)
+        let totalPendingCount = 0;
         try {
-          const approvalsRes = await apiClient.getApprovals();
-          if (approvalsRes?.data && Array.isArray(approvalsRes.data)) {
-            const pendingApprovals = approvalsRes.data.filter((a: any) => 
-              a.status?.toLowerCase() === 'pending' || 
-              a.status === 'pending'
+          // Fetch pending approval workflows
+          const workflowsRes = await apiClient.getApprovals();
+          if (workflowsRes?.data && Array.isArray(workflowsRes.data)) {
+            const pendingWorkflows = workflowsRes.data.filter((w: any) => 
+              (w.status?.toLowerCase() === 'pending' || w.status === 'pending')
             );
-            
-            // Use the higher count to ensure we show all pending items
-            const pendingCount = pendingApprovals.length;
-            if (pendingCount > count) {
-              count = pendingCount;
-            }
+            totalPendingCount += pendingWorkflows.length;
+          }
+
+          // Fetch pending revenue entries
+          const revenuesRes = await apiClient.getRevenues({ is_approved: false });
+          if (revenuesRes?.data && Array.isArray(revenuesRes.data)) {
+            const pendingRevenues = revenuesRes.data.filter((r: any) => !r.is_approved);
+            totalPendingCount += pendingRevenues.length;
+          }
+
+          // Fetch pending expense entries
+          const expensesRes = await apiClient.getExpenses({ is_approved: false });
+          if (expensesRes?.data && Array.isArray(expensesRes.data)) {
+            const pendingExpenses = expensesRes.data.filter((e: any) => !e.is_approved);
+            totalPendingCount += pendingExpenses.length;
           }
         } catch (err) {
-          // If approvals API fails, use overview count
+          // Fallback to overview count if direct fetching fails
+          const overviewCount = overviewData.pending_approvals ?? 
+                               overviewData.team_stats?.pending_approvals ?? 
+                               overviewData.personal_stats?.pending_approvals;
+          if (overviewCount !== undefined && overviewCount !== null) {
+            totalPendingCount = Number(overviewCount) || 0;
+          }
         }
         
-        setPendingApprovalsCount(Math.max(0, count));
+        setPendingApprovalsCount(Math.max(0, totalPendingCount));
         
         // Log for debugging (only in development)
         if (process.env.NODE_ENV === 'development') {
@@ -464,7 +470,7 @@ const AdminDashboard: React.FC = () => {
             total_revenue: overviewData.financials?.total_revenue,
             total_expenses: overviewData.financials?.total_expenses,
             profit: overviewData.financials?.profit,
-            pending_approvals_count: count,
+            pending_approvals_count: totalPendingCount,
           });
         }
         
