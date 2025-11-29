@@ -827,21 +827,21 @@ export default function ApprovalsPage() {
         <ContentContainer>
           <HeaderContainer>
             <HeaderContent>
-              <div>
+            <div>
                 <h1>Approvals</h1>
                 <p>Manage pending approvals and review history</p>
-              </div>
+            </div>
               <RefreshButton onClick={loadApprovals} disabled={loading}>
                 <RefreshCw />
-                Refresh
+              Refresh
               </RefreshButton>
             </HeaderContent>
           </HeaderContainer>
 
-          {error && (
+        {error && (
             <ErrorBanner>
               <AlertCircle />
-              <span>{error}</span>
+            <span>{error}</span>
             </ErrorBanner>
           )}
 
@@ -850,38 +850,38 @@ export default function ApprovalsPage() {
               <SearchContainer>
                 <Search />
                 <SearchInput
-                  type="text"
-                  placeholder="Search approvals..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                type="text"
+                placeholder="Search approvals..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
               </SearchContainer>
-              
+            
               <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="cancelled">Cancelled</option>
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="cancelled">Cancelled</option>
               </Select>
-              
+            
               <Select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-              >
-                <option value="all">All Types</option>
-                <option value="revenue">Revenue</option>
-                <option value="expense">Expense</option>
-                <option value="workflow">Workflow</option>
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+            >
+              <option value="all">All Types</option>
+              <option value="revenue">Revenue</option>
+              <option value="expense">Expense</option>
+              <option value="workflow">Workflow</option>
               </Select>
             </FiltersGrid>
           </FiltersContainer>
 
           <ApprovalsList>
-            {filteredApprovals.length === 0 ? (
+          {filteredApprovals.length === 0 ? (
               <EmptyState>
                 <Clock />
                 <p>No approvals found</p>
@@ -904,7 +904,7 @@ export default function ApprovalsPage() {
                           {item.status.toUpperCase()}
                         </StatusBadge>
                       </ApprovalHeader>
-         
+                      
                       <ApprovalMeta>
                         <span style={{ textTransform: 'capitalize' }}>{item.type}</span>
                         {item.amount !== undefined && (
@@ -972,8 +972,8 @@ export default function ApprovalsPage() {
             )}
           </ApprovalsList>
 
-          {/* Rejection Modal */}
-          {showRejectModal && (
+        {/* Rejection Modal */}
+        {showRejectModal && (
             <ModalOverlay onClick={() => {
               setShowRejectModal(null);
               setRejectionReason('');
@@ -981,36 +981,36 @@ export default function ApprovalsPage() {
               <ModalContent onClick={(e) => e.stopPropagation()}>
                 <ModalTitle>Reject Approval</ModalTitle>
                 <div>
-                  <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                <Label htmlFor="rejection-reason">Rejection Reason</Label>
                   <TextArea
-                    id="rejection-reason"
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
+                  id="rejection-reason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
                     placeholder="Please provide a reason for rejection..."
-                    rows={4}
-                  />
-                </div>
+                  rows={4}
+                />
+              </div>
                 <ModalActions>
                   <ActionButton
                     $variant="secondary"
-                    onClick={() => {
-                      setShowRejectModal(null);
-                      setRejectionReason('');
-                    }}
-                  >
-                    Cancel
+                  onClick={() => {
+                    setShowRejectModal(null);
+                    setRejectionReason('');
+                  }}
+                >
+                  Cancel
                   </ActionButton>
                   <ActionButton
                     $variant="danger"
-                    onClick={() => {
-                      const item = approvals.find(a => a.id === showRejectModal);
-                      if (item) {
-                        handleReject(item, rejectionReason);
-                      }
-                    }}
-                    disabled={!rejectionReason.trim() || processingId !== null}
-                  >
-                    Reject
+                  onClick={() => {
+                    const item = approvals.find(a => a.id === showRejectModal);
+                    if (item) {
+                      handleReject(item, rejectionReason);
+                    }
+                  }}
+                  disabled={!rejectionReason.trim() || processingId !== null}
+                >
+                  Reject
                   </ActionButton>
                 </ModalActions>
               </ModalContent>

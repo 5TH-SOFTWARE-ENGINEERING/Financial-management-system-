@@ -2,173 +2,189 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
-import Navbar from '@/components/common/Navbar';
-import Sidebar from '@/components/common/Sidebar';
+import Layout from '@/components/layout';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, UserPlus, Edit, Trash2, Users, Loader2 } from 'lucide-react';
+import { AlertCircle, UserPlus, Edit, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { theme } from '@/components/common/theme';
 
-// ──────────────────────────────────────────
-// Styled Components
-// ──────────────────────────────────────────
-const LayoutWrapper = styled.div`
-  display: flex;
-  background: #f5f6fa;
-  min-height: 100vh;
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
 `;
 
-const SidebarWrapper = styled.div`
-  width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    width: auto;
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding-left: 250px;
+const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
+  width: 100%;
 `;
 
-const InnerContent = styled.div`
-  padding: 32px;
+const ContentContainer = styled.div`
+  flex: 1;
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
 `;
 
 const Header = styled.div`
   display: flex;
-  justify-between;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: ${theme.spacing.lg};
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
 `;
 
 const HeaderText = styled.div`
   h1 {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 4px;
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: ${TEXT_COLOR_DARK};
   }
   
   p {
-    color: var(--muted-foreground);
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.sm};
+    margin: 0;
   }
 `;
 
 const MessageBox = styled.div<{ type: 'error' | 'success' }>`
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  padding: ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
   display: flex;
-  gap: 10px;
+  gap: ${theme.spacing.sm};
   align-items: center;
-
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  background-color: ${(p) => (p.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)')};
+  border: 1px solid ${(p) => (p.type === 'error' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)')};
+  color: ${(p) => (p.type === 'error' ? '#dc2626' : '#059669')};
+  font-size: ${theme.typography.fontSizes.sm};
 `;
 
 const Card = styled.div`
-  background: #fff;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background: ${theme.colors.background};
+  padding: ${theme.spacing.lg};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  transition: box-shadow ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: ${CardShadowHover};
+  }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 48px 24px;
+  padding: ${theme.spacing.xxl} ${theme.spacing.lg};
   
   svg {
-    margin: 0 auto 16px;
-    color: var(--muted-foreground);
+    margin: 0 auto ${theme.spacing.md};
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.5;
   }
   
   p {
-    color: var(--muted-foreground);
-    margin-bottom: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    margin-bottom: ${theme.spacing.md};
+    font-size: ${theme.typography.fontSizes.md};
   }
 `;
 
 const Table = styled.table`
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 `;
 
 const TableHeader = styled.thead`
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid ${theme.colors.border};
+  background: ${theme.colors.backgroundSecondary};
   
   th {
     text-align: left;
-    padding: 12px 16px;
-    font-weight: 600;
-    color: var(--foreground);
-    font-size: 14px;
+    padding: ${theme.spacing.md} ${theme.spacing.lg};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.xs};
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 `;
 
 const TableBody = styled.tbody`
   tr {
-    border-bottom: 1px solid var(--border);
-    transition: background-color 0.2s;
+    border-bottom: 1px solid ${theme.colors.border};
+    transition: background-color ${theme.transitions.default};
     
     &:hover {
-      background: var(--muted);
+      background-color: ${theme.colors.backgroundSecondary};
+    }
+    
+    &:last-child {
+      border-bottom: none;
     }
     
     td {
-      padding: 12px 16px;
-      color: var(--muted-foreground);
-      font-size: 14px;
+      padding: ${theme.spacing.md} ${theme.spacing.lg};
+      color: ${TEXT_COLOR_DARK};
+      font-size: ${theme.typography.fontSizes.sm};
     }
   }
 `;
 
 const StatusBadge = styled.span<{ $active: boolean }>`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${(p) => (p.$active ? '#d1fae5' : '#fee2e2')};
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  background: ${(p) => (p.$active ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)')};
   color: ${(p) => (p.$active ? '#065f46' : '#991b1b')};
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
 `;
 
 const LoadingContainer = styled.div`
-  padding: 32px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: ${theme.spacing.md};
   
   p {
-    color: var(--muted-foreground);
-    margin-top: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0;
   }
 `;
 
 const Spinner = styled.div`
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${theme.colors.border};
+  border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto;
+  animation: spin 0.8s linear infinite;
   
   @keyframes spin {
     to { transform: rotate(360deg); }
@@ -242,30 +258,23 @@ export default function EmployeeListPage() {
 
   if (loading) {
     return (
-      <LayoutWrapper>
-        <SidebarWrapper>
-          <Sidebar />
-        </SidebarWrapper>
-        <ContentArea>
-          <Navbar />
-          <LoadingContainer>
-            <Spinner />
-            <p>Loading employees...</p>
-          </LoadingContainer>
-        </ContentArea>
-      </LayoutWrapper>
+      <Layout>
+        <PageContainer>
+          <ContentContainer>
+            <LoadingContainer>
+              <Spinner />
+              <p>Loading employees...</p>
+            </LoadingContainer>
+          </ContentContainer>
+        </PageContainer>
+      </Layout>
     );
   }
 
   return (
-    <LayoutWrapper>
-      <SidebarWrapper>
-        <Sidebar />
-      </SidebarWrapper>
-      <ContentArea>
-        <Navbar />
-
-        <InnerContent>
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
           <Header>
             <HeaderText>
               <h1>Employees</h1>
@@ -316,9 +325,9 @@ export default function EmployeeListPage() {
                     {employees.map((employee) => (
                       <tr key={employee.id}>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Users size={16} style={{ color: 'var(--muted-foreground)' }} />
-                            <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <Users size={16} style={{ color: TEXT_COLOR_MUTED }} />
+                            <span style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
                               {employee.full_name || 'N/A'}
                             </span>
                           </div>
@@ -337,7 +346,6 @@ export default function EmployeeListPage() {
                             <Link href={`/employees/edit/${employee.id}`}>
                               <Button size="sm" variant="secondary">
                                 <Edit className="h-4 w-4 mr-1" />
-                                Edit
                               </Button>
                             </Link>
                             <Button 
@@ -346,7 +354,6 @@ export default function EmployeeListPage() {
                               onClick={() => handleDelete(employee.id)}
                             >
                               <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
                             </Button>
                           </ActionButtons>
                         </td>
@@ -357,9 +364,9 @@ export default function EmployeeListPage() {
               </div>
             )}
           </Card>
-        </InnerContent>
-      </ContentArea>
-    </LayoutWrapper>
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
   );
 }
 
