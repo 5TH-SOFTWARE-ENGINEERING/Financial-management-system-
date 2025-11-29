@@ -273,6 +273,7 @@ const Sidebar: React.FC = () => {
     }, [pathname]);
     const isAdmin = hasUserType(UserType.ADMIN) || user?.userType?.toLowerCase() === "admin";
     const isFinanceAdmin = hasUserType(UserType.FINANCE_ADMIN) || user?.userType?.toLowerCase() === "finance_admin";
+    const isEmployee = hasUserType(UserType.EMPLOYEE) || user?.userType?.toLowerCase() === "employee";
     
     return (
         <SidebarContainer $collapsed={collapsed}> 
@@ -292,33 +293,35 @@ const Sidebar: React.FC = () => {
            </NavItem>
         </ComponentGate>
 
-        {/* Revenue */}
-        <ComponentGate componentId={ComponentId.SIDEBAR_REVENUE}>
-            <>
-            <DropdownHeader 
-                onClick={() => toggleSection('revenue')}
-                $open={isOpen('revenue')}
-                $active={pathname.includes('/revenue')}
-                $collapsed={collapsed} 
-            >
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <ArrowDownCircle />
-                    {!collapsed && <span style={{ marginLeft: '12px' }}>Revenue</span>}
-                </div>
-                {!collapsed && <ChevronDown size={16} />}
-            </DropdownHeader>
-            {isOpen('revenue') && (
-                <SubMenu $collapsed={collapsed}> 
-                    <ComponentGate componentId={ComponentId.REVENUE_LIST}>
-                        <NavItem href="/revenue/list" $active={pathname === '/revenue/list'} $collapsed={collapsed}> 
-                            <List size={16} /> {/* Added icon for List */}
-                            {!collapsed && 'Revenues'}
-                        </NavItem>
-                    </ComponentGate>
-                    </SubMenu>
-                )}
-            </>
-        </ComponentGate>
+        {/* Revenue - Hidden for employees */}
+        {!isEmployee && (
+            <ComponentGate componentId={ComponentId.SIDEBAR_REVENUE}>
+                <>
+                <DropdownHeader 
+                    onClick={() => toggleSection('revenue')}
+                    $open={isOpen('revenue')}
+                    $active={pathname.includes('/revenue')}
+                    $collapsed={collapsed} 
+                >
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <ArrowDownCircle />
+                        {!collapsed && <span style={{ marginLeft: '12px' }}>Revenue</span>}
+                    </div>
+                    {!collapsed && <ChevronDown size={16} />}
+                </DropdownHeader>
+                {isOpen('revenue') && (
+                    <SubMenu $collapsed={collapsed}> 
+                        <ComponentGate componentId={ComponentId.REVENUE_LIST}>
+                            <NavItem href="/revenue/list" $active={pathname === '/revenue/list'} $collapsed={collapsed}> 
+                                <List size={16} /> {/* Added icon for List */}
+                                {!collapsed && 'Revenues'}
+                            </NavItem>
+                        </ComponentGate>
+                        </SubMenu>
+                    )}
+                </>
+            </ComponentGate>
+        )}
 
         {/* Expenses */}
         <ComponentGate componentId={ComponentId.SIDEBAR_EXPENSE}>
