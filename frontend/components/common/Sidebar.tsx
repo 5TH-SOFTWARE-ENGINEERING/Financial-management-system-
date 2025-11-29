@@ -23,7 +23,7 @@ const SidebarContainer = styled.div<SidebarContainerProps>`
     height: 100vh;
     background: ${theme.colors.background};
     border-right: 1px solid ${theme.colors.border};
-    padding: ${theme.spacing.xs} 0;
+    padding: ${theme.spacing.sm} 0;
     position: fixed;
     left: 0;
     top: 0;
