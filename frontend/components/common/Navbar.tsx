@@ -421,12 +421,190 @@ const SignOutItem = styled(DropdownItem)`
     color: ${DANGER_COLOR};
   }
 `;
+
+const NotificationPanel = styled.div<{ $isOpen: boolean }>`
+  position: absolute;
+  top: calc(100% + ${theme.spacing.sm});
+  right: 0;
+  width: 380px;
+  max-height: 500px;
+  background: ${theme.colors.background};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: ${props => (props.$isOpen ? 1 : 0)};
+  visibility: ${props => (props.$isOpen ? 'visible' : 'hidden')};
+  transform: ${props => (props.$isOpen ? 'translateY(0)' : 'translateY(-8px)')};
+  transition: all ${theme.transitions.default};
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  
+  ${props => props.$isOpen && `
+    animation: slideDown 0.2s ease-out;
+  `}
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const NotificationPanelHeader = styled.div`
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  border-bottom: 1px solid ${theme.colors.border};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: ${theme.colors.backgroundSecondary};
+  
+  h3 {
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${theme.colors.textSecondary};
+    margin: 0;
+  }
+  
+  span {
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${PRIMARY_ACCENT};
+    font-weight: ${theme.typography.fontWeights.medium};
+  }
+`;
+
+const NotificationPanelBody = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  max-height: 400px;
+`;
+
+const NotificationItem = styled.div<{ $isRead: boolean }>`
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  border-bottom: 1px solid ${theme.colors.border};
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+  background: ${props => props.$isRead ? theme.colors.background : 'rgba(6, 182, 212, 0.05)'};
+  position: relative;
+  
+  &:hover {
+    background: ${theme.colors.backgroundSecondary};
+    padding-left: ${theme.spacing.xl};
+  }
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  ${props => !props.$isRead && `
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: ${PRIMARY_ACCENT};
+    }
+  `}
+`;
+
+const NotificationItemContent = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+`;
+
+const NotificationText = styled.div<{ $isRead?: boolean }>`
+  flex: 1;
+  
+  p {
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${theme.colors.textSecondary};
+    margin: 0 0 ${theme.spacing.xs};
+    line-height: 1.4;
+    font-weight: ${props => props.$isRead ? theme.typography.fontWeights.medium : theme.typography.fontWeights.bold};
+  }
+  
+  span {
+    font-size: ${theme.typography.fontSizes.xs};
+    color: ${theme.colors.textSecondary};
+    opacity: 0.7;
+  }
+`;
+
+const NotificationPanelFooter = styled.div`
+  padding: ${theme.spacing.sm} ${theme.spacing.lg};
+  border-top: 1px solid ${theme.colors.border};
+  background: ${theme.colors.backgroundSecondary};
+  display: flex;
+  justify-content: center;
+`;
+
+const ViewAllButton = styled.button`
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${PRIMARY_ACCENT};
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: ${theme.borderRadius.sm};
+  transition: all ${theme.transitions.default};
+  
+  &:hover {
+    background: ${PRIMARY_ACCENT}10;
+    color: ${PRIMARY_HOVER};
+  }
+`;
+
+const EmptyNotifications = styled.div`
+  padding: ${theme.spacing.xl};
+  text-align: center;
+  color: ${theme.colors.textSecondary};
+  
+  p {
+    font-size: ${theme.typography.fontSizes.sm};
+    margin: 0;
+    opacity: 0.7;
+  }
+`;
+
+const LoadingNotifications = styled.div`
+  padding: ${theme.spacing.xl};
+  text-align: center;
+  color: ${theme.colors.textSecondary};
+  
+  p {
+    font-size: ${theme.typography.fontSizes.sm};
+    margin: 0;
+  }
+`;
+interface Notification {
+  id: number;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+  title?: string;
+}
+
 export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [language, setLanguage] = useState('EN');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationPanelRef = useRef<HTMLDivElement>(null);
+  const notificationBadgeRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
   const { user: storeUser } = useUserStore();
   const router = useRouter();
@@ -438,14 +616,25 @@ export default function Navbar() {
       const target = e.target as HTMLElement;
       const isSignOutClick = target?.closest('[data-signout]');
       const isDropdownClick = target?.closest('[data-dropdown-menu]');
+      const isNotificationClick = target?.closest('[data-notification-panel]');
+      const isNotificationBadgeClick = target?.closest('[data-notification-badge]');
       
       if (dropdownRef.current && !dropdownRef.current.contains(target as Node) && !isSignOutClick && !isDropdownClick) {
         setIsDropdownOpen(false);
       }
+      
+      // Close notification panel if clicking outside
+      const isNotificationArea = isNotificationClick || isNotificationBadgeClick || 
+        (notificationPanelRef.current && notificationPanelRef.current.contains(target as Node)) ||
+        (notificationBadgeRef.current && notificationBadgeRef.current.contains(target as Node));
+      
+      if (!isNotificationArea && isNotificationPanelOpen) {
+        setIsNotificationPanelOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [isNotificationPanelOpen]);
 
   // Load unread notification count
   useEffect(() => {
@@ -500,6 +689,41 @@ export default function Navbar() {
     setLanguage(savedLanguage);
   }, []);
 
+  // Load notifications when panel opens
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (isNotificationPanelOpen && user) {
+        setLoadingNotifications(true);
+        try {
+          const response = await apiClient.getNotifications(false); // Get all notifications, not just unread
+          const notifs = response.data || [];
+          setNotifications(notifs);
+          
+          // Update unread count based on loaded notifications
+          const unreadCountFromList = notifs.filter((n: Notification) => !n.is_read).length;
+          setUnreadCount(unreadCountFromList);
+        } catch (err: any) {
+          console.error('Failed to load notifications:', err);
+          setNotifications([]);
+        } finally {
+          setLoadingNotifications(false);
+        }
+      }
+    };
+
+    loadNotifications();
+
+    // Refresh notifications every 10 seconds when panel is open
+    let intervalId: NodeJS.Timeout | null = null;
+    if (isNotificationPanelOpen && user) {
+      intervalId = setInterval(loadNotifications, 10000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isNotificationPanelOpen, user]);
+
   const handleAddClick = () => {
     // Context-aware routing based on current path
     if (pathname?.includes('/expenses')) {
@@ -527,7 +751,46 @@ export default function Navbar() {
   };
 
   const handleNotificationsClick = () => {
+    setIsNotificationPanelOpen(!isNotificationPanelOpen);
+    setIsDropdownOpen(false); // Close user dropdown if open
+  };
+
+  const handleViewAllNotifications = () => {
+    setIsNotificationPanelOpen(false);
     router.push('/notifications');
+  };
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.is_read) {
+      try {
+        await apiClient.markNotificationAsRead(notification.id);
+        // Update local state
+        setNotifications(prev => prev.map(n => 
+          n.id === notification.id ? { ...n, is_read: true } : n
+        ));
+        // Update unread count
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      } catch (err) {
+        console.error('Failed to mark notification as read:', err);
+      }
+    }
+    setIsNotificationPanelOpen(false);
+    router.push('/notifications');
+  };
+
+  const formatNotificationDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   };
 
   const handleLanguageClick = () => {
@@ -726,14 +989,67 @@ export default function Navbar() {
           </AddButton>
         </ComponentGate>
         <ComponentGate componentId={ComponentId.DASHBOARD}>
-          <NotificationBadge onClick={handleNotificationsClick}>
-            <IconWrapper>
-              <Bell />
-            </IconWrapper>
-            {unreadCount > 0 && (
-              <span>{unreadCount > 99 ? '99+' : unreadCount}</span>
-            )}
-          </NotificationBadge>
+          <div ref={notificationBadgeRef} style={{ position: 'relative' }}>
+            <NotificationBadge 
+              data-notification-badge="true"
+              onClick={handleNotificationsClick}
+            >
+              <IconWrapper>
+                <Bell />
+              </IconWrapper>
+              {unreadCount > 0 && (
+                <span>{unreadCount > 99 ? '99+' : unreadCount}</span>
+              )}
+            </NotificationBadge>
+            <div ref={notificationPanelRef}>
+              <NotificationPanel
+                data-notification-panel="true"
+                $isOpen={isNotificationPanelOpen}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+              <NotificationPanelHeader>
+                <h3>Notifications</h3>
+                {unreadCount > 0 && (
+                  <span>{unreadCount} unread</span>
+                )}
+              </NotificationPanelHeader>
+              <NotificationPanelBody>
+                {loadingNotifications ? (
+                  <LoadingNotifications>
+                    <p>Loading notifications...</p>
+                  </LoadingNotifications>
+                ) : notifications.length === 0 ? (
+                  <EmptyNotifications>
+                    <p>No notifications</p>
+                  </EmptyNotifications>
+                ) : (
+                  notifications.slice(0, 5).map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      $isRead={notification.is_read}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <NotificationItemContent>
+                        <NotificationText $isRead={notification.is_read}>
+                          <p>{notification.title || notification.message}</p>
+                          <span>{formatNotificationDate(notification.created_at)}</span>
+                        </NotificationText>
+                      </NotificationItemContent>
+                    </NotificationItem>
+                  ))
+                )}
+              </NotificationPanelBody>
+              {notifications.length > 0 && (
+                <NotificationPanelFooter>
+                  <ViewAllButton onClick={handleViewAllNotifications}>
+                    View All Notifications
+                  </ViewAllButton>
+                </NotificationPanelFooter>
+              )}
+              </NotificationPanel>
+            </div>
+          </div>
         </ComponentGate>
         <ComponentGate componentId={ComponentId.REPORT_LIST}>
           <IconButton onClick={handleReportsClick} title="View reports">
