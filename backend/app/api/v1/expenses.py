@@ -6,9 +6,12 @@ from datetime import datetime
 from ...core.database import get_db
 from ...crud.expense import expense as expense_crud
 from ...crud.user import user as user_crud
+from ...crud.approval import approval as approval_crud
 from ...schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseOut, ExpenseSummary
 from ...models.user import User, UserRole
+from ...models.approval import ApprovalStatus
 from ...api.deps import get_current_active_user, require_min_role
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -25,16 +28,18 @@ def read_expense_entries(
     db: Session = Depends(get_db)
 ):
     """Get expense entries with optional filtering"""
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-        # Admins can see all entries
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        # Admins and Finance Managers can see all entries
+        # For reports, allow fetching all data by using a very high limit
+        effective_limit = limit if limit <= 10000 else 10000
         if start_date and end_date:
-            entries = expense_crud.get_by_date_range(db, start_date, end_date, skip, limit)
+            entries = expense_crud.get_by_date_range(db, start_date, end_date, skip, effective_limit)
         elif category:
-            entries = expense_crud.get_by_category(db, category, skip, limit)
+            entries = expense_crud.get_by_category(db, category, skip, effective_limit)
         elif vendor:
-            entries = expense_crud.get_by_vendor(db, vendor, skip, limit)
+            entries = expense_crud.get_by_vendor(db, vendor, skip, effective_limit)
         else:
-            entries = expense_crud.get_multi(db, skip, limit)
+            entries = expense_crud.get_multi(db, skip, effective_limit)
     elif current_user.role == UserRole.MANAGER:
         # Managers can see their own entries and their subordinates' entries
         subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
@@ -80,7 +85,7 @@ def read_expense_entry(
         raise HTTPException(status_code=404, detail="Expense entry not found")
     
     # Check permissions
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
         if current_user.role == UserRole.MANAGER:
             # Managers can see entries of their subordinates
             subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
@@ -117,7 +122,7 @@ def update_expense_entry(
         raise HTTPException(status_code=404, detail="Expense entry not found")
     
     # Check permissions
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
         if current_user.role == UserRole.MANAGER:
             # Managers can update entries of their subordinates
             subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
@@ -128,8 +133,8 @@ def update_expense_entry(
             if entry.created_by_id != current_user.id:
                 raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    # Cannot update approved entries unless admin
-    if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+    # Cannot update approved entries unless admin or finance manager
+    if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
         raise HTTPException(status_code=400, detail="Cannot update approved entry")
     
     return expense_crud.update(db, db_obj=entry, obj_in=expense_update)
@@ -147,7 +152,7 @@ def delete_expense_entry(
         raise HTTPException(status_code=404, detail="Expense entry not found")
     
     # Check permissions
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
         if current_user.role == UserRole.MANAGER:
             # Managers can delete entries of their subordinates
             subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
@@ -158,8 +163,8 @@ def delete_expense_entry(
             if entry.created_by_id != current_user.id:
                 raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    # Cannot delete approved entries unless admin
-    if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+    # Cannot delete approved entries unless admin or finance manager
+    if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
         raise HTTPException(status_code=400, detail="Cannot delete approved entry")
     
     expense_crud.delete(db, id=expense_id)
@@ -184,6 +189,48 @@ def approve_expense_entry(
     return {"message": "Expense entry approved successfully"}
 
 
+class RejectRequest(BaseModel):
+    reason: str
+
+
+@router.post("/{expense_id}/reject")
+def reject_expense_entry(
+    expense_id: int,
+    reject_request: RejectRequest,
+    current_user: User = Depends(require_min_role(UserRole.MANAGER)),
+    db: Session = Depends(get_db)
+):
+    """Reject expense entry by rejecting its approval workflow (manager and above)"""
+    entry = expense_crud.get(db, id=expense_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Expense entry not found")
+    
+    if entry.is_approved:
+        raise HTTPException(status_code=400, detail="Entry already approved")
+    
+    # Find the approval workflow for this expense entry
+    approval_workflow = approval_crud.get_by_expense_entry(db, expense_id)
+    if approval_workflow is None:
+        raise HTTPException(status_code=404, detail="Approval workflow not found for this expense entry")
+    
+    if approval_workflow.status != ApprovalStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Approval workflow is not pending")
+    
+    # Check permissions - manager can reject if requester is their subordinate
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        if current_user.role == UserRole.MANAGER:
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            subordinate_ids = [sub.id for sub in subordinates]
+            if approval_workflow.requester_id not in subordinate_ids:
+                raise HTTPException(status_code=403, detail="Not enough permissions to reject this request")
+        else:
+            raise HTTPException(status_code=403, detail="Not enough permissions to reject expense entries")
+    
+    # Reject the approval workflow
+    approval_crud.reject(db, approval_workflow.id, current_user.id, reject_request.reason)
+    return {"message": "Expense entry rejected successfully"}
+
+
 @router.get("/summary/total")
 def get_expense_total(
     start_date: datetime = Query(...),
@@ -192,10 +239,9 @@ def get_expense_total(
     db: Session = Depends(get_db)
 ):
     """Get total expenses for a period"""
-    # Allow admin, super_admin, manager, and finance_manager roles
-    allowed_roles = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]
-    role_value = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
-    if current_user.role not in allowed_roles and role_value not in ["manager", "finance_manager", "finance_admin"]:
+    # Allow admin, super_admin, finance_manager, and manager roles
+    allowed_roles = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.MANAGER]
+    if current_user.role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     total = expense_crud.get_total_by_period(db, start_date, end_date)
@@ -210,10 +256,9 @@ def get_expense_summary_by_category(
     db: Session = Depends(get_db)
 ):
     """Get expense summary by category for a period"""
-    # Allow admin, super_admin, manager, and finance_manager roles
-    allowed_roles = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]
-    role_value = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
-    if current_user.role not in allowed_roles and role_value not in ["manager", "finance_manager", "finance_admin"]:
+    # Allow admin, super_admin, finance_admin, and manager roles
+    allowed_roles = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.MANAGER]
+    if current_user.role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     summary = expense_crud.get_summary_by_category(db, start_date, end_date)
@@ -245,7 +290,7 @@ def get_expense_summary_by_vendor(
     db: Session = Depends(get_db)
 ):
     """Get expense summary by vendor for a period"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]:
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     summary = expense_crud.get_summary_by_vendor(db, start_date, end_date)

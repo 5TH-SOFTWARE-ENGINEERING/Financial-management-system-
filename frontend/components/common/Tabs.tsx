@@ -37,13 +37,13 @@ const TabsListContainer = styled.div`
   gap: 0;
 `;
 
-const TabsTriggerButton = styled.button<{ isActive: boolean }>`
+const TabsTriggerButton = styled.button<{ $isActive: boolean }>`
   padding: 12px 24px;
-  background: ${props => props.isActive ? `${theme.colors.primary}15` : 'transparent'};
+  background: ${props => props.$isActive ? `${theme.colors.primary}15` : 'transparent'};
   border: none;
-  border-bottom: 2px solid ${props => props.isActive ? theme.colors.primary : 'transparent'};
-  color: ${props => props.isActive ? theme.colors.primary : theme.colors.textSecondary};
-  font-weight: ${props => props.isActive ? theme.typography.fontWeights.bold : theme.typography.fontWeights.medium};
+  border-bottom: 2px solid ${props => props.$isActive ? theme.colors.primary : 'transparent'};
+  color: ${props => props.$isActive ? theme.colors.primary : theme.colors.textSecondary};
+  font-weight: ${props => props.$isActive ? theme.typography.fontWeights.bold : theme.typography.fontWeights.medium};
   cursor: pointer;
   transition: all ${theme.transitions.default};
   
@@ -58,8 +58,8 @@ const TabsTriggerButton = styled.button<{ isActive: boolean }>`
   }
 `;
 
-const TabsContentContainer = styled.div<{ isActive: boolean }>`
-  display: ${props => props.isActive ? 'block' : 'none'};
+const TabsContentContainer = styled.div<{ $isActive: boolean }>`
+  display: ${props => props.$isActive ? 'block' : 'none'};
 `;
 
 const TabsContext = React.createContext<{
@@ -104,7 +104,7 @@ export const TabsTrigger: React.FC<TabsTriggerProps> = ({ children, value }) => 
   
   return (
     <TabsTriggerButton 
-      isActive={isActive} 
+      $isActive={isActive} 
       onClick={() => onValueChange(value)}
       onKeyDown={handleKeyDown}
       role="tab"
@@ -124,7 +124,7 @@ export const TabsContent: React.FC<TabsContentProps> = ({ children, value }) => 
   
   return (
     <TabsContentContainer 
-      isActive={isActive}
+      $isActive={isActive}
       role="tabpanel"
       id={`tab-content-${value}`}
       aria-labelledby={`tab-trigger-${value}`}

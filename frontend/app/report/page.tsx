@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Layout from '@/components/layout';
-import apiClient from '@/lib/api';
+import { apiClient } from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { toast } from 'sonner';
 import { 
@@ -353,10 +353,10 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Date filters - Default to last 6 months to ensure we capture all recent data
+  // Date filters - Default to last 12 months to ensure we capture all data
   const [startDate, setStartDate] = useState<string>(() => {
     const date = new Date();
-    date.setMonth(date.getMonth() - 6);
+    date.setFullYear(date.getFullYear() - 1); // Last 12 months
     date.setDate(1); // Start of month
     return date.toISOString().split('T')[0];
   });
@@ -371,21 +371,44 @@ export default function ReportPage() {
   const [incomeStatement, setIncomeStatement] = useState<IncomeStatement | null>(null);
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
 
+  // Load reports when user is available
   useEffect(() => {
     if (user) {
-      loadReports();
+      // Small delay to ensure state is ready
+      const timer = setTimeout(() => {
+        loadReports(true);
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [user, startDate, endDate]);
+  }, [user]);
+
+  // Reload when date filters change (with debounce)
+  useEffect(() => {
+    if (user && startDate && endDate) {
+      const timer = setTimeout(() => {
+        loadReports(true);
+      }, 300); // Debounce date changes
+      return () => clearTimeout(timer);
+    }
+  }, [startDate, endDate]);
 
   const loadReports = async (useDateFilter: boolean = true) => {
     setLoading(true);
     setError(null);
     
+    // Debug: Log user info
+    console.log('Loading reports for user:', {
+      user_id: user?.id,
+      user_email: user?.email,
+      user_role: user?.role,
+      useDateFilter,
+    });
+    
     try {
-      console.log('Loading reports...', { startDate, endDate, useDateFilter });
-      
       // Load reports - optionally without date filters to get all data
       const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
+      
+      console.log('Fetching reports with params:', dateParams);
       
       // Use Promise.allSettled to handle partial failures gracefully
       const [summaryResult, incomeResult, cashFlowResult] = await Promise.allSettled([
@@ -394,21 +417,36 @@ export default function ReportPage() {
         apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
       ]);
       
-      console.log('Report results:', {
-        summary: summaryResult.status === 'fulfilled' ? summaryResult.value.data : summaryResult.reason,
-        income: incomeResult.status === 'fulfilled' ? incomeResult.value.data : incomeResult.reason,
-        cashFlow: cashFlowResult.status === 'fulfilled' ? cashFlowResult.value.data : cashFlowResult.reason,
+      console.log('Report fetch results:', {
+        summary: summaryResult.status,
+        income: incomeResult.status,
+        cashFlow: cashFlowResult.status,
       });
       
       // Handle summary result
       if (summaryResult.status === 'fulfilled') {
-        setFinancialSummary(summaryResult.value.data);
+        const summaryData = summaryResult.value.data || summaryResult.value;
+        // Ensure we have valid data structure
+        if (summaryData && (summaryData.financials || summaryData.revenue_by_category || summaryData.expenses_by_category)) {
+          console.log('Financial Summary loaded:', {
+            total_revenue: summaryData.financials?.total_revenue,
+            total_expenses: summaryData.financials?.total_expenses,
+            revenue_categories: Object.keys(summaryData.revenue_by_category || {}).length,
+            expense_categories: Object.keys(summaryData.expenses_by_category || {}).length,
+          });
+          setFinancialSummary(summaryData);
+        } else {
+          console.warn('Invalid summary data structure:', summaryData);
+          setFinancialSummary(null);
+        }
       } else {
         console.error('Failed to load financial summary:', summaryResult.reason);
         // Try to load income statement as fallback
         if (incomeResult.status === 'fulfilled') {
           const incomeData = incomeResult.value.data;
-          // Estimate transaction counts from category data (approximate)
+          // We can't get exact transaction counts from income statement alone,
+          // so we'll fetch them separately or use a reasonable estimate
+          // For now, use category count as a proxy (will be updated when we have actual data)
           const revenueCategories = Object.keys(incomeData.revenue.by_category).length;
           const expenseCategories = Object.keys(incomeData.expenses.by_category).length;
           setFinancialSummary({
@@ -428,33 +466,76 @@ export default function ReportPage() {
             },
             generated_at: new Date().toISOString(),
           });
+        } else {
+          // If both failed, set empty summary to show empty state
+          setFinancialSummary(null);
         }
       }
       
       // Handle income statement result
       if (incomeResult.status === 'fulfilled') {
-        setIncomeStatement(incomeResult.value.data);
+        const incomeData = incomeResult.value.data || incomeResult.value;
+        // Ensure we have valid data structure
+        if (incomeData && (incomeData.revenue || incomeData.expenses)) {
+          console.log('Income Statement loaded:', {
+            revenue_total: incomeData.revenue?.total,
+            expenses_total: incomeData.expenses?.total,
+            profit: incomeData.profit,
+          });
+          setIncomeStatement(incomeData);
+        } else {
+          console.warn('Invalid income statement data structure:', incomeData);
+          setIncomeStatement(null);
+        }
       } else {
         console.error('Failed to load income statement:', incomeResult.reason);
+        setIncomeStatement(null);
       }
       
       // Handle cash flow result
       if (cashFlowResult.status === 'fulfilled') {
-        setCashFlow(cashFlowResult.value.data);
+        const cashFlowData = cashFlowResult.value.data || cashFlowResult.value;
+        // Ensure we have valid data structure
+        if (cashFlowData && (cashFlowData.summary || cashFlowData.daily_cash_flow)) {
+          console.log('Cash Flow loaded:', {
+            total_inflow: cashFlowData.summary?.total_inflow,
+            total_outflow: cashFlowData.summary?.total_outflow,
+            net_cash_flow: cashFlowData.summary?.net_cash_flow,
+            daily_entries: Object.keys(cashFlowData.daily_cash_flow || {}).length,
+          });
+          setCashFlow(cashFlowData);
+        } else {
+          console.warn('Invalid cash flow data structure:', cashFlowData);
+          setCashFlow(null);
+        }
       } else {
         console.error('Failed to load cash flow:', cashFlowResult.reason);
+        setCashFlow(null);
       }
       
-      // If all failed, throw the first error
+      // If all failed, show error but don't throw (allow empty state display)
       if (summaryResult.status === 'rejected' && incomeResult.status === 'rejected' && cashFlowResult.status === 'rejected') {
         const firstError = summaryResult.reason || incomeResult.reason || cashFlowResult.reason;
-        throw firstError;
+        // Extract error message
+        let errorMsg = 'Failed to load reports';
+        if (firstError?.response?.data?.detail) {
+          const detail = firstError.response.data.detail;
+          if (typeof detail === 'string') {
+            errorMsg = detail;
+          } else if (Array.isArray(detail)) {
+            errorMsg = detail.map((e: any) => typeof e === 'string' ? e : e.msg || JSON.stringify(e)).join(', ');
+          }
+        } else if (firstError?.message) {
+          errorMsg = firstError.message;
+        }
+        setError(errorMsg);
+        toast.error(errorMsg);
+        // Set empty states
+        setFinancialSummary(null);
+        setIncomeStatement(null);
+        setCashFlow(null);
       }
       
-      // Log success for debugging
-      if (summaryResult.status === 'fulfilled' || incomeResult.status === 'fulfilled') {
-        console.log('Reports loaded successfully');
-      }
     } catch (err: any) {
       let errorMessage = 'Failed to load reports';
       
@@ -640,7 +721,9 @@ export default function ReportPage() {
                           <ArrowUpRight size={16} />
                           Total Revenue
                         </div>
-                        <div className="value">{formatCurrency(financialSummary.financials.total_revenue)}</div>
+                        <div className="value">
+                          {formatCurrency(financialSummary.financials?.total_revenue || 0)}
+                        </div>
                         <div className="sub-value">
                           {financialSummary.transaction_counts.revenue} revenue transactions
                         </div>
@@ -650,9 +733,11 @@ export default function ReportPage() {
                           <ArrowDownRight size={16} />
                           Total Expenses
                         </div>
-                        <div className="value">{formatCurrency(financialSummary.financials.total_expenses)}</div>
+                        <div className="value">
+                          {formatCurrency(financialSummary.financials?.total_expenses || 0)}
+                        </div>
                         <div className="sub-value">
-                          {financialSummary.transaction_counts.expenses} expense transactions
+                          {financialSummary.transaction_counts?.expenses || 0} expense transactions
                         </div>
                       </SummaryCard>
                       <SummaryCard $type="profit">
@@ -661,10 +746,10 @@ export default function ReportPage() {
                           Net Profit
                         </div>
                         <div className="value">
-                          {formatCurrency(financialSummary.financials.profit)}
+                          {formatCurrency(financialSummary.financials?.profit || 0)}
                         </div>
                         <div className="sub-value">
-                          Profit Margin: {financialSummary.financials.profit_margin.toFixed(2)}%
+                          Profit Margin: {(financialSummary.financials?.profit_margin || 0).toFixed(2)}%
                         </div>
                       </SummaryCard>
                       <SummaryCard>
@@ -672,9 +757,9 @@ export default function ReportPage() {
                           <FileText size={16} />
                           Total Transactions
                         </div>
-                        <div className="value">{financialSummary.transaction_counts.total}</div>
+                        <div className="value">{financialSummary.transaction_counts?.total || 0}</div>
                         <div className="sub-value">
-                          {financialSummary.transaction_counts.revenue} revenue + {financialSummary.transaction_counts.expenses} expenses
+                          {financialSummary.transaction_counts?.revenue || 0} revenue + {financialSummary.transaction_counts?.expenses || 0} expenses
                         </div>
                       </SummaryCard>
                     </SummaryGrid>
@@ -692,14 +777,14 @@ export default function ReportPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {Object.entries(financialSummary.revenue_by_category).length > 0 ? (
+                            {financialSummary.revenue_by_category && Object.entries(financialSummary.revenue_by_category).length > 0 ? (
                               Object.entries(financialSummary.revenue_by_category)
-                                .sort(([, a], [, b]) => b - a)
+                                .sort(([, a], [, b]) => (b as number) - (a as number))
                                 .slice(0, 5)
                                 .map(([category, amount]) => (
                                   <tr key={category}>
                                     <td>{capitalize(category)}</td>
-                                    <td style={{ textAlign: 'right' }}>{formatCurrency(amount)}</td>
+                                    <td style={{ textAlign: 'right' }}>{formatCurrency(amount as number)}</td>
                                   </tr>
                                 ))
                             ) : (
@@ -725,14 +810,14 @@ export default function ReportPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {Object.entries(financialSummary.expenses_by_category).length > 0 ? (
+                            {financialSummary.expenses_by_category && Object.entries(financialSummary.expenses_by_category).length > 0 ? (
                               Object.entries(financialSummary.expenses_by_category)
-                                .sort(([, a], [, b]) => b - a)
+                                .sort(([, a], [, b]) => (b as number) - (a as number))
                                 .slice(0, 5)
                                 .map(([category, amount]) => (
                                   <tr key={category}>
                                     <td>{capitalize(category)}</td>
-                                    <td style={{ textAlign: 'right' }}>{formatCurrency(amount)}</td>
+                                    <td style={{ textAlign: 'right' }}>{formatCurrency(amount as number)}</td>
                                   </tr>
                                 ))
                             ) : (
@@ -779,14 +864,18 @@ export default function ReportPage() {
                           <ArrowUpRight size={16} />
                           Total Revenue
                         </div>
-                        <div className="value">{formatCurrency(incomeStatement.revenue.total)}</div>
+                        <div className="value">
+                          {formatCurrency(incomeStatement.revenue?.total || 0)}
+                        </div>
                       </SummaryCard>
                       <SummaryCard $type="expense">
                         <div className="label">
                           <ArrowDownRight size={16} />
                           Total Expenses
                         </div>
-                        <div className="value">{formatCurrency(incomeStatement.expenses.total)}</div>
+                        <div className="value">
+                          {formatCurrency(incomeStatement.expenses?.total || 0)}
+                        </div>
                       </SummaryCard>
                       <SummaryCard $type="profit">
                         <div className="label">
@@ -794,10 +883,10 @@ export default function ReportPage() {
                           Net Profit
                         </div>
                         <div className="value">
-                          {formatCurrency(incomeStatement.profit)}
+                          {formatCurrency(incomeStatement.profit || 0)}
                         </div>
                         <div className="sub-value">
-                          Profit Margin: {incomeStatement.profit_margin.toFixed(2)}%
+                          Profit Margin: {(incomeStatement.profit_margin || 0).toFixed(2)}%
                         </div>
                       </SummaryCard>
                     </SummaryGrid>
@@ -814,13 +903,13 @@ export default function ReportPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.entries(incomeStatement.revenue.by_category).length > 0 ? (
+                          {incomeStatement.revenue?.by_category && Object.entries(incomeStatement.revenue.by_category).length > 0 ? (
                             Object.entries(incomeStatement.revenue.by_category)
-                              .sort(([, a], [, b]) => b - a)
+                              .sort(([, a], [, b]) => (b as number) - (a as number))
                               .map(([category, amount]) => (
                                 <tr key={category}>
                                   <td>{capitalize(category)}</td>
-                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount)}</td>
+                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount as number)}</td>
                                 </tr>
                               ))
                           ) : (
@@ -846,13 +935,13 @@ export default function ReportPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.entries(incomeStatement.expenses.by_category).length > 0 ? (
+                          {incomeStatement.expenses?.by_category && Object.entries(incomeStatement.expenses.by_category).length > 0 ? (
                             Object.entries(incomeStatement.expenses.by_category)
-                              .sort(([, a], [, b]) => b - a)
+                              .sort(([, a], [, b]) => (b as number) - (a as number))
                               .map(([category, amount]) => (
                                 <tr key={category}>
                                   <td>{capitalize(category)}</td>
-                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount)}</td>
+                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount as number)}</td>
                                 </tr>
                               ))
                           ) : (
@@ -898,7 +987,9 @@ export default function ReportPage() {
                           <ArrowUpRight size={16} />
                           Cash Inflow
                         </div>
-                        <div className="value">{formatCurrency(cashFlow.summary.total_inflow)}</div>
+                        <div className="value">
+                          {formatCurrency(cashFlow.summary?.total_inflow || 0)}
+                        </div>
                         <div className="sub-value">Money coming in</div>
                       </SummaryCard>
                       <SummaryCard $type="expense">
@@ -906,7 +997,9 @@ export default function ReportPage() {
                           <ArrowDownRight size={16} />
                           Cash Outflow
                         </div>
-                        <div className="value">{formatCurrency(cashFlow.summary.total_outflow)}</div>
+                        <div className="value">
+                          {formatCurrency(cashFlow.summary?.total_outflow || 0)}
+                        </div>
                         <div className="sub-value">Money going out</div>
                       </SummaryCard>
                       <SummaryCard $type="profit">
@@ -915,7 +1008,7 @@ export default function ReportPage() {
                           Net Cash Flow
                         </div>
                         <div className="value">
-                          {formatCurrency(cashFlow.summary.net_cash_flow)}
+                          {formatCurrency(cashFlow.summary?.net_cash_flow || 0)}
                         </div>
                         <div className="sub-value">Actual cash available</div>
                       </SummaryCard>
@@ -935,10 +1028,10 @@ export default function ReportPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.entries(cashFlow.daily_cash_flow).length > 0 ? (
+                          {cashFlow.daily_cash_flow && Object.entries(cashFlow.daily_cash_flow).length > 0 ? (
                             Object.entries(cashFlow.daily_cash_flow)
                               .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
-                              .map(([date, flow]) => (
+                              .map(([date, flow]: [string, any]) => (
                                 <tr key={date}>
                                   <td>{formatDate(date)}</td>
                                   <td style={{ textAlign: 'right' }}>
@@ -948,7 +1041,7 @@ export default function ReportPage() {
                                     {flow.outflow > 0 ? formatCurrency(flow.outflow) : '—'}
                                   </td>
                                   <td style={{ textAlign: 'right' }}>
-                                    {formatCurrency(flow.net)}
+                                    {formatCurrency(flow.net || 0)}
                                   </td>
                                 </tr>
                               ))

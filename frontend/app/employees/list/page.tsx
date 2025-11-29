@@ -137,13 +137,13 @@ const TableBody = styled.tbody`
   }
 `;
 
-const StatusBadge = styled.span<{ active: boolean }>`
+const StatusBadge = styled.span<{ $active: boolean }>`
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
-  background: ${(p) => (p.active ? '#d1fae5' : '#fee2e2')};
-  color: ${(p) => (p.active ? '#065f46' : '#991b1b')};
+  background: ${(p) => (p.$active ? '#d1fae5' : '#fee2e2')};
+  color: ${(p) => (p.$active ? '#065f46' : '#991b1b')};
 `;
 
 const ActionButtons = styled.div`
@@ -328,7 +328,7 @@ export default function EmployeeListPage() {
                         <td>{employee.phone || 'N/A'}</td>
                         <td>{employee.department || 'N/A'}</td>
                         <td>
-                          <StatusBadge active={employee.is_active}>
+                          <StatusBadge $active={employee.is_active}>
                             {employee.is_active ? 'Active' : 'Inactive'}
                           </StatusBadge>
                         </td>

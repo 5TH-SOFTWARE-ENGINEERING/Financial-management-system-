@@ -28,6 +28,18 @@ class CRUDApproval:
             query = query.filter(ApprovalWorkflow.approver_id == approver_id)
         return query.offset(skip).limit(limit).all()
 
+    def get_by_revenue_entry(self, db: Session, revenue_entry_id: int) -> Optional[ApprovalWorkflow]:
+        """Find approval workflow by revenue entry ID"""
+        return db.query(ApprovalWorkflow).filter(
+            ApprovalWorkflow.revenue_entry_id == revenue_entry_id
+        ).first()
+
+    def get_by_expense_entry(self, db: Session, expense_entry_id: int) -> Optional[ApprovalWorkflow]:
+        """Find approval workflow by expense entry ID"""
+        return db.query(ApprovalWorkflow).filter(
+            ApprovalWorkflow.expense_entry_id == expense_entry_id
+        ).first()
+
     def create(self, db: Session, obj_in: ApprovalCreate, requester_id: int) -> ApprovalWorkflow:
         db_obj = ApprovalWorkflow(
             title=obj_in.title,

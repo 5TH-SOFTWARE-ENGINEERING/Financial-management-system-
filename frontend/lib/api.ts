@@ -40,7 +40,7 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 10000,
+      timeout: 30000, // Increased timeout for large data requests (30 seconds)
       headers: { 'Content-Type': 'application/json' },
     });
 
@@ -86,9 +86,28 @@ class ApiClient {
           }
         }
         
+        // Handle 404 Not Found - suppress console errors for known missing features
+        if (error.response?.status === 404) {
+          const url = error.config?.url || '';
+          // Only log 404s for endpoints that should exist
+          const knownMissingEndpoints = ['/departments', '/projects'];
+          const isKnownMissing = knownMissingEndpoints.some(endpoint => url.includes(endpoint));
+          if (!isKnownMissing && typeof window !== 'undefined') {
+            console.warn('Resource not found:', url);
+          }
+        }
+        
         // Handle network errors
         if (!error.response) {
-          console.error('Network error:', error.message);
+          const errorMessage = error.message || 'Network error: Unable to connect to server';
+          console.error('Network error:', errorMessage);
+          
+          // Provide more helpful error messages
+          if (error.code === 'ECONNREFUSED' || error.message?.includes('Network Error')) {
+            console.error('Backend server may not be running. Please ensure the backend is running on http://localhost:8000');
+          } else if (error.code === 'ERR_NETWORK') {
+            console.error('Network request failed. Check your internet connection and backend server status.');
+          }
         }
         
         return Promise.reject(error);
@@ -221,7 +240,14 @@ class ApiClient {
   async getRevenues(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
     // For reports, we need all data, so increase limit significantly
     const params = { ...filters, limit: 10000, skip: 0 };
-    return this.get('/revenue', { params });
+    console.log('getRevenues - Request params:', params);
+    const response = await this.get('/revenue', { params });
+    const data = Array.isArray(response.data) ? response.data : [];
+    console.log('getRevenues - Response:', {
+      data_length: data.length,
+      first_item: data[0],
+    });
+    return { ...response, data };
   }
 
   async getRevenue(revenueId: number): Promise<ApiResponse<any>> {
@@ -243,7 +269,14 @@ class ApiClient {
   async getExpenses(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
     // For reports, we need all data, so increase limit significantly
     const params = { ...filters, limit: 10000, skip: 0 };
-    return this.get('/expenses', { params });
+    console.log('getExpenses - Request params:', params);
+    const response = await this.get('/expenses', { params });
+    const data = Array.isArray(response.data) ? response.data : [];
+    console.log('getExpenses - Response:', {
+      data_length: data.length,
+      first_item: data[0],
+    });
+    return { ...response, data };
   }
 
   async getExpense(expenseId: number): Promise<ApiResponse<any>> {
@@ -366,20 +399,10 @@ class ApiClient {
     let revenues = revenuesRes.data || [];
     let expenses = expensesRes.data || [];
     
-    console.log('Fetched all income statement data:', {
-      revenueCount: revenues.length,
-      expenseCount: expenses.length,
-      sampleRevenue: revenues[0],
-      sampleExpense: expenses[0],
-    });
-    
     // Filter by date range if provided (client-side filtering)
     if (startDate && endDate) {
       const start = new Date(startDate + 'T00:00:00').getTime();
       const end = new Date(endDate + 'T23:59:59').getTime();
-      
-      const beforeFilterRevenue = revenues.length;
-      const beforeFilterExpense = expenses.length;
       
       revenues = revenues.filter((r: any) => {
         const dateStr = r.date || r.created_at;
@@ -402,23 +425,7 @@ class ApiClient {
           return true; // Include if date parsing fails
         }
       });
-      
-      console.log('After date filtering:', {
-        beforeRevenue: beforeFilterRevenue,
-        afterRevenue: revenues.length,
-        beforeExpense: beforeFilterExpense,
-        afterExpense: expenses.length,
-        dateRange: { startDate, endDate }
-      });
     }
-    
-    console.log('Income Statement Data:', {
-      totalRevenues: revenues.length,
-      totalExpenses: expenses.length,
-      dateRange: { startDate, endDate },
-      sampleRevenue: revenues[0],
-      sampleExpense: expenses[0],
-    });
 
     // Calculate totals
     const totalRevenue = revenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
@@ -490,11 +497,6 @@ class ApiClient {
     let revenues = revenuesRes.data || [];
     let expenses = expensesRes.data || [];
     
-    console.log('Fetched all cash flow data:', {
-      revenueCount: revenues.length,
-      expenseCount: expenses.length,
-    });
-    
     // Filter by date range if provided (client-side filtering)
     if (startDate && endDate) {
       const start = new Date(startDate + 'T00:00:00').getTime();
@@ -522,12 +524,6 @@ class ApiClient {
         }
       });
     }
-    
-    console.log('Cash Flow Data:', {
-      totalRevenues: revenues.length,
-      totalExpenses: expenses.length,
-      dateRange: { startDate, endDate },
-    });
 
     // Calculate daily cash flow
     const cashFlowByDay: Record<string, { inflow: number; outflow: number; net: number }> = {};
@@ -575,16 +571,26 @@ class ApiClient {
 
   // Financial Summary Report
   async getFinancialSummary(startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
-    console.log('getFinancialSummary called with:', { startDate, endDate });
-    
     // Always fetch all data first, then calculate summary
     const [allRevenuesRes, allExpensesRes] = await Promise.all([
       this.getRevenues(),
       this.getExpenses(),
     ]);
 
+    console.log('getFinancialSummary - Raw API responses:', {
+      revenues_count: allRevenuesRes.data?.length || 0,
+      expenses_count: allExpensesRes.data?.length || 0,
+      revenues_sample: allRevenuesRes.data?.[0],
+      expenses_sample: allExpensesRes.data?.[0],
+    });
+
     let revenues = allRevenuesRes.data || [];
     let expenses = allExpensesRes.data || [];
+    
+    console.log('getFinancialSummary - After extraction:', {
+      revenues_count: revenues.length,
+      expenses_count: expenses.length,
+    });
     
     // Filter by date range if provided (client-side filtering)
     if (startDate && endDate) {
@@ -611,11 +617,6 @@ class ApiClient {
         } catch {
           return true; // Include if date parsing fails
         }
-      });
-      
-      console.log('After date filtering financial summary:', {
-        revenueCount: revenues.length,
-        expenseCount: expenses.length,
       });
     }
     
@@ -650,7 +651,11 @@ class ApiClient {
       expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(e.amount || 0);
     });
 
-    return {
+    // Calculate actual transaction counts (not category counts)
+    const revenueCount = revenues.length;
+    const expenseCount = expenses.length;
+
+    const result = {
       data: {
         period: { start_date: startDate, end_date: endDate },
         financials: {
@@ -662,145 +667,26 @@ class ApiClient {
         revenue_by_category: revenueByCategory,
         expenses_by_category: expenseByCategory,
         transaction_counts: {
-          revenue: revenues.length,
-          expenses: expenses.length,
-          total: revenues.length + expenses.length,
+          revenue: revenueCount,
+          expenses: expenseCount,
+          total: revenueCount + expenseCount,
         },
         generated_at: new Date().toISOString(),
       },
     };
+
+    console.log('getFinancialSummary - Final result:', {
+      total_revenue: totalRevenue,
+      total_expenses: totalExpenses,
+      profit,
+      revenue_count: revenueCount,
+      expense_count: expenseCount,
+      revenue_categories: Object.keys(revenueByCategory).length,
+      expense_categories: Object.keys(expenseByCategory).length,
+    });
+
+    return result;
   }
-  
-  /* OLD CODE - Try backend summary endpoints first, fallback to calculated
-  async getFinancialSummary_OLD(startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
-    try {
-      // Convert date strings to ISO datetime format
-      const startDateTime = startDate ? new Date(startDate + 'T00:00:00').toISOString() : undefined;
-      const endDateTime = endDate ? new Date(endDate + 'T23:59:59').toISOString() : undefined;
-
-      // Fetch summary data from backend endpoints
-      const [revenueTotalRes, expenseTotalRes, revenueCategoryRes, expenseCategoryRes] = await Promise.all([
-        startDateTime && endDateTime
-          ? this.get<{ total: number }>('/revenue/summary/total', { params: { start_date: startDateTime, end_date: endDateTime } })
-          : Promise.resolve<ApiResponse<{ total: number }>>({ data: { total: 0 } }),
-        startDateTime && endDateTime
-          ? this.get<{ total: number }>('/expenses/summary/total', { params: { start_date: startDateTime, end_date: endDateTime } })
-          : Promise.resolve<ApiResponse<{ total: number }>>({ data: { total: 0 } }),
-        startDateTime && endDateTime
-          ? this.get<Array<{ category: string; total: number }>>('/revenue/summary/by-category', { params: { start_date: startDateTime, end_date: endDateTime } })
-          : Promise.resolve<ApiResponse<Array<{ category: string; total: number }>>>({ data: [] }),
-        startDateTime && endDateTime
-          ? this.get<Array<{ category: string; total: number }>>('/expenses/summary/by-category', { params: { start_date: startDateTime, end_date: endDateTime } })
-          : Promise.resolve<ApiResponse<Array<{ category: string; total: number }>>>({ data: [] }),
-      ]);
-
-      const totalRevenue = revenueTotalRes.data?.total || 0;
-      const totalExpenses = expenseTotalRes.data?.total || 0;
-      const profit = totalRevenue - totalExpenses;
-      const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
-
-      // Process category summaries
-      const revenueByCategory: Record<string, number> = {};
-      (revenueCategoryRes.data || []).forEach((item: { category: string; total: number }) => {
-        revenueByCategory[item.category || 'other'] = Number(item.total || 0);
-      });
-
-      const expenseByCategory: Record<string, number> = {};
-      (expenseCategoryRes.data || []).forEach((item: { category: string; total: number }) => {
-        expenseByCategory[item.category || 'other'] = Number(item.total || 0);
-      });
-
-      // Get transaction counts - use same date params if available
-      const revenueParams: Record<string, any> = {};
-      const expenseParams: Record<string, any> = {};
-      if (startDateTime) revenueParams.start_date = startDateTime;
-      if (endDateTime) revenueParams.end_date = endDateTime;
-      if (startDateTime) expenseParams.start_date = startDateTime;
-      if (endDateTime) expenseParams.end_date = endDateTime;
-
-      const [revenuesRes, expensesRes] = await Promise.all([
-        Object.keys(revenueParams).length > 0 ? this.getRevenues(revenueParams) : this.getRevenues(),
-        Object.keys(expenseParams).length > 0 ? this.getExpenses(expenseParams) : this.getExpenses(),
-      ]);
-
-      const revenueCount = (revenuesRes.data || []).length;
-      const expenseCount = (expensesRes.data || []).length;
-
-      return {
-        data: {
-          period: { start_date: startDate, end_date: endDate },
-          financials: {
-            total_revenue: totalRevenue,
-            total_expenses: totalExpenses,
-            profit,
-            profit_margin: profitMargin,
-          },
-          revenue_by_category: revenueByCategory,
-          expenses_by_category: expenseByCategory,
-          transaction_counts: {
-            revenue: revenueCount,
-            expenses: expenseCount,
-            total: revenueCount + expenseCount,
-          },
-          generated_at: new Date().toISOString(),
-        },
-      };
-    } catch (error) {
-      // Fallback to calculating from full data if summary endpoints fail
-      const params: Record<string, any> = {};
-      if (startDateTime) params.start_date = startDateTime;
-      if (endDateTime) params.end_date = endDateTime;
-
-      const [revenuesRes, expensesRes] = await Promise.all([
-        this.getRevenues(params),
-        this.getExpenses(params),
-      ]);
-
-      const revenues = revenuesRes.data || [];
-      const expenses = expensesRes.data || [];
-
-      const totalRevenue = revenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
-      const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-      const profit = totalRevenue - totalExpenses;
-      const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
-
-      const revenueByCategory: Record<string, number> = {};
-      revenues.forEach((r: any) => {
-        const cat = r.category || 'other';
-        revenueByCategory[cat] = (revenueByCategory[cat] || 0) + Number(r.amount || 0);
-      });
-
-      const expenseByCategory: Record<string, number> = {};
-      expenses.forEach((e: any) => {
-        const cat = e.category || 'other';
-        expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(e.amount || 0);
-      });
-
-      return {
-        data: {
-          period: { start_date: startDate, end_date: endDate },
-          financials: {
-            total_revenue: totalRevenue,
-            total_expenses: totalExpenses,
-            profit,
-            profit_margin: profitMargin,
-          },
-          revenue_by_category: revenueByCategory,
-          expenses_by_category: expenseByCategory,
-          transaction_counts: {
-            revenue: revenues.length,
-            expenses: expenses.length,
-            total: revenues.length + expenses.length,
-          },
-          generated_at: new Date().toISOString(),
-        },
-      };
-    } catch (error) {
-      // Fallback handled in new implementation
-      throw error;
-    }
-  }
-  */
 
   // Approvals
   async getApprovals(): Promise<ApiResponse<any[]>> {
@@ -816,9 +702,12 @@ class ApiClient {
   }
 
   async rejectItem(itemId: number, itemType: 'revenue' | 'expense', reason?: string): Promise<ApiResponse<any>> {
-    // Note: Backend may not have reject endpoints for revenue/expense directly
-    // This might need to go through approval workflows
-    return this.post(`/approvals/${itemType}/${itemId}/reject`, { reason });
+    // Reject revenue or expense entry through their respective endpoints
+    if (itemType === 'revenue') {
+      return this.post(`/revenue/${itemId}/reject`, { reason: reason || 'No reason provided' });
+    } else {
+      return this.post(`/expenses/${itemId}/reject`, { reason: reason || 'No reason provided' });
+    }
   }
 
   async approveWorkflow(workflowId: number): Promise<ApiResponse<any>> {
@@ -861,6 +750,14 @@ class ApiClient {
 
   async getHierarchy(): Promise<ApiResponse<any>> {
     return this.get('/admin/hierarchy');
+  }
+
+  async getRoles(): Promise<ApiResponse<any[]>> {
+    return this.get('/admin/roles');
+  }
+
+  async getVerificationHistory(): Promise<ApiResponse<any[]>> {
+    return this.get('/users/me/verification-history');
   }
 
   async triggerBackup(includeFiles = false): Promise<ApiResponse<{ message: string }>> {

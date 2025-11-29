@@ -8,6 +8,7 @@ from ..core.database import Base
 class UserRole(str, enum.Enum):
     SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
+    FINANCE_ADMIN = "finance_manager"
     MANAGER = "manager"
     ACCOUNTANT = "accountant"
     EMPLOYEE = "employee"

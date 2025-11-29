@@ -196,7 +196,7 @@ export default function DepartmentListPage() {
       setDepartments(response.data || []);
     } catch (err: any) {
       if (err.response?.status === 404) {
-        setError('Department API endpoint not yet implemented. Please implement backend endpoints.');
+        setError('Departments feature is not available. Please contact your administrator.');
         setDepartments([]);
       } else {
         setError(err.response?.data?.detail || 'Failed to load departments');

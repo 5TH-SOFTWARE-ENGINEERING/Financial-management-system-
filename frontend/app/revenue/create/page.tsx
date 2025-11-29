@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, DollarSign, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/rbac/auth-context';
 
 // ──────────────────────────────────────────
 // Styled Components Layout
@@ -169,6 +170,7 @@ const CheckboxWrapper = styled.div`
 
 export default function CreateRevenuePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -216,8 +218,14 @@ export default function CreateRevenuePage() {
       reset();
       
       // Redirect after 2 seconds
+      // Employees go to dashboard, others go to revenue list
       setTimeout(() => {
-        router.push('/revenue/list');
+        const userRole = user?.role?.toLowerCase();
+        if (userRole === 'employee') {
+          router.push('/dashboard');
+        } else {
+          router.push('/revenue/list');
+        }
       }, 2000);
     } catch (err: any) {
       let errorMessage = 'Failed to create revenue entry';

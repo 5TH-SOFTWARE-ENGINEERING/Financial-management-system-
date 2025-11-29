@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -327,49 +327,26 @@ export default function SecuritySettingsPage() {
   // Password strength
   const [passwordStrength, setPasswordStrength] = useState(0);
   
-  // Mock verification history
-  const [verificationHistory] = useState<VerificationHistoryEntry[]>([
-    {
-      id: '1',
-      device: 'Windows PC - Chrome',
-      location: 'New York, USA',
-      ip: '192.168.1.1',
-      date: '2023-08-15 14:30:22',
-      success: true
-    },
-    {
-      id: '2',
-      device: 'iPhone - Safari',
-      location: 'Boston, USA',
-      ip: '192.168.1.2',
-      date: '2023-08-14 09:15:47',
-      success: true
-    },
-    {
-      id: '3',
-      device: 'Android - Chrome',
-      location: 'Unknown',
-      ip: '192.168.1.3',
-      date: '2023-08-13 22:41:10',
-      success: false
-    },
-    {
-      id: '4',
-      device: 'Mac - Firefox',
-      location: 'Chicago, USA',
-      ip: '192.168.1.4',
-      date: '2023-08-12 16:05:33',
-      success: true
-    },
-    {
-      id: '5',
-      device: 'Windows PC - Edge',
-      location: 'Dallas, USA',
-      ip: '192.168.1.5',
-      date: '2023-08-11 11:22:15',
-      success: true
+  // Verification history
+  const [verificationHistory, setVerificationHistory] = useState<VerificationHistoryEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  useEffect(() => {
+    loadVerificationHistory();
+  }, []);
+
+  const loadVerificationHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const response = await apiClient.getVerificationHistory();
+      setVerificationHistory(response.data || []);
+    } catch (err: any) {
+      console.error('Failed to load verification history:', err);
+      setVerificationHistory([]);
+    } finally {
+      setLoadingHistory(false);
     }
-  ]);
+  };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -787,29 +764,39 @@ export default function SecuritySettingsPage() {
           <CardContent>
             <HelperText>Recent login attempts to your account</HelperText>
             <VerificationHistoryContainer>
-              {verificationHistory.map(entry => (
-                <VerificationHistoryItem key={entry.id}>
-                  <VerificationHistoryDetails>
-                    <VerificationHistoryDevice>{entry.device}</VerificationHistoryDevice>
-                    <VerificationHistoryStatus $success={entry.success}>
-                      {entry.success ? (
-                        <>
-                          <CheckCircle size={12} />
-                          Success
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle size={12} />
-                          Failed
-                        </>
-                      )}
-                    </VerificationHistoryStatus>
-                  </VerificationHistoryDetails>
-                  <VerificationHistoryMeta>
-                    {entry.location} • {entry.ip} • {entry.date}
-                  </VerificationHistoryMeta>
-                </VerificationHistoryItem>
-              ))}
+              {loadingHistory ? (
+                <div style={{ textAlign: 'center', padding: '24px', color: 'var(--muted-foreground)' }}>
+                  Loading verification history...
+                </div>
+              ) : verificationHistory.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px', color: 'var(--muted-foreground)' }}>
+                  No verification history available
+                </div>
+              ) : (
+                verificationHistory.map(entry => (
+                  <VerificationHistoryItem key={entry.id}>
+                    <VerificationHistoryDetails>
+                      <VerificationHistoryDevice>{entry.device}</VerificationHistoryDevice>
+                      <VerificationHistoryStatus $success={entry.success}>
+                        {entry.success ? (
+                          <>
+                            <CheckCircle size={12} />
+                            Success
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle size={12} />
+                            Failed
+                          </>
+                        )}
+                      </VerificationHistoryStatus>
+                    </VerificationHistoryDetails>
+                    <VerificationHistoryMeta>
+                      {entry.location} • {entry.ip} • {entry.date}
+                    </VerificationHistoryMeta>
+                  </VerificationHistoryItem>
+                ))
+              )}
             </VerificationHistoryContainer>
           </CardContent>
         </Card>

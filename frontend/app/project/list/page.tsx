@@ -197,13 +197,13 @@ const TableBody = styled.tbody`
   }
 `;
 
-const StatusBadge = styled.span<{ active: boolean }>`
+const StatusBadge = styled.span<{ $active: boolean }>`
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
-  background: ${(p) => (p.active ? '#d1fae5' : '#f3f4f6')};
-  color: ${(p) => (p.active ? '#065f46' : '#374151')};
+  background: ${(p) => (p.$active ? '#d1fae5' : '#f3f4f6')};
+  color: ${(p) => (p.$active ? '#065f46' : '#374151')};
 `;
 
 const ActionButtons = styled.div`
@@ -275,7 +275,7 @@ export default function ProjectListPage() {
       setProjects(response.data || []);
     } catch (err: any) {
       if (err.response?.status === 404) {
-        setError('Project API endpoint not yet implemented. Please implement backend endpoints.');
+        setError('Projects feature is not available. Please contact your administrator.');
         setProjects([]);
       } else {
         setError(err.response?.data?.detail || 'Failed to load projects');
@@ -464,7 +464,7 @@ export default function ProjectListPage() {
                           {project.end_date ? formatDate(project.end_date) : '-'}
                         </td>
                         <td style={{ whiteSpace: 'nowrap' }}>
-                          <StatusBadge active={project.is_active}>
+                          <StatusBadge $active={project.is_active}>
                             {project.is_active ? 'Active' : 'Inactive'}
                           </StatusBadge>
                         </td>

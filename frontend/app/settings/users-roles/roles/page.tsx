@@ -15,6 +15,7 @@ import {
   TableCell 
 } from '@/components/common/Table';
 import { useRouter } from 'next/navigation';
+import apiClient from '@/lib/api';
 import { 
   Search, 
   Plus, 
@@ -72,7 +73,6 @@ const Message = styled.div`
   color: ${theme.colors.textSecondary};
 `;
 
-// Mock data interfaces
 interface Role {
   id: string;
   name: string;
@@ -87,53 +87,37 @@ const RolesPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const router = useRouter();
   
-  // Mock data for demonstration
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load roles from API
   useEffect(() => {
-    const mockRoles: Role[] = [
-      {
-        id: '1',
-        name: 'Admin',
-        description: 'Full system access and management capabilities',
-        userCount: 5,
-        permissionCount: 25,
-        createdAt: '2023-01-15'
-      },
-      {
-        id: '2',
-        name: 'Insurance admin',
-        description: 'Can manage insurance-related activities',
-        userCount: 8,
-        permissionCount: 15,
-        createdAt: '2023-02-10'
-      },
-      {
-        id: '3',
-        name: 'Provider Admin',
-        description: 'Can manage healthcare providers',
-        userCount: 12,
-        permissionCount: 12,
-        createdAt: '2023-03-22'
-      },
-      {
-        id: '4',
-        name: 'Staff',
-        description: 'Support access for member-facing operations',
-        userCount: 20,
-        permissionCount: 8,
-        createdAt: '2023-04-05'
-      },
-      {
-        id: '5',
-        name: 'Member',
-        description: 'View-only access to system data',
-        userCount: 30,
-        permissionCount: 5,
-        createdAt: '2023-05-18'
-      }
-    ];
-    
-    setRoles(mockRoles);
+    loadRoles();
   }, []);
+
+  const loadRoles = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.getRoles();
+      // Transform API response to match Role interface
+      const transformedRoles: Role[] = (response.data || []).map((role: any) => ({
+        id: role.id || role.name,
+        name: role.name,
+        description: role.description || `Users with ${role.name} role`,
+        userCount: role.userCount || 0,
+        permissionCount: role.permissionCount || 0,
+        createdAt: role.createdAt || '2023-01-01'
+      }));
+      setRoles(transformedRoles);
+    } catch (err: any) {
+      console.error('Failed to load roles:', err);
+      setError(err.response?.data?.detail || 'Failed to load roles');
+      setRoles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Filter roles by search term
   const filteredRoles = roles.filter(role => 
@@ -141,6 +125,23 @@ const RolesPage: React.FC = () => {
     role.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
+  if (loading) {
+    return (
+      <div style={{ padding: '48px', textAlign: 'center' }}>
+        <p>Loading roles...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '48px', textAlign: 'center', color: 'red' }}>
+        <p>Error: {error}</p>
+        <Button onClick={loadRoles} style={{ marginTop: '16px' }}>Retry</Button>
+      </div>
+    );
+  }
+
   const handleCreateRole = () => {
     router.push('/settings/users-roles/roles/create');
   };

@@ -25,8 +25,8 @@ def get_dashboard_overview(
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=30)
     
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-        # Full overview for admins
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        # Full overview for admins and finance managers
         total_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
         total_expenses = expense_crud.get_total_by_period(db, start_date, end_date)
         profit = total_revenue - total_expenses
@@ -206,49 +206,146 @@ def get_recent_activity(
     db: Session = Depends(get_db)
 ):
     """Get recent activity for the current user"""
-    # Get recent revenue entries
-    recent_revenue = revenue_crud.get_by_user(db, current_user.id, 0, limit)
-    
-    # Get recent expense entries  
-    recent_expenses = expense_crud.get_by_user(db, current_user.id, 0, limit)
-    
-    # Get recent approval requests
-    recent_approvals = approval_crud.get_by_requester(db, current_user.id, 0, limit)
-    
-    # Combine and sort by date
     activities = []
     
-    for rev in recent_revenue[:5]:
-        activities.append({
-            "type": "revenue",
-            "id": rev.id,
-            "title": rev.title,
-            "amount": rev.amount,
-            "date": rev.created_at,
-            "status": "approved" if rev.is_approved else "pending"
-        })
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        # Admins and Finance Managers can see all activities
+        # Get recent revenue entries from all users (sorted by created_at desc)
+        all_revenue = revenue_crud.get_multi(db, 0, limit * 3)
+        all_expenses = expense_crud.get_multi(db, 0, limit * 3)
+        all_approvals = approval_crud.get_multi(db, 0, limit * 3)
+        
+        # Sort revenue and expenses by created_at descending
+        all_revenue_sorted = sorted(all_revenue, key=lambda x: x.created_at if x.created_at else datetime.min, reverse=True)
+        all_expenses_sorted = sorted(all_expenses, key=lambda x: x.created_at if x.created_at else datetime.min, reverse=True)
+        all_approvals_sorted = sorted(all_approvals, key=lambda x: x.created_at if x.created_at else datetime.min, reverse=True)
+        
+        # Add all revenue entries
+        for rev in all_revenue_sorted[:limit]:
+            activities.append({
+                "type": "revenue",
+                "id": rev.id,
+                "title": rev.title,
+                "amount": rev.amount,
+                "date": rev.created_at,
+                "status": "approved" if rev.is_approved else "pending"
+            })
+        
+        # Add all expense entries
+        for exp in all_expenses_sorted[:limit]:
+            activities.append({
+                "type": "expense",
+                "id": exp.id,
+                "title": exp.title,
+                "amount": exp.amount,
+                "date": exp.created_at,
+                "status": "approved" if exp.is_approved else "pending"
+            })
+        
+        # Add all approval requests
+        for appr in all_approvals_sorted[:limit]:
+            activities.append({
+                "type": "approval",
+                "id": appr.id,
+                "title": appr.title if hasattr(appr, 'title') else f"Approval Request #{appr.id}",
+                "amount": None,
+                "date": appr.created_at,
+                "status": appr.status.value if hasattr(appr.status, 'value') else str(appr.status)
+            })
     
-    for exp in recent_expenses[:5]:
-        activities.append({
-            "type": "expense",
-            "id": exp.id,
-            "title": exp.title,
-            "amount": exp.amount,
-            "date": exp.created_at,
-            "status": "approved" if exp.is_approved else "pending"
-        })
+    elif current_user.role == UserRole.MANAGER:
+        # Managers can see their team's activities
+        subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+        subordinate_ids.append(current_user.id)
+        
+        # Get all revenue and expenses for the period
+        all_revenue = revenue_crud.get_multi(db, 0, limit * 2)
+        all_expenses = expense_crud.get_multi(db, 0, limit * 2)
+        all_approvals = approval_crud.get_pending(db)
+        
+        # Filter for team members
+        team_revenue = [r for r in all_revenue if r.created_by_id in subordinate_ids]
+        team_expenses = [e for e in all_expenses if e.created_by_id in subordinate_ids]
+        team_approvals = [a for a in all_approvals if a.requester_id in subordinate_ids]
+        
+        # Add team revenue entries
+        for rev in team_revenue[:limit]:
+            activities.append({
+                "type": "revenue",
+                "id": rev.id,
+                "title": rev.title,
+                "amount": rev.amount,
+                "date": rev.created_at,
+                "status": "approved" if rev.is_approved else "pending"
+            })
+        
+        # Add team expense entries
+        for exp in team_expenses[:limit]:
+            activities.append({
+                "type": "expense",
+                "id": exp.id,
+                "title": exp.title,
+                "amount": exp.amount,
+                "date": exp.created_at,
+                "status": "approved" if exp.is_approved else "pending"
+            })
+        
+        # Add team approval requests
+        for appr in team_approvals[:limit]:
+            activities.append({
+                "type": "approval",
+                "id": appr.id,
+                "title": appr.title if hasattr(appr, 'title') else f"Approval Request #{appr.id}",
+                "amount": None,
+                "date": appr.created_at,
+                "status": appr.status.value if hasattr(appr.status, 'value') else str(appr.status)
+            })
     
-    for appr in recent_approvals[:5]:
-        activities.append({
-            "type": "approval",
-            "id": appr.id,
-            "title": appr.title,
-            "amount": None,
-            "date": appr.created_at,
-            "status": appr.status.value
-        })
+    else:
+        # Regular users can only see their own activities
+        # Get recent revenue entries
+        recent_revenue = revenue_crud.get_by_user(db, current_user.id, 0, limit)
+        
+        # Get recent expense entries  
+        recent_expenses = expense_crud.get_by_user(db, current_user.id, 0, limit)
+        
+        # Get recent approval requests
+        recent_approvals = approval_crud.get_by_requester(db, current_user.id, 0, limit)
+        
+        # Add user's revenue entries
+        for rev in recent_revenue[:limit]:
+            activities.append({
+                "type": "revenue",
+                "id": rev.id,
+                "title": rev.title,
+                "amount": rev.amount,
+                "date": rev.created_at,
+                "status": "approved" if rev.is_approved else "pending"
+            })
+        
+        # Add user's expense entries
+        for exp in recent_expenses[:limit]:
+            activities.append({
+                "type": "expense",
+                "id": exp.id,
+                "title": exp.title,
+                "amount": exp.amount,
+                "date": exp.created_at,
+                "status": "approved" if exp.is_approved else "pending"
+            })
+        
+        # Add user's approval requests
+        for appr in recent_approvals[:limit]:
+            activities.append({
+                "type": "approval",
+                "id": appr.id,
+                "title": appr.title if hasattr(appr, 'title') else f"Approval Request #{appr.id}",
+                "amount": None,
+                "date": appr.created_at,
+                "status": appr.status.value if hasattr(appr.status, 'value') else str(appr.status)
+            })
     
     # Sort by date descending
-    activities.sort(key=lambda x: x["date"], reverse=True)
+    activities.sort(key=lambda x: x["date"] if x["date"] else datetime.min, reverse=True)
     
     return activities[:limit]

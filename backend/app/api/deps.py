@@ -76,6 +76,7 @@ def require_role(required_role: UserRole):
             UserRole.EMPLOYEE: 0,
             UserRole.ACCOUNTANT: 1,
             UserRole.MANAGER: 2,
+            UserRole.FINANCE_ADMIN: 3,
             UserRole.ADMIN: 3,
             UserRole.SUPER_ADMIN: 4,
         }
@@ -94,6 +95,7 @@ def require_min_role(min_role: UserRole):
             UserRole.EMPLOYEE: 0,
             UserRole.ACCOUNTANT: 1,
             UserRole.MANAGER: 2,
+            UserRole.FINANCE_ADMIN: 3,
             UserRole.ADMIN: 3,
             UserRole.SUPER_ADMIN: 4,
         }

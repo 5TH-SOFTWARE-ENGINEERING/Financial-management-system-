@@ -77,12 +77,12 @@ const TableRow = styled.tr`
   }
 `;
 
-const Badge = styled.span<{ active: boolean }>`
+const Badge = styled.span<{ $active: boolean }>`
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 12px;
-  color: ${(p) => (p.active ? '#065f46' : '#991b1b')};
-  background: ${(p) => (p.active ? '#d1fae5' : '#fee2e2')};
+  color: ${(p) => (p.$active ? '#065f46' : '#991b1b')};
+  background: ${(p) => (p.$active ? '#d1fae5' : '#fee2e2')};
 `;
 
 // ──────────────────────────────────────────
@@ -255,7 +255,7 @@ export default function FinanceListPage() {
                       <td>{m.phone || 'N/A'}</td>
                       <td>{m.department || 'N/A'}</td>
                       <td>
-                      <Badge active={m.is_active}>
+                      <Badge $active={m.is_active}>
                          {m.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                       </td>

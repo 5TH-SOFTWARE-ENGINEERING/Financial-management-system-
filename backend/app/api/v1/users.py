@@ -11,6 +11,27 @@ from ...api.deps import get_current_active_user, require_min_role
 
 
 router = APIRouter()
+
+
+# GET /me/verification-history
+@router.get("/me/verification-history", response_model=List[dict])
+def get_verification_history(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get verification/login history for current user"""
+    # Since we don't have a login history table, return basic info from last_login
+    history = []
+    if current_user.last_login:
+        history.append({
+            "id": "1",
+            "device": "Unknown",  # Would need to track this in real implementation
+            "location": "Unknown",  # Would need IP geolocation service
+            "ip": "Unknown",  # Would need to track this in real implementation
+            "date": current_user.last_login.isoformat(),
+            "success": True
+        })
+    return history
 # GET /me
 @router.get("/me", response_model=UserOut)
 def read_users_me(current_user: User = Depends(get_current_active_user)):

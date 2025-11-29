@@ -316,27 +316,34 @@ class ReportService:
     @staticmethod
     def _generate_budget_vs_actual_report(db: Session, report: Report) -> str:
         """Generate budget vs actual report"""
-        # This is a placeholder - in a real implementation, you'd have budget tables
+        # Note: Budget functionality would require a budget table/model
+        # For now, we calculate budget as a percentage of previous period's expenses
         params = json.loads(report.parameters or "{}")
         start_date = datetime.fromisoformat(params.get("start_date", (datetime.now() - timedelta(days=30)).isoformat()))
         end_date = datetime.fromisoformat(params.get("end_date", datetime.now().isoformat()))
         
-        # Get actual expenses by category
+        # Get actual expenses by category for current period
         expenses_by_category = expense_crud.get_summary_by_category(db, start_date, end_date)
         
-        # Mock budget data (in real implementation, this would come from budget tables)
-        budget_data = {
-            "salary": 50000,
-            "rent": 10000,
-            "utilities": 2000,
-            "marketing": 5000,
-            "equipment": 3000,
-            "travel": 2000,
-            "supplies": 1500,
-            "insurance": 3000,
-            "taxes": 8000,
-            "other": 2000
-        }
+        # Calculate previous period (same duration before start_date)
+        period_duration = (end_date - start_date).days
+        prev_start = start_date - timedelta(days=period_duration)
+        prev_expenses = expense_crud.get_summary_by_category(db, prev_start, start_date)
+        
+        # Use previous period's expenses as budget baseline (or 110% for growth projection)
+        budget_data = {}
+        prev_expenses_dict = {item["category"]: item["total"] for item in prev_expenses}
+        for expense_cat in expenses_by_category:
+            category = expense_cat["category"]
+            # Budget is 110% of previous period (allowing for growth)
+            budget_data[category] = prev_expenses_dict.get(category, 0) * 1.1
+        
+        # For categories not in previous period, use a default based on current actual
+        for expense_cat in expenses_by_category:
+            category = expense_cat["category"]
+            if category not in budget_data:
+                # Default budget is 120% of current actual
+                budget_data[category] = expense_cat["total"] * 1.2
         
         # Compare budget vs actual
         comparison = []

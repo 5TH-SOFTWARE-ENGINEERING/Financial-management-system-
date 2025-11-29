@@ -110,14 +110,14 @@ const EmptyState = styled.div`
   }
 `;
 
-const StatusPill = styled.span<{ isActive: boolean }>`
+const StatusPill = styled.span<{ $isActive: boolean }>`
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 500;
 
-  ${({ isActive }) =>
-    isActive
+  ${({ $isActive }) =>
+    $isActive
       ? `
         background: #D1FAE5;
         color: #065F46;
@@ -327,7 +327,7 @@ export default function AccountantListPage() {
                         <td>{accountant.phone || 'N/A'}</td>
                         <td>{accountant.department || 'N/A'}</td>
                         <td>
-                          <StatusPill isActive={accountant.is_active}>
+                          <StatusPill $isActive={accountant.is_active}>
                             {accountant.is_active ? 'Active' : 'Inactive'}
                           </StatusPill>
                         </td>

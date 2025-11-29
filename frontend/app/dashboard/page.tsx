@@ -312,7 +312,22 @@ const AdminDashboard: React.FC = () => {
           apiClient.getDashboardOverview(),
           apiClient.getDashboardRecentActivity(8),
         ]);
-        setOverview(overviewRes.data);
+        // Ensure overview data is properly set
+        const overviewData = overviewRes.data || {};
+        setOverview(overviewData);
+        
+        // Log for debugging (only in development)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Dashboard Overview Data:', {
+            overview: overviewData,
+            financials: overviewData.financials,
+            total_revenue: overviewData.financials?.total_revenue,
+            total_expenses: overviewData.financials?.total_expenses,
+            profit: overviewData.financials?.profit,
+            pending_approvals: overviewData.pending_approvals || overviewData.team_stats?.pending_approvals || overviewData.personal_stats?.pending_approvals,
+          });
+        }
+        
         const activity = (activityRes.data || []).map((entry: any, index: number): ActivityItem => ({
           id: entry.id?.toString() ?? `activity-${index}`,
           type: entry.type ?? 'activity',
@@ -323,7 +338,23 @@ const AdminDashboard: React.FC = () => {
         }));
         setRecentActivity(activity);
       } catch (err: any) {
-        setError(err.response?.data?.detail || 'Failed to load dashboard data');
+        const errorMessage = err.response?.data?.detail || err.message || 'Failed to load dashboard data';
+        setError(errorMessage);
+        console.error('Dashboard load error:', {
+          error: err,
+          response: err.response?.data,
+          message: errorMessage,
+        });
+        // Set default values on error so UI still renders
+        setOverview({
+          financials: {
+            total_revenue: 0,
+            total_expenses: 0,
+            profit: 0,
+            profit_margin: 0,
+          },
+          pending_approvals: 0,
+        });
       } finally {
         setLoading(false);
       }
@@ -332,14 +363,27 @@ const AdminDashboard: React.FC = () => {
     loadDashboard();
   }, [user]);
 
-  const totalRevenue = overview?.financials?.total_revenue ?? 0;
-  const totalExpenses = overview?.financials?.total_expenses ?? 0;
-  const netProfit = overview?.financials?.profit ?? (totalRevenue - totalExpenses);
-  const pendingApprovals =
-    overview?.pending_approvals ??
-    overview?.team_stats?.pending_approvals ??
-    overview?.personal_stats?.pending_approvals ??
-    0;
+  // Extract financial data with proper type conversion (handles Decimal from backend)
+  // Always ensure we have valid numbers, defaulting to 0 if data is missing
+  const totalRevenue = (overview?.financials?.total_revenue !== undefined && overview?.financials?.total_revenue !== null)
+    ? Number(overview.financials.total_revenue) 
+    : 0;
+  const totalExpenses = (overview?.financials?.total_expenses !== undefined && overview?.financials?.total_expenses !== null)
+    ? Number(overview.financials.total_expenses) 
+    : 0;
+  const netProfit = (overview?.financials?.profit !== undefined && overview?.financials?.profit !== null)
+    ? Number(overview.financials.profit)
+    : (totalRevenue - totalExpenses);
+  
+  // Extract pending approvals from different possible locations in the response
+  const pendingApprovals = 
+    (overview?.pending_approvals !== undefined && overview?.pending_approvals !== null)
+      ? Number(overview.pending_approvals)
+      : (overview?.team_stats?.pending_approvals !== undefined && overview?.team_stats?.pending_approvals !== null)
+        ? Number(overview.team_stats.pending_approvals)
+        : (overview?.personal_stats?.pending_approvals !== undefined && overview?.personal_stats?.pending_approvals !== null)
+          ? Number(overview.personal_stats.pending_approvals)
+          : 0;
 
   const renderWelcomeHeader = () => {
     if (!user) return <HeaderContent><h1>Dashboard</h1></HeaderContent>;
@@ -386,15 +430,19 @@ const AdminDashboard: React.FC = () => {
               {error}
             </div>
           )}
-          <ComponentGate componentId={ComponentId.DASHBOARD}>
-            <SectionTitle>System Overview</SectionTitle>
+          <SectionTitle>System Overview</SectionTitle>
+          {overview ? (
             <DashboardGrid>
-              {createStatsCard(DollarSign, 'Total Revenue', `$${totalRevenue.toLocaleString()}`)}
-              {createStatsCard(CreditCard, 'Total Expenses', `$${totalExpenses.toLocaleString()}`)}
-              {createStatsCard(TrendingUp, 'Net Profit', `$${netProfit.toLocaleString()}`)}
+              {createStatsCard(DollarSign, 'Total Revenue', `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
+              {createStatsCard(CreditCard, 'Total Expenses', `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
+              {createStatsCard(TrendingUp, 'Net Profit', `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
               {createStatsCard(ClipboardList, 'Pending Approvals', pendingApprovals.toString())}
             </DashboardGrid>
-          </ComponentGate>
+          ) : (
+            <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-8 text-center text-gray-500">
+              <p>No overview data available. Please ensure you have revenue and expense entries.</p>
+            </div>
+          )}
           <SectionTitle>Recent Transactions</SectionTitle>
           <TableContainer>
             <TableTitle>Latest Activity</TableTitle>

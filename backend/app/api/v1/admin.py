@@ -20,6 +20,75 @@ from ...services.email import EmailService
 router = APIRouter()
 
 
+# GET /hierarchy
+@router.get("/hierarchy")
+def get_hierarchy(
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """Get organizational hierarchy"""
+    # Build hierarchy tree
+    all_users = db.query(User).filter(User.is_active == True).all()
+    
+    hierarchy = []
+    for user in all_users:
+        manager_name = None
+        if user.manager_id:
+            manager = db.query(User).filter(User.id == user.manager_id).first()
+            if manager:
+                manager_name = manager.full_name or manager.username
+        
+        hierarchy.append({
+            "id": user.id,
+            "name": user.full_name or user.username,
+            "email": user.email,
+            "role": user.role.value,
+            "manager_id": user.manager_id,
+            "manager_name": manager_name,
+            "department": user.department,
+            "subordinates": []
+        })
+    
+    # Build tree structure
+    def build_tree(users_list, manager_id=None):
+        children = []
+        for user in users_list:
+            if user["manager_id"] == manager_id:
+                user["subordinates"] = build_tree(users_list, user["id"])
+                children.append(user)
+        return children
+    
+    tree = build_tree(hierarchy, None)
+    
+    return {
+        "hierarchy": tree,
+        "flat_list": hierarchy
+    }
+
+
+# GET /roles
+@router.get("/roles", response_model=List[dict])
+def get_roles(
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """Get all available roles with user counts"""
+    roles = []
+    for role in UserRole:
+        user_count = db.query(User).filter(User.role == role, User.is_active == True).count()
+        # Get permission count (this would need a permissions table in real implementation)
+        # For now, return a basic structure
+        roles.append({
+            "id": role.value,
+            "name": role.value.replace("_", " ").title(),
+            "description": f"Users with {role.value.replace('_', ' ')} role",
+            "userCount": user_count,
+            "permissionCount": 0,  # Would need permissions table
+            "createdAt": "2023-01-01"  # Would need role creation tracking
+        })
+    return roles
+
+
 @router.get("/system/stats")
 def get_system_stats(
     current_user: User = Depends(require_min_role(UserRole.ADMIN)),

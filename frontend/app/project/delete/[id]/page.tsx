@@ -151,13 +151,13 @@ const InfoBox = styled.div`
   }
 `;
 
-const StatusBadge = styled.span<{ active: boolean }>`
+const StatusBadge = styled.span<{ $active: boolean }>`
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
-  background: ${(p) => (p.active ? '#d1fae5' : '#f3f4f6')};
-  color: ${(p) => (p.active ? '#065f46' : '#374151')};
+  background: ${(p) => (p.$active ? '#d1fae5' : '#f3f4f6')};
+  color: ${(p) => (p.$active ? '#065f46' : '#374151')};
 `;
 
 const ButtonRow = styled.div`
@@ -371,7 +371,7 @@ export default function DeleteProjectPage() {
               )}
               <div>
                 <span>Status:</span>
-                <StatusBadge active={project.is_active}>
+                <StatusBadge $active={project.is_active}>
                   {project.is_active ? 'Active' : 'Inactive'}
                 </StatusBadge>
               </div>
