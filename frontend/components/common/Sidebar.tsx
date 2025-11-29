@@ -19,7 +19,7 @@ interface SidebarContainerProps {
 }
 
 const SidebarContainer = styled.div<SidebarContainerProps>`
-    width: ${props => (props.$collapsed ? '70px' : '230px')};
+    width: ${props => (props.$collapsed ? '70px' : '260px')};
     height: 100vh;
     background: ${theme.colors.background};
     border-right: 1px solid ${theme.colors.border};
@@ -28,9 +28,30 @@ const SidebarContainer = styled.div<SidebarContainerProps>`
     left: 0;
     top: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     z-index: 50;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+    transition: width ${theme.transitions.default};
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+
+    /* Custom scrollbar styling */
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: ${theme.colors.border};
+        border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: ${theme.colors.textSecondary};
+    }
 `;
 
 const CollapseButton = styled.button`
@@ -42,12 +63,26 @@ const CollapseButton = styled.button`
     color: ${theme.colors.textSecondary};
     cursor: pointer;
     padding: ${theme.spacing.sm};
-    border-radius: 8px;
-    transition: all 0.2s;
+    border-radius: ${theme.borderRadius.sm};
+    transition: all ${theme.transitions.default};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
 
     &:hover {
         background: ${theme.colors.backgroundSecondary};
         color: ${theme.colors.primary};
+        transform: scale(1.05);
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+
+    svg {
+        width: 20px;
+        height: 20px;
     }
 `;
 
@@ -56,11 +91,24 @@ const Logo = styled.div<{ $collapsed: boolean }>`
     display: flex;
     align-items: center;
     justify-content: ${props => (props.$collapsed ? 'center' : 'flex-start')}; 
-    padding: 0 ${theme.spacing.sm};
+    padding: 0 ${props => (props.$collapsed ? theme.spacing.sm : theme.spacing.lg)};
     margin-bottom: ${theme.spacing.sm};
     font-size: ${theme.typography.fontSizes.xxl};
     font-weight: ${theme.typography.fontWeights.bold};
     color: ${theme.colors.primary};
+    transition: padding ${theme.transitions.default};
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: ${props => (props.$collapsed ? theme.spacing.sm : theme.spacing.lg)};
+        right: ${props => (props.$collapsed ? theme.spacing.sm : theme.spacing.lg)};
+        height: 1px;
+        background: ${theme.colors.border};
+        opacity: 0.5;
+    }
 `;
 
 const SectionTitle = styled.h3<{$collapsed: boolean}>`
@@ -68,10 +116,12 @@ const SectionTitle = styled.h3<{$collapsed: boolean}>`
     text-transform: uppercase;
     letter-spacing: 1.5px;
     color: ${theme.colors.textSecondary};
-    padding: ${theme.spacing.sm} ${theme.spacing.xl};
+    padding: ${theme.spacing.md} ${theme.spacing.xl};
     margin: ${theme.spacing.xl} 0 ${theme.spacing.md};
     opacity: ${props => (props.$collapsed ? 0 : 1)};
     pointer-events: none;
+    transition: opacity ${theme.transitions.default};
+    font-weight: ${theme.typography.fontWeights.medium};
 `;
 
 const NavItem = styled(Link)<{ $active?: boolean; $collapsed?: boolean }>`
@@ -81,19 +131,30 @@ const NavItem = styled(Link)<{ $active?: boolean; $collapsed?: boolean }>`
     color: ${props => (props.$active ? theme.colors.primary : theme.colors.textSecondary)};
     text-decoration: none;
     border-left: 3px solid ${props => (props.$active ? theme.colors.primary : 'transparent')};
-    transition: all 0.2s;
+    transition: all ${theme.transitions.default};
     justify-content: ${props => (props.$collapsed ? 'center' : 'flex-start')};
+    position: relative;
+    margin: 2px ${theme.spacing.sm};
+    border-radius: ${theme.borderRadius.sm};
+    font-weight: ${props => (props.$active ? theme.typography.fontWeights.medium : 400)};
 
     &:hover {
         background: ${theme.colors.backgroundSecondary};
         color: ${theme.colors.primary};
+        transform: translateX(${props => (props.$collapsed ? '0' : '4px')});
     }
+
+    ${props => props.$active && `
+        background: ${theme.colors.backgroundSecondary};
+        font-weight: ${theme.typography.fontWeights.medium};
+    `}
 
     svg {
         width: 20px;
         height: 20px;
         flex-shrink: 0;
         margin-right: ${props => (props.$collapsed ? 0 : theme.spacing.md)};
+        transition: all ${theme.transitions.default};
     }
 `;
 
@@ -105,29 +166,86 @@ const DropdownHeader = styled.div<{ $open?: boolean; $collapsed?: boolean; $acti
     color: ${props => (props.$active ? theme.colors.primary : theme.colors.textSecondary)};
     cursor: pointer;
     border-left: 3px solid ${props => (props.$active ? theme.colors.primary : 'transparent')};
-    transition: all 0.2s;
+    transition: all ${theme.transitions.default};
+    position: relative;
+    margin: 2px ${theme.spacing.sm};
+    border-radius: ${theme.borderRadius.sm};
+    font-weight: ${props => (props.$active ? theme.typography.fontWeights.medium : 400)};
 
     &:hover {
         background: ${theme.colors.backgroundSecondary};
         color: ${theme.colors.primary};
+        transform: translateX(${props => (props.$collapsed ? '0' : '4px')});
+    }
+
+    ${props => props.$active && `
+        background: ${theme.colors.backgroundSecondary};
+    `}
+
+    svg:first-child {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        margin-right: ${props => (props.$collapsed ? 0 : theme.spacing.md)};
     }
 
     svg:last-child {
-        transition: transform 0.3s;
+        transition: transform ${theme.transitions.default};
         transform: ${props => (props.$open ? 'rotate(180deg)' : 'rotate(0)')};
         display: ${props => (props.$collapsed ? 'none' : 'block')};
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
     }
 `;
 
 const SubMenu = styled.div<{$collapsed: boolean}>`
     margin-left: ${props => (props.$collapsed ? 0 : '20px')}; 
-    border-left: ${props => (props.$collapsed ? 'none' : '2px solid ' + theme.colors.border)};
+    border-left: ${props => (props.$collapsed ? 'none' : `2px solid ${theme.colors.border}`)};
+    padding-left: ${props => (props.$collapsed ? 0 : theme.spacing.xs)};
+    margin-top: ${props => (props.$collapsed ? theme.spacing.xs : theme.spacing.sm)};
+    animation: ${props => (!props.$collapsed ? 'slideDown 0.2s ease-out' : 'none')};
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
     /* Correct NavItem padding inside SubMenu */
     ${NavItem} {
-        padding-left: ${props => (props.$collapsed ? theme.spacing.lg : `calc(${theme.spacing.xl} + 5px)`)};
+        padding-left: ${props => (props.$collapsed ? theme.spacing.lg : `calc(${theme.spacing.xl} + 8px)`)};
         border-left: none;
+        margin-left: ${props => (props.$collapsed ? theme.spacing.sm : '0')};
+        margin-right: ${props => (props.$collapsed ? theme.spacing.sm : '0')};
+        font-size: ${theme.typography.fontSizes.sm};
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: ${props => (props.$collapsed ? '0' : theme.spacing.xl)};
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: ${theme.colors.textSecondary};
+            opacity: 0.5;
+        }
     }
+`;
+
+const AccountSection = styled.div<{$collapsed: boolean}>`
+    margin-top: auto;
+    padding-top: ${theme.spacing.xl};
+    border-top: 1px solid ${theme.colors.border};
+    margin-left: ${theme.spacing.sm};
+    margin-right: ${theme.spacing.sm};
+    padding-left: ${props => (props.$collapsed ? theme.spacing.sm : 0)};
+    padding-right: ${props => (props.$collapsed ? theme.spacing.sm : 0)};
 `;
 
 const Sidebar: React.FC = () => {
@@ -194,7 +312,7 @@ const Sidebar: React.FC = () => {
                     <ComponentGate componentId={ComponentId.REVENUE_LIST}>
                         <NavItem href="/revenue/list" $active={pathname === '/revenue/list'} $collapsed={collapsed}> 
                             <List size={16} /> {/* Added icon for List */}
-                            {!collapsed && 'All Revenue'}
+                            {!collapsed && 'Revenues'}
                         </NavItem>
                     </ComponentGate>
                     </SubMenu>
@@ -222,13 +340,13 @@ const Sidebar: React.FC = () => {
                         <ComponentGate componentId={ComponentId.EXPENSE_LIST}>
                             <NavItem href="/expenses/list" $active={pathname === '/expense/list'} $collapsed={collapsed}>
                                 <List size={16} /> {/* Added icon for List */}
-                                {!collapsed && 'All Expenses'}
+                                {!collapsed && 'Expenses'}
                             </NavItem>
                         </ComponentGate>
                         <ComponentGate componentId={ComponentId.EXPENSE_CREATE}>
                             <NavItem href="/expenses/items" $active={pathname === '/expenses/items'} $collapsed={collapsed}>
                                 <Calculator size={16} />
-                                {!collapsed && 'Expense Calculator'}
+                                {!collapsed && 'Expense-Calcu'}
                             </NavItem>
                         </ComponentGate>
                     </SubMenu>
@@ -389,7 +507,7 @@ const Sidebar: React.FC = () => {
         )}
 
         {/* ========== ACCOUNT SECTION (Bottom) 👤 ========== */}
-        <div style={{ marginTop: 'auto', paddingTop: theme.spacing.xl }}>
+        <AccountSection $collapsed={collapsed}>
             <SectionTitle $collapsed={collapsed}>user</SectionTitle>
 
             <ComponentGate componentId={ComponentId.SIDEBAR_PROFILE}>
@@ -405,7 +523,7 @@ const Sidebar: React.FC = () => {
                     {!collapsed && 'Settings'}
                 </NavItem>
             </ComponentGate>
-        </div>
+        </AccountSection>
       </SidebarContainer>
     );
 };
