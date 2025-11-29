@@ -90,13 +90,11 @@ class ApiClient {
           }
         }
         
-        // Handle 404 Not Found - suppress console errors for known missing features
+        // Handle 404 Not Found - suppress console warnings for non-critical endpoints
         if (error.response?.status === 404) {
           const url = error.config?.url || '';
-          // Only log 404s for endpoints that should exist
-          const knownMissingEndpoints = ['/departments', '/projects'];
-          const isKnownMissing = knownMissingEndpoints.some(endpoint => url.includes(endpoint));
-          if (!isKnownMissing && typeof window !== 'undefined') {
+          // Only log 404s in development mode to reduce console noise
+          if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
             console.warn('Resource not found:', url);
           }
         }
@@ -846,6 +844,37 @@ class ApiClient {
 
   async deleteProject(projectId: number): Promise<ApiResponse<{ message: string }>> {
     return this.delete(`/projects/${projectId}`);
+  }
+
+  // Audit Logs endpoints (Admin only)
+  async getAuditLogs(filters?: {
+    skip?: number;
+    limit?: number;
+    user_id?: number;
+    action?: string;
+    resource_type?: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<ApiResponse<any[]>> {
+    const params: Record<string, any> = {};
+    if (filters) {
+      if (filters.skip !== undefined) params.skip = filters.skip;
+      if (filters.limit !== undefined) params.limit = filters.limit;
+      if (filters.user_id !== undefined) params.user_id = filters.user_id;
+      if (filters.action) params.action = filters.action;
+      if (filters.resource_type) params.resource_type = filters.resource_type;
+      if (filters.start_date) {
+        // Convert to ISO format for backend
+        const start = new Date(filters.start_date + 'T00:00:00');
+        params.start_date = start.toISOString();
+      }
+      if (filters.end_date) {
+        // Convert to ISO format for backend
+        const end = new Date(filters.end_date + 'T23:59:59');
+        params.end_date = end.toISOString();
+      }
+    }
+    return this.get('/admin/audit/logs', { params });
   }
 
   // Generic request method

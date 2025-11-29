@@ -396,19 +396,9 @@ export default function ReportPage() {
     setLoading(true);
     setError(null);
     
-    // Debug: Log user info
-    console.log('Loading reports for user:', {
-      user_id: user?.id,
-      user_email: user?.email,
-      user_role: user?.role,
-      useDateFilter,
-    });
-    
     try {
       // Load reports - optionally without date filters to get all data
       const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
-      
-      console.log('Fetching reports with params:', dateParams);
       
       // Use Promise.allSettled to handle partial failures gracefully
       const [summaryResult, incomeResult, cashFlowResult] = await Promise.allSettled([
@@ -417,23 +407,20 @@ export default function ReportPage() {
         apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
       ]);
       
-      console.log('Report fetch results:', {
-        summary: summaryResult.status,
-        income: incomeResult.status,
-        cashFlow: cashFlowResult.status,
-      });
-      
       // Handle summary result
       if (summaryResult.status === 'fulfilled') {
         const summaryData = summaryResult.value.data || summaryResult.value;
         // Ensure we have valid data structure
         if (summaryData && (summaryData.financials || summaryData.revenue_by_category || summaryData.expenses_by_category)) {
-          console.log('Financial Summary loaded:', {
-            total_revenue: summaryData.financials?.total_revenue,
-            total_expenses: summaryData.financials?.total_expenses,
-            revenue_categories: Object.keys(summaryData.revenue_by_category || {}).length,
-            expense_categories: Object.keys(summaryData.expenses_by_category || {}).length,
-          });
+          // Financial summary loaded successfully
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Financial Summary loaded:', {
+              total_revenue: summaryData.financials?.total_revenue,
+              total_expenses: summaryData.financials?.total_expenses,
+              revenue_categories: Object.keys(summaryData.revenue_by_category || {}).length,
+              expense_categories: Object.keys(summaryData.expenses_by_category || {}).length,
+            });
+          }
           setFinancialSummary(summaryData);
         } else {
           console.warn('Invalid summary data structure:', summaryData);
@@ -477,14 +464,11 @@ export default function ReportPage() {
         const incomeData = incomeResult.value.data || incomeResult.value;
         // Ensure we have valid data structure
         if (incomeData && (incomeData.revenue || incomeData.expenses)) {
-          console.log('Income Statement loaded:', {
-            revenue_total: incomeData.revenue?.total,
-            expenses_total: incomeData.expenses?.total,
-            profit: incomeData.profit,
-          });
           setIncomeStatement(incomeData);
         } else {
-          console.warn('Invalid income statement data structure:', incomeData);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Invalid income statement data structure:', incomeData);
+          }
           setIncomeStatement(null);
         }
       } else {
@@ -497,15 +481,11 @@ export default function ReportPage() {
         const cashFlowData = cashFlowResult.value.data || cashFlowResult.value;
         // Ensure we have valid data structure
         if (cashFlowData && (cashFlowData.summary || cashFlowData.daily_cash_flow)) {
-          console.log('Cash Flow loaded:', {
-            total_inflow: cashFlowData.summary?.total_inflow,
-            total_outflow: cashFlowData.summary?.total_outflow,
-            net_cash_flow: cashFlowData.summary?.net_cash_flow,
-            daily_entries: Object.keys(cashFlowData.daily_cash_flow || {}).length,
-          });
           setCashFlow(cashFlowData);
         } else {
-          console.warn('Invalid cash flow data structure:', cashFlowData);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Invalid cash flow data structure:', cashFlowData);
+          }
           setCashFlow(null);
         }
       } else {

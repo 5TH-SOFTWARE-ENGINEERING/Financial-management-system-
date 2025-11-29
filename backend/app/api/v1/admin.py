@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, and_, desc
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 
@@ -189,24 +189,75 @@ def get_audit_logs(
     current_user: User = Depends(require_min_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    """Get audit logs with filtering"""
+    """Get audit logs with filtering (Admin only)"""
+    from ...models.audit import AuditLog, AuditAction
+    
+    # Build query with combined filters (allow multiple filters to work together)
+    query = db.query(AuditLog)
+    filters = []
+    
     if user_id:
-        logs = audit_crud.get_by_user(db, user_id, skip, limit)
-    elif action:
-        from ...models.audit import AuditAction
+        filters.append(AuditLog.user_id == user_id)
+    
+    if action:
         try:
             action_enum = AuditAction(action)
-            logs = audit_crud.get_by_action(db, action_enum, skip, limit)
+            filters.append(AuditLog.action == action_enum)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid action")
-    elif resource_type:
-        logs = audit_crud.get_by_resource(db, resource_type, None, skip, limit)
-    elif start_date and end_date:
-        logs = audit_crud.get_by_date_range(db, start_date, end_date, skip, limit)
-    else:
-        logs = audit_crud.get_multi(db, skip, limit)
     
-    return logs
+    if resource_type:
+        filters.append(AuditLog.resource_type == resource_type)
+    
+    if start_date:
+        filters.append(AuditLog.created_at >= start_date)
+    
+    if end_date:
+        filters.append(AuditLog.created_at <= end_date)
+    
+    # Apply filters
+    if filters:
+        query = query.filter(and_(*filters))
+    
+    # Order by created_at descending and apply pagination
+    logs = query.order_by(desc(AuditLog.created_at)).offset(skip).limit(limit).all()
+    
+    # Get unique user IDs to fetch users in batch (optimize user loading)
+    user_ids = list(set([log.user_id for log in logs]))
+    users_dict = {}
+    for uid in user_ids:
+        user = user_crud.get(db, uid)
+        if user:
+            users_dict[uid] = {
+                "id": user.id,
+                "username": user.username,
+                "full_name": user.full_name,
+                "email": user.email,
+            }
+    
+    # Format response with user information
+    result = []
+    for log in logs:
+        log_dict = {
+            "id": log.id,
+            "user_id": log.user_id,
+            "action": log.action.value if hasattr(log.action, 'value') else str(log.action),
+            "resource_type": log.resource_type,
+            "resource_id": log.resource_id,
+            "old_values": log.old_values,
+            "new_values": log.new_values,
+            "ip_address": log.ip_address,
+            "user_agent": log.user_agent,
+            "created_at": log.created_at.isoformat() if log.created_at else None,
+        }
+        
+        # Add user information from pre-fetched dictionary
+        if log.user_id in users_dict:
+            log_dict["user"] = users_dict[log.user_id]
+        
+        result.append(log_dict)
+    
+    return result
 
 
 @router.post("/backup/create")
