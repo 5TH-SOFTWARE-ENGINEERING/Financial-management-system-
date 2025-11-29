@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Layout from '@/components/layout';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
-import { Settings, Users, Globe, Lock, Bell, Database, List } from 'lucide-react';
+import { Settings, Users, Globe, Lock, Bell, Database, List, History } from 'lucide-react';
 import { theme } from '@/components/common/theme';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -155,7 +155,21 @@ const ContentSubtext = styled.p`
 
 const SettingsPage: React.FC = () => {
   const pathname = usePathname();
-  const activeTab = pathname?.split('/').pop() || 'general';
+  
+  // Determine active tab based on pathname
+  const getActiveTab = () => {
+    if (!pathname) return 'general';
+    if (pathname.includes('/history')) return 'history';
+    if (pathname.includes('/logs')) return 'logs';
+    if (pathname.includes('/backup')) return 'backup';
+    if (pathname.includes('/users-roles')) return 'users-roles';
+    if (pathname.includes('/security')) return 'security';
+    if (pathname.includes('/notifications')) return 'notifications';
+    if (pathname.includes('/general')) return 'general';
+    return 'general';
+  };
+  
+  const activeTab = getActiveTab();
 
   return (
     <ComponentGate componentId={ComponentId.SETTINGS_VIEW}>
@@ -194,6 +208,10 @@ const SettingsPage: React.FC = () => {
                   <List />
                   Logs
                 </NavItem>
+                <NavItem href="/settings/history" $active={activeTab === 'history'}>
+                  <History />
+                  History
+                </NavItem>
               </Nav>
 
               <SettingContent>
@@ -204,6 +222,7 @@ const SettingsPage: React.FC = () => {
                   {activeTab === 'users-roles' && 'Users & Roles Management'}
                   {activeTab === 'backup' && 'Backup Management'}
                   {activeTab === 'logs' && 'Audit Logs'}
+                  {activeTab === 'history' && 'History'}
                 </ContentHeader>
                 
                 {activeTab === 'general' && (
@@ -263,6 +282,16 @@ const SettingsPage: React.FC = () => {
                     </ContentText>
                     <ContentSubtext>
                       Navigate to the Logs page to view detailed audit logs.
+                    </ContentSubtext>
+                  </div>
+                )}
+                {activeTab === 'history' && (
+                  <div>
+                    <ContentText>
+                      View your login history, recent activity logs, and system audit trails. Track all account activities including login attempts, transactions, and administrative actions.
+                    </ContentText>
+                    <ContentSubtext>
+                      Navigate to the History page to view detailed login history, activity logs, and audit trails.
                     </ContentSubtext>
                   </div>
                 )}
