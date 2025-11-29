@@ -163,7 +163,7 @@ const Sidebar: React.FC = () => {
         </CollapseButton>
 
         <Logo $collapsed={collapsed}> 
-        {!collapsed ? 'FinancePro' : 'FP'}
+        {!collapsed ? 'Finance': null}
         </Logo>
         <SectionTitle $collapsed={collapsed}>Main</SectionTitle>
 

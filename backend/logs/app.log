@@ -15321,3 +15321,107 @@ WHERE users.manager_id = ?]
 2025-11-29 07:45:27,947 - app.main - INFO - Response: 200 in 0.1035s
 2025-11-29 07:45:28,012 - app.main - INFO - Response: 200 in 0.1867s
 2025-11-29 07:45:28,035 - app.main - INFO - Response: 200 in 0.1732s
+2025-11-29 07:45:52,909 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-29 07:45:52,922 - app.main - INFO - Response: 200 in 0.0130s
+2025-11-29 07:45:52,937 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-29 07:45:52,955 - app.main - INFO - Response: 200 in 0.0185s
+2025-11-29 07:45:53,012 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:45:53,020 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:45:53,021 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:45:53,026 - app.main - INFO - Response: 200 in 0.0138s
+2025-11-29 07:45:53,032 - app.main - INFO - Response: 200 in 0.0121s
+2025-11-29 07:45:53,032 - app.main - INFO - Response: 200 in 0.0106s
+2025-11-29 07:45:53,032 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:45:53,044 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:45:53,046 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:45:53,047 - app.main - INFO - Response: 200 in 0.0156s
+2025-11-29 07:45:53,047 - app.main - INFO - Response: 200 in 0.0036s
+2025-11-29 07:45:53,047 - app.main - INFO - Response: 200 in 0.0020s
+2025-11-29 07:45:53,047 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:45:53,062 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:45:53,062 - app.main - INFO - Response: 307 in 0.0149s
+2025-11-29 07:45:53,062 - app.main - INFO - Response: 307 in 0.0000s
+2025-11-29 07:45:53,072 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:45:53,081 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:45:53,081 - app.main - INFO - Response: 200 in 0.0089s
+2025-11-29 07:45:53,086 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:45:53,095 - app.main - INFO - Response: 307 in 0.0143s
+2025-11-29 07:45:53,100 - app.main - INFO - Response: 307 in 0.0136s
+2025-11-29 07:45:53,107 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:45:53,111 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:45:53,113 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:45:53,113 - app.main - INFO - Response: 200 in 0.0057s
+2025-11-29 07:45:53,122 - app.main - INFO - Response: 307 in 0.0091s
+2025-11-29 07:45:53,132 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:45:53,141 - app.main - INFO - Request: OPTIONS http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:45:53,145 - app.main - INFO - Response: 307 in 0.0130s
+2025-11-29 07:45:53,150 - app.main - INFO - Response: 200 in 0.0385s
+2025-11-29 07:45:53,151 - app.main - INFO - Response: 200 in 0.0098s
+2025-11-29 07:45:53,161 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:45:53,175 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:45:53,194 - app.main - INFO - Response: 200 in 0.0329s
+2025-11-29 07:45:53,206 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:45:53,212 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:45:53,228 - app.main - INFO - Response: 200 in 0.0532s
+2025-11-29 07:45:53,231 - app.main - INFO - Response: 307 in 0.0185s
+2025-11-29 07:45:53,234 - app.main - INFO - Response: 200 in 0.0283s
+2025-11-29 07:45:53,243 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:45:53,246 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:45:53,248 - app.main - INFO - Response: 307 in 0.0018s
+2025-11-29 07:45:53,248 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:45:53,266 - app.main - INFO - Response: 307 in 0.0174s
+2025-11-29 07:45:53,273 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:45:53,278 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:45:53,280 - app.main - INFO - Response: 200 in 0.0366s
+2025-11-29 07:45:53,290 - app.main - INFO - Response: 307 in 0.0119s
+2025-11-29 07:45:53,299 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:45:53,299 - app.main - INFO - Response: 200 in 0.0255s
+2025-11-29 07:45:53,311 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:45:53,326 - app.main - INFO - Response: 307 in 0.0143s
+2025-11-29 07:45:53,337 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:45:53,344 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:45:53,353 - app.main - INFO - Response: 307 in 0.0093s
+2025-11-29 07:45:53,364 - app.main - INFO - Response: 200 in 0.0650s
+2025-11-29 07:45:53,379 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:45:53,382 - app.main - INFO - Response: 200 in 0.0445s
+2025-11-29 07:45:53,387 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:45:53,425 - app.main - INFO - Response: 200 in 0.0462s
+2025-11-29 07:45:53,432 - app.main - INFO - Response: 200 in 0.0441s
+2025-11-29 07:45:53,440 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:45:53,446 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:45:53,479 - app.main - INFO - Response: 200 in 0.0394s
+2025-11-29 07:45:53,479 - app.main - INFO - Response: 200 in 0.0333s
+2025-11-29 07:46:02,581 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:46:02,581 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:46:02,581 - app.main - INFO - Response: 307 in 0.0000s
+2025-11-29 07:46:02,581 - app.main - INFO - Response: 307 in 0.0000s
+2025-11-29 07:46:02,597 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:46:02,597 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:46:02,597 - app.main - INFO - Response: 307 in 0.0000s
+2025-11-29 07:46:02,611 - app.main - INFO - Response: 307 in 0.0142s
+2025-11-29 07:46:02,616 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue?limit=10000&skip=0
+2025-11-29 07:46:02,618 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:46:02,626 - app.main - INFO - Response: 307 in 0.0096s
+2025-11-29 07:46:02,638 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:46:02,664 - app.main - INFO - Response: 200 in 0.0462s
+2025-11-29 07:46:02,664 - app.main - INFO - Response: 200 in 0.0263s
+2025-11-29 07:46:02,672 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses?limit=10000&skip=0
+2025-11-29 07:46:02,677 - app.main - INFO - Response: 307 in 0.0049s
+2025-11-29 07:46:02,684 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:46:02,684 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:46:02,711 - app.main - INFO - Response: 200 in 0.0268s
+2025-11-29 07:46:02,711 - app.main - INFO - Response: 200 in 0.0268s
+2025-11-29 07:46:02,719 - app.main - INFO - Request: GET http://localhost:8000/api/v1/expenses/?limit=10000&skip=0
+2025-11-29 07:46:02,719 - app.main - INFO - Request: GET http://localhost:8000/api/v1/revenue/?limit=10000&skip=0
+2025-11-29 07:46:02,732 - app.main - INFO - Response: 200 in 0.0131s
+2025-11-29 07:46:02,745 - app.main - INFO - Response: 200 in 0.0262s
+2025-11-29 07:46:23,762 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-29 07:46:23,774 - app.main - INFO - Response: 200 in 0.0122s
+2025-11-29 07:46:53,763 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-29 07:46:53,763 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-29 07:47:24,075 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-29 07:47:24,083 - app.main - INFO - Response: 200 in 0.0085s
+2025-11-29 07:47:53,761 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-29 07:47:53,761 - app.main - INFO - Response: 200 in 0.0000s
+2025-11-29 07:48:24,076 - app.main - INFO - Request: GET http://localhost:8000/api/v1/notifications/unread/count
+2025-11-29 07:48:24,082 - app.main - INFO - Response: 200 in 0.0060s
