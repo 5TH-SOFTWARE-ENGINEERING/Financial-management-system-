@@ -401,6 +401,7 @@ const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const [overview, setOverview] = useState<any | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -424,6 +425,37 @@ const AdminDashboard: React.FC = () => {
         const overviewData = overviewRes.data || {};
         setOverview(overviewData);
         
+        // Calculate pending approvals count from overview data
+        let count = 0;
+        const overviewCount = overviewData.pending_approvals ?? 
+                             overviewData.team_stats?.pending_approvals ?? 
+                             overviewData.personal_stats?.pending_approvals;
+        
+        if (overviewCount !== undefined && overviewCount !== null) {
+          count = Number(overviewCount) || 0;
+        }
+        
+        // Also fetch approvals directly to get accurate count including pending revenue/expenses
+        try {
+          const approvalsRes = await apiClient.getApprovals();
+          if (approvalsRes?.data && Array.isArray(approvalsRes.data)) {
+            const pendingApprovals = approvalsRes.data.filter((a: any) => 
+              a.status?.toLowerCase() === 'pending' || 
+              a.status === 'pending'
+            );
+            
+            // Use the higher count to ensure we show all pending items
+            const pendingCount = pendingApprovals.length;
+            if (pendingCount > count) {
+              count = pendingCount;
+            }
+          }
+        } catch (err) {
+          // If approvals API fails, use overview count
+        }
+        
+        setPendingApprovalsCount(Math.max(0, count));
+        
         // Log for debugging (only in development)
         if (process.env.NODE_ENV === 'development') {
           console.log('Dashboard Overview Data:', {
@@ -432,7 +464,7 @@ const AdminDashboard: React.FC = () => {
             total_revenue: overviewData.financials?.total_revenue,
             total_expenses: overviewData.financials?.total_expenses,
             profit: overviewData.financials?.profit,
-            pending_approvals: overviewData.pending_approvals || overviewData.team_stats?.pending_approvals || overviewData.personal_stats?.pending_approvals,
+            pending_approvals_count: count,
           });
         }
         
@@ -458,6 +490,7 @@ const AdminDashboard: React.FC = () => {
           },
           pending_approvals: 0,
         });
+        setPendingApprovalsCount(0);
       } finally {
         setLoading(false);
       }
@@ -478,15 +511,8 @@ const AdminDashboard: React.FC = () => {
     ? Number(overview.financials.profit)
     : (totalRevenue - totalExpenses);
   
-  // Extract pending approvals from different possible locations in the response
-  const pendingApprovals = 
-    (overview?.pending_approvals !== undefined && overview?.pending_approvals !== null)
-      ? Number(overview.pending_approvals)
-      : (overview?.team_stats?.pending_approvals !== undefined && overview?.team_stats?.pending_approvals !== null)
-        ? Number(overview.team_stats.pending_approvals)
-        : (overview?.personal_stats?.pending_approvals !== undefined && overview?.personal_stats?.pending_approvals !== null)
-          ? Number(overview.personal_stats.pending_approvals)
-          : 0;
+  // Use the pending approvals count from state (fetched from multiple sources)
+  const pendingApprovals = pendingApprovalsCount;
 
   const renderWelcomeHeader = () => {
     if (!user) return <HeaderContent><h1>Dashboard</h1></HeaderContent>;
@@ -500,7 +526,11 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handlePendingApprovalsClick = () => {
-    router.push('/approvals');
+    if (pendingApprovals > 0) {
+      router.push('/approvals?status=pending');
+    } else {
+      router.push('/approvals');
+    }
   };
 
   const createStatsCard = (

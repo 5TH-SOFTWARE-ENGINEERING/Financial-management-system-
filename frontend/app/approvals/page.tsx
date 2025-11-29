@@ -48,10 +48,10 @@ const PageContainer = styled.div`
 const ContentContainer = styled.div`
   flex: 1;
   width: 100%;
-  max-width: 980px;
+  max-width: 1000px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${theme.spacing.md} ${theme.spacing.md} ${theme.spacing.xl};
 `;
 
 const HeaderContainer = styled.div`
@@ -779,6 +779,22 @@ export default function ApprovalsPage() {
     }
   };
 
+  const getItemType = (title: string): string => {
+    // Extract only the item type value from the title string
+    // Match "Item Type:" followed by value until next label pattern (e.g., "Buy-at Price:", "Sold-at Price:")
+    // This pattern captures everything after "Item Type:" until the next label (which starts with uppercase + colon)
+    const itemTypeMatch = title.match(/Item Type:\s*(.+?)(?=\s+[A-Z][a-z-]+\s+[A-Z][^:]*:|$)/i);
+    if (itemTypeMatch && itemTypeMatch[1]) {
+      return itemTypeMatch[1].trim();
+    }
+    // Fallback: try simpler pattern if the above doesn't match
+    const simpleMatch = title.match(/Item Type:\s*(\S+)/i);
+    if (simpleMatch && simpleMatch[1]) {
+      return simpleMatch[1].trim();
+    }
+    return title;
+  };
+
   const filteredApprovals = approvals.filter(item => {
     const matchesSearch = 
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -880,13 +896,15 @@ export default function ApprovalsPage() {
                           {getTypeIcon(item.type)}
                         </TypeIcon>
                         <div style={{ flex: 1 }}>
-                          <ApprovalTitle>{item.title}</ApprovalTitle>
+                          <ApprovalTitle>
+                            {item.title.includes('Item Type:') ? getItemType(item.title) : item.title}
+                          </ApprovalTitle>
                         </div>
                         <StatusBadge $status={item.status}>
                           {item.status.toUpperCase()}
                         </StatusBadge>
                       </ApprovalHeader>
-                      
+         
                       <ApprovalMeta>
                         <span style={{ textTransform: 'capitalize' }}>{item.type}</span>
                         {item.amount !== undefined && (
