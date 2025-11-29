@@ -575,13 +575,6 @@ export default function TransactionListPage() {
                           </td>
                           <td>
                             <TransactionTitle>{transaction.title}</TransactionTitle>
-                            {transaction.description && (
-                              <TransactionDescription>
-                                {transaction.description.length > 50 
-                                  ? `${transaction.description.substring(0, 50)}...` 
-                                  : transaction.description}
-                              </TransactionDescription>
-                            )}
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <CategoryBadge>{transaction.category || 'N/A'}</CategoryBadge>

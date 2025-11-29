@@ -881,9 +881,6 @@ export default function ApprovalsPage() {
                         </TypeIcon>
                         <div style={{ flex: 1 }}>
                           <ApprovalTitle>{item.title}</ApprovalTitle>
-                          {item.description && (
-                            <ApprovalDescription>{item.description}</ApprovalDescription>
-                          )}
                         </div>
                         <StatusBadge $status={item.status}>
                           {item.status.toUpperCase()}
