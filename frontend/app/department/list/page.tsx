@@ -2,167 +2,219 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
-import Navbar from '@/components/common/Navbar';
-import Sidebar from '@/components/common/Sidebar';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Building2, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { AlertCircle, Building2, Plus, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Layout from '@/components/layout';
+import { theme } from '@/components/common/theme';
 
-// ──────────────────────────────────────────
-// Styled Components
-// ──────────────────────────────────────────
-const LayoutWrapper = styled.div`
-  display: flex;
-  background: #f5f6fa;
-  min-height: 100vh;
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
 `;
 
-const SidebarWrapper = styled.div`
-  width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    width: auto;
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding-left: 250px;
+const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
-`;
-
-const InnerContent = styled.div`
-  padding: 32px;
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
 `;
 
-const Header = styled.div`
+const ContentContainer = styled.div`
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+`;
+
+const HeaderContent = styled.div`
   display: flex;
-  justify-between;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-`;
-
-const HeaderText = styled.div`
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
+  
   h1 {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 4px;
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: #ffffff;
   }
   
   p {
-    color: var(--muted-foreground);
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
   }
 `;
 
-const MessageBox = styled.div<{ type: 'error' | 'success' }>`
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+const ErrorBanner = styled.div`
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
 
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 const Card = styled.div`
-  background: #fff;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background: ${theme.colors.background};
+  padding: ${theme.spacing.lg};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  transition: box-shadow ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: ${CardShadowHover};
+  }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 48px 24px;
+  padding: ${theme.spacing.xxl};
   
   svg {
-    margin: 0 auto 16px;
-    color: var(--muted-foreground);
+    margin: 0 auto ${theme.spacing.md};
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.5;
   }
   
   p {
-    color: var(--muted-foreground);
-    margin-bottom: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    margin-bottom: ${theme.spacing.md};
+    font-size: ${theme.typography.fontSizes.md};
   }
+`;
+
+const TableContainer = styled.div`
+  overflow-x: auto;
 `;
 
 const Table = styled.table`
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 `;
 
 const TableHeader = styled.thead`
-  border-bottom: 1px solid var(--border);
+  background: ${theme.colors.backgroundSecondary};
+  border-bottom: 2px solid ${theme.colors.border};
   
   th {
     text-align: left;
-    padding: 12px 16px;
-    font-weight: 600;
-    color: var(--foreground);
-    font-size: 14px;
+    padding: ${theme.spacing.md} ${theme.spacing.lg};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.xs};
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 `;
 
 const TableBody = styled.tbody`
   tr {
-    border-bottom: 1px solid var(--border);
-    transition: background-color 0.2s;
+    border-bottom: 1px solid ${theme.colors.border};
+    transition: background-color ${theme.transitions.default};
     
     &:hover {
-      background: var(--muted);
+      background-color: ${theme.colors.backgroundSecondary};
+    }
+    
+    &:last-child {
+      border-bottom: none;
     }
     
     td {
-      padding: 12px 16px;
-      color: var(--muted-foreground);
-      font-size: 14px;
+      padding: ${theme.spacing.md} ${theme.spacing.lg};
+      color: ${TEXT_COLOR_DARK};
+      font-size: ${theme.typography.fontSizes.sm};
     }
   }
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
 `;
 
 const LoadingContainer = styled.div`
-  padding: 32px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: ${theme.spacing.md};
   
   p {
-    color: var(--muted-foreground);
-    margin-top: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0;
   }
 `;
 
 const Spinner = styled.div`
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${theme.colors.border};
+  border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto;
+  animation: spin 0.8s linear infinite;
   
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+`;
+
+const DepartmentName = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  
+  svg {
+    width: 16px;
+    height: 16px;
+    color: ${TEXT_COLOR_MUTED};
+  }
+  
+  span {
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_DARK};
   }
 `;
 
@@ -223,48 +275,43 @@ export default function DepartmentListPage() {
 
   if (loading) {
     return (
-      <LayoutWrapper>
-        <SidebarWrapper>
-          <Sidebar />
-        </SidebarWrapper>
-        <ContentArea>
-          <Navbar />
-          <LoadingContainer>
-            <Spinner />
-            <p>Loading departments...</p>
-          </LoadingContainer>
-        </ContentArea>
-      </LayoutWrapper>
+      <Layout>
+        <PageContainer>
+          <ContentContainer>
+            <LoadingContainer>
+              <Spinner />
+              <p>Loading departments...</p>
+            </LoadingContainer>
+          </ContentContainer>
+        </PageContainer>
+      </Layout>
     );
   }
 
   return (
-    <LayoutWrapper>
-      <SidebarWrapper>
-        <Sidebar />
-      </SidebarWrapper>
-      <ContentArea>
-        <Navbar />
-
-        <InnerContent>
-          <Header>
-            <HeaderText>
-              <h1>Departments</h1>
-              <p>Manage organizational departments</p>
-            </HeaderText>
-            <Link href="/department/create">
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Department
-              </Button>
-            </Link>
-          </Header>
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
+          <HeaderContainer>
+            <HeaderContent>
+              <div>
+                <h1>Departments</h1>
+                <p>Manage organizational departments</p>
+              </div>
+              <Link href="/department/create">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Department
+                </Button>
+              </Link>
+            </HeaderContent>
+          </HeaderContainer>
 
           {error && (
-            <MessageBox type="error">
-              <AlertCircle size={18} />
+            <ErrorBanner>
+              <AlertCircle />
               <span>{error}</span>
-            </MessageBox>
+            </ErrorBanner>
           )}
 
           <Card>
@@ -280,7 +327,7 @@ export default function DepartmentListPage() {
                 </Link>
               </EmptyState>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <TableContainer>
                 <Table>
                   <TableHeader>
                     <tr>
@@ -295,12 +342,10 @@ export default function DepartmentListPage() {
                     {departments.map((dept) => (
                       <tr key={dept.id}>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Building2 size={16} style={{ color: 'var(--muted-foreground)' }} />
-                            <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
-                              {dept.name}
-                            </span>
-                          </div>
+                          <DepartmentName>
+                            <Building2 size={16} />
+                            <span>{dept.name}</span>
+                          </DepartmentName>
                         </td>
                         <td>{dept.description || 'N/A'}</td>
                         <td>{dept.user_count ?? dept.employee_count ?? 0}</td>
@@ -314,7 +359,6 @@ export default function DepartmentListPage() {
                             <Link href={`/department/edit/${dept.id}`}>
                               <Button size="sm" variant="secondary">
                                 <Edit className="h-4 w-4 mr-1" />
-                                Edit
                               </Button>
                             </Link>
                             <Button 
@@ -323,7 +367,6 @@ export default function DepartmentListPage() {
                               onClick={() => handleDelete(dept.id)}
                             >
                               <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
                             </Button>
                           </ActionButtons>
                         </td>
@@ -331,11 +374,11 @@ export default function DepartmentListPage() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </TableContainer>
             )}
           </Card>
-        </InnerContent>
-      </ContentArea>
-    </LayoutWrapper>
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
   );
 }
