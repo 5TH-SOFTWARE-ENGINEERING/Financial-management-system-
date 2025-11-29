@@ -1,10 +1,12 @@
 # app/api/v1/users.py
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from ...core.database import get_db
 from ...crud.user import user as user_crud
+from ...crud import login_history as login_history_crud
 from ...schemas.user import UserCreate, UserOut, UserUpdate, UserChangePassword
 from ...models.user import User, UserRole
 from ...api.deps import get_current_active_user, require_min_role
@@ -13,29 +15,295 @@ from ...api.deps import get_current_active_user, require_min_role
 router = APIRouter()
 
 
+# ------------------------------------------------------------------
+# 2FA Endpoints (must come before /me route for proper routing)
+# ------------------------------------------------------------------
+class TwoFactorSetupResponse(BaseModel):
+    secret: str
+    qr_code_url: str
+    manual_entry_key: str
+
+class TwoFactorVerifyRequest(BaseModel):
+    code: str
+
+class TwoFactorStatusResponse(BaseModel):
+    enabled: bool
+
+@router.get("/me/2fa/status", response_model=TwoFactorStatusResponse)
+def get_2fa_status(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get current 2FA status"""
+    return {"enabled": current_user.is_2fa_enabled or False}
+
+@router.post("/me/2fa/setup", response_model=TwoFactorSetupResponse)
+def setup_2fa(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Generate 2FA secret and QR code for setup"""
+    import pyotp
+    from urllib.parse import quote
+    
+    from ...core.config import settings
+    
+    # Generate a new secret
+    secret = pyotp.random_base32()
+    
+    # Create TOTP object
+    totp = pyotp.TOTP(secret)
+    
+    # Generate provisioning URI
+    issuer_name = settings.APP_NAME or "Finance Management System"
+    account_name = current_user.email or current_user.username
+    provisioning_uri = totp.provisioning_uri(
+        name=account_name,
+        issuer_name=issuer_name
+    )
+    
+    # Generate QR code URL using online service (fallback if qrcode library not available)
+    # Using QR Server API (free, no auth required)
+    qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={quote(provisioning_uri)}"
+    
+    # Store secret temporarily (not enabled yet - user needs to verify first)
+    current_user.otp_secret = secret
+    current_user.is_2fa_enabled = False  # Not enabled until verified
+    db.commit()
+    db.refresh(current_user)
+    
+    return {
+        "secret": secret,
+        "qr_code_url": qr_code_url,
+        "manual_entry_key": secret
+    }
+
+@router.post("/me/2fa/verify", response_model=dict)
+def verify_2fa(
+    verify_data: TwoFactorVerifyRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Verify 2FA code and enable 2FA"""
+    import pyotp
+    
+    if not current_user.otp_secret:
+        raise HTTPException(status_code=400, detail="2FA setup not initiated. Please setup 2FA first.")
+    
+    # Verify the code
+    totp = pyotp.TOTP(current_user.otp_secret)
+    if not totp.verify(verify_data.code, valid_window=1):
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+    
+    # Enable 2FA
+    current_user.is_2fa_enabled = True
+    db.commit()
+    db.refresh(current_user)
+    
+    return {"message": "2FA enabled successfully", "enabled": True}
+
+class TwoFactorDisableRequest(BaseModel):
+    current_password: str
+
+@router.post("/me/2fa/disable", response_model=dict)
+def disable_2fa(
+    password_data: TwoFactorDisableRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Disable 2FA (requires password verification)"""
+    from ...core.security import verify_password
+    
+    # Verify password
+    if not verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    # Disable 2FA and clear secret
+    current_user.is_2fa_enabled = False
+    current_user.otp_secret = None
+    db.commit()
+    db.refresh(current_user)
+    
+    return {"message": "2FA disabled successfully", "enabled": False}
+
+
+# ------------------------------------------------------------------
+# IP Restriction Endpoints (must come before /me route for proper routing)
+# ------------------------------------------------------------------
+class IPRestrictionStatusResponse(BaseModel):
+    enabled: bool
+    allowed_ips: List[str]
+
+class IPRestrictionUpdateRequest(BaseModel):
+    enabled: bool
+
+class AddIPRequest(BaseModel):
+    ip_address: str
+
+@router.get("/me/ip-restriction", response_model=IPRestrictionStatusResponse)
+def get_ip_restriction_status(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get IP restriction status and allowed IPs"""
+    import json
+    allowed_ips = []
+    if current_user.allowed_ips:
+        try:
+            allowed_ips = json.loads(current_user.allowed_ips)
+            if not isinstance(allowed_ips, list):
+                allowed_ips = []
+        except (json.JSONDecodeError, ValueError):
+            # Fallback to comma-separated string
+            allowed_ips = [ip.strip() for ip in current_user.allowed_ips.split(',') if ip.strip()]
+    
+    return {
+        "enabled": current_user.ip_restriction_enabled or False,
+        "allowed_ips": allowed_ips
+    }
+
+@router.put("/me/ip-restriction", response_model=IPRestrictionStatusResponse)
+def update_ip_restriction(
+    ip_data: IPRestrictionUpdateRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Enable or disable IP restriction"""
+    current_user.ip_restriction_enabled = ip_data.enabled
+    db.commit()
+    db.refresh(current_user)
+    
+    import json
+    allowed_ips = []
+    if current_user.allowed_ips:
+        try:
+            allowed_ips = json.loads(current_user.allowed_ips)
+            if not isinstance(allowed_ips, list):
+                allowed_ips = []
+        except (json.JSONDecodeError, ValueError):
+            allowed_ips = [ip.strip() for ip in current_user.allowed_ips.split(',') if ip.strip()]
+    
+    return {
+        "enabled": current_user.ip_restriction_enabled,
+        "allowed_ips": allowed_ips
+    }
+
+@router.post("/me/ip-restriction/allowed-ips", response_model=IPRestrictionStatusResponse)
+def add_allowed_ip(
+    ip_request: AddIPRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Add an IP address to the allowed list"""
+    import json
+    import re
+    
+    # Validate IP address format (IPv4 or IPv4 CIDR)
+    ip_pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\/(?:[0-9]|[1-2][0-9]|3[0-2]))?$'
+    if not re.match(ip_pattern, ip_request.ip_address):
+        raise HTTPException(status_code=400, detail="Invalid IP address format")
+    
+    # Get current allowed IPs
+    allowed_ips = []
+    if current_user.allowed_ips:
+        try:
+            allowed_ips = json.loads(current_user.allowed_ips)
+            if not isinstance(allowed_ips, list):
+                allowed_ips = []
+        except (json.JSONDecodeError, ValueError):
+            allowed_ips = [ip.strip() for ip in current_user.allowed_ips.split(',') if ip.strip()]
+    
+    # Add IP if not already in list
+    if ip_request.ip_address not in allowed_ips:
+        allowed_ips.append(ip_request.ip_address)
+        current_user.allowed_ips = json.dumps(allowed_ips)
+        db.commit()
+        db.refresh(current_user)
+    else:
+        raise HTTPException(status_code=400, detail="IP address already in allowed list")
+    
+    return {
+        "enabled": current_user.ip_restriction_enabled or False,
+        "allowed_ips": allowed_ips
+    }
+
+@router.delete("/me/ip-restriction/allowed-ips/{ip_address:path}", response_model=IPRestrictionStatusResponse)
+def remove_allowed_ip(
+    ip_address: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Remove an IP address from the allowed list"""
+    import json
+    from urllib.parse import unquote
+    
+    # Decode URL-encoded IP address
+    ip_address = unquote(ip_address)
+    
+    # Get current allowed IPs
+    allowed_ips = []
+    if current_user.allowed_ips:
+        try:
+            allowed_ips = json.loads(current_user.allowed_ips)
+            if not isinstance(allowed_ips, list):
+                allowed_ips = []
+        except (json.JSONDecodeError, ValueError):
+            allowed_ips = [ip.strip() for ip in current_user.allowed_ips.split(',') if ip.strip()]
+    
+    # Remove IP if exists
+    if ip_address in allowed_ips:
+        allowed_ips.remove(ip_address)
+        current_user.allowed_ips = json.dumps(allowed_ips) if allowed_ips else None
+        db.commit()
+        db.refresh(current_user)
+    else:
+        raise HTTPException(status_code=404, detail="IP address not found in allowed list")
+    
+    return {
+        "enabled": current_user.ip_restriction_enabled or False,
+        "allowed_ips": allowed_ips
+    }
+
+
 # GET /me/verification-history
 @router.get("/me/verification-history", response_model=List[dict])
 def get_verification_history(
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    limit: int = 50
 ):
     """Get verification/login history for current user"""
-    # Since we don't have a login history table, return basic info from last_login
-    history = []
-    if current_user.last_login:
-        history.append({
-            "id": "1",
-            "device": "Unknown",  # Would need to track this in real implementation
-            "location": "Unknown",  # Would need IP geolocation service
-            "ip": "Unknown",  # Would need to track this in real implementation
-            "date": current_user.last_login.isoformat(),
-            "success": True
-        })
-    return history
+    try:
+        # Get login history from database
+        login_history = login_history_crud.get_by_user(db, current_user.id, skip=0, limit=limit)
+        
+        # Format history entries
+        history = []
+        for entry in login_history:
+            history.append({
+                "id": str(entry.id),
+                "device": entry.device or "Unknown Device",
+                "location": entry.location or "Unknown",
+                "ip": entry.ip_address or "Unknown",
+                "date": entry.login_at.isoformat() if entry.login_at else "",
+                "success": entry.success
+            })
+        
+        return history
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error fetching verification history for user {current_user.id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch verification history: {str(e)}"
+        )
+
 # GET /me
 @router.get("/me", response_model=UserOut)
 def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
+
 # PUT /me
 @router.put("/me", response_model=UserOut)
 def update_user_me(
@@ -54,10 +322,13 @@ def update_user_me(
 # ------------------------------------------------------------------
 # POST /me/change-password
 # ------------------------------------------------------------------
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 @router.post("/me/change-password", response_model=dict)
 def change_password(
-    current_password: str,
-    new_password: str,
+    password_data: PasswordChangeRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -65,21 +336,23 @@ def change_password(
     from ...core.security import verify_password, get_password_hash
     
     # Verify current password
-    if not verify_password(current_password, current_user.hashed_password):
+    if not verify_password(password_data.current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     
     # Validate new password
-    if len(new_password) < 8:
+    if len(password_data.new_password) < 8:
         raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
     
     # Update password
-    current_user.hashed_password = get_password_hash(new_password)
+    current_user.hashed_password = get_password_hash(password_data.new_password)
     db.commit()
     db.refresh(current_user)
     
     return {"message": "Password changed successfully"}
 
 
+# ------------------------------------------------------------------
+# User Management Endpoints
 # ------------------------------------------------------------------
 # GET / (List users - manager and above)
 # ------------------------------------------------------------------

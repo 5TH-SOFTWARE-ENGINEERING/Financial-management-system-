@@ -340,11 +340,6 @@ const AdminDashboard: React.FC = () => {
       } catch (err: any) {
         const errorMessage = err.response?.data?.detail || err.message || 'Failed to load dashboard data';
         setError(errorMessage);
-        console.error('Dashboard load error:', {
-          error: err,
-          response: err.response?.data,
-          message: errorMessage,
-        });
         // Set default values on error so UI still renders
         setOverview({
           financials: {

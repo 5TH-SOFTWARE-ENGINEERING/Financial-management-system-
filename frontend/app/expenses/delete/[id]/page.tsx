@@ -1,7 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import Navbar from '@/components/common/Navbar';
+import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
 import { ArrowLeft, DollarSign, Loader2, AlertTriangle } from 'lucide-react';
@@ -20,6 +23,202 @@ interface Expense {
   recurring_frequency?: string | null;
   is_approved: boolean;
 }
+
+// ──────────────────────────────────────────
+// Styled Components
+// ──────────────────────────────────────────
+const LayoutWrapper = styled.div`
+  display: flex;
+  background: #f5f6fa;
+  min-height: 100vh;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    width: auto;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-left: 250px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InnerContent = styled.div`
+  padding: 32px;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+`;
+
+const BackLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-bottom: 16px;
+  transition: 0.2s;
+
+  &:hover {
+    color: var(--foreground);
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const Subtitle = styled.p`
+  color: var(--muted-foreground);
+  margin-bottom: 24px;
+`;
+
+const FormCard = styled.div`
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 2px solid #fecaca;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+`;
+
+const MessageBox = styled.div<{ type: 'error' | 'success' }>`
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
+  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
+  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+`;
+
+const WarningBox = styled.div`
+  display: flex;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #fef2f2;
+  border-radius: 8px;
+`;
+
+const WarningIcon = styled.div`
+  padding: 12px;
+  background: #fee2e2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const WarningText = styled.div`
+  flex: 1;
+  
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--foreground);
+  }
+  
+  p {
+    color: var(--muted-foreground);
+    font-size: 14px;
+  }
+`;
+
+const ExpenseDetails = styled.div`
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  
+  > div {
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+`;
+
+const DetailRow = styled.div`
+  display: flex;
+  gap: 8px;
+  
+  .label {
+    font-weight: 600;
+    color: var(--foreground);
+  }
+  
+  .value {
+    color: var(--muted-foreground);
+  }
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+`;
+
+const Spinner = styled(Loader2)`
+  animation: spin 1s linear infinite;
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const StatusBadge = styled.span<{ $approved: boolean }>`
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${(p) => (p.$approved ? '#d1fae5' : '#fef3c7')};
+  color: ${(p) => (p.$approved ? '#065f46' : '#92400e')};
+`;
+
+const RecurringBadge = styled.span`
+  margin-left: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #dbeafe;
+  color: #1e40af;
+`;
 
 export default function DeleteExpensePage() {
   const router = useRouter();
@@ -90,153 +289,161 @@ export default function DeleteExpensePage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-2xl mx-auto">
-        <div className="text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading expense...</p>
-        </div>
-      </div>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <LoadingContainer>
+            <Spinner size={32} />
+            <p>Loading expense...</p>
+          </LoadingContainer>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   if (!expense) {
     return (
-      <div className="p-8 max-w-2xl mx-auto">
-        <div className="mb-6">
-          <Link 
-            href="/expenses/list"
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Expenses
-          </Link>
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2 text-red-700">
-          <AlertTriangle size={16} />
-          <span>{error || 'Expense not found'}</span>
-        </div>
-      </div>
+      <LayoutWrapper>
+        <SidebarWrapper>
+          <Sidebar />
+        </SidebarWrapper>
+        <ContentArea>
+          <Navbar />
+          <InnerContent>
+            <BackLink href="/expenses/list">
+              <ArrowLeft size={16} />
+              Back to Expenses
+            </BackLink>
+            <MessageBox type="error">
+              <AlertTriangle size={18} />
+              {error || 'Expense not found'}
+            </MessageBox>
+          </InnerContent>
+        </ContentArea>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link 
-          href="/expenses/list"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Expenses
-        </Link>
-        <div className="flex items-center gap-3 mb-2">
-          <DollarSign className="h-8 w-8 text-red-600" />
-          <h1 className="text-3xl font-bold text-foreground">Delete Expense</h1>
-        </div>
-        <p className="text-muted-foreground">Confirm deletion of expense</p>
-      </div>
+    <LayoutWrapper>
+      <SidebarWrapper>
+        <Sidebar />
+      </SidebarWrapper>
+      <ContentArea>
+        <Navbar />
+        <InnerContent>
+          <BackLink href="/expenses/list">
+            <ArrowLeft size={16} />
+            Back to Expenses
+          </BackLink>
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
-          {error}
-        </div>
-      )}
+          <Title>
+            <DollarSign className="h-8 w-8" style={{ color: '#dc2626' }} />
+            Delete Expense
+          </Title>
+          <Subtitle>Confirm deletion of expense</Subtitle>
 
-      <div className="bg-card p-6 rounded-lg border border-red-200 shadow-sm">
-        <div className="flex items-start gap-4 mb-6">
-          <div className="p-3 bg-red-100 rounded-full">
-            <AlertTriangle className="h-6 w-6 text-red-600" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-foreground mb-2">
-              Are you sure you want to delete this expense?
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              This action cannot be undone. All data associated with this expense will be permanently deleted.
-            </p>
-          </div>
-        </div>
+          {error && (
+            <MessageBox type="error">
+              <AlertTriangle size={18} />
+              {error}
+            </MessageBox>
+          )}
 
-        <div className="bg-muted p-4 rounded-md mb-6">
-          <div className="space-y-2">
-            <div>
-              <span className="font-medium text-foreground">Title:</span>{' '}
-              <span className="text-muted-foreground">{expense.title}</span>
-            </div>
-            {expense.description && (
-              <div>
-                <span className="font-medium text-foreground">Description:</span>{' '}
-                <span className="text-muted-foreground">{expense.description}</span>
-              </div>
-            )}
-            <div>
-              <span className="font-medium text-foreground">Category:</span>{' '}
-              <span className="text-muted-foreground capitalize">{expense.category}</span>
-            </div>
-            <div>
-              <span className="font-medium text-foreground">Amount:</span>{' '}
-              <span className="text-muted-foreground font-semibold">{formatCurrency(expense.amount)}</span>
-            </div>
-            {expense.vendor && (
-              <div>
-                <span className="font-medium text-foreground">Vendor:</span>{' '}
-                <span className="text-muted-foreground">{expense.vendor}</span>
-              </div>
-            )}
-            <div>
-              <span className="font-medium text-foreground">Date:</span>{' '}
-              <span className="text-muted-foreground">{formatDate(expense.date)}</span>
-            </div>
-            <div>
-              <span className="font-medium text-foreground">Status:</span>{' '}
-              <span className={`px-2 py-1 rounded text-xs ${
-                expense.is_approved 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-yellow-100 text-yellow-800'
-              }`}>
-                {expense.is_approved ? 'Approved' : 'Pending'}
-              </span>
-              {expense.is_recurring && (
-                <span className="ml-2 px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
-                  Recurring ({expense.recurring_frequency})
-                </span>
+          <FormCard>
+            <WarningBox>
+              <WarningIcon>
+                <AlertTriangle size={24} style={{ color: '#dc2626' }} />
+              </WarningIcon>
+              <WarningText>
+                <h2>Are you sure you want to delete this expense?</h2>
+                <p>
+                  This action cannot be undone. All data associated with this expense will be permanently deleted.
+                </p>
+              </WarningText>
+            </WarningBox>
+
+            <ExpenseDetails>
+              <DetailRow>
+                <span className="label">Title:</span>
+                <span className="value">{expense.title}</span>
+              </DetailRow>
+              {expense.description && (
+                <DetailRow>
+                  <span className="label">Description:</span>
+                  <span className="value">{expense.description}</span>
+                </DetailRow>
               )}
-            </div>
-          </div>
-        </div>
+              <DetailRow>
+                <span className="label">Category:</span>
+                <span className="value" style={{ textTransform: 'capitalize' }}>{expense.category}</span>
+              </DetailRow>
+              <DetailRow>
+                <span className="label">Amount:</span>
+                <span className="value" style={{ fontWeight: 600 }}>{formatCurrency(expense.amount)}</span>
+              </DetailRow>
+              {expense.vendor && (
+                <DetailRow>
+                  <span className="label">Vendor:</span>
+                  <span className="value">{expense.vendor}</span>
+                </DetailRow>
+              )}
+              <DetailRow>
+                <span className="label">Date:</span>
+                <span className="value">{formatDate(expense.date)}</span>
+              </DetailRow>
+              <DetailRow>
+                <span className="label">Status:</span>
+                <span className="value">
+                  <StatusBadge $approved={expense.is_approved}>
+                    {expense.is_approved ? 'Approved' : 'Pending'}
+                  </StatusBadge>
+                  {expense.is_recurring && (
+                    <RecurringBadge>
+                      Recurring ({expense.recurring_frequency})
+                    </RecurringBadge>
+                  )}
+                </span>
+              </DetailRow>
+            </ExpenseDetails>
 
-        <div className="flex gap-4">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => router.push('/expenses/list')}
-            disabled={deleting}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="flex-1"
-          >
-            {deleting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Deleting...
-              </>
-            ) : (
-              <>
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Delete Expense
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
+            <ButtonRow>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => router.push('/expenses/list')}
+                disabled={deleting}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{ flex: 1 }}
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Delete Expense
+                  </>
+                )}
+              </Button>
+            </ButtonRow>
+          </FormCard>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }
 

@@ -15,7 +15,6 @@ import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Building2, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useUserStore } from '@/store/userStore';
 
 // ──────────────────────────────────────────
 // Styled Components Layout
@@ -159,8 +158,7 @@ const LoadingContainer = styled.div`
 export default function EditDepartmentPage() {
   const router = useRouter();
   const params = useParams();
-  const departmentId = params?.id ? parseInt(params.id as string, 10) : null;
-  const { allUsers, fetchAllUsers } = useUserStore();
+  const departmentId = params?.id ? (params.id as string) : null;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -177,7 +175,6 @@ export default function EditDepartmentPage() {
   useEffect(() => {
     if (departmentId) {
       loadDepartment();
-      fetchAllUsers();
     }
   }, [departmentId]);
 
@@ -194,7 +191,7 @@ export default function EditDepartmentPage() {
       reset({
         name: department.name || '',
         description: department.description || '',
-        managerId: department.manager_id?.toString() || '',
+        managerId: '', // Departments don't have managers in current implementation
       });
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to load department';
@@ -213,12 +210,11 @@ export default function EditDepartmentPage() {
 
     try {
       const departmentData = {
-        name: data.name,
-        description: data.description || null,
-        manager_id: data.managerId ? parseInt(data.managerId, 10) : null,
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
       };
 
-      await apiClient.updateDepartment(departmentId, departmentData);
+      await apiClient.updateDepartment(departmentId as string, departmentData);
       toast.success('Department updated successfully!');
       router.push('/department/list');
     } catch (err: any) {
@@ -230,10 +226,6 @@ export default function EditDepartmentPage() {
     }
   };
 
-  // Filter managers from all users
-  const managers = allUsers.filter(
-    user => user.role === 'admin' || user.role === 'finance_manager'
-  );
 
   if (loading) {
     return (
@@ -301,28 +293,6 @@ export default function EditDepartmentPage() {
                 rows={4}
               />
               {errors.description && <FieldError>{errors.description.message}</FieldError>}
-            </FormGroup>
-
-            <FormGroup>
-              <Label htmlFor="managerId">Manager</Label>
-              <Select
-                id="managerId"
-                {...register('managerId')}
-                disabled={submitting}
-              >
-                <option value="">Select a manager (optional)</option>
-                {managers.map((manager) => (
-                  <option key={manager.id} value={manager.id}>
-                    {manager.name} ({manager.email})
-                  </option>
-                ))}
-              </Select>
-              {errors.managerId && <FieldError>{errors.managerId.message}</FieldError>}
-              {managers.length === 0 && (
-                <p style={{ fontSize: '14px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
-                  No managers available. Create a manager user first.
-                </p>
-              )}
             </FormGroup>
 
             <ButtonRow>

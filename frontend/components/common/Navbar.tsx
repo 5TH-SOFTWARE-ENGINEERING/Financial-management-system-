@@ -344,20 +344,48 @@ export default function Navbar() {
 
   // Load unread notification count
   useEffect(() => {
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    let intervalId: NodeJS.Timeout | null = null;
+    
     const loadUnreadCount = async () => {
       try {
         const response = await apiClient.getUnreadCount();
         setUnreadCount(response.data?.unread_count || 0);
-      } catch (err) {
-        console.error('Failed to load unread count:', err);
+        retryCount = 0; // Reset retry count on success
+      } catch (err: any) {
+        // Only log errors if it's not a network/connection error
+        // Network errors are expected when backend is down, so we suppress them
+        const isNetworkError = err.code === 'ERR_NETWORK' || 
+                               err.message === 'Network Error' ||
+                               err.message?.includes('ERR_CONNECTION_REFUSED') ||
+                               !err.response;
+        
+        if (!isNetworkError) {
+          // Only log non-network errors (e.g., 401, 403, 500)
+          console.error('Failed to load unread count:', err);
+        }
+        
+        // If backend is down, set count to 0 and stop retrying aggressively
+        if (isNetworkError && retryCount >= MAX_RETRIES) {
+          setUnreadCount(0);
+          // Increase interval to 60 seconds if backend is down
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = setInterval(loadUnreadCount, 60000);
+          }
+        }
+        retryCount++;
       }
     };
 
     if (user) {
       loadUnreadCount();
-      // Refresh every 30 seconds
-      const interval = setInterval(loadUnreadCount, 30000);
-      return () => clearInterval(interval);
+      // Refresh every 30 seconds (or 60 seconds if backend is down)
+      intervalId = setInterval(loadUnreadCount, 30000);
+      return () => {
+        if (intervalId) clearInterval(intervalId);
+      };
     }
   }, [user]);
 
@@ -370,9 +398,9 @@ export default function Navbar() {
   const handleAddClick = () => {
     // Context-aware routing based on current path
     if (pathname?.includes('/expenses')) {
-      router.push('/expenses/create');
+      router.push('/expenses/items');
     } else if (pathname?.includes('/revenue')) {
-      router.push('/revenue/create');
+      router.push('/revenue/list');
     } else if (pathname?.includes('/project')) {
       router.push('/project/create');
     } else if (pathname?.includes('/employees')) {
@@ -384,8 +412,8 @@ export default function Navbar() {
     } else if (pathname?.includes('/department')) {
       router.push('/department/create');
     } else {
-      // Default to expenses create
-      router.push('/expenses/create');
+      // Default to expenses items
+      router.push('/expenses/items');
     }
   };
 

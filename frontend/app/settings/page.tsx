@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
-import { Settings, Users, Globe, Lock, Bell } from 'lucide-react';
+import { Settings, Users, Globe, Lock, Bell, Database } from 'lucide-react';
 
 const PageContainer = styled.div`
   background: #f8fafc;
@@ -106,6 +106,8 @@ const SettingsPage: React.FC = () => {
               <NavItem href="/settings/users-roles/user-roles" $active={activeTab === 'users-roles'}>
                 <Users /> Users & Roles
               </NavItem>
+              <NavItem href="/settings/backup" $active={activeTab === 'backup'}> 
+              <Database/> Backup</NavItem>
             </Nav>
 
             <SettingContent>

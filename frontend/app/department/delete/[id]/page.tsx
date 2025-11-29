@@ -166,16 +166,17 @@ const LoadingContainer = styled.div`
 `;
 
 interface Department {
-  id: number;
+  id: string;
   name: string;
   description?: string | null;
   manager_id?: number | null;
+  user_count?: number;
 }
 
 export default function DeleteDepartmentPage() {
   const router = useRouter();
   const params = useParams();
-  const departmentId = params?.id ? parseInt(params.id as string, 10) : null;
+  const departmentId = params?.id ? (params.id as string) : null;
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -216,7 +217,7 @@ export default function DeleteDepartmentPage() {
     setError(null);
 
     try {
-      await apiClient.deleteDepartment(departmentId);
+      await apiClient.deleteDepartment(departmentId as string);
       toast.success('Department deleted successfully!');
       router.push('/department/list');
     } catch (err: any) {

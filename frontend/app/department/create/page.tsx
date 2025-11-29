@@ -15,7 +15,6 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Building2, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useUserStore } from '@/store/userStore';
 
 // ──────────────────────────────────────────
 // Styled Components Layout
@@ -148,7 +147,6 @@ const Select = styled.select`
 
 export default function CreateDepartmentPage() {
   const router = useRouter();
-  const { allUsers, fetchAllUsers } = useUserStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -161,10 +159,6 @@ export default function CreateDepartmentPage() {
     resolver: zodResolver(CreateDepartmentSchema),
   });
 
-  // Fetch users for manager selection
-  useEffect(() => {
-    fetchAllUsers();
-  }, [fetchAllUsers]);
 
   const onSubmit = async (data: CreateDepartmentInput) => {
     setLoading(true);
@@ -172,9 +166,8 @@ export default function CreateDepartmentPage() {
 
     try {
       const departmentData = {
-        name: data.name,
-        description: data.description || null,
-        manager_id: data.managerId ? parseInt(data.managerId, 10) : null,
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
       };
 
       const response = await apiClient.createDepartment(departmentData);
@@ -190,10 +183,6 @@ export default function CreateDepartmentPage() {
     }
   };
 
-  // Filter managers from all users
-  const managers = allUsers.filter(
-    user => user.role === 'admin' || user.role === 'finance_manager'
-  );
 
   return (
     <LayoutWrapper>
@@ -244,28 +233,6 @@ export default function CreateDepartmentPage() {
                 rows={4}
               />
               {errors.description && <FieldError>{errors.description.message}</FieldError>}
-            </FormGroup>
-
-            <FormGroup>
-              <Label htmlFor="managerId">Manager</Label>
-              <Select
-                id="managerId"
-                {...register('managerId')}
-                disabled={loading}
-              >
-                <option value="">Select a manager (optional)</option>
-                {managers.map((manager) => (
-                  <option key={manager.id} value={manager.id}>
-                    {manager.name} ({manager.email})
-                  </option>
-                ))}
-              </Select>
-              {errors.managerId && <FieldError>{errors.managerId.message}</FieldError>}
-              {managers.length === 0 && (
-                <p style={{ fontSize: '14px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
-                  No managers available. Create a manager user first.
-                </p>
-              )}
             </FormGroup>
 
             <ButtonRow>

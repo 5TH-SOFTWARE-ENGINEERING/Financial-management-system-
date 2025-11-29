@@ -80,9 +80,13 @@ class ApiClient {
         
         // Handle 403 Forbidden - user doesn't have permission
         if (error.response?.status === 403) {
-          if (typeof window !== 'undefined') {
-            // Could redirect to unauthorized page if needed
-            console.warn('Access forbidden:', error.response?.data?.detail || 'Insufficient permissions');
+          const url = error.config?.url || '';
+          // Only log 403s for non-backup endpoints to reduce noise
+          // Backup endpoints will show proper error messages in the UI
+          if (!url.includes('/backup')) {
+            if (typeof window !== 'undefined') {
+              console.warn('Access forbidden:', error.response?.data?.detail || 'Insufficient permissions');
+            }
           }
         }
         
@@ -97,17 +101,30 @@ class ApiClient {
           }
         }
         
-        // Handle network errors
+        // Handle network errors - suppress repetitive errors for polling endpoints
         if (!error.response) {
-          const errorMessage = error.message || 'Network error: Unable to connect to server';
-          console.error('Network error:', errorMessage);
+          const url = error.config?.url || '';
+          // Suppress errors for polling endpoints to reduce console noise
+          // These are expected when backend is down
+          const isPollingEndpoint = url.includes('/notifications/unread/count') || 
+                                   url.includes('/dashboard/recent-activity') ||
+                                   url.includes('/health');
           
-          // Provide more helpful error messages
-          if (error.code === 'ECONNREFUSED' || error.message?.includes('Network Error')) {
-            console.error('Backend server may not be running. Please ensure the backend is running on http://localhost:8000');
-          } else if (error.code === 'ERR_NETWORK') {
-            console.error('Network request failed. Check your internet connection and backend server status.');
+          if (!isPollingEndpoint) {
+            // Only log non-polling endpoint errors
+            const errorMessage = error.message || 'Network error: Unable to connect to server';
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Network error:', errorMessage);
+              
+              if (error.code === 'ECONNREFUSED' || error.message?.includes('Network Error')) {
+                console.error('Backend server may not be running. Please ensure the backend is running on http://localhost:8000');
+              } else if (error.code === 'ERR_NETWORK') {
+                console.error('Network request failed. Check your internet connection and backend server status.');
+              }
+            }
           }
+          // Polling endpoint errors are silently handled - they're expected when backend is down
         }
         
         return Promise.reject(error);
@@ -240,13 +257,8 @@ class ApiClient {
   async getRevenues(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
     // For reports, we need all data, so increase limit significantly
     const params = { ...filters, limit: 10000, skip: 0 };
-    console.log('getRevenues - Request params:', params);
     const response = await this.get('/revenue', { params });
     const data = Array.isArray(response.data) ? response.data : [];
-    console.log('getRevenues - Response:', {
-      data_length: data.length,
-      first_item: data[0],
-    });
     return { ...response, data };
   }
 
@@ -269,13 +281,8 @@ class ApiClient {
   async getExpenses(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
     // For reports, we need all data, so increase limit significantly
     const params = { ...filters, limit: 10000, skip: 0 };
-    console.log('getExpenses - Request params:', params);
     const response = await this.get('/expenses', { params });
     const data = Array.isArray(response.data) ? response.data : [];
-    console.log('getExpenses - Response:', {
-      data_length: data.length,
-      first_item: data[0],
-    });
     return { ...response, data };
   }
 
@@ -324,7 +331,7 @@ class ApiClient {
 
       return { data: transactions };
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      // Error handled by caller
       throw error;
     }
   }
@@ -577,20 +584,8 @@ class ApiClient {
       this.getExpenses(),
     ]);
 
-    console.log('getFinancialSummary - Raw API responses:', {
-      revenues_count: allRevenuesRes.data?.length || 0,
-      expenses_count: allExpensesRes.data?.length || 0,
-      revenues_sample: allRevenuesRes.data?.[0],
-      expenses_sample: allExpensesRes.data?.[0],
-    });
-
     let revenues = allRevenuesRes.data || [];
     let expenses = allExpensesRes.data || [];
-    
-    console.log('getFinancialSummary - After extraction:', {
-      revenues_count: revenues.length,
-      expenses_count: expenses.length,
-    });
     
     // Filter by date range if provided (client-side filtering)
     if (startDate && endDate) {
@@ -675,16 +670,6 @@ class ApiClient {
       },
     };
 
-    console.log('getFinancialSummary - Final result:', {
-      total_revenue: totalRevenue,
-      total_expenses: totalExpenses,
-      profit,
-      revenue_count: revenueCount,
-      expense_count: expenseCount,
-      revenue_categories: Object.keys(revenueByCategory).length,
-      expense_categories: Object.keys(expenseByCategory).length,
-    });
-
     return result;
   }
 
@@ -756,8 +741,65 @@ class ApiClient {
     return this.get('/admin/roles');
   }
 
+  // Backup endpoints
+  async createBackup(includeFiles: boolean = false): Promise<ApiResponse<{ message: string }>> {
+    const response = await this.client.post('/admin/backup/create', null, {
+      params: { include_files: includeFiles }
+    });
+    return this.normalizeResponse<{ message: string }>(response.data);
+  }
+
+  async listBackups(): Promise<ApiResponse<{ backups: any[] }>> {
+    return this.get('/admin/backup/list');
+  }
+
+  async restoreBackup(backupName: string): Promise<ApiResponse<{ message: string }>> {
+    const response = await this.client.post('/admin/backup/restore', null, {
+      params: { backup_name: backupName }
+    });
+    return this.normalizeResponse<{ message: string }>(response.data);
+  }
+
+  async deleteBackup(backupName: string): Promise<ApiResponse<{ message: string }>> {
+    return this.delete(`/admin/backup/${encodeURIComponent(backupName)}`);
+  }
+
   async getVerificationHistory(): Promise<ApiResponse<any[]>> {
     return this.get('/users/me/verification-history');
+  }
+
+  // 2FA endpoints
+  async get2FAStatus(): Promise<ApiResponse<{ enabled: boolean }>> {
+    return this.get('/users/me/2fa/status');
+  }
+
+  async setup2FA(): Promise<ApiResponse<{ secret: string; qr_code_url: string; manual_entry_key: string }>> {
+    return this.post('/users/me/2fa/setup');
+  }
+
+  async verify2FA(code: string): Promise<ApiResponse<{ message: string; enabled: boolean }>> {
+    return this.post('/users/me/2fa/verify', { code });
+  }
+
+  async disable2FA(currentPassword: string): Promise<ApiResponse<{ message: string; enabled: boolean }>> {
+    return this.post('/users/me/2fa/disable', { current_password: currentPassword });
+  }
+
+  // IP Restriction endpoints
+  async getIPRestrictionStatus(): Promise<ApiResponse<{ enabled: boolean; allowed_ips: string[] }>> {
+    return this.get('/users/me/ip-restriction');
+  }
+
+  async updateIPRestriction(enabled: boolean): Promise<ApiResponse<{ enabled: boolean; allowed_ips: string[] }>> {
+    return this.put('/users/me/ip-restriction', { enabled });
+  }
+
+  async addAllowedIP(ipAddress: string): Promise<ApiResponse<{ enabled: boolean; allowed_ips: string[] }>> {
+    return this.post('/users/me/ip-restriction/allowed-ips', { ip_address: ipAddress });
+  }
+
+  async removeAllowedIP(ipAddress: string): Promise<ApiResponse<{ enabled: boolean; allowed_ips: string[] }>> {
+    return this.delete(`/users/me/ip-restriction/allowed-ips/${encodeURIComponent(ipAddress)}`);
   }
 
   async triggerBackup(includeFiles = false): Promise<ApiResponse<{ message: string }>> {
@@ -769,7 +811,7 @@ class ApiClient {
     return this.get('/departments');
   }
 
-  async getDepartment(departmentId: number): Promise<ApiResponse<any>> {
+  async getDepartment(departmentId: string | number): Promise<ApiResponse<any>> {
     return this.get(`/departments/${departmentId}`);
   }
 
@@ -777,11 +819,11 @@ class ApiClient {
     return this.post('/departments', departmentData);
   }
 
-  async updateDepartment(departmentId: number, departmentData: any): Promise<ApiResponse<any>> {
+  async updateDepartment(departmentId: string | number, departmentData: any): Promise<ApiResponse<any>> {
     return this.put(`/departments/${departmentId}`, departmentData);
   }
 
-  async deleteDepartment(departmentId: number): Promise<ApiResponse<{ message: string }>> {
+  async deleteDepartment(departmentId: string | number): Promise<ApiResponse<{ message: string }>> {
     return this.delete(`/departments/${departmentId}`);
   }
 

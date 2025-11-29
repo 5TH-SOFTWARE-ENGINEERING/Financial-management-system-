@@ -167,11 +167,12 @@ const Spinner = styled.div`
 `;
 
 interface Department {
-  id: number;
+  id: string;
   name: string;
   description?: string | null;
   manager_id?: number | null;
   manager_name?: string | null;
+  user_count?: number;
   employee_count?: number;
   created_at?: string;
   updated_at?: string;
@@ -206,7 +207,7 @@ export default function DepartmentListPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this department? This action cannot be undone.')) {
       return;
     }
@@ -285,7 +286,6 @@ export default function DepartmentListPage() {
                     <tr>
                       <th>Name</th>
                       <th>Description</th>
-                      <th>Manager</th>
                       <th>Employees</th>
                       <th>Created</th>
                       <th>Actions</th>
@@ -303,8 +303,7 @@ export default function DepartmentListPage() {
                           </div>
                         </td>
                         <td>{dept.description || 'N/A'}</td>
-                        <td>{dept.manager_name || 'Not assigned'}</td>
-                        <td>{dept.employee_count ?? 0}</td>
+                        <td>{dept.user_count ?? dept.employee_count ?? 0}</td>
                         <td>
                           {dept.created_at 
                             ? new Date(dept.created_at).toLocaleDateString()

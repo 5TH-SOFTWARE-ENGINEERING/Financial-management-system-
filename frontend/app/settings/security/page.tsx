@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
-import { Save, Lock, Shield, Key, AlertTriangle, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, Lock, Shield, Key, AlertTriangle, Eye, EyeOff, CheckCircle, AlertCircle, X, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
+import { toast } from 'sonner';
 
 // Styled components
 const Container = styled.div`
@@ -285,6 +286,96 @@ const Message = styled.div<{ type: 'error' | 'success' }>`
   font-size: 0.875rem;
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+`;
+
+const ModalTitle = styled.h2`
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    color: #111827;
+  }
+`;
+
+const QRCodeContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.5rem 0;
+`;
+
+const QRCodeImage = styled.img`
+  width: 250px;
+  height: 250px;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  background-color: white;
+`;
+
+const CodeInput = styled(Input)`
+  text-align: center;
+  font-size: 1.25rem;
+  letter-spacing: 0.5rem;
+  font-family: monospace;
+  max-width: 200px;
+  margin: 0 auto;
+`;
+
+const StatusBadge = styled.span<{ $enabled: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: ${props => props.$enabled ? '#dcfce7' : '#fee2e2'};
+  color: ${props => props.$enabled ? '#166534' : '#b91c1c'};
+`;
+
 interface VerificationHistoryEntry {
   id: string;
   device: string;
@@ -324,16 +415,116 @@ export default function SecuritySettingsPage() {
     ipRestriction: false
   });
   
+  // 2FA state
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [loading2FAStatus, setLoading2FAStatus] = useState(true);
+  const [show2FASetup, setShow2FASetup] = useState(false);
+  const [show2FADisable, setShow2FADisable] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [manualEntryKey, setManualEntryKey] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [disablePassword, setDisablePassword] = useState('');
+  const [setupStep, setSetupStep] = useState<'qr' | 'verify'>('qr');
+  
   // Password strength
   const [passwordStrength, setPasswordStrength] = useState(0);
   
   // Verification history
   const [verificationHistory, setVerificationHistory] = useState<VerificationHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  
+  // IP Restriction state
+  const [ipRestrictionEnabled, setIpRestrictionEnabled] = useState(false);
+  const [allowedIPs, setAllowedIPs] = useState<string[]>([]);
+  const [loadingIPRestriction, setLoadingIPRestriction] = useState(true);
+  const [newIPAddress, setNewIPAddress] = useState('');
+  const [ipError, setIpError] = useState<string | null>(null);
 
   useEffect(() => {
     loadVerificationHistory();
+    load2FAStatus();
+    loadIPRestrictionStatus();
   }, []);
+
+  const load2FAStatus = async () => {
+    setLoading2FAStatus(true);
+    try {
+      const response = await apiClient.get2FAStatus();
+      setIs2FAEnabled(response.data?.enabled || false);
+      setSecuritySettings(prev => ({ ...prev, twoFactorEnabled: response.data?.enabled || false }));
+    } catch (err: any) {
+      console.error('Failed to load 2FA status:', err);
+    } finally {
+      setLoading2FAStatus(false);
+    }
+  };
+
+  const handle2FASetup = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.setup2FA();
+      setQrCodeUrl(response.data?.qr_code_url || null);
+      setManualEntryKey(response.data?.manual_entry_key || null);
+      setShow2FASetup(true);
+      setSetupStep('qr');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to setup 2FA. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handle2FAVerify = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setError('Please enter a valid 6-digit verification code');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      await apiClient.verify2FA(verificationCode);
+      setIs2FAEnabled(true);
+      setSecuritySettings(prev => ({ ...prev, twoFactorEnabled: true }));
+      setShow2FASetup(false);
+      setVerificationCode('');
+      setQrCodeUrl(null);
+      setManualEntryKey(null);
+      setSuccess('2FA enabled successfully');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Invalid verification code. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handle2FADisable = async () => {
+    if (!disablePassword) {
+      setError('Please enter your current password to disable 2FA');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      await apiClient.disable2FA(disablePassword);
+      setIs2FAEnabled(false);
+      setSecuritySettings(prev => ({ ...prev, twoFactorEnabled: false }));
+      setShow2FADisable(false);
+      setDisablePassword('');
+      setSuccess('2FA disabled successfully');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to disable 2FA. Please check your password.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadVerificationHistory = async () => {
     setLoadingHistory(true);
@@ -348,6 +539,76 @@ export default function SecuritySettingsPage() {
     }
   };
 
+  const loadIPRestrictionStatus = async () => {
+    setLoadingIPRestriction(true);
+    try {
+      const response = await apiClient.getIPRestrictionStatus();
+      setIpRestrictionEnabled(response.data?.enabled || false);
+      setAllowedIPs(response.data?.allowed_ips || []);
+      setSecuritySettings(prev => ({ ...prev, ipRestriction: response.data?.enabled || false }));
+    } catch (err: any) {
+      console.error('Failed to load IP restriction status:', err);
+    } finally {
+      setLoadingIPRestriction(false);
+    }
+  };
+
+  const handleIPRestrictionToggle = async (enabled: boolean) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.updateIPRestriction(enabled);
+      setIpRestrictionEnabled(response.data?.enabled || false);
+      setAllowedIPs(response.data?.allowed_ips || []);
+      setSecuritySettings(prev => ({ ...prev, ipRestriction: enabled }));
+      setSuccess(`IP restriction ${enabled ? 'enabled' : 'disabled'} successfully`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to update IP restriction. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddIP = async () => {
+    if (!newIPAddress.trim()) {
+      setIpError('Please enter an IP address');
+      return;
+    }
+
+    setIpError(null);
+    setLoading(true);
+    try {
+      const response = await apiClient.addAllowedIP(newIPAddress.trim());
+      setAllowedIPs(response.data?.allowed_ips || []);
+      setNewIPAddress('');
+      setSuccess('IP address added successfully');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to add IP address. Please check the format.';
+      setIpError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveIP = async (ipAddress: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.removeAllowedIP(ipAddress);
+      setAllowedIPs(response.data?.allowed_ips || []);
+      setSuccess('IP address removed successfully');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to remove IP address. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPasswordForm(prev => ({ ...prev, [name]: value }));
@@ -355,9 +616,23 @@ export default function SecuritySettingsPage() {
     // Reset specific error when user is typing
     setPasswordErrors(prev => ({ ...prev, [name]: '' }));
     
+    // Clear general error when user starts typing
+    if (error) {
+      setError(null);
+    }
+    
     // Calculate password strength if changing new password
     if (name === 'newPassword') {
       calculatePasswordStrength(value);
+    }
+    
+    // Re-validate confirm password if new password changes
+    if (name === 'newPassword' && passwordForm.confirmPassword) {
+      if (value !== passwordForm.confirmPassword) {
+        setPasswordErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+      } else {
+        setPasswordErrors(prev => ({ ...prev, confirmPassword: '' }));
+      }
     }
   };
 
@@ -428,19 +703,24 @@ export default function SecuritySettingsPage() {
   };
 
   const handleSavePassword = async () => {
+    // Clear previous errors
+    setError(null);
+    setSuccess(null);
+    
+    // Validate form
     if (!validatePasswordForm()) {
+      // Validation errors are already set in passwordErrors state
+      toast.error('Please fix the errors in the form before submitting');
       return;
     }
     
     setLoading(true);
-    setError(null);
-    setSuccess(null);
     
     try {
       // Call API to change password
-      await apiClient.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      const response = await apiClient.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
       
-      // Reset form
+      // Reset form on success
       setPasswordForm({
         currentPassword: '',
         newPassword: '',
@@ -448,15 +728,31 @@ export default function SecuritySettingsPage() {
       });
       setPasswordStrength(0);
       
-      setSuccess('Password updated successfully');
+      // Clear password errors
+      setPasswordErrors({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
       
-      // Clear success message after 3 seconds
+      // Show success message
+      const successMessage = response.data?.message || 'Password updated successfully';
+      setSuccess(successMessage);
+      toast.success(successMessage);
+      
+      // Clear success message after 5 seconds
       setTimeout(() => {
         setSuccess(null);
-      }, 3000);
+      }, 5000);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Failed to update password. Please try again.';
       setError(errorMessage);
+      toast.error(errorMessage);
+      
+      // Set specific field error if it's about current password
+      if (errorMessage.toLowerCase().includes('current password') || errorMessage.toLowerCase().includes('incorrect')) {
+        setPasswordErrors(prev => ({ ...prev, currentPassword: errorMessage }));
+      }
     } finally {
       setLoading(false);
     }
@@ -619,14 +915,23 @@ export default function SecuritySettingsPage() {
               )}
             </FormGroup>
 
-            <ActionButtons>
+              <ActionButtons>
               <Button 
                 variant="default" 
                 onClick={handleSavePassword} 
-                disabled={loading}
+                disabled={loading || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
               >
-                <Save size={16} />
-                Update Password
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    Update Password
+                  </>
+                )}
               </Button>
             </ActionButtons>
           </CardContent>
@@ -644,17 +949,45 @@ export default function SecuritySettingsPage() {
               <div>
                 <Label htmlFor="twoFactorEnabled">Two-Factor Authentication</Label>
                 <HelperText>Add an extra layer of security to your account</HelperText>
+                {loading2FAStatus ? (
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>Loading...</div>
+                ) : (
+                  <StatusBadge $enabled={is2FAEnabled} style={{ marginTop: '0.5rem' }}>
+                    {is2FAEnabled ? (
+                      <>
+                        <CheckCircle size={12} />
+                        Enabled
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle size={12} />
+                        Disabled
+                      </>
+                    )}
+                  </StatusBadge>
+                )}
               </div>
-              <Switch>
-                <SwitchInput
-                  type="checkbox"
-                  id="twoFactorEnabled"
-                  name="twoFactorEnabled"
-                  checked={securitySettings.twoFactorEnabled}
-                  onChange={handleSecuritySettingChange}
-                />
-                <SwitchSlider />
-              </Switch>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {is2FAEnabled ? (
+                  <Button
+                    variant="default"
+                    onClick={() => setShow2FADisable(true)}
+                    disabled={loading}
+                    style={{ backgroundColor: '#ef4444', color: 'white' }}
+                  >
+                    Disable 2FA
+                  </Button>
+                ) : (
+                  <Button
+                    variant="default"
+                    onClick={handle2FASetup}
+                    disabled={loading || loading2FAStatus}
+                  >
+                    <QrCode size={16} style={{ marginRight: '0.5rem' }} />
+                    Enable 2FA
+                  </Button>
+                )}
+              </div>
             </SwitchContainer>
 
             <Divider />
@@ -724,22 +1057,116 @@ export default function SecuritySettingsPage() {
 
             <Divider />
             
-            <SwitchContainer>
-              <div>
-                <Label htmlFor="ipRestriction">IP Address Restriction</Label>
-                <HelperText>Restrict login attempts to known IP addresses</HelperText>
-              </div>
-              <Switch>
-                <SwitchInput
-                  type="checkbox"
-                  id="ipRestriction"
-                  name="ipRestriction"
-                  checked={securitySettings.ipRestriction}
-                  onChange={handleSecuritySettingChange}
-                />
-                <SwitchSlider />
-              </Switch>
-            </SwitchContainer>
+            <FormGroup>
+              <SwitchContainer>
+                <div>
+                  <Label htmlFor="ipRestriction">IP Address Restriction</Label>
+                  <HelperText>Restrict login attempts to known IP addresses</HelperText>
+                  {loadingIPRestriction ? (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>Loading...</div>
+                  ) : (
+                    <StatusBadge $enabled={ipRestrictionEnabled} style={{ marginTop: '0.5rem' }}>
+                      {ipRestrictionEnabled ? (
+                        <>
+                          <CheckCircle size={12} />
+                          Enabled ({allowedIPs.length} IP{allowedIPs.length !== 1 ? 's' : ''})
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle size={12} />
+                          Disabled
+                        </>
+                      )}
+                    </StatusBadge>
+                  )}
+                </div>
+                <Switch>
+                  <SwitchInput
+                    type="checkbox"
+                    id="ipRestriction"
+                    name="ipRestriction"
+                    checked={ipRestrictionEnabled}
+                    onChange={(e) => handleIPRestrictionToggle(e.target.checked)}
+                    disabled={loading || loadingIPRestriction}
+                  />
+                  <SwitchSlider />
+                </Switch>
+              </SwitchContainer>
+
+              {ipRestrictionEnabled && (
+                <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.375rem', border: '1px solid #e5e7eb' }}>
+                  <Label>Allowed IP Addresses</Label>
+                  <HelperText style={{ marginBottom: '0.75rem' }}>
+                    Only these IP addresses will be allowed to log in. You can use CIDR notation (e.g., 192.168.1.0/24).
+                  </HelperText>
+                  
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <Input
+                      type="text"
+                      placeholder="e.g., 192.168.1.100 or 192.168.1.0/24"
+                      value={newIPAddress}
+                      onChange={(e) => {
+                        setNewIPAddress(e.target.value);
+                        setIpError(null);
+                      }}
+                      disabled={loading}
+                      style={{ flex: 1 }}
+                    />
+                    <Button
+                      variant="default"
+                      onClick={handleAddIP}
+                      disabled={loading || !newIPAddress.trim()}
+                    >
+                      Add IP
+                    </Button>
+                  </div>
+                  
+                  {ipError && (
+                    <ErrorText style={{ marginBottom: '0.75rem' }}>{ipError}</ErrorText>
+                  )}
+
+                  {allowedIPs.length === 0 ? (
+                    <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
+                      No IP addresses added yet. Add at least one IP address to enable IP restriction.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {allowedIPs.map((ip, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0.75rem',
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '0.25rem'
+                          }}
+                        >
+                          <span style={{ fontFamily: 'monospace', fontSize: '0.875rem', color: '#111827' }}>
+                            {ip}
+                          </span>
+                          <Button
+                            variant="default"
+                            onClick={() => handleRemoveIP(ip)}
+                            disabled={loading}
+                            style={{
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </FormGroup>
 
             <ActionButtons>
               <Button 
@@ -792,7 +1219,14 @@ export default function SecuritySettingsPage() {
                       </VerificationHistoryStatus>
                     </VerificationHistoryDetails>
                     <VerificationHistoryMeta>
-                      {entry.location} • {entry.ip} • {entry.date}
+                      {entry.location} • {entry.ip} • {entry.date ? new Date(entry.date).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      }) : 'Unknown date'}
                     </VerificationHistoryMeta>
                   </VerificationHistoryItem>
                 ))
@@ -800,6 +1234,126 @@ export default function SecuritySettingsPage() {
             </VerificationHistoryContainer>
           </CardContent>
         </Card>
+
+        {/* 2FA Setup Modal */}
+        {show2FASetup && (
+          <ModalOverlay onClick={() => !loading && setShow2FASetup(false)}>
+            <ModalContent onClick={(e) => e.stopPropagation()}>
+              <ModalHeader>
+                <ModalTitle>Setup Two-Factor Authentication</ModalTitle>
+                <CloseButton onClick={() => setShow2FASetup(false)} disabled={loading}>
+                  <X size={20} />
+                </CloseButton>
+              </ModalHeader>
+
+              {setupStep === 'qr' && (
+                <>
+                  <HelperText style={{ marginBottom: '1rem' }}>
+                    Scan this QR code with your authenticator app (e.g., Google Authenticator, Authy, Microsoft Authenticator)
+                  </HelperText>
+                  {qrCodeUrl && (
+                    <QRCodeContainer>
+                      <QRCodeImage src={qrCodeUrl} alt="2FA QR Code" />
+                      {manualEntryKey && (
+                        <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#6b7280' }}>
+                          <strong>Or enter this key manually:</strong>
+                          <div style={{ fontFamily: 'monospace', marginTop: '0.5rem', wordBreak: 'break-all' }}>
+                            {manualEntryKey}
+                          </div>
+                        </div>
+                      )}
+                    </QRCodeContainer>
+                  )}
+                  <HelperText style={{ marginBottom: '1rem' }}>
+                    After scanning, enter the 6-digit code from your authenticator app to verify and enable 2FA.
+                  </HelperText>
+                  <FormGroup>
+                    <Label htmlFor="verificationCode">Verification Code</Label>
+                    <CodeInput
+                      id="verificationCode"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="000000"
+                      disabled={loading}
+                    />
+                  </FormGroup>
+                  <ActionButtons>
+                    <Button
+                      variant="default"
+                      onClick={() => setShow2FASetup(false)}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="default"
+                      onClick={handle2FAVerify}
+                      disabled={loading || verificationCode.length !== 6}
+                    >
+                      Verify & Enable
+                    </Button>
+                  </ActionButtons>
+                </>
+              )}
+            </ModalContent>
+          </ModalOverlay>
+        )}
+
+        {/* 2FA Disable Modal */}
+        {show2FADisable && (
+          <ModalOverlay onClick={() => !loading && setShow2FADisable(false)}>
+            <ModalContent onClick={(e) => e.stopPropagation()}>
+              <ModalHeader>
+                <ModalTitle>Disable Two-Factor Authentication</ModalTitle>
+                <CloseButton onClick={() => setShow2FADisable(false)} disabled={loading}>
+                  <X size={20} />
+                </CloseButton>
+              </ModalHeader>
+
+              <HelperText style={{ marginBottom: '1rem' }}>
+                To disable 2FA, please enter your current password for security verification.
+              </HelperText>
+
+              <FormGroup>
+                <Label htmlFor="disablePassword">Current Password</Label>
+                <PasswordInputContainer>
+                  <Input
+                    id="disablePassword"
+                    type="password"
+                    value={disablePassword}
+                    onChange={(e) => setDisablePassword(e.target.value)}
+                    placeholder="Enter your password"
+                    disabled={loading}
+                  />
+                </PasswordInputContainer>
+              </FormGroup>
+
+              <ActionButtons>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    setShow2FADisable(false);
+                    setDisablePassword('');
+                  }}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handle2FADisable}
+                  disabled={loading || !disablePassword}
+                  style={{ backgroundColor: '#ef4444', color: 'white' }}
+                >
+                  Disable 2FA
+                </Button>
+              </ActionButtons>
+            </ModalContent>
+          </ModalOverlay>
+        )}
       </Container>
     </ComponentGate>
   );

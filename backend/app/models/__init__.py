@@ -8,11 +8,14 @@ from .report import Report
 from .report_schedule import ReportSchedule  # ← NEW
 from .audit import AuditLog
 from .notification import Notification
+from .project import Project
+from .login_history import LoginHistory
 
 __all__ = [
     "User", "UserRole", "Role",
     "RevenueEntry", "ExpenseEntry",
     "ApprovalWorkflow", "ApprovalComment",
     "Report", "ReportSchedule",
-    "AuditLog", "Notification"
+    "AuditLog", "Notification",
+    "Project", "LoginHistory"
 ]

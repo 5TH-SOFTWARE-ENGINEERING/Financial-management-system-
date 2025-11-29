@@ -213,10 +213,10 @@ def get_audit_logs(
 def create_backup(
     background_tasks: BackgroundTasks,
     include_files: bool = Query(False),
-    current_user: User = Depends(require_min_role(UserRole.SUPER_ADMIN)),
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    """Create system backup (super admin only)"""
+    """Create system backup (admin, finance_admin, or super_admin only)"""
     # Add backup task to background
     background_tasks.add_task(BackupService.create_backup, include_files)
     
@@ -225,10 +225,10 @@ def create_backup(
 
 @router.get("/backup/list")
 def list_backups(
-    current_user: User = Depends(require_min_role(UserRole.SUPER_ADMIN)),
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    """List available backups"""
+    """List available backups (admin, finance_admin, or super_admin only)"""
     backups = BackupService.list_backups()
     return {"backups": backups}
 
@@ -236,13 +236,30 @@ def list_backups(
 @router.post("/backup/restore")
 def restore_backup(
     backup_name: str,
-    current_user: User = Depends(require_min_role(UserRole.SUPER_ADMIN)),
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    """Restore from backup (super admin only)"""
+    """Restore from backup (admin, finance_admin, or super_admin only)"""
     # This is a dangerous operation - should require additional confirmation
     result = BackupService.restore_backup(backup_name)
     return {"message": f"Backup restore completed: {result}"}
+
+
+@router.delete("/backup/{backup_name}")
+def delete_backup(
+    backup_name: str,
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """Delete a backup (admin, finance_admin, or super_admin only)"""
+    result = BackupService.delete_backup(backup_name)
+    if result:
+        return {"message": f"Backup deleted successfully: {backup_name}"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to delete backup: {backup_name}"
+        )
 
 
 @router.post("/maintenance/cleanup")

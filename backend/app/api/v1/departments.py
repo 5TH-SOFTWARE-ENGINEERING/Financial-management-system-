@@ -75,13 +75,36 @@ def create_department(
     current_user: User = Depends(require_min_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    """Create department - note: This is a stub, departments are managed via user.department field"""
+    """Create department - departments are managed via user.department field"""
+    name = department_data.get("name", "").strip()
+    if not name or len(name) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Department name must be at least 2 characters"
+        )
+    
+    # Check if department already exists
+    existing = db.query(User.department).filter(
+        User.department == name
+    ).first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Department '{name}' already exists"
+        )
+    
+    # Department is created implicitly when users are assigned to it
+    # Return success response
+    dept_id = name.lower().replace(" ", "_")
     return {
-        "id": department_data.get("name", "").lower().replace(" ", "_"),
-        "name": department_data.get("name", ""),
-        "description": department_data.get("description", ""),
+        "id": dept_id,
+        "name": name,
+        "description": department_data.get("description", f"{name} department"),
         "user_count": 0,
-        "message": "Department created (stub implementation)"
+        "created_at": None,
+        "updated_at": None,
+        "message": "Department created. Assign users to this department to activate it."
     }
 
 
@@ -92,13 +115,46 @@ def update_department(
     current_user: User = Depends(require_min_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    """Update department - note: This is a stub"""
-    dept_name = department_id.replace("_", " ").title()
+    """Update department - updates department name for all users in that department"""
+    old_dept_name = department_id.replace("_", " ").title()
+    new_name = department_data.get("name", "").strip()
+    
+    if not new_name or len(new_name) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Department name must be at least 2 characters"
+        )
+    
+    # Check if users exist with old department name
+    users = db.query(User).filter(User.department == old_dept_name).all()
+    
+    if not users:
+        raise HTTPException(
+            status_code=404,
+            detail="Department not found or has no users"
+        )
+    
+    # Check if new name already exists (and is different)
+    if new_name != old_dept_name:
+        existing = db.query(User).filter(User.department == new_name).first()
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Department '{new_name}' already exists"
+            )
+    
+    # Update department name for all users
+    for user in users:
+        user.department = new_name
+    db.commit()
+    
+    new_dept_id = new_name.lower().replace(" ", "_")
     return {
-        "id": department_id,
-        "name": department_data.get("name", dept_name),
-        "description": department_data.get("description", ""),
-        "message": "Department updated (stub implementation)"
+        "id": new_dept_id,
+        "name": new_name,
+        "description": department_data.get("description", f"{new_name} department"),
+        "user_count": len(users),
+        "message": f"Department updated from '{old_dept_name}' to '{new_name}'"
     }
 
 

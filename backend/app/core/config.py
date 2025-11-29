@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     
     # CORS and Hosts
-    ALLOWED_ORIGINS: Optional[str] = "*"
+    ALLOWED_ORIGINS: Optional[str] = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000"
     ALLOWED_HOSTS: Optional[str] = "localhost,127.0.0.1"
     
     # Logging

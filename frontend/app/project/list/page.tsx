@@ -291,7 +291,8 @@ export default function ProjectListPage() {
       const response = await apiClient.getDepartments();
       setDepartments(response.data || []);
     } catch (err: any) {
-      console.error('Failed to load departments:', err);
+      // Silently fail - departments are optional for filtering
+      setDepartments([]);
     }
   };
 

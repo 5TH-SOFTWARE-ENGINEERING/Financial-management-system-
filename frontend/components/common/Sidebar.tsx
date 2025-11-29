@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import styled from 'styled-components';
 import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
-    UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List,
+    UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List, Calculator,
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -191,12 +191,6 @@ const Sidebar: React.FC = () => {
             </DropdownHeader>
             {isOpen('revenue') && (
                 <SubMenu $collapsed={collapsed}> 
-                    <ComponentGate componentId={ComponentId.REVENUE_CREATE}>
-                        <NavItem href="/revenue/create" $active={pathname === '/revenue/create'} $collapsed={collapsed}> 
-                            <UserPlus size={16} /> {/* Added icon for Create */}
-                            {!collapsed && 'Add Revenue'}
-                        </NavItem>
-                    </ComponentGate>
                     <ComponentGate componentId={ComponentId.REVENUE_LIST}>
                         <NavItem href="/revenue/list" $active={pathname === '/revenue/list'} $collapsed={collapsed}> 
                             <List size={16} /> {/* Added icon for List */}
@@ -225,16 +219,16 @@ const Sidebar: React.FC = () => {
                 </DropdownHeader>
                 {isOpen('expense') && (
                     <SubMenu $collapsed={collapsed}>
-                        <ComponentGate componentId={ComponentId.EXPENSE_CREATE}>
-                            <NavItem href="/expenses/create" $active={pathname === '/expense/create'} $collapsed={collapsed}>
-                                <UserPlus size={16} /> {/* Added icon for Create */}
-                                {!collapsed && 'Add Expense'}
-                            </NavItem>
-                        </ComponentGate>
                         <ComponentGate componentId={ComponentId.EXPENSE_LIST}>
                             <NavItem href="/expenses/list" $active={pathname === '/expense/list'} $collapsed={collapsed}>
                                 <List size={16} /> {/* Added icon for List */}
                                 {!collapsed && 'All Expenses'}
+                            </NavItem>
+                        </ComponentGate>
+                        <ComponentGate componentId={ComponentId.EXPENSE_CREATE}>
+                            <NavItem href="/expenses/items" $active={pathname === '/expenses/items'} $collapsed={collapsed}>
+                                <Calculator size={16} />
+                                {!collapsed && 'Expense Calculator'}
                             </NavItem>
                         </ComponentGate>
                     </SubMenu>

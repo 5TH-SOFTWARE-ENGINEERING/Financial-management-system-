@@ -376,6 +376,28 @@ export default function ExpenseListPage() {
     }
   };
 
+  // Extract clean item type from title (remove extra text like "Item:", prices, etc.)
+  const getItemType = (title: string): string => {
+    if (!title) return '';
+    
+    // If title starts with "Item:", extract the item name
+    if (title.toLowerCase().startsWith('item:')) {
+      const match = title.match(/item:\s*([^,]+)/i);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    
+    // If title contains "Buy-at" or other calculation-related text, extract first part
+    const buyAtIndex = title.toLowerCase().indexOf('buy-at');
+    if (buyAtIndex > 0) {
+      return title.substring(0, buyAtIndex).trim().replace(/^item:\s*/i, '').trim();
+    }
+    
+    // Otherwise, return the title as-is (already clean)
+    return title.trim();
+  };
+
   // Get unique categories from expenses
   const categories = Array.from(new Set(expenses.map(e => e.category).filter(Boolean)));
 
@@ -425,10 +447,10 @@ export default function ExpenseListPage() {
               <h1>Expenses</h1>
               <p>Manage expense entries</p>
             </HeaderText>
-            <Link href="/expenses/create">
+            <Link href="/expenses/items">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Expense
+                Add Expenses
               </Button>
             </Link>
           </Header>
@@ -479,10 +501,10 @@ export default function ExpenseListPage() {
                   {expenses.length === 0 ? 'No expenses found.' : 'No expenses match your filters.'}
                 </p>
                 {expenses.length === 0 && (
-                  <Link href="/expenses/create">
+                  <Link href="/expenses/items">
                     <Button>
                       <Plus className="h-4 w-4 mr-2" />
-                      Create First Expense
+                      Add Expenses
                     </Button>
                   </Link>
                 )}
@@ -492,7 +514,7 @@ export default function ExpenseListPage() {
                 <Table>
                   <TableHeader>
                     <tr>
-                      <th>Title</th>
+                      <th>Type</th>
                       <th>Category</th>
                       <th>Amount</th>
                       <th>Vendor</th>
@@ -507,16 +529,9 @@ export default function ExpenseListPage() {
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <DollarSign size={16} style={{ color: 'var(--muted-foreground)' }} />
-                            <div>
-                              <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
-                                {expense.title}
-                              </span>
-                              {expense.description && (
-                                <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
-                                  {expense.description}
-                                </p>
-                              )}
-                            </div>
+                            <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                              {getItemType(expense.title)}
+                            </span>
                           </div>
                         </td>
                         <td style={{ textTransform: 'capitalize' }}>{expense.category || 'N/A'}</td>
@@ -544,27 +559,48 @@ export default function ExpenseListPage() {
                               </Button>
                             </Link>
                             {!expense.is_approved && canApprove() && (
-                              <Button 
-                                size="sm" 
-                                variant="default"
-                                onClick={() => handleApprove(expense.id)}
-                                disabled={approvingId === expense.id}
-                              >
-                                {approvingId === expense.id ? (
-                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                ) : (
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                )}
-                                Approve
-                              </Button>
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="default"
+                                  onClick={() => handleApprove(expense.id)}
+                                  disabled={approvingId === expense.id || rejectingId === expense.id}
+                                  style={{ 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  {approvingId === expense.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4" />
+                                  )}
+                                  <span>Approve</span>
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => setShowRejectModal(expense.id)}
+                                  disabled={approvingId === expense.id || rejectingId === expense.id}
+                                  style={{ 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  <span>Reject</span>
+                                </Button>
+                              </>
                             )}
                             <Button 
                               size="sm" 
-                              variant="destructive"
+                              variant="ghost"
+                              style={{ height: '32px', width: '32px', padding: 0, color: 'var(--destructive)' }}
                               onClick={() => handleDelete(expense.id)}
                             >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </ActionButtons>
                         </td>
@@ -575,6 +611,70 @@ export default function ExpenseListPage() {
               </div>
             )}
           </Card>
+
+          {/* Rejection Modal */}
+          {showRejectModal && (
+            <div style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 50
+            }}>
+              <div style={{
+                background: '#fff',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                padding: '24px',
+                maxWidth: '500px',
+                width: '100%',
+                margin: '16px'
+              }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>Reject Expense Entry</h3>
+                <div style={{ marginBottom: '16px' }}>
+                  <Label htmlFor="rejection-reason">Rejection Reason *</Label>
+                  <Textarea
+                    id="rejection-reason"
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Please provide a reason for rejection..."
+                    rows={4}
+                    style={{ marginTop: '8px', width: '100%' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setShowRejectModal(null);
+                      setRejectionReason('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleReject(showRejectModal, rejectionReason)}
+                    disabled={!rejectionReason.trim() || rejectingId === showRejectModal}
+                  >
+                    {rejectingId === showRejectModal ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        Rejecting...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </InnerContent>
       </ContentArea>
     </LayoutWrapper>

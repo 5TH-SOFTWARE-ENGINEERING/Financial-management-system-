@@ -30,6 +30,10 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)
+    otp_secret = Column(String, nullable=True)  # TOTP secret for 2FA
+    is_2fa_enabled = Column(Boolean, default=False, nullable=False)  # Whether 2FA is enabled
+    ip_restriction_enabled = Column(Boolean, default=False, nullable=False)  # Whether IP restriction is enabled
+    allowed_ips = Column(String, nullable=True)  # JSON array of allowed IP addresses
 
     manager = relationship("User", remote_side=[id], back_populates="subordinates")
     subordinates = relationship("User", back_populates="manager")
@@ -102,6 +106,7 @@ class User(Base):
     # -----------------------------------------------------------------
     audit_logs = relationship("AuditLog", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
+    login_history = relationship("LoginHistory", back_populates="user", cascade="all, delete-orphan")
 
     # -----------------------------------------------------------------
     # Backward-compatibility

@@ -16,7 +16,8 @@ from .core.config import settings
 from .core.database import engine, Base, get_db, SessionLocal
 from .api.v1 import (
     auth, users, revenue, expenses, dashboard,
-    reports, approvals, notifications, admin
+    reports, approvals, notifications, admin,
+    projects, departments
 )
 from .utils.audit import AuditLogger, AuditAction
 
@@ -171,10 +172,32 @@ app = FastAPI(
 )
 
 # Add CORS middleware
-if settings.ALLOWED_ORIGINS:
+# Handle wildcard or specific origins
+origins = settings.ALLOWED_ORIGINS.strip() if settings.ALLOWED_ORIGINS else ""
+if origins == "*":
+    # When using wildcard, credentials must be False
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",")],
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+elif origins:
+    # Parse comma-separated origins
+    allowed_origins = [origin.strip() for origin in origins.split(",") if origin.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # Default CORS for development - allow localhost:3000 (Next.js default)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -264,6 +287,8 @@ app.include_router(reports.router, prefix=f"{api_prefix}/reports", tags=["Report
 app.include_router(notifications.router, prefix=f"{api_prefix}/notifications", tags=["Notifications"])
 app.include_router(dashboard.router, prefix=f"{api_prefix}/dashboard", tags=["Dashboard"])
 app.include_router(admin.router, prefix=f"{api_prefix}/admin", tags=["Admin"])
+app.include_router(projects.router, prefix=f"{api_prefix}/projects", tags=["Projects"])
+app.include_router(departments.router, prefix=f"{api_prefix}/departments", tags=["Departments"])
 
 
 # Health check endpoint
@@ -420,18 +445,59 @@ if celery_app:
             logger.error(f"Failed to create backup: {str(e)}")
             return False
 
-    # Stub for missing cleanup tasks (implement as needed)
     @celery_app.task
     def cleanup_logs_task():
         """Cleanup old logs task"""
-        logger.info("Cleaning old logs (stub - implement logic)")
-        # Add actual cleanup code here, e.g., delete old files in logs/
+        logger.info("Cleaning old logs")
+        try:
+            import os
+            import glob
+            from datetime import datetime, timedelta
+            
+            log_dir = os.path.dirname(settings.LOG_FILE) if settings.LOG_FILE else "logs"
+            if not os.path.exists(log_dir):
+                logger.warning(f"Log directory {log_dir} does not exist")
+                return
+            
+            # Delete log files older than 30 days
+            cutoff_date = datetime.now() - timedelta(days=30)
+            log_files = glob.glob(os.path.join(log_dir, "*.log"))
+            
+            deleted_count = 0
+            for log_file in log_files:
+                try:
+                    file_time = datetime.fromtimestamp(os.path.getmtime(log_file))
+                    if file_time < cutoff_date:
+                        os.remove(log_file)
+                        deleted_count += 1
+                except Exception as e:
+                    logger.error(f"Error deleting log file {log_file}: {str(e)}")
+            
+            logger.info(f"Cleaned up {deleted_count} old log files")
+        except Exception as e:
+            logger.error(f"Error in cleanup_logs_task: {str(e)}")
 
     @celery_app.task
     def cleanup_notifications_task():
         """Cleanup expired notifications task"""
-        logger.info("Cleaning expired notifications (stub - implement logic)")
-        # Add actual DB cleanup code here
+        logger.info("Cleaning expired notifications")
+        try:
+            from datetime import datetime, timedelta
+            from .models.notification import Notification
+            
+            db = SessionLocal()
+            try:
+                # Delete notifications older than 90 days
+                cutoff_date = datetime.utcnow() - timedelta(days=90)
+                deleted_count = db.query(Notification).filter(
+                    Notification.created_at < cutoff_date
+                ).delete()
+                db.commit()
+                logger.info(f"Cleaned up {deleted_count} expired notifications")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Error in cleanup_notifications_task: {str(e)}")
 
 
 # Scheduled tasks (Celery Beat)

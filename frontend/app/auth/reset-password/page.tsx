@@ -212,6 +212,8 @@ export default function ResetPassword() {
   const [step, setStep] = useState<'request' | 'otp' | 'new-password'>('request');
   const [email, setEmail] = useState<string>('');
   const [otpCode, setOtpCode] = useState<string>('');
+  const [canResendOTP, setCanResendOTP] = useState(true);
+  const [resendTimer, setResendTimer] = useState(0);
 
   // Separate forms for each step
   const requestForm = useForm<{ email: string }>({
@@ -243,10 +245,58 @@ export default function ResetPassword() {
       setEmail(data.email);
       setIsSuccess(true);
       setStep('otp');
+      setCanResendOTP(false);
+      setResendTimer(60); // 60 seconds cooldown
+      
+      // Start countdown timer
+      const timer = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setCanResendOTP(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
       toast.success('OTP sent to your email! Please check your inbox.');
       requestForm.reset();
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to send OTP. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (!email || !canResendOTP) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await apiClient.requestOTP(email);
+      setCanResendOTP(false);
+      setResendTimer(60); // Reset timer
+      
+      // Start countdown timer
+      const timer = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setCanResendOTP(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      toast.success('OTP resent to your email!');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to resend OTP. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -260,16 +310,15 @@ export default function ResetPassword() {
     setIsSuccess(false);
     
     try {
-      // Verify OTP - Note: The backend verify-otp endpoint requires authentication
-      // For password reset, we might need a different endpoint or approach
-      // For now, we'll store the OTP and proceed to password reset step
+      // Store the OTP code - verification will happen in the reset-password step
+      // This allows the user to proceed to enter their new password
       setOtpCode(data.otp);
       setIsSuccess(true);
       setStep('new-password');
-      toast.success('OTP verified! Please enter your new password.');
+      toast.success('Please enter your new password.');
       otpForm.reset();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Invalid OTP. Please try again.';
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to proceed. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -278,27 +327,52 @@ export default function ResetPassword() {
   };
 
   const handleResetPassword = async (data: { newPassword: string; confirmPassword: string }) => {
+    if (!otpCode || otpCode.length !== 6) {
+      setError('Please enter a valid 6-digit OTP code');
+      toast.error('Please enter a valid 6-digit OTP code');
+      setStep('otp');
+      return;
+    }
+
+    if (!email) {
+      setError('Email is required');
+      toast.error('Email is required');
+      setStep('request');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
     try {
       // Reset password with email, OTP, and new password
+      // The backend will verify the OTP during this step
       const response = await apiClient.resetPassword(email, otpCode, data.newPassword);
-      toast.success('Password reset successful! You can now login.');
+      
+      const successMessage = response.data?.message || 'Password reset successful! You can now login.';
+      toast.success(successMessage);
       
       // Clear state
       setEmail('');
       setOtpCode('');
-      setStep('request');
+      passwordForm.reset();
       
       // Redirect to login after a short delay
       setTimeout(() => {
         router.push('/auth/login');
-      }, 1500);
+      }, 2000);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to reset password. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
+      
+      // If OTP is invalid or expired, go back to OTP step
+      if (errorMessage.toLowerCase().includes('otp') || 
+          errorMessage.toLowerCase().includes('invalid') ||
+          errorMessage.toLowerCase().includes('expired')) {
+        setOtpCode('');
+        setStep('otp');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -368,6 +442,8 @@ export default function ResetPassword() {
                   placeholder="Enter 6-digit OTP"
                   disabled={isLoading}
                   maxLength={6}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                 />
                 {otpForm.formState.errors.otp && (
                   <ErrorMessage>{otpForm.formState.errors.otp.message}</ErrorMessage>
@@ -377,10 +453,36 @@ export default function ResetPassword() {
                 {isLoading ? 'Verifying...' : 'Verify OTP'}
               </ResetButton>
             </form>
+            <div style={{ textAlign: 'center', marginTop: theme.spacing.md }}>
+              <p style={{ color: '#b3b3b3', fontSize: theme.typography.fontSizes.sm, marginBottom: theme.spacing.sm }}>
+                Didn't receive the OTP?
+              </p>
+              {canResendOTP ? (
+                <button
+                  type="button"
+                  onClick={handleResendOTP}
+                  disabled={isLoading}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: theme.colors.primary,
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    fontSize: theme.typography.fontSizes.sm,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Resend OTP
+                </button>
+              ) : (
+                <p style={{ color: '#b3b3b3', fontSize: theme.typography.fontSizes.sm }}>
+                  Resend OTP in {resendTimer}s
+                </p>
+              )}
+            </div>
             {isSuccess && (
               <SuccessMessage>
                 <CheckCircle size={16} className="inline mr-2" />
-                OTP verified! Please enter your new password.
+                Please enter your new password.
               </SuccessMessage>
             )}
           </>
