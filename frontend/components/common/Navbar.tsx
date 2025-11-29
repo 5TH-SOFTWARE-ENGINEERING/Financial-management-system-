@@ -36,39 +36,43 @@ const HeaderContainer = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: ${theme.spacing.xs} ${theme.spacing.xs};
+  padding: ${theme.spacing.sm} ${theme.spacing.lg};
   background: ${theme.colors.background};
   border-bottom: 1px solid ${theme.colors.border};
-  height: 36px;
-  width: calc(100% - 250px); // Adjust for sidebar width
+  height: 64px;
+  width: calc(100% - 300px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: width ${theme.transitions.default};
 `;
 
 const SearchContainer = styled.div`
   position: relative;
   flex: 1;
   max-width: 480px;
-  margin: 0 ${theme.spacing.xs};
+  margin: 0 ${theme.spacing.md};
 `;
 
 const SearchInput = styled.input`
   width: 100%;
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   padding-left: 40px;
-  border: none;
+  border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
-  background: #f5f5f5;
+  background: ${theme.colors.backgroundSecondary};
   font-size: ${theme.typography.fontSizes.sm};
-  color: #333;
+  color: ${theme.colors.textSecondary};
+  transition: all ${theme.transitions.default};
 
   &:focus {
     outline: none;
-    background: #eeeeee;
-    box-shadow: 0 0 0 2px ${PRIMARY_ACCENT}40; 
+    border-color: ${PRIMARY_ACCENT};
+    background: ${theme.colors.background};
+    box-shadow: 0 0 0 3px ${PRIMARY_ACCENT}15;
   }
 
   &::placeholder {
     color: ${theme.colors.textSecondary};
-    opacity: 0.5;
+    opacity: 0.6;
   }
 `;
 
@@ -78,35 +82,50 @@ const SearchIcon = styled.div`
   top: 50%;
   transform: translateY(-50%);
   color: ${theme.colors.textSecondary};
-  opacity: 0.5;
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity ${theme.transitions.default};
+  
+  ${SearchInput}:focus ~ & {
+    opacity: 0.8;
+    color: ${PRIMARY_ACCENT};
+  }
 `;
 
 const ActionsContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
+  gap: ${theme.spacing.sm};
 `;
 
 const AddButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 50%;
+  border-radius: ${theme.borderRadius.md};
   background: ${PRIMARY_ACCENT};
   color: white;
   cursor: pointer;
-  transition: background-color ${theme.transitions.default};
+  transition: all ${theme.transitions.default};
+  box-shadow: 0 2px 4px rgba(6, 182, 212, 0.2);
 
   &:hover {
     background: ${PRIMARY_HOVER};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(6, 182, 212, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
   }
 `;
 
@@ -114,46 +133,86 @@ const IconButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 50%;
+  border-radius: ${theme.borderRadius.md};
   background: transparent;
   color: ${theme.colors.textSecondary};
   cursor: pointer;
-  transition: background-color ${theme.transitions.default};
+  transition: all ${theme.transitions.default};
+  position: relative;
 
   &:hover {
     background: ${theme.colors.backgroundSecondary};
-    color: ${PRIMARY_ACCENT}; 
+    color: ${PRIMARY_ACCENT};
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+  }
+`;
+
+const IconWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  svg {
     width: 20px;
     height: 20px;
+    stroke-width: 1.5px;
+    transition: color ${theme.transitions.default};
   }
 `;
 
 const NotificationBadge = styled.div`
   position: relative;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover ${IconWrapper} {
+    color: ${PRIMARY_ACCENT};
+  }
 
   span {
     position: absolute;
-    top: -8px;
-    right: -8px;
-    background: ${DANGER_COLOR}; 
+    top: -6px;
+    right: -6px;
+    background: ${DANGER_COLOR};
     color: white;
-    font-size: 8px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
+    font-size: 10px;
+    font-weight: ${theme.typography.fontWeights.bold};
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 2px solid ${theme.colors.background};
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
   }
 `;
-
 
 const MenuButton = styled.button`
   display: flex;
@@ -165,25 +224,17 @@ const MenuButton = styled.button`
   background: none;
   cursor: pointer;
   color: ${theme.colors.textSecondary};
+  border-radius: ${theme.borderRadius.sm};
+  transition: all ${theme.transitions.default};
 
   &:hover {
-    color: #333;
+    background: ${theme.colors.backgroundSecondary};
+    color: ${theme.colors.textSecondary};
   }
 
   svg {
     width: 24px;
     height: 24px;
-  }
-`;
-const IconWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  svg {
-    width: 20px;
-    height: 20px;
-    stroke-width: 1.5px;
   }
 `;
 
@@ -192,100 +243,140 @@ const LanguageSelector = styled.div`
   align-items: center;
   gap: ${theme.spacing.sm};
   cursor: pointer;
-  padding: ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  transition: background-color ${theme.transitions.default};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.md};
+  transition: all ${theme.transitions.default};
+  border: 1px solid transparent;
 
   &:hover {
     background: ${theme.colors.backgroundSecondary};
-    color: ${PRIMARY_ACCENT};
+    border-color: ${theme.colors.border};
+    transform: translateY(-1px);
     
     span {
-        color: ${PRIMARY_ACCENT};
+      color: ${PRIMARY_ACCENT};
     }
     ${IconWrapper} { 
-        svg {
-            color: ${PRIMARY_ACCENT};
-        }
+      svg {
+        color: ${PRIMARY_ACCENT};
+      }
     }
   }
+
   span {
     font-size: ${theme.typography.fontSizes.sm};
+    font-weight: ${theme.typography.fontWeights.medium};
     color: ${theme.colors.textSecondary};
+    transition: color ${theme.transitions.default};
   }
 `;
+
 const UserProfileContainer = styled.div`
   position: relative;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${theme.spacing.md};
   cursor: pointer;
-  padding: ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  transition: background-color ${theme.transitions.default};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.md};
+  transition: all ${theme.transitions.default};
+  border: 1px solid transparent;
 
   &:hover {
     background: ${theme.colors.backgroundSecondary};
+    border-color: ${theme.colors.border};
   }
 `;
 
 const UserAvatar = styled.div`
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background-color: ${PRIMARY_ACCENT}; 
+  background: linear-gradient(135deg, ${PRIMARY_ACCENT} 0%, ${PRIMARY_HOVER} 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: ${theme.typography.fontWeights.bold};
   font-size: ${theme.typography.fontSizes.sm};
+  box-shadow: 0 2px 4px rgba(6, 182, 212, 0.2);
+  transition: transform ${theme.transitions.default};
+  
+  ${UserProfileContainer}:hover & {
+    transform: scale(1.05);
+  }
 `;
 
 const UserInfo = styled.div`
   display: flex;
   flex-direction: column;
+  gap: 2px;
 `;
 
 const UserName = styled.span`
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
-  color: #333;
+  color: ${theme.colors.textSecondary};
+  line-height: 1.2;
 `;
 
 const UserRole = styled.span`
   font-size: ${theme.typography.fontSizes.xs};
   color: ${theme.colors.textSecondary};
+  opacity: 0.7;
+  line-height: 1.2;
 `;
 const DropdownMenu = styled.div<{ $isOpen: boolean }>`
   position: absolute;
-  top: 100%;
+  top: calc(100% + ${theme.spacing.sm});
   right: 0;
-  width: 200px;
+  width: 240px;
   background: ${theme.colors.background};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
-  box-shadow: ${theme.shadows.md};
-  z-index: 100;
-  display: ${props => (props.$isOpen ? 'block' : 'none')}; 
-  margin-top: ${theme.spacing.sm};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: ${props => (props.$isOpen ? 1 : 0)};
+  visibility: ${props => (props.$isOpen ? 'visible' : 'hidden')};
+  transform: ${props => (props.$isOpen ? 'translateY(0)' : 'translateY(-8px)')};
+  transition: all ${theme.transitions.default};
+  overflow: hidden;
+  
+  ${props => props.$isOpen && `
+    animation: slideDown 0.2s ease-out;
+  `}
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 `;
 
 const DropdownItem = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.spacing.md};
-  padding: ${theme.spacing.md};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
   color: ${theme.colors.textSecondary};
-  transition: background-color ${theme.transitions.default};
+  transition: all ${theme.transitions.default};
   cursor: pointer;
+  font-size: ${theme.typography.fontSizes.sm};
+  position: relative;
 
   &:hover {
-    background: ${PRIMARY_ACCENT}10; 
-    color: ${PRIMARY_ACCENT}; 
+    background: ${PRIMARY_ACCENT}10;
+    color: ${PRIMARY_ACCENT};
+    padding-left: ${theme.spacing.xl};
     
     svg {
-        color: ${PRIMARY_ACCENT};
+      color: ${PRIMARY_ACCENT};
+      transform: scale(1.1);
     }
   }
 
@@ -294,26 +385,40 @@ const DropdownItem = styled.div`
   }
   
   svg {
+    width: 16px;
+    height: 16px;
     color: ${theme.colors.textSecondary};
+    transition: all ${theme.transitions.default};
+    flex-shrink: 0;
+  }
+  
+  span {
+    flex: 1;
   }
 `;
 
 const SignOutItem = styled(DropdownItem)`
-  color: ${DANGER_COLOR}; 
-  cursor: pointer;
-  user-select: none;
-
+  color: ${DANGER_COLOR};
+  border-top: 1px solid ${theme.colors.border};
+  margin-top: ${theme.spacing.xs};
+  
   &:hover {
     background: ${DANGER_COLOR}10;
-    color: #b91c1c; 
+    color: #dc2626;
+    padding-left: ${theme.spacing.xl};
     
     svg {
-        color: #b91c1c;
+      color: #dc2626;
+      transform: scale(1.1);
     }
   }
   
   &:active {
     background: ${DANGER_COLOR}20;
+  }
+  
+  svg {
+    color: ${DANGER_COLOR};
   }
 `;
 export default function Navbar() {
