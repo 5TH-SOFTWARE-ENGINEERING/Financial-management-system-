@@ -1,31 +1,33 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import {
   Users, DollarSign, TrendingUp, FileText, Shield, Calendar,
   CreditCard, Activity, Briefcase, UserCheck,
-  ClipboardList, BarChart3, Wallet
+  ClipboardList, BarChart3, Wallet, ArrowRight, AlertCircle
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
+import { theme } from '@/components/common/theme';
 
-const PRIMARY_COLOR = '#4f46e5'; 
-const PRIMARY_LIGHT = '#eef2ff'; 
-const TEXT_COLOR_DARK = '#111827'; 
-const TEXT_COLOR_MUTED = '#6b7280'; 
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, #ffffff 100%)`;
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_LIGHT = '#e8f5e9';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
 
 const CardShadow = `
-  0 4px 6px -1px rgba(0, 0, 0, 0.1),
-  0 2px 4px -2px rgba(0, 0, 0, 0.1),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
 `;
 const CardShadowHover = `
-  0 10px 15px -3px rgba(0, 0, 0, 0.1),
-  0 4px 6px -4px rgba(0, 0, 0, 0.1),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.05)
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
 `;
 
 const PageContainer = styled.div`
@@ -37,53 +39,63 @@ const PageContainer = styled.div`
 
 const ContentContainer = styled.div`
   flex: 1;
-  width: min(1280px, 100%);
-  margin: 0 auto;
-  padding: 0 clamp(16px, 4vw, 40px) 48px; /* Added bottom padding */
+  width: 97.5%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
-  background-color: ${PRIMARY_COLOR};
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
   color: #ffffff;
-  padding: 48px clamp(16px, 4vw, 40px);
-  margin-bottom: 32px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  /* The padding is handled by ContentContainer, so this is just for the background */
-  margin-left: calc(-1 * clamp(16px, 4vw, 40px));
-  margin-right: calc(-1 * clamp(16px, 4vw, 40px));
+  padding: ${theme.spacing.xl} clamp(${theme.spacing.lg}, 4vw, ${theme.spacing.xl});
+  margin-bottom: ${theme.spacing.xl};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-left: calc(-1 * clamp(${theme.spacing.lg}, 4vw, ${theme.spacing.xl}));
+  margin-right: calc(-1 * clamp(${theme.spacing.lg}, 4vw, ${theme.spacing.xl}));
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
 `;
 
 const HeaderContent = styled.div`
   width: min(1280px, 100%);
   margin: 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
   
   h1 {
     font-size: clamp(28px, 3.5vw, 42px);
-    font-weight: 800;
-    margin-bottom: 4px;
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.md};
   }
   
   p {
-    font-size: clamp(16px, 1.8vw, 20px);
-    font-weight: 400;
-    opacity: 0.85;
+    font-size: clamp(${theme.typography.fontSizes.md}, 1.8vw, ${theme.typography.fontSizes.lg});
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: 0;
   }
 `;
 
 const SectionTitle = styled.h2`
   font-size: clamp(20px, 2.2vw, 28px);
-  margin: 48px 0 24px 0;
+  margin: ${theme.spacing.xl} 0 ${theme.spacing.lg};
   color: ${TEXT_COLOR_DARK};
-  font-weight: 700;
+  font-weight: ${theme.typography.fontWeights.bold};
   border-bottom: 2px solid ${PRIMARY_LIGHT};
-  padding-bottom: 8px;
+  padding-bottom: ${theme.spacing.sm};
 `;
 
 const DashboardGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
-  margin-bottom: 32px;
+  gap: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.xl};
 `;
 
 const getIconColor = (IconComponent: React.FC<any>) => {
@@ -106,81 +118,124 @@ const getIconColor = (IconComponent: React.FC<any>) => {
   }
 };
 
-const CardIcon = styled.div<{ $IconComponent: React.FC<any> }>`
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: ${props => getIconColor(props.$IconComponent).bg};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  
-  svg {
-    width: 24px;
-    height: 24px;
-    color: ${props => getIconColor(props.$IconComponent).color};
-    stroke-width: 2.5; /* Slightly thicker icon stroke */
-  }
-`;
-
-const StatsCard = styled.div<{ $IconComponent: React.FC<any> }>`
-  background: #ffffff;
-  border-radius: 16px;
+const StatsCard = styled.div<{ $IconComponent: React.FC<any>; $clickable?: boolean }>`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
   box-shadow: ${CardShadow};
-  padding: 24px;
+  padding: ${theme.spacing.lg};
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all ${theme.transitions.default};
+  cursor: ${props => props.$clickable ? 'pointer' : 'default'};
   
   &:before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
-    width: 6px;
+    width: 4px;
     height: 100%;
-    background-color: ${props => getIconColor(props.$IconComponent).border};
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
+    background: ${props => getIconColor(props.$IconComponent).border};
+    border-top-left-radius: ${theme.borderRadius.md};
+    border-bottom-left-radius: ${theme.borderRadius.md};
+    transition: width ${theme.transitions.default};
   }
 
   &:hover {
-    transform: translateY(-6px);
+    transform: translateY(-4px);
     box-shadow: ${CardShadowHover};
+    border-color: ${props => getIconColor(props.$IconComponent).border};
+    
+    ${props => props.$clickable && `
+      &:before {
+        width: 6px;
+      }
+      
+      ${CardValue} {
+        color: ${PRIMARY_COLOR};
+      }
+    `}
+  }
+
+  &:active {
+    transform: translateY(-2px);
+  }
+`;
+
+const CardIcon = styled.div<{ $IconComponent: React.FC<any> }>`
+  width: 48px;
+  height: 48px;
+  border-radius: ${theme.borderRadius.md};
+  background: ${props => getIconColor(props.$IconComponent).bg};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: ${theme.spacing.md};
+  transition: transform ${theme.transitions.default};
+  
+  ${StatsCard}:hover & {
+    transform: scale(1.05);
+  }
+  
+  svg {
+    width: 24px;
+    height: 24px;
+    color: ${props => getIconColor(props.$IconComponent).color};
+    stroke-width: 2.5;
   }
 `;
 
 const CardTitle = styled.h3`
-  font-size: 13px;
+  font-size: ${theme.typography.fontSizes.xs};
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: ${TEXT_COLOR_MUTED};
-  margin-bottom: 4px;
-  font-weight: 600;
+  margin-bottom: ${theme.spacing.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
 `;
 
 const CardValue = styled.div`
-  font-size: 34px;
-  font-weight: 800;
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: ${theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   line-height: 1.1;
+  transition: color ${theme.transitions.default};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const ClickableIndicator = styled(ArrowRight)`
+  width: 18px;
+  height: 18px;
+  color: ${TEXT_COLOR_MUTED};
+  opacity: 0;
+  transition: all ${theme.transitions.default};
+  
+  ${StatsCard}:hover & {
+    opacity: 1;
+    transform: translateX(4px);
+    color: ${PRIMARY_COLOR};
+  }
 `;
 
 const TableContainer = styled.div`
-  background: #ffffff;
-  border-radius: 16px;
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
   box-shadow: ${CardShadow};
-  padding: 24px;
+  padding: ${theme.spacing.lg};
+  overflow: hidden;
 `;
 
 const TableTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
-  margin-bottom: 24px;
+  margin-bottom: ${theme.spacing.lg};
 `;
 
 const Table = styled.table`
@@ -189,25 +244,25 @@ const Table = styled.table`
   border-spacing: 0;
   
   th, td {
-    padding: 16px 20px;
+    padding: ${theme.spacing.md} ${theme.spacing.lg};
     text-align: left;
   }
   
   th {
-    font-weight: 600;
-    color: #94a3b8; /* Gray-400 */
-    font-size: 12px;
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.xs};
     text-transform: uppercase;
     letter-spacing: 0.08em;
     padding-top: 0;
-    border-bottom: 2px solid #f3f4f6;
+    border-bottom: 2px solid ${theme.colors.border};
   }
   
   tbody tr {
-    transition: background-color 0.2s ease;
+    transition: background-color ${theme.transitions.default};
     
     &:hover {
-      background-color: #f9fafb;
+      background-color: ${theme.colors.backgroundSecondary};
     }
     
     &:last-child td {
@@ -215,7 +270,8 @@ const Table = styled.table`
     }
     
     td {
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid ${theme.colors.border};
+      font-size: ${theme.typography.fontSizes.sm};
     }
   }
 `;
@@ -251,33 +307,84 @@ const Badge = styled.span<{ $type: 'success' | 'warning' | 'danger' | 'info' }>`
   }};
 `;
 
-// Within the '--- Layout & Structure ---' or similar section
 const RoleBadge = styled.span<{ $role: string }>`
   display: inline-block;
-  padding: 4px 12px;
-  margin-left: 12px;
+  padding: ${theme.spacing.xs} ${theme.spacing.md};
+  margin-left: ${theme.spacing.md};
   border-radius: 999px;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.bold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
   
   /* Dynamic colors for the badge */
   background-color: ${props => {
     const role = props.$role.toLowerCase();
-    if (role.includes('admin')) return 'rgba(25, 219, 44, 0.15)'; // Pink
-    if (role.includes('manager') || role.includes('finance')) return 'rgba(34, 197, 94, 0.15)'; // Green
-    if (role.includes('accountant')) return 'rgba(59, 130, 246, 0.15)'; // Blue
-    return 'rgba(251, 191, 36, 0.15)'; // Yellow/Default
+    if (role.includes('admin')) return 'rgba(255, 255, 255, 0.2)';
+    if (role.includes('manager') || role.includes('finance')) return 'rgba(255, 255, 255, 0.15)';
+    if (role.includes('accountant')) return 'rgba(255, 255, 255, 0.15)';
+    return 'rgba(255, 255, 255, 0.1)';
   }};
   color: ${props => {
-    const role = props.$role.toLowerCase();
-    if (role.includes('admin')) return '#be185d';
-    if (role.includes('manager') || role.includes('finance')) return '#15803d';
-    if (role.includes('accountant')) return '#1d4ed8';
-    return '#b45309';
+    return '#ffffff';
   }};
 `;
+
+const ErrorBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  
+  svg {
+    flex-shrink: 0;
+  }
+`;
+
+const EmptyState = styled.div`
+  padding: ${theme.spacing.xl};
+  text-align: center;
+  color: ${TEXT_COLOR_MUTED};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.backgroundSecondary};
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: ${theme.spacing.md};
+  
+  p {
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+  }
+`;
+
+const Spinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${theme.colors.border};
+  border-top-color: ${PRIMARY_COLOR};
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
 /* --------------------------------------------------------------- */
 
 interface ActivityItem {
@@ -290,6 +397,7 @@ interface ActivityItem {
 }
 
 const AdminDashboard: React.FC = () => {
+  const router = useRouter();
   const { user } = useAuth();
   const [overview, setOverview] = useState<any | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
@@ -385,28 +493,46 @@ const AdminDashboard: React.FC = () => {
     
     return (
       <HeaderContent>
-        <h1>Welcome, {user.username || 'Admin'} 👋</h1>
+        <h1>Welcome, {user.username || 'Admin'} </h1>
         <RoleBadge $role={user.role}>{user.role}</RoleBadge>
       </HeaderContent>
     );
   };
 
-  const createStatsCard = (Icon: React.FC<any>, title: string, value: string) => (
-    <StatsCard $IconComponent={Icon}>
+  const handlePendingApprovalsClick = () => {
+    router.push('/approvals');
+  };
+
+  const createStatsCard = (
+    Icon: React.FC<any>, 
+    title: string, 
+    value: string, 
+    clickable: boolean = false,
+    onClick?: () => void
+  ) => (
+    <StatsCard 
+      $IconComponent={Icon} 
+      $clickable={clickable}
+      onClick={onClick}
+    >
       <CardIcon $IconComponent={Icon}><Icon /></CardIcon> 
       <CardTitle>{title}</CardTitle>
-      <CardValue>{value}</CardValue>
+      <CardValue>
+        {value}
+        {clickable && <ClickableIndicator />}
+      </CardValue>
     </StatsCard>
   );
+
 
   if (loading) {
     return (
       <Layout>
-        <PageContainer className="items-center justify-center">
-          <div className="flex flex-col items-center justify-center py-24">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-4" />
-            <p className="text-muted-foreground">Loading dashboard...</p>
-          </div>
+        <PageContainer>
+          <LoadingContainer>
+            <Spinner />
+            <p>Loading dashboard...</p>
+          </LoadingContainer>
         </PageContainer>
       </Layout>
     );
@@ -421,22 +547,41 @@ const AdminDashboard: React.FC = () => {
 
         <ContentContainer>
           {error && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive mb-6">
-              {error}
-            </div>
+            <ErrorBanner>
+              <AlertCircle size={20} />
+              <span>{error}</span>
+            </ErrorBanner>
           )}
           <SectionTitle>System Overview</SectionTitle>
           {overview ? (
             <DashboardGrid>
-              {createStatsCard(DollarSign, 'Total Revenue', `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
-              {createStatsCard(CreditCard, 'Total Expenses', `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
-              {createStatsCard(TrendingUp, 'Net Profit', `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
-              {createStatsCard(ClipboardList, 'Pending Approvals', pendingApprovals.toString())}
+              {createStatsCard(
+                DollarSign, 
+                'Total Revenue', 
+                `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              )}
+              {createStatsCard(
+                CreditCard, 
+                'Total Expenses', 
+                `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              )}
+              {createStatsCard(
+                TrendingUp, 
+                'Net Profit', 
+                `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              )}
+              {createStatsCard(
+                ClipboardList, 
+                'Pending Approvals', 
+                pendingApprovals.toString(),
+                true,
+                handlePendingApprovalsClick
+              )}
             </DashboardGrid>
           ) : (
-            <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-8 text-center text-gray-500">
+            <EmptyState>
               <p>No overview data available. Please ensure you have revenue and expense entries.</p>
-            </div>
+            </EmptyState>
           )}
           <SectionTitle>Recent Transactions</SectionTitle>
           <TableContainer>

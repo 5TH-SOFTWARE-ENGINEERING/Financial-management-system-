@@ -14,60 +14,54 @@ import {
   CheckSquare,
   Settings,
   RefreshCw,
-  FileText
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { formatDate } from '@/lib/utils';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
-import Navbar from '@/components/common/Navbar';
-import Sidebar from '@/components/common/Sidebar';
+import Layout from '@/components/layout';
+import { theme } from '@/components/common/theme';
 
-// ──────────────────────────────────────────
-// Styled Components
-// ──────────────────────────────────────────
-const LayoutWrapper = styled.div`
-  display: flex;
-  background: #f5f6fa;
-  min-height: 100vh;
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
 `;
 
-const SidebarWrapper = styled.div`
-  width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    width: auto;
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding-left: 250px;
+const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
-`;
-
-const InnerContent = styled.div`
-  padding: 32px;
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
 `;
 
-const Header = styled.div`
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 24px 32px;
-  margin-bottom: 24px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+const ContentContainer = styled.div`
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
 `;
 
 const HeaderContent = styled.div`
@@ -75,55 +69,60 @@ const HeaderContent = styled.div`
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px;
-`;
-
-const HeaderText = styled.div`
+  gap: ${theme.spacing.md};
+  
   h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: #111827;
-    margin-bottom: 4px;
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: #ffffff;
   }
   
   p {
-    color: #6b7280;
-    font-size: 14px;
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
   }
 `;
 
 const HeaderActions = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${theme.spacing.sm};
   flex-wrap: wrap;
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 6px;
+  gap: ${theme.spacing.sm};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.medium};
+  border-radius: ${theme.borderRadius.md};
   border: none;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all ${theme.transitions.default};
   
   ${props => props.$variant === 'primary' ? `
-    background: #4f46e5;
+    background: ${PRIMARY_COLOR};
     color: white;
     
     &:hover:not(:disabled) {
-      background: #4338ca;
+      background: #008800;
+      transform: translateY(-1px);
+      box-shadow: ${CardShadowHover};
     }
   ` : `
-    background: #f3f4f6;
-    color: #374151;
+    background: ${theme.colors.backgroundSecondary};
+    color: ${TEXT_COLOR_DARK};
     
     &:hover:not(:disabled) {
-      background: #e5e7eb;
+      background: ${theme.colors.border};
+      transform: translateY(-1px);
+      box-shadow: ${CardShadowHover};
     }
   `}
   
@@ -131,39 +130,51 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     opacity: 0.5;
     cursor: not-allowed;
   }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `;
 
-const ErrorMessage = styled.div`
+const ErrorBanner = styled.div`
   background: #fef2f2;
   border: 1px solid #fecaca;
-  border-radius: 6px;
-  padding: 12px 16px;
-  margin: 0 32px 24px;
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
   color: #991b1b;
+  font-size: ${theme.typography.fontSizes.sm};
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 0 32px;
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.lg};
 `;
 
 const StatCard = styled.div`
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
+  background: ${theme.colors.background};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.lg};
+  box-shadow: ${CardShadow};
+  transition: all ${theme.transitions.default};
   
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: ${CardShadowHover};
+    border-color: ${PRIMARY_COLOR};
   }
 `;
 
@@ -178,24 +189,24 @@ const StatInfo = styled.div`
 `;
 
 const StatLabel = styled.p`
-  font-size: 12px;
-  font-weight: 500;
-  color: #6b7280;
-  margin-bottom: 4px;
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_MUTED};
+  margin-bottom: ${theme.spacing.xs};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const StatValue = styled.p<{ $color?: string }>`
-  font-size: 24px;
-  font-weight: 700;
-  color: ${props => props.$color || '#111827'};
+  font-size: ${theme.typography.fontSizes.xxl};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${props => props.$color || TEXT_COLOR_DARK};
 `;
 
 const StatIcon = styled.div<{ $bgColor: string; $iconColor: string }>`
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: ${theme.borderRadius.md};
   background: ${props => props.$bgColor};
   display: flex;
   align-items: center;
@@ -209,76 +220,79 @@ const StatIcon = styled.div<{ $bgColor: string; $iconColor: string }>`
 `;
 
 const FiltersContainer = styled.div`
-  padding: 0 32px 24px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: ${theme.spacing.md};
   flex-wrap: wrap;
+  margin-bottom: ${theme.spacing.lg};
 `;
 
 const FilterSelect = styled.select`
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #ffffff;
-  font-size: 14px;
-  color: #111827;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  font-size: ${theme.typography.fontSizes.md};
+  color: ${TEXT_COLOR_DARK};
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all ${theme.transitions.default};
   
   &:focus {
     outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
   }
 `;
 
 const FilterCount = styled.span`
-  font-size: 14px;
-  color: #6b7280;
+  font-size: ${theme.typography.fontSizes.md};
+  color: ${TEXT_COLOR_MUTED};
 `;
 
 const NotificationsList = styled.div`
-  padding: 0 32px 32px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${theme.spacing.md};
 `;
 
 const NotificationCard = styled.div<{ $isRead: boolean; $type: string }>`
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
-  cursor: pointer;
-  
-  ${props => !props.$isRead && `
-    border-left: 4px solid #4f46e5;
-    background: #f9fafb;
-  `}
-  
-  ${props => {
+  background: ${props => props.$isRead ? theme.colors.background : theme.colors.backgroundSecondary};
+  border: 1px solid ${theme.colors.border};
+  border-left: 4px solid ${props => {
+    if (!props.$isRead) return PRIMARY_COLOR;
     const colors: Record<string, string> = {
       success: '#10b981',
       error: '#ef4444',
       warning: '#f59e0b',
       info: '#3b82f6'
     };
-    return `
-      &:hover {
-        border-color: ${colors[props.$type] || '#4f46e5'};
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      }
-    `;
-  }}
+    return colors[props.$type] || theme.colors.border;
+  }};
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.lg};
+  box-shadow: ${CardShadow};
+  transition: all ${theme.transitions.default};
+  cursor: pointer;
+  
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: ${CardShadowHover};
+    border-color: ${props => {
+      const colors: Record<string, string> = {
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#3b82f6'
+      };
+      return colors[props.$type] || PRIMARY_COLOR;
+    }};
+  }
 `;
 
 const NotificationContent = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: ${theme.spacing.md};
 `;
 
 const NotificationIcon = styled.div<{ $type: string }>`
@@ -310,61 +324,62 @@ const NotificationDetails = styled.div`
 const NotificationHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: ${theme.spacing.sm};
+  margin-bottom: ${theme.spacing.sm};
   flex-wrap: wrap;
 `;
 
 const NotificationTitle = styled.h3<{ $isRead: boolean }>`
-  font-size: 16px;
-  font-weight: ${props => props.$isRead ? 500 : 600};
-  color: #111827;
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${props => props.$isRead ? theme.typography.fontWeights.medium : theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
   margin: 0;
 `;
 
 const NewBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  font-size: 10px;
-  font-weight: 700;
+  padding: 2px ${theme.spacing.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.bold};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-radius: 12px;
-  background: #4f46e5;
+  background: ${PRIMARY_COLOR};
   color: white;
 `;
 
 const NotificationMessage = styled.p`
-  font-size: 14px;
-  color: #6b7280;
-  margin-bottom: 12px;
+  font-size: ${theme.typography.fontSizes.md};
+  color: ${TEXT_COLOR_MUTED};
+  margin-bottom: ${theme.spacing.md};
   line-height: 1.5;
 `;
 
 const NotificationMeta = styled.div`
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: ${theme.spacing.md};
   flex-wrap: wrap;
 `;
 
 const NotificationTime = styled.span`
-  font-size: 12px;
-  color: #9ca3af;
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_MUTED};
 `;
 
 const ViewDetailsLink = styled.button`
-  font-size: 12px;
-  font-weight: 500;
-  color: #4f46e5;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${PRIMARY_COLOR};
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
+  transition: color ${theme.transitions.default};
   
   &:hover {
-    color: #4338ca;
+    color: #008800;
     text-decoration: underline;
   }
 `;
@@ -372,7 +387,7 @@ const ViewDetailsLink = styled.button`
 const NotificationActions = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
   flex-shrink: 0;
 `;
 
@@ -384,14 +399,14 @@ const IconButton = styled.button`
   height: 32px;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: ${theme.borderRadius.md};
   cursor: pointer;
-  color: #6b7280;
-  transition: all 0.2s;
+  color: ${TEXT_COLOR_MUTED};
+  transition: all ${theme.transitions.default};
   
   &:hover:not(:disabled) {
-    background: #f3f4f6;
-    color: #111827;
+    background: ${theme.colors.backgroundSecondary};
+    color: ${TEXT_COLOR_DARK};
   }
   
   &:disabled {
@@ -406,29 +421,31 @@ const IconButton = styled.button`
 `;
 
 const EmptyState = styled.div`
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 64px 32px;
+  background: ${theme.colors.background};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.xxl} ${theme.spacing.xl};
   text-align: center;
+  box-shadow: ${CardShadow};
   
   svg {
-    color: #9ca3af;
+    color: ${TEXT_COLOR_MUTED};
     width: 48px;
     height: 48px;
-    margin: 0 auto 16px;
+    margin: 0 auto ${theme.spacing.md};
+    opacity: 0.5;
   }
   
   h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 8px;
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin-bottom: ${theme.spacing.sm};
   }
   
   p {
-    color: #6b7280;
-    font-size: 14px;
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
   }
 `;
 
@@ -437,26 +454,24 @@ const LoadingContainer = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  background: #f5f6fa;
+  min-height: 400px;
+  width: 100%;
   
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #e5e7eb;
-    border-top-color: #4f46e5;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+  p {
+    margin-top: ${theme.spacing.md};
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
   }
+`;
+
+const Spinner = styled(Loader2)`
+  width: 40px;
+  height: 40px;
+  color: ${PRIMARY_COLOR};
+  animation: spin 1s linear infinite;
   
   @keyframes spin {
     to { transform: rotate(360deg); }
-  }
-  
-  p {
-    margin-top: 16px;
-    color: #6b7280;
-    font-size: 14px;
   }
 `;
 
@@ -656,26 +671,9 @@ export default function NotificationsPage() {
   if (isLoading || !isAuthenticated || !user) {
     return (
       <LoadingContainer>
-        <div className="spinner" />
+        <Spinner />
         <p>Loading...</p>
       </LoadingContainer>
-    );
-  }
-
-  if (loading) {
-    return (
-      <LayoutWrapper>
-        <SidebarWrapper>
-          <Sidebar />
-        </SidebarWrapper>
-        <ContentArea>
-          <Navbar />
-          <LoadingContainer>
-            <div className="spinner" />
-            <p>Loading notifications...</p>
-          </LoadingContainer>
-        </ContentArea>
-      </LayoutWrapper>
     );
   }
 
@@ -695,27 +693,22 @@ export default function NotificationsPage() {
   };
 
   return (
-    <LayoutWrapper>
-      <SidebarWrapper>
-        <Sidebar />
-      </SidebarWrapper>
-      <ContentArea>
-        <Navbar />
-
-        <InnerContent>
-          <Header>
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
+          <HeaderContainer>
             <HeaderContent>
-              <HeaderText>
+              <div>
                 <h1>Notifications</h1>
                 <p>Stay updated with important alerts and updates</p>
-              </HeaderText>
+              </div>
               <HeaderActions>
                 <ActionButton
                   $variant="secondary"
                   onClick={fetchNotifications}
                   disabled={loading}
                 >
-                  <RefreshCw style={{ width: 16, height: 16 }} />
+                  <RefreshCw />
                   Refresh
                 </ActionButton>
                 {unreadCount > 0 && (
@@ -724,7 +717,7 @@ export default function NotificationsPage() {
                     onClick={markAllAsRead}
                     disabled={processingIds.has(-1)}
                   >
-                    <CheckSquare style={{ width: 16, height: 16 }} />
+                    <CheckSquare />
                     Mark All as Read
                   </ActionButton>
                 )}
@@ -732,169 +725,178 @@ export default function NotificationsPage() {
                   $variant="secondary"
                   onClick={() => router.push('/settings/notifications')}
                 >
-                  <Settings style={{ width: 16, height: 16 }} />
+                  <Settings />
                   Settings
                 </ActionButton>
               </HeaderActions>
             </HeaderContent>
-          </Header>
+          </HeaderContainer>
 
           {error && (
-            <ErrorMessage>
-              <AlertCircle size={16} />
+            <ErrorBanner>
+              <AlertCircle />
               <span>{error}</span>
-            </ErrorMessage>
+            </ErrorBanner>
           )}
 
-          <StatsGrid>
-            <StatCard>
-              <StatContent>
-                <StatInfo>
-                  <StatLabel>Total</StatLabel>
-                  <StatValue>{notifications.length}</StatValue>
-                </StatInfo>
-                <StatIcon $bgColor="#dbeafe" $iconColor="#3b82f6">
-                  <Bell />
-                </StatIcon>
-              </StatContent>
-            </StatCard>
+          {loading ? (
+            <LoadingContainer>
+              <Spinner />
+              <p>Loading notifications...</p>
+            </LoadingContainer>
+          ) : (
+            <>
+              <StatsGrid>
+                <StatCard>
+                  <StatContent>
+                    <StatInfo>
+                      <StatLabel>Total</StatLabel>
+                      <StatValue>{notifications.length}</StatValue>
+                    </StatInfo>
+                    <StatIcon $bgColor="#dbeafe" $iconColor="#3b82f6">
+                      <Bell />
+                    </StatIcon>
+                  </StatContent>
+                </StatCard>
 
-            <StatCard>
-              <StatContent>
-                <StatInfo>
-                  <StatLabel>Unread</StatLabel>
-                  <StatValue $color="#f59e0b">{unreadCount}</StatValue>
-                </StatInfo>
-                <StatIcon $bgColor="#fef3c7" $iconColor="#f59e0b">
-                  <AlertCircle />
-                </StatIcon>
-              </StatContent>
-            </StatCard>
+                <StatCard>
+                  <StatContent>
+                    <StatInfo>
+                      <StatLabel>Unread</StatLabel>
+                      <StatValue $color="#f59e0b">{unreadCount}</StatValue>
+                    </StatInfo>
+                    <StatIcon $bgColor="#fef3c7" $iconColor="#f59e0b">
+                      <AlertCircle />
+                    </StatIcon>
+                  </StatContent>
+                </StatCard>
 
-            <StatCard>
-              <StatContent>
-                <StatInfo>
-                  <StatLabel>Today</StatLabel>
-                  <StatValue $color="#10b981">{todayCount}</StatValue>
-                </StatInfo>
-                <StatIcon $bgColor="#d1fae5" $iconColor="#10b981">
-                  <Calendar />
-                </StatIcon>
-              </StatContent>
-            </StatCard>
+                <StatCard>
+                  <StatContent>
+                    <StatInfo>
+                      <StatLabel>Today</StatLabel>
+                      <StatValue $color="#10b981">{todayCount}</StatValue>
+                    </StatInfo>
+                    <StatIcon $bgColor="#d1fae5" $iconColor="#10b981">
+                      <Calendar />
+                    </StatIcon>
+                  </StatContent>
+                </StatCard>
 
-            <StatCard>
-              <StatContent>
-                <StatInfo>
-                  <StatLabel>This Week</StatLabel>
-                  <StatValue $color="#8b5cf6">{weekCount}</StatValue>
-                </StatInfo>
-                <StatIcon $bgColor="#ede9fe" $iconColor="#8b5cf6">
-                  <FileText />
-                </StatIcon>
-              </StatContent>
-            </StatCard>
-          </StatsGrid>
+                <StatCard>
+                  <StatContent>
+                    <StatInfo>
+                      <StatLabel>This Week</StatLabel>
+                      <StatValue $color="#8b5cf6">{weekCount}</StatValue>
+                    </StatInfo>
+                    <StatIcon $bgColor="#ede9fe" $iconColor="#8b5cf6">
+                      <FileText />
+                    </StatIcon>
+                  </StatContent>
+                </StatCard>
+              </StatsGrid>
 
-          <FiltersContainer>
-            <FilterSelect
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-            >
-              <option value="all">All Notifications</option>
-              <option value="unread">Unread</option>
-              <option value="success">Success</option>
-              <option value="error">Errors</option>
-              <option value="warning">Warnings</option>
-              <option value="info">Info</option>
-            </FilterSelect>
-            
-            <FilterCount>
-              {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? 's' : ''}
-            </FilterCount>
-          </FiltersContainer>
-
-          <NotificationsList>
-            {filteredNotifications.length > 0 ? (
-              filteredNotifications.map((notification) => (
-                <NotificationCard
-                  key={notification.id}
-                  $isRead={notification.is_read}
-                  $type={notification.type}
-                  onClick={() => {
-                    if (notification.action_url) {
-                      router.push(notification.action_url);
-                    }
-                  }}
+              <FiltersContainer>
+                <FilterSelect
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
                 >
-                  <NotificationContent>
-                    <NotificationIcon $type={notification.type}>
-                      {getNotificationIcon(notification.type)}
-                    </NotificationIcon>
-                    <NotificationDetails>
-                      <NotificationHeader>
-                        <NotificationTitle $isRead={notification.is_read}>
-                          {notification.title}
-                        </NotificationTitle>
-                        {!notification.is_read && <NewBadge>New</NewBadge>}
-                      </NotificationHeader>
-                      <NotificationMessage>{notification.message}</NotificationMessage>
-                      <NotificationMeta>
-                        <NotificationTime>{formatDate(notification.created_at)}</NotificationTime>
-                        {notification.action_url && (
-                          <ViewDetailsLink
+                  <option value="all">All Notifications</option>
+                  <option value="unread">Unread</option>
+                  <option value="success">Success</option>
+                  <option value="error">Errors</option>
+                  <option value="warning">Warnings</option>
+                  <option value="info">Info</option>
+                </FilterSelect>
+                
+                <FilterCount>
+                  {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? 's' : ''}
+                </FilterCount>
+              </FiltersContainer>
+
+              <NotificationsList>
+                {filteredNotifications.length > 0 ? (
+                  filteredNotifications.map((notification) => (
+                    <NotificationCard
+                      key={notification.id}
+                      $isRead={notification.is_read}
+                      $type={notification.type}
+                      onClick={() => {
+                        if (notification.action_url) {
+                          router.push(notification.action_url);
+                        }
+                      }}
+                    >
+                      <NotificationContent>
+                        <NotificationIcon $type={notification.type}>
+                          {getNotificationIcon(notification.type)}
+                        </NotificationIcon>
+                        <NotificationDetails>
+                          <NotificationHeader>
+                            <NotificationTitle $isRead={notification.is_read}>
+                              {notification.title}
+                            </NotificationTitle>
+                            {!notification.is_read && <NewBadge>New</NewBadge>}
+                          </NotificationHeader>
+                          <NotificationMessage>{notification.message}</NotificationMessage>
+                          <NotificationMeta>
+                            <NotificationTime>{formatDate(notification.created_at)}</NotificationTime>
+                            {notification.action_url && (
+                              <ViewDetailsLink
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(notification.action_url!);
+                                }}
+                              >
+                                View Details
+                              </ViewDetailsLink>
+                            )}
+                          </NotificationMeta>
+                        </NotificationDetails>
+                        <NotificationActions>
+                          {!notification.is_read && (
+                            <IconButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markAsRead(notification.id);
+                              }}
+                              disabled={processingIds.has(notification.id)}
+                              title="Mark as read"
+                            >
+                              <CheckSquare />
+                            </IconButton>
+                          )}
+                          <IconButton
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(notification.action_url!);
+                              deleteNotification(notification.id);
                             }}
+                            disabled={processingIds.has(notification.id)}
+                            title="Delete"
                           >
-                            View Details
-                          </ViewDetailsLink>
-                        )}
-                      </NotificationMeta>
-                    </NotificationDetails>
-                    <NotificationActions>
-                      {!notification.is_read && (
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markAsRead(notification.id);
-                          }}
-                          disabled={processingIds.has(notification.id)}
-                          title="Mark as read"
-                        >
-                          <CheckSquare />
-                        </IconButton>
-                      )}
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNotification(notification.id);
-                        }}
-                        disabled={processingIds.has(notification.id)}
-                        title="Delete"
-                      >
-                        <Trash2 />
-                      </IconButton>
-                    </NotificationActions>
-                  </NotificationContent>
-                </NotificationCard>
-              ))
-            ) : (
-              <EmptyState>
-                <Bell />
-                <h3>No notifications</h3>
-                <p>
-                  {filterType === 'unread' 
-                    ? 'No unread notifications'
-                    : 'No notifications match your filter'
-                  }
-                </p>
-              </EmptyState>
-            )}
-          </NotificationsList>
-        </InnerContent>
-      </ContentArea>
-    </LayoutWrapper>
+                            <Trash2 />
+                          </IconButton>
+                        </NotificationActions>
+                      </NotificationContent>
+                    </NotificationCard>
+                  ))
+                ) : (
+                  <EmptyState>
+                    <Bell />
+                    <h3>No notifications</h3>
+                    <p>
+                      {filterType === 'unread' 
+                        ? 'No unread notifications'
+                        : 'No notifications match your filter'
+                      }
+                    </p>
+                  </EmptyState>
+                )}
+              </NotificationsList>
+            </>
+          )}
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
   );
 }

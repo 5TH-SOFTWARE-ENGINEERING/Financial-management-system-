@@ -1,242 +1,484 @@
 'use client';
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import Navbar from '@/components/common/Navbar';
-import Sidebar from '@/components/common/Sidebar';
 import Link from 'next/link';
-import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Plus, Edit, Trash2, DollarSign, Search, Filter, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  Plus,
+  Edit,
+  Trash2,
+  DollarSign,
+  Search,
+  Loader2,
+  CheckCircle,
+  XCircle
+} from 'lucide-react';
+import Layout from '@/components/layout';
+import apiClient from '@/lib/api';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { useUserStore } from '@/store/userStore';
+import { theme } from '@/components/common/theme';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 
-// ──────────────────────────────────────────
-// Styled Components
-// ──────────────────────────────────────────
-const LayoutWrapper = styled.div`
-  display: flex;
-  background: #f5f6fa;
-  min-height: 100vh;
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
 `;
 
-const SidebarWrapper = styled.div`
-  width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    width: auto;
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding-left: 250px;
+const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
-`;
-
-const InnerContent = styled.div`
-  padding: 32px;
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
 `;
 
-const Header = styled.div`
+const ContentContainer = styled.div`
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
   display: flex;
-  justify-between;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
 `;
 
-const HeaderText = styled.div`
+const HeaderContent = styled.div`
+  flex: 1;
+  
   h1 {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 4px;
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: #ffffff;
   }
   
   p {
-    color: var(--muted-foreground);
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
   }
 `;
 
-const MessageBox = styled.div<{ type: 'error' | 'success' }>`
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+const AddButton = styled(Button)`
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+  transition: all ${theme.transitions.default};
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const ErrorBanner = styled.div`
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
 
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
 `;
 
-const Card = styled.div`
-  background: #fff;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+const FiltersContainer = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: ${CardShadow};
+  transition: box-shadow ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: ${CardShadowHover};
+  }
 `;
 
-const FiltersCard = styled.div`
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  margin-bottom: 20px;
+const FiltersGrid = styled.div`
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 16px;
-  align-items: center;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: ${theme.spacing.sm};
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: ${theme.spacing.sm};
   }
 `;
 
-const SearchWrapper = styled.div`
+const SearchContainer = styled.div`
   position: relative;
-  
+  grid-column: span 1;
+
   svg {
     position: absolute;
-    left: 12px;
+    left: ${theme.spacing.md};
     top: 50%;
     transform: translateY(-50%);
-    color: var(--muted-foreground);
+    width: 18px;
+    height: 18px;
+    color: ${TEXT_COLOR_MUTED};
+    pointer-events: none;
   }
-  
-  input {
-    padding-left: 40px;
+`;
+
+const SearchInput = styled.input`
+  width: 70%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} 40px;
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_DARK};
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
   }
 `;
 
 const Select = styled.select`
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 14px;
-  color: var(--foreground);
-  
+  width: 100%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+
   &:focus {
     outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
   }
 `;
 
+const TableContainer = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  overflow: hidden;
+`;
+
 const EmptyState = styled.div`
+  padding: ${theme.spacing.xxl};
   text-align: center;
-  padding: 48px 24px;
-  
+  color: ${TEXT_COLOR_MUTED};
+
   svg {
-    margin: 0 auto 16px;
-    color: var(--muted-foreground);
+    width: 48px;
+    height: 48px;
+    margin: 0 auto ${theme.spacing.md};
+    opacity: 0.5;
   }
-  
+
+  h3 {
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.sm};
+    color: ${TEXT_COLOR_DARK};
+  }
+
   p {
-    color: var(--muted-foreground);
-    margin-bottom: 16px;
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0 0 ${theme.spacing.md};
   }
 `;
 
 const Table = styled.table`
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 `;
 
 const TableHeader = styled.thead`
-  border-bottom: 1px solid var(--border);
+  background: ${theme.colors.backgroundSecondary};
+  border-bottom: 2px solid ${theme.colors.border};
   
   th {
     text-align: left;
-    padding: 12px 16px;
-    font-weight: 600;
-    color: var(--foreground);
-    font-size: 14px;
+    padding: ${theme.spacing.md} ${theme.spacing.lg};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.xs};
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 `;
 
 const TableBody = styled.tbody`
   tr {
-    border-bottom: 1px solid var(--border);
-    transition: background-color 0.2s;
+    border-bottom: 1px solid ${theme.colors.border};
+    transition: background-color ${theme.transitions.default};
     
     &:hover {
-      background: var(--muted);
+      background-color: ${theme.colors.backgroundSecondary};
+    }
+    
+    &:last-child {
+      border-bottom: none;
     }
     
     td {
-      padding: 12px 16px;
-      color: var(--muted-foreground);
-      font-size: 14px;
+      padding: ${theme.spacing.md} ${theme.spacing.lg};
+      color: ${TEXT_COLOR_DARK};
+      font-size: ${theme.typography.fontSizes.sm};
     }
   }
 `;
 
 const StatusBadge = styled.span<{ $approved: boolean }>`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${(p) => (p.$approved ? '#d1fae5' : '#fef3c7')};
-  color: ${(p) => (p.$approved ? '#065f46' : '#92400e')};
-  margin-right: 8px;
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  background: ${props => props.$approved ? 'rgba(16, 185, 129, 0.12)' : 'rgba(251, 191, 36, 0.12)'};
+  color: ${props => props.$approved ? '#065f46' : '#92400e'};
+  margin-right: ${theme.spacing.sm};
 `;
 
 const RecurringBadge = styled.span`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  background: #dbeafe;
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  background: rgba(59, 130, 246, 0.12);
   color: #1e40af;
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
+  align-items: center;
+`;
+
+const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' | 'secondary' }>`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+
+  ${props => {
+    if (props.$variant === 'danger') {
+      return `
+        background: #ef4444;
+        color: white;
+        border-color: #ef4444;
+        
+        &:hover:not(:disabled) {
+          background: #dc2626;
+          transform: translateY(-1px);
+        }
+      `;
+    }
+    return `
+      &:hover:not(:disabled) {
+        background: ${theme.colors.backgroundSecondary};
+        border-color: ${PRIMARY_COLOR};
+        color: ${PRIMARY_COLOR};
+      }
+    `;
+  }}
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 `;
 
 const LoadingContainer = styled.div`
-  padding: 32px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: ${theme.spacing.md};
   
   p {
-    color: var(--muted-foreground);
-    margin-top: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0;
   }
 `;
 
 const Spinner = styled.div`
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${theme.colors.border};
+  border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto;
+  animation: spin 0.8s linear infinite;
   
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+`;
+
+const ExpenseTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  
+  svg {
+    width: 16px;
+    height: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    flex-shrink: 0;
+  }
+  
+  span {
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_DARK};
+  }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContent = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.xl};
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.lg};
+`;
+
+const StyledLabel = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin-bottom: ${theme.spacing.sm};
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  resize: vertical;
+  min-height: 120px;
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${theme.spacing.lg};
 `;
 
 interface Expense {
@@ -270,7 +512,6 @@ export default function ExpenseListPage() {
   const [showRejectModal, setShowRejectModal] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   
-  // Check if user can approve transactions
   const canApprove = () => {
     if (canApproveTransactions()) return true;
     if (!user) return false;
@@ -290,8 +531,9 @@ export default function ExpenseListPage() {
       const response = await apiClient.getExpenses();
       setExpenses(response.data || []);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load expenses');
-      toast.error('Failed to load expenses');
+      const errorMessage = err.response?.data?.detail || 'Failed to load expenses';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -323,17 +565,7 @@ export default function ExpenseListPage() {
       toast.success('Expense approved successfully');
       loadExpenses();
     } catch (err: any) {
-      let errorMessage = 'Failed to approve expense';
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
-        if (typeof detail === 'string') {
-          errorMessage = detail;
-        } else if (Array.isArray(detail)) {
-          errorMessage = detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
-        } else if (typeof detail === 'object' && detail.msg) {
-          errorMessage = detail.msg;
-        }
-      }
+      const errorMessage = err.response?.data?.detail || 'Failed to approve expense';
       toast.error(errorMessage);
     } finally {
       setApprovingId(null);
@@ -359,28 +591,16 @@ export default function ExpenseListPage() {
       setRejectionReason('');
       loadExpenses();
     } catch (err: any) {
-      let errorMessage = 'Failed to reject expense';
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
-        if (typeof detail === 'string') {
-          errorMessage = detail;
-        } else if (Array.isArray(detail)) {
-          errorMessage = detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
-        } else if (typeof detail === 'object' && detail.msg) {
-          errorMessage = detail.msg;
-        }
-      }
+      const errorMessage = err.response?.data?.detail || 'Failed to reject expense';
       toast.error(errorMessage);
     } finally {
       setRejectingId(null);
     }
   };
 
-  // Extract clean item type from title (remove extra text like "Item:", prices, etc.)
   const getItemType = (title: string): string => {
     if (!title) return '';
     
-    // If title starts with "Item:", extract the item name
     if (title.toLowerCase().startsWith('item:')) {
       const match = title.match(/item:\s*([^,]+)/i);
       if (match && match[1]) {
@@ -388,20 +608,16 @@ export default function ExpenseListPage() {
       }
     }
     
-    // If title contains "Buy-at" or other calculation-related text, extract first part
     const buyAtIndex = title.toLowerCase().indexOf('buy-at');
     if (buyAtIndex > 0) {
       return title.substring(0, buyAtIndex).trim().replace(/^item:\s*/i, '').trim();
     }
     
-    // Otherwise, return the title as-is (already clean)
     return title.trim();
   };
 
-  // Get unique categories from expenses
   const categories = Array.from(new Set(expenses.map(e => e.category).filter(Boolean)));
 
-  // Filter expenses
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = 
       expense.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -418,90 +634,90 @@ export default function ExpenseListPage() {
 
   if (loading) {
     return (
-      <LayoutWrapper>
-        <SidebarWrapper>
-          <Sidebar />
-        </SidebarWrapper>
-        <ContentArea>
-          <Navbar />
-          <LoadingContainer>
-            <Spinner />
-            <p>Loading expenses...</p>
-          </LoadingContainer>
-        </ContentArea>
-      </LayoutWrapper>
+      <Layout>
+        <PageContainer>
+          <ContentContainer>
+            <LoadingContainer>
+              <Spinner />
+              <p>Loading expenses...</p>
+            </LoadingContainer>
+          </ContentContainer>
+        </PageContainer>
+      </Layout>
     );
   }
 
   return (
-    <LayoutWrapper>
-      <SidebarWrapper>
-        <Sidebar />
-      </SidebarWrapper>
-      <ContentArea>
-        <Navbar />
-
-        <InnerContent>
-          <Header>
-            <HeaderText>
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
+          <HeaderContainer>
+            <HeaderContent>
               <h1>Expenses</h1>
               <p>Manage expense entries</p>
-            </HeaderText>
+            </HeaderContent>
             <Link href="/expenses/items">
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
+              <AddButton>
+                <Plus size={16} style={{ marginRight: theme.spacing.xs }} />
                 Add Expenses
-              </Button>
+              </AddButton>
             </Link>
-          </Header>
+          </HeaderContainer>
 
           {error && (
-            <MessageBox type="error">
-              <AlertCircle size={18} />
+            <ErrorBanner>
+              <AlertCircle />
               <span>{error}</span>
-            </MessageBox>
+            </ErrorBanner>
           )}
 
-          <FiltersCard>
-            <SearchWrapper>
-              <Search size={16} />
-              <Input
-                type="text"
-                placeholder="Search expenses..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </SearchWrapper>
-            
-            <Select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="all">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </Select>
-            
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Statuses</option>
-              <option value="approved">Approved</option>
-              <option value="pending">Pending</option>
-            </Select>
-          </FiltersCard>
+          <FiltersContainer>
+            <FiltersGrid>
+              <SearchContainer>
+                <Search />
+                <SearchInput
+                  type="text"
+                  placeholder="Search expenses..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </SearchContainer>
+              
+              <Select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="all">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                ))}
+              </Select>
+              
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Statuses</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+              </Select>
+            </FiltersGrid>
+          </FiltersContainer>
 
-          <Card>
+          <TableContainer>
             {filteredExpenses.length === 0 ? (
               <EmptyState>
-                <DollarSign size={48} />
+                <DollarSign />
+                <h3>
+                  {expenses.length === 0 ? 'No expenses found' : 'No expenses match your filters'}
+                </h3>
                 <p>
-                  {expenses.length === 0 ? 'No expenses found.' : 'No expenses match your filters.'}
+                  {expenses.length === 0 
+                    ? 'Get started by adding your first expense entry.' 
+                    : 'Try adjusting your search or filter criteria.'}
                 </p>
                 {expenses.length === 0 && (
-                  <Link href="/expenses/items">
+                  <Link href="/expenses/items" style={{ marginTop: theme.spacing.md, display: 'inline-block' }}>
                     <Button>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Expenses
@@ -526,23 +742,23 @@ export default function ExpenseListPage() {
                   <TableBody>
                     {filteredExpenses.map((expense) => (
                       <tr key={expense.id}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <DollarSign size={16} style={{ color: 'var(--muted-foreground)' }} />
-                            <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
-                              {getItemType(expense.title)}
-                            </span>
-                          </div>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <ExpenseTitle>
+                            <DollarSign />
+                            <span>{getItemType(expense.title)}</span>
+                          </ExpenseTitle>
                         </td>
-                        <td style={{ textTransform: 'capitalize' }}>{expense.category || 'N/A'}</td>
-                        <td>
-                          <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
+                        <td style={{ whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
+                          {expense.category || 'N/A'}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <span style={{ fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
                             {formatCurrency(expense.amount)}
                           </span>
                         </td>
-                        <td>{expense.vendor || 'N/A'}</td>
-                        <td>{formatDate(expense.date)}</td>
-                        <td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{expense.vendor || 'N/A'}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{formatDate(expense.date)}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
                           <StatusBadge $approved={expense.is_approved}>
                             {expense.is_approved ? 'Approved' : 'Pending'}
                           </StatusBadge>
@@ -550,58 +766,46 @@ export default function ExpenseListPage() {
                             <RecurringBadge>Recurring</RecurringBadge>
                           )}
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
                           <ActionButtons>
                             <Link href={`/expenses/edit/${expense.id}`}>
-                              <Button size="sm" variant="secondary">
-                                <Edit className="h-4 w-4 mr-1" />
-                                Edit
-                              </Button>
+                              <ActionButton $variant="secondary" title="Edit">
+                                <Edit />
+                              </ActionButton>
                             </Link>
                             {!expense.is_approved && canApprove() && (
                               <>
-                                <Button 
-                                  size="sm" 
-                                  variant="default"
+                                <ActionButton
+                                  $variant="primary"
                                   onClick={() => handleApprove(expense.id)}
                                   disabled={approvingId === expense.id || rejectingId === expense.id}
-                                  style={{ 
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px'
-                                  }}
+                                  style={{ background: PRIMARY_COLOR, color: 'white', borderColor: PRIMARY_COLOR }}
                                 >
                                   {approvingId === expense.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
                                   ) : (
-                                    <CheckCircle className="h-4 w-4" />
+                                    <CheckCircle />
                                   )}
-                                  <span>Approve</span>
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="destructive"
+                                  Approve
+                                </ActionButton>
+                                <ActionButton
+                                  $variant="danger"
                                   onClick={() => setShowRejectModal(expense.id)}
                                   disabled={approvingId === expense.id || rejectingId === expense.id}
-                                  style={{ 
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px'
-                                  }}
                                 >
-                                  <XCircle className="h-4 w-4" />
-                                  <span>Reject</span>
-                                </Button>
+                                  <XCircle />
+                                  Reject
+                                </ActionButton>
                               </>
                             )}
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              style={{ height: '32px', width: '32px', padding: 0, color: 'var(--destructive)' }}
+                            <ActionButton
+                              $variant="danger"
                               onClick={() => handleDelete(expense.id)}
+                              style={{ color: '#dc2626' }}
+                              title="Delete"
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <Trash2 />
+                            </ActionButton>
                           </ActionButtons>
                         </td>
                       </tr>
@@ -610,74 +814,59 @@ export default function ExpenseListPage() {
                 </Table>
               </div>
             )}
-          </Card>
+          </TableContainer>
 
           {/* Rejection Modal */}
           {showRejectModal && (
-            <div style={{
-              position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 50
+            <ModalOverlay onClick={() => {
+              setShowRejectModal(null);
+              setRejectionReason('');
             }}>
-              <div style={{
-                background: '#fff',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                padding: '24px',
-                maxWidth: '500px',
-                width: '100%',
-                margin: '16px'
-              }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>Reject Expense Entry</h3>
-                <div style={{ marginBottom: '16px' }}>
-                  <Label htmlFor="rejection-reason">Rejection Reason *</Label>
-                  <Textarea
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalTitle>Reject Expense Entry</ModalTitle>
+                <div>
+                  <StyledLabel htmlFor="rejection-reason">Rejection Reason *</StyledLabel>
+                  <TextArea
                     id="rejection-reason"
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
                     placeholder="Please provide a reason for rejection..."
                     rows={4}
-                    style={{ marginTop: '8px', width: '100%' }}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  <Button
-                    variant="secondary"
+                <ModalActions>
+                  <ActionButton
+                    $variant="secondary"
                     onClick={() => {
                       setShowRejectModal(null);
                       setRejectionReason('');
                     }}
                   >
                     Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
+                  </ActionButton>
+                  <ActionButton
+                    $variant="danger"
                     onClick={() => handleReject(showRejectModal, rejectionReason)}
                     disabled={!rejectionReason.trim() || rejectingId === showRejectModal}
                   >
                     {rejectingId === showRejectModal ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
                         Rejecting...
                       </>
                     ) : (
                       <>
-                        <XCircle className="h-4 w-4 mr-1" />
+                        <XCircle />
                         Reject
                       </>
                     )}
-                  </Button>
-                </div>
-              </div>
-            </div>
+                  </ActionButton>
+                </ModalActions>
+              </ModalContent>
+            </ModalOverlay>
           )}
-        </InnerContent>
-      </ContentArea>
-    </LayoutWrapper>
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
   );
 }
-

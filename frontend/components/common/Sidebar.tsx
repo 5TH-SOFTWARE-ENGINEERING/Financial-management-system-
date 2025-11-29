@@ -19,7 +19,7 @@ interface SidebarContainerProps {
 }
 
 const SidebarContainer = styled.div<SidebarContainerProps>`
-    width: ${props => (props.$collapsed ? '70px' : '260px')};
+    width: ${props => (props.$collapsed ? '70px' : '230px')};
     height: 100vh;
     background: ${theme.colors.background};
     border-right: 1px solid ${theme.colors.border};

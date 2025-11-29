@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import apiClient from '@/lib/api';
+import Layout from '@/components/layout';
+import { theme } from '@/components/common/theme';
 
 import {
   AlertCircle,
@@ -19,13 +21,256 @@ import {
   Search
 } from 'lucide-react';
 
-import Navbar from '@/components/common/Navbar';
-import Sidebar from '@/components/common/Sidebar';
 import { toast } from 'sonner';
 
-// ──────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
+`;
+
+const PageContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+`;
+
+const ContentContainer = styled.div`
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
+  
+  h1 {
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: #ffffff;
+  }
+  
+  p {
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
+  }
+`;
+
+const HeaderContent = styled.div`
+  flex: 1;
+`;
+
+const ErrorBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const SearchContainer = styled.div`
+  position: relative;
+  margin-bottom: ${theme.spacing.lg};
+
+  svg {
+    position: absolute;
+    left: ${theme.spacing.md};
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: ${TEXT_COLOR_MUTED};
+    pointer-events: none;
+  }
+`;
+
+const SearchInput = styled.input`
+  width: 70%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} 40px;
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_DARK};
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const TableContainer = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  overflow: hidden;
+`;
+
+const EmptyState = styled.div`
+  padding: ${theme.spacing.xxl};
+  text-align: center;
+  color: ${TEXT_COLOR_MUTED};
+
+  svg {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto ${theme.spacing.md};
+    opacity: 0.5;
+    color: ${TEXT_COLOR_MUTED};
+  }
+
+  p {
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0;
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+`;
+
+const TableHeader = styled.thead`
+  background: ${theme.colors.backgroundSecondary};
+  border-bottom: 2px solid ${theme.colors.border};
+  
+  th {
+    text-align: left;
+    padding: ${theme.spacing.md} ${theme.spacing.lg};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.xs};
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+`;
+
+const TableBody = styled.tbody`
+  tr {
+    border-bottom: 1px solid ${theme.colors.border};
+    transition: background-color ${theme.transitions.default};
+    
+    &:hover {
+      background-color: ${theme.colors.backgroundSecondary};
+    }
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    td {
+      padding: ${theme.spacing.md} ${theme.spacing.lg};
+      color: ${TEXT_COLOR_DARK};
+      font-size: ${theme.typography.fontSizes.sm};
+    }
+  }
+`;
+
+const StatusBadge = styled.span<{ $active: boolean }>`
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  background: ${props => props.$active ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'};
+  color: ${props => props.$active ? '#065f46' : '#991b1b'};
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  align-items: center;
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: ${theme.spacing.md};
+  
+  p {
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0;
+  }
+`;
+
+const Spinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${theme.colors.border};
+  border-top-color: ${PRIMARY_COLOR};
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
+const AddButton = styled(Button)`
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+  transition: all ${theme.transitions.default};
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+`;
+
 interface FinanceManager {
   id: number;
   full_name?: string | null;
@@ -37,57 +282,6 @@ interface FinanceManager {
   department?: string | null;
 }
 
-// ──────────────────────────────────────────
-// Styled Components Layout
-// ──────────────────────────────────────────
-const PageWrapper = styled.div`
-  display: flex;
-  height: 100vh;
-  background: #f7f7f9;
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding-left: 260px; /* Sidebar width */
-  display: flex;
-  flex-direction: column;
-`;
-
-const PageContent = styled.div`
-  padding: 24px;
-`;
-
-const Card = styled.div`
-  background: white;
-  padding: 24px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-`;
-
-const Table = styled.table`
-  width: 100%;
-`;
-
-const TableRow = styled.tr`
-  border-bottom: 1px solid #e5e7eb;
-
-  &:hover {
-    background: #fafafa;
-  }
-`;
-
-const Badge = styled.span<{ $active: boolean }>`
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  color: ${(p) => (p.$active ? '#065f46' : '#991b1b')};
-  background: ${(p) => (p.$active ? '#d1fae5' : '#fee2e2')};
-`;
-
-// ──────────────────────────────────────────
-// Component
-// ──────────────────────────────────────────
 export default function FinanceListPage() {
   const router = useRouter();
   const [financeManagers, setFinanceManagers] = useState<FinanceManager[]>([]);
@@ -154,134 +348,111 @@ export default function FinanceListPage() {
 
   if (loading) {
     return (
-      <PageWrapper>
-        <Sidebar />
-        <ContentArea>
-          <Navbar />
-          <PageContent>
-            <div style={{ textAlign: 'center', padding: '50px' }}>
-              <div className="animate-spin w-8 h-8 border-2 border-gray-400 border-r-transparent rounded-full mx-auto"></div>
-              <p style={{ marginTop: '12px', color: '#6b7280' }}>Loading...</p>
-            </div>
-          </PageContent>
-        </ContentArea>
-      </PageWrapper>
+      <Layout>
+        <PageContainer>
+          <ContentContainer>
+            <LoadingContainer>
+              <Spinner />
+              <p>Loading finance managers...</p>
+            </LoadingContainer>
+          </ContentContainer>
+        </PageContainer>
+      </Layout>
     );
   }
 
   return (
-    <PageWrapper>
-      <Sidebar />
-      <ContentArea>
-        <Navbar />
-
-        <PageContent>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-            <div>
-              <h1 style={{ fontSize: '28px', fontWeight: 700 }}>Finance Managers</h1>
-              <p style={{ color: '#6b7280', marginTop: 4 }}>Manage financial department users</p>
-            </div>
-
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
+          <HeaderContainer>
+            <HeaderContent>
+              <h1>Finance Managers</h1>
+              <p>Manage financial department users</p>
+            </HeaderContent>
             <Link href="/finance/create">
-              <Button>
-                <UserPlus size={16} className="mr-2" /> Add Finance Manager
-              </Button>
+              <AddButton>
+                <UserPlus size={16} style={{ marginRight: theme.spacing.xs }} />
+                Add Finance Manager
+              </AddButton>
             </Link>
-          </div>
+          </HeaderContainer>
 
           {error && (
-            <div
-              style={{
-                background: '#fee2e2',
-                border: '1px solid #fecaca',
-                padding: '12px',
-                borderRadius: 8,
-                display: 'flex',
-                gap: 8,
-                color: '#991b1b',
-                marginBottom: 16,
-              }}
-            >
-              <AlertCircle size={18} /> {error}
-            </div>
+            <ErrorBanner>
+              <AlertCircle />
+              <span>{error}</span>
+            </ErrorBanner>
           )}
 
-          {/* Search */}
-          <div style={{ marginBottom: 20, position: 'relative' }}>
-            <Search
-              size={16}
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: 12,
-                transform: 'translateY(-50%)',
-                color: '#9ca3af',
-              }}
-            />
-            <Input
+          <SearchContainer>
+            <Search />
+            <SearchInput
+              type="text"
               placeholder="Search finance managers..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
             />
-          </div>
+          </SearchContainer>
 
-          <Card>
+          <TableContainer>
             {filtered.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '50px' }}>
-                <Briefcase size={40} style={{ color: '#9ca3af', margin: '0 auto' }} />
-                <p style={{ marginTop: 12, color: '#6b7280' }}>No finance managers found.</p>
-              </div>
+              <EmptyState>
+                <Briefcase />
+                <p>No finance managers found.</p>
+              </EmptyState>
             ) : (
-              <Table>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <th style={{ textAlign: 'left', padding: '12px' }}>Name</th>
-                    <th>Email</th>
-                    <th>Username</th>
-                    <th>Phone</th>
-                    <th>Department</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {filtered.map((m) => (
-                    <TableRow key={m.id}>
-                      <td style={{ padding: '12px' }}>{m.full_name || 'N/A'}</td>
-                      <td>{m.email}</td>
-                      <td>{m.username}</td>
-                      <td>{m.phone || 'N/A'}</td>
-                      <td>{m.department || 'N/A'}</td>
-                      <td>
-                      <Badge $active={m.is_active}>
-                         {m.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                      </td>
-                      <td style={{ padding: '12px', display: 'flex', gap: 8 }}>
-                        <Link href={`/finance/edit/${m.id}`}>
-                          <Button size="sm" variant="secondary">
-                            <Edit size={14} className="mr-1" /> Edit
-                          </Button>
-                        </Link>
-
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDelete(m.id)}
-                        >
-                          <Trash2 size={14} className="mr-1" /> Delete
-                        </Button>
-                      </td>
-                    </TableRow>
-                  ))}
-                </tbody>
-              </Table>
+              <div style={{ overflowX: 'auto' }}>
+                <Table>
+                  <TableHeader>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Username</th>
+                      <th>Phone</th>
+                      <th>Department</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((m) => (
+                      <tr key={m.id}>
+                        <td style={{ whiteSpace: 'nowrap' }}>{m.full_name || 'N/A'}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{m.email}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{m.username || 'N/A'}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{m.phone || 'N/A'}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{m.department || 'N/A'}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <StatusBadge $active={m.is_active}>
+                            {m.is_active ? 'Active' : 'Inactive'}
+                          </StatusBadge>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <ActionButtons>
+                            <Link href={`/finance/edit/${m.id}`}>
+                              <Button size="sm" variant="secondary">
+                                <Edit size={14} style={{ marginRight: theme.spacing.xs }} />
+                              </Button>
+                            </Link>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDelete(m.id)}
+                            >
+                              <Trash2 size={14} style={{ marginRight: theme.spacing.xs }} />
+                            </Button>
+                          </ActionButtons>
+                        </td>
+                      </tr>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
-          </Card>
-        </PageContent>
-      </ContentArea>
-    </PageWrapper>
+          </TableContainer>
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
   );
 }

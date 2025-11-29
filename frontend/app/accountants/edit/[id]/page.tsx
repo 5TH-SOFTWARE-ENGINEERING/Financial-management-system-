@@ -1,4 +1,3 @@
-// app/accountants/[id]/edit/page.tsx
 'use client';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -8,16 +7,29 @@ import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import Navbar from '@/components/common/Navbar';
-import Sidebar from '@/components/common/Sidebar';
+import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useRouter, useParams } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { CheckCircle, AlertCircle, ArrowLeft, Users, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { theme } from '@/components/common/theme';
 
-/* --------------------------------- ZOD SCHEMA ---------------------------------- */
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
+`;
 
 const UpdateAccountantSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -29,124 +41,178 @@ const UpdateAccountantSchema = z.object({
 
 type FormData = z.infer<typeof UpdateAccountantSchema>;
 
-/* --------------------------------- STYLED COMPONENTS ---------------------------------- */
-
-const LayoutWrapper = styled.div`
-  display: flex;
-  background: #f5f6fa;
-  min-height: 100vh;
-`;
-
-const SidebarWrapper = styled.div`
-  width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    width: auto;
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding-left: 250px;
+const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
+  width: 100%;
 `;
 
-const InnerContent = styled.div`
-  padding: 32px;
+const ContentContainer = styled.div`
+  flex: 1;
   width: 100%;
-  max-width: 700px;
-  margin: 0 auto;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+`;
+
+const HeaderContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  
+  h1 {
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.md};
+  }
+  
+  p {
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
+  }
+  
+  svg {
+    width: 32px;
+    height: 32px;
+  }
 `;
 
 const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: var(--muted-foreground);
-  font-size: 14px;
-  margin-bottom: 16px;
-  transition: 0.2s;
+  gap: ${theme.spacing.sm};
+  color: ${TEXT_COLOR_MUTED};
+  font-size: ${theme.typography.fontSizes.md};
+  margin-bottom: ${theme.spacing.md};
+  text-decoration: none;
+  transition: color ${theme.transitions.default};
 
   &:hover {
-    color: var(--foreground);
+    color: ${PRIMARY_COLOR};
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `;
 
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const Subtitle = styled.p`
-  color: var(--muted-foreground);
-  margin-bottom: 24px;
-`;
-
-const FormWrapper = styled.form`
-  background: #fff;
-  padding: 28px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+const FormCard = styled.form`
+  background: ${theme.colors.background};
+  padding: ${theme.spacing.xl};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: ${theme.spacing.lg};
+  transition: box-shadow ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: ${CardShadowHover};
+  }
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
 `;
 
-const ErrorText = styled.p`
+const FieldError = styled.p`
   color: #dc2626;
-  font-size: 14px;
-  margin-top: 4px;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin-top: ${theme.spacing.xs};
 `;
 
-const AlertBox = styled.div<{ status: 'error' | 'success' }>`
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+const ErrorBanner = styled.div`
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.lg};
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: ${theme.spacing.sm};
+  color: #991b1b;
+  font-size: ${theme.typography.fontSizes.sm};
 
-  background: ${(p) => (p.status === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.status === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.status === 'error' ? '#991b1b' : '#065f46')};
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const SuccessBanner = styled.div`
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.lg};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  color: #065f46;
+  font-size: ${theme.typography.fontSizes.sm};
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: 12px;
-  padding-top: 12px;
+  gap: ${theme.spacing.md};
+  padding-top: ${theme.spacing.md};
+  margin-top: ${theme.spacing.sm};
 `;
 
 const LoadingContainer = styled.div`
-  padding: 32px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  width: 100%;
   
   p {
-    color: var(--muted-foreground);
-    margin-top: 16px;
+    margin-top: ${theme.spacing.md};
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
   }
 `;
 
-/* --------------------------------- PAGE ---------------------------------- */
+const Spinner = styled(Loader2)`
+  width: 40px;
+  height: 40px;
+  color: ${PRIMARY_COLOR};
+  animation: spin 1s linear infinite;
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
 
 export default function EditAccountantPage() {
   const router = useRouter();
@@ -235,72 +301,69 @@ export default function EditAccountantPage() {
 
   if (loadingUser) {
     return (
-      <LayoutWrapper>
-        <SidebarWrapper>
-          <Sidebar />
-        </SidebarWrapper>
-        <ContentArea>
-          <Navbar />
-          <LoadingContainer>
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p>Loading accountant...</p>
-          </LoadingContainer>
-        </ContentArea>
-      </LayoutWrapper>
+      <Layout>
+        <PageContainer>
+          <ContentContainer>
+            <LoadingContainer>
+              <Spinner />
+              <p>Loading accountant...</p>
+            </LoadingContainer>
+          </ContentContainer>
+        </PageContainer>
+      </Layout>
     );
   }
 
   return (
-    <LayoutWrapper>
-      <SidebarWrapper>
-        <Sidebar />
-      </SidebarWrapper>
-      <ContentArea>
-        <Navbar />
-
-        <InnerContent>
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
           <BackLink href="/accountants/list">
-            <ArrowLeft size={16} />
+            <ArrowLeft />
             Back to Accountants
           </BackLink>
 
-          <Title>
-            <Users className="h-8 w-8 text-primary" />
-            Edit Accountant
-          </Title>
-          <Subtitle>Update accountant information</Subtitle>
+          <HeaderContainer>
+            <HeaderContent>
+              <Users />
+              <div>
+                <h1>Edit Accountant</h1>
+                <p>Update accountant information</p>
+              </div>
+            </HeaderContent>
+          </HeaderContainer>
 
           {error && (
-            <AlertBox status="error">
-              <AlertCircle size={18} />
-              {error}
-            </AlertBox>
+            <ErrorBanner>
+              <AlertCircle />
+              <span>{error}</span>
+            </ErrorBanner>
           )}
 
           {success && (
-            <AlertBox status="success">
-              <CheckCircle size={18} />
-              {success}
-            </AlertBox>
+            <SuccessBanner>
+              <CheckCircle />
+              <span>{success}</span>
+            </SuccessBanner>
           )}
 
-          <FormWrapper onSubmit={handleSubmit(onSubmit)}>
+          <FormCard onSubmit={handleSubmit(onSubmit)}>
             <FormGroup>
               <Label htmlFor="full_name">Full Name *</Label>
               <Input id="full_name" {...register('full_name')} disabled={loading} />
-              {errors.full_name && <ErrorText>{errors.full_name.message}</ErrorText>}
+              {errors.full_name && <FieldError>{errors.full_name.message}</FieldError>}
             </FormGroup>
 
             <FormGroup>
               <Label htmlFor="email">Email *</Label>
               <Input id="email" type="email" {...register('email')} disabled={loading} />
-              {errors.email && <ErrorText>{errors.email.message}</ErrorText>}
+              {errors.email && <FieldError>{errors.email.message}</FieldError>}
             </FormGroup>
 
             <FormGroup>
               <Label htmlFor="username">Username *</Label>
               <Input id="username" {...register('username')} disabled={loading} />
-              {errors.username && <ErrorText>{errors.username.message}</ErrorText>}
+              {errors.username && <FieldError>{errors.username.message}</FieldError>}
             </FormGroup>
 
             <FormGroup>
@@ -333,9 +396,9 @@ export default function EditAccountantPage() {
                 )}
               </Button>
             </ButtonRow>
-          </FormWrapper>
-        </InnerContent>
-      </ContentArea>
-    </LayoutWrapper>
+          </FormCard>
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
   );
 }

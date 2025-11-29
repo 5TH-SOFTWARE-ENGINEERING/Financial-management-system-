@@ -40,7 +40,7 @@ const HeaderContainer = styled.header`
   background: ${theme.colors.background};
   border-bottom: 1px solid ${theme.colors.border};
   height: 64px;
-  width: calc(100% - 300px);
+  width: calc(100% - 280px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: width ${theme.transitions.default};
 `;

@@ -4,192 +4,284 @@ import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import Navbar from '@/components/common/Navbar';
-import Sidebar from '@/components/common/Sidebar';
+import Layout from '@/components/layout';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Calculator, DollarSign, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calculator, DollarSign, AlertCircle, CheckCircle, Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
-import { Loader2, Save } from 'lucide-react';
+import { theme } from '@/components/common/theme';
 
-// ──────────────────────────────────────────
-// Styled Components
-// ──────────────────────────────────────────
-const LayoutWrapper = styled.div`
-  display: flex;
-  background: #f5f6fa;
-  min-height: 100vh;
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
 `;
 
-const SidebarWrapper = styled.div`
-  width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    width: auto;
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding-left: 250px;
+const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
+  width: 100%;
 `;
 
-const InnerContent = styled.div`
-  padding: 32px;
+const ContentContainer = styled.div`
+  flex: 1;
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
 `;
 
 const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: var(--muted-foreground);
-  font-size: 14px;
-  margin-bottom: 16px;
-  transition: 0.2s;
+  gap: ${theme.spacing.sm};
+  color: ${TEXT_COLOR_MUTED};
+  font-size: ${theme.typography.fontSizes.sm};
+  margin-bottom: ${theme.spacing.md};
+  transition: color ${theme.transitions.default};
 
   &:hover {
-    color: var(--foreground);
+    color: ${PRIMARY_COLOR};
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `;
 
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+  
+  h1 {
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.md};
+  }
+  
+  p {
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  svg {
+    width: 32px;
+    height: 32px;
+  }
 `;
 
-const Subtitle = styled.p`
-  color: var(--muted-foreground);
-  margin-bottom: 24px;
+const ErrorBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const SuccessBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  color: #059669;
+  font-size: ${theme.typography.fontSizes.sm};
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 const FormCard = styled.div`
-  background: #fff;
-  padding: 28px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  margin-bottom: 24px;
+  background: ${theme.colors.background};
+  padding: ${theme.spacing.xl};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  margin-bottom: ${theme.spacing.lg};
+  transition: box-shadow ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: ${CardShadowHover};
+  }
+`;
+
+const GlobalSettingsCard = styled.div`
+  background: ${theme.colors.backgroundSecondary};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: ${CardShadow};
+`;
+
+const GlobalSettingsTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  margin: 0 0 ${theme.spacing.md};
+  color: ${TEXT_COLOR_DARK};
+`;
+
+const FormGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.sm};
 `;
 
 const ItemCard = styled.div`
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 16px;
+  background: ${theme.colors.backgroundSecondary};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.md};
   position: relative;
+  transition: box-shadow ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: ${CardShadow};
+  }
 `;
 
 const ItemHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: ${theme.spacing.md};
 `;
 
 const ItemTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--foreground);
+  font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0;
 `;
 
 const DeleteButton = styled.button`
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  padding: 6px 12px;
-  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.md};
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  transition: all 0.2s;
+  gap: ${theme.spacing.xs};
+  font-size: ${theme.typography.fontSizes.sm};
+  transition: all ${theme.transitions.default};
 
-  &:hover {
-    background: #fecaca;
-    border-color: #f87171;
+  &:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    transform: translateY(-1px);
   }
-`;
 
-const FormGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-`;
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-const FormGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 `;
 
 const FieldError = styled.p`
   color: #dc2626;
-  font-size: 12px;
-  margin-top: 4px;
+  font-size: ${theme.typography.fontSizes.xs};
+  margin-top: ${theme.spacing.xs};
+  margin: 0;
 `;
 
 const HelperText = styled.div`
-  color: var(--muted-foreground);
-  font-size: 12px;
-  margin-top: 4px;
+  color: ${TEXT_COLOR_MUTED};
+  font-size: ${theme.typography.fontSizes.xs};
+  margin-top: ${theme.spacing.xs};
   line-height: 1.5;
   
   strong {
-    color: var(--foreground);
-    font-weight: 600;
+    color: ${TEXT_COLOR_DARK};
+    font-weight: ${theme.typography.fontWeights.bold};
   }
   
   ul {
-    margin: 8px 0 0 20px;
+    margin: ${theme.spacing.sm} 0 0 ${theme.spacing.xl};
     padding: 0;
     list-style-type: disc;
   }
   
   li {
-    margin: 4px 0;
+    margin: ${theme.spacing.xs} 0;
   }
 `;
 
 const ResultsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 2px solid #e5e7eb;
+  gap: ${theme.spacing.md};
+  margin-top: ${theme.spacing.md};
+  padding-top: ${theme.spacing.md};
+  border-top: 2px solid ${theme.colors.border};
 `;
 
 const ResultItem = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${theme.spacing.xs};
 `;
 
 const ResultLabel = styled.span`
-  font-size: 12px;
-  color: var(--muted-foreground);
-  font-weight: 500;
+  font-size: ${theme.typography.fontSizes.xs};
+  color: ${TEXT_COLOR_MUTED};
+  font-weight: ${theme.typography.fontWeights.medium};
 `;
 
 interface ResultValueProps {
@@ -199,128 +291,44 @@ interface ResultValueProps {
 }
 
 const ResultValue = styled.span<ResultValueProps>`
-  font-size: 16px;
-  font-weight: 600;
+  font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.bold};
   color: ${(props) => {
-    if (props.$na) return `var(--muted-foreground)`;
-    if (props.$positive) return `#059669`;
-    if (props.$negative) return `#dc2626`;
-    return `var(--foreground)`;
+    if (props.$na) return TEXT_COLOR_MUTED;
+    if (props.$positive) return '#059669';
+    if (props.$negative) return '#dc2626';
+    return TEXT_COLOR_DARK;
   }};
-`;
-
-const SummaryCard = styled.div`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 24px;
-  border-radius: 12px;
-  margin-top: 24px;
-`;
-
-const SummaryTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const SummaryGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-`;
-
-const SummaryItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-const SummaryLabel = styled.span`
-  font-size: 14px;
-  opacity: 0.9;
-  font-weight: 500;
-`;
-
-const SummaryValue = styled.span`
-  font-size: 24px;
-  font-weight: 700;
 `;
 
 const AddButton = styled(Button)`
   width: 100%;
-  margin-bottom: 24px;
+  margin-bottom: ${theme.spacing.lg};
 `;
 
-const ResultsTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 24px;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-`;
-
-const TableHeader = styled.thead`
-  background: #f3f4f6;
-`;
-
-const TableRow = styled.tr`
-  border-bottom: 1px solid #e5e7eb;
-  
-  &:last-child {
-    border-bottom: none;
-  }
-  
-  &:hover {
-    background: #f9fafb;
-  }
-`;
-
-const TableHeaderCell = styled.th`
-  padding: 12px;
-  text-align: left;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--foreground);
-`;
-
-const TableCell = styled.td`
-  padding: 12px;
-  font-size: 14px;
-  color: var(--foreground);
-`;
-
-const TableBody = styled.tbody``;
-
-const MessageBox = styled.div<{ type: 'error' | 'success' }>`
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+const SaveButtonRow = styled.div`
   display: flex;
-  gap: 10px;
-  align-items: center;
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  gap: ${theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${theme.spacing.lg};
+  padding-top: ${theme.spacing.lg};
+  border-top: 2px solid ${theme.colors.border};
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 14px;
-  color: var(--foreground);
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  transition: all ${theme.transitions.default};
   
   &:focus {
     outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
   }
   
   &:disabled {
@@ -329,33 +337,121 @@ const Select = styled.select`
   }
 `;
 
-const GlobalSettingsCard = styled.div`
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 24px;
+const ResultsTableContainer = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  overflow: hidden;
+  margin-top: ${theme.spacing.lg};
 `;
 
-const GlobalSettingsTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: var(--foreground);
-`;
-
-const SaveButtonRow = styled.div`
+const SectionTitle = styled.h2`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  margin: 0 0 ${theme.spacing.md};
+  color: ${TEXT_COLOR_DARK};
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 2px solid #e5e7eb;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  
+  svg {
+    width: 20px;
+    height: 20px;
+    color: ${PRIMARY_COLOR};
+  }
 `;
 
-// ──────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────
+const ResultsTable = styled.table`
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+`;
+
+const TableHeader = styled.thead`
+  background: ${theme.colors.backgroundSecondary};
+  border-bottom: 2px solid ${theme.colors.border};
+`;
+
+const TableRow = styled.tr`
+  border-bottom: 1px solid ${theme.colors.border};
+  transition: background-color ${theme.transitions.default};
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  &:hover {
+    background: ${theme.colors.backgroundSecondary};
+  }
+`;
+
+const TableHeaderCell = styled.th`
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  text-align: left;
+  font-weight: ${theme.typography.fontWeights.medium};
+  font-size: ${theme.typography.fontSizes.xs};
+  color: ${TEXT_COLOR_MUTED};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+`;
+
+const TableCell = styled.td`
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_DARK};
+`;
+
+const TableBody = styled.tbody``;
+
+const SummaryCard = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: white;
+  padding: ${theme.spacing.xl};
+  border-radius: ${theme.borderRadius.md};
+  margin-top: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+`;
+
+const SummaryTitle = styled.h2`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  margin: 0 0 ${theme.spacing.lg};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  color: #ffffff;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const SummaryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: ${theme.spacing.lg};
+`;
+
+const SummaryItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.xs};
+`;
+
+const SummaryLabel = styled.span`
+  font-size: ${theme.typography.fontSizes.sm};
+  opacity: 0.9;
+  font-weight: ${theme.typography.fontWeights.medium};
+`;
+
+const SummaryValue = styled.span`
+  font-size: clamp(20px, 3vw, 24px);
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: #ffffff;
+`;
+
 interface ExpenseItem {
   id: string;
   itemName: string;
@@ -376,9 +472,6 @@ interface CalculatedItem extends ExpenseItem {
   };
 }
 
-// ──────────────────────────────────────────
-// Component
-// ──────────────────────────────────────────
 export default function ExpenseItemsPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -389,7 +482,6 @@ export default function ExpenseItemsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
-  // Global settings for all items
   const [globalDate, setGlobalDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -397,7 +489,6 @@ export default function ExpenseItemsPage() {
   const [globalCategory, setGlobalCategory] = useState<string>('other');
   const [globalVendor, setGlobalVendor] = useState<string>('');
   
-  // Initialize with one item only on client side
   useEffect(() => {
     if (items.length === 0) {
       idCounterRef.current += 1;
@@ -413,7 +504,6 @@ export default function ExpenseItemsPage() {
     }
   }, [items.length]);
 
-  // Auto-calculate when items change
   useEffect(() => {
     const calculated = items.map((item) => calculateItem(item));
     setCalculatedItems(calculated);
@@ -422,7 +512,6 @@ export default function ExpenseItemsPage() {
   const calculateItem = (item: ExpenseItem): CalculatedItem => {
     const errors: { expenseAmount?: string; buyAtPrice?: string; soldAtPrice?: string } = {};
     
-    // Validate inputs
     const expenseAmount = typeof item.expenseAmount === 'number' ? item.expenseAmount : null;
     const buyAtPrice = typeof item.buyAtPrice === 'number' ? item.buyAtPrice : null;
     const soldAtPrice = typeof item.soldAtPrice === 'number' ? item.soldAtPrice : null;
@@ -437,25 +526,21 @@ export default function ExpenseItemsPage() {
       errors.soldAtPrice = 'Sold-at Price must be a valid positive number';
     }
 
-    // Calculate Revenue = Sold-at Price - Buy-at Price
     let revenue: number | null = null;
     if (buyAtPrice !== null && soldAtPrice !== null && !isNaN(buyAtPrice) && !isNaN(soldAtPrice)) {
       revenue = soldAtPrice - buyAtPrice;
     }
 
-    // Calculate Profit = Revenue - Expense Amount
     let profit: number | null = null;
     if (revenue !== null && expenseAmount !== null && !isNaN(expenseAmount)) {
       profit = revenue - expenseAmount;
     }
 
-    // Calculate Profit Margin (%) = (Profit / Sold-at Price) × 100
     let profitMargin: number | null = null;
     if (profit !== null && soldAtPrice !== null && soldAtPrice !== 0 && !isNaN(soldAtPrice)) {
       profitMargin = (profit / soldAtPrice) * 100;
     }
 
-    // Calculate Return on Cost (%) = (Profit / Buy-at Price) × 100
     let returnOnCost: number | null = null;
     if (profit !== null && buyAtPrice !== null && buyAtPrice !== 0 && !isNaN(buyAtPrice)) {
       returnOnCost = (profit / buyAtPrice) * 100;
@@ -497,7 +582,6 @@ export default function ExpenseItemsPage() {
     setItems(
       items.map((item) => {
         if (item.id === id) {
-          // Convert empty string to '' and numeric strings to numbers
           if (field === 'expenseAmount' || field === 'buyAtPrice' || field === 'soldAtPrice') {
             if (value === '' || value === null) {
               return { ...item, [field]: '' };
@@ -512,7 +596,6 @@ export default function ExpenseItemsPage() {
     );
   };
 
-  // Calculate totals
   const totals = calculatedItems.reduce(
     (acc, item) => {
       const expenseAmount = typeof item.expenseAmount === 'number' ? item.expenseAmount : 0;
@@ -532,13 +615,11 @@ export default function ExpenseItemsPage() {
       ? Number((totals.profitMargins.reduce((a, b) => a + b, 0) / totals.profitMargins.length).toFixed(2))
       : null;
 
-  // Check for errors
   const hasErrors = calculatedItems.some((item) => Object.keys(item.errors).length > 0);
   const hasMissingRequiredFields = calculatedItems.some(
     (item) => !item.buyAtPrice || !item.soldAtPrice || !item.itemName
   );
 
-  // Validate items before saving
   const validateItems = (): boolean => {
     if (calculatedItems.length === 0) {
       setError('Please add at least one item');
@@ -563,7 +644,6 @@ export default function ExpenseItemsPage() {
     return true;
   };
 
-  // Save all items as expenses
   const handleSaveAll = async () => {
     setError(null);
     setSuccess(null);
@@ -579,7 +659,6 @@ export default function ExpenseItemsPage() {
       let revenueCount = 0;
 
       for (const item of calculatedItems) {
-        // Build description with all calculation details
         const expenseAmount = typeof item.expenseAmount === 'number' ? item.expenseAmount : 0;
         const buyAtPrice = typeof item.buyAtPrice === 'number' ? item.buyAtPrice : 0;
         const soldAtPrice = typeof item.soldAtPrice === 'number' ? item.soldAtPrice : 0;
@@ -597,7 +676,6 @@ export default function ExpenseItemsPage() {
           .filter(Boolean)
           .join('\n');
 
-        // Use expenseAmount if provided, otherwise use buyAtPrice as the expense
         const amount = expenseAmount > 0 ? expenseAmount : buyAtPrice;
 
         const expenseData = {
@@ -612,10 +690,8 @@ export default function ExpenseItemsPage() {
           attachment_url: null,
         };
 
-        // Save expense
         savePromises.push(apiClient.createExpense(expenseData));
 
-        // If there's revenue, also create a revenue entry
         if (item.revenue !== null && item.revenue > 0) {
           revenueCount++;
           const revenueDescription = [
@@ -656,7 +732,6 @@ export default function ExpenseItemsPage() {
       setSuccess(successMessages.join(' '));
       toast.success(successMessages.join(' '));
       
-      // Clear form after successful save
       setTimeout(() => {
         idCounterRef.current = 0;
         setItems([{
@@ -697,46 +772,43 @@ export default function ExpenseItemsPage() {
   };
 
   return (
-    <LayoutWrapper>
-      <SidebarWrapper>
-        <Sidebar />
-      </SidebarWrapper>
-      <ContentArea>
-        <Navbar />
-        <InnerContent>
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
           <BackLink href="/expenses/list">
-            <ArrowLeft size={16} />
+            <ArrowLeft />
             Back to Expenses
           </BackLink>
 
-          <Title>
-            <Calculator className="h-8 w-8 text-primary" />
-            Expense Items Calculator
-          </Title>
-          <Subtitle>Enter multiple expense items with automatic revenue and profit calculations</Subtitle>
+          <HeaderContainer>
+            <h1>
+              <Calculator />
+              Expense Items Calculator
+            </h1>
+            <p>Enter multiple expense items with automatic revenue and profit calculations</p>
+          </HeaderContainer>
 
           {error && (
-            <MessageBox type="error">
-              <AlertCircle size={18} />
-              {error}
-            </MessageBox>
+            <ErrorBanner>
+              <AlertCircle />
+              <span>{error}</span>
+            </ErrorBanner>
           )}
 
           {success && (
-            <MessageBox type="success">
-              <CheckCircle size={18} />
-              {success}
-            </MessageBox>
+            <SuccessBanner>
+              <CheckCircle />
+              <span>{success}</span>
+            </SuccessBanner>
           )}
 
           {hasErrors && (
-            <MessageBox type="error">
-              <AlertCircle size={18} />
-              Please fix validation errors in the items below
-            </MessageBox>
+            <ErrorBanner>
+              <AlertCircle />
+              <span>Please fix validation errors in the items below</span>
+            </ErrorBanner>
           )}
 
-          {/* Global Settings */}
           <GlobalSettingsCard>
             <GlobalSettingsTitle>Global Settings (Applied to All Items)</GlobalSettingsTitle>
             <FormGrid>
@@ -785,7 +857,7 @@ export default function ExpenseItemsPage() {
 
           <FormCard>
             <AddButton type="button" onClick={addItem} variant="outline" disabled={loading}>
-              <Plus size={16} className="mr-2" />
+              <Plus size={16} style={{ marginRight: theme.spacing.xs }} />
               Add New Item
             </AddButton>
 
@@ -798,7 +870,7 @@ export default function ExpenseItemsPage() {
                     onClick={() => removeItem(item.id)}
                     disabled={items.length === 1 || loading}
                   >
-                    <Trash2 size={14} />
+                    <Trash2 />
                     Remove
                   </DeleteButton>
                 </ItemHeader>
@@ -816,7 +888,7 @@ export default function ExpenseItemsPage() {
                   </FormGroup>
 
                   <FormGroup>
-                    <Label htmlFor={`expenseAmount-${item.id}`}>Expense Amount (Optional)</Label>
+                    <Label htmlFor={`expenseAmount-${item.id}`}>Expense Amount (Opt)</Label>
                     <Input
                       id={`expenseAmount-${item.id}`}
                       type="number"
@@ -832,7 +904,7 @@ export default function ExpenseItemsPage() {
                       <br />
                       <br />
                       <strong>Examples of costs to include:</strong>
-                      <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
+                      <ul>
                         <li>Cost of shipping</li>
                         <li>Labor cost</li>
                         <li>Packaging cost</li>
@@ -983,103 +1055,105 @@ export default function ExpenseItemsPage() {
             </SaveButtonRow>
           </FormCard>
 
-          {/* Results Table */}
           {calculatedItems.some((item) => item.itemName) && (
             <FormCard>
-              <Title style={{ fontSize: '20px', marginBottom: '16px' }}>
-                <DollarSign size={20} />
+              <SectionTitle>
+                <DollarSign />
                 Detailed Results
-              </Title>
-              <ResultsTable>
-                <TableHeader>
-                  <TableRow>
-                    <TableHeaderCell>Item Name</TableHeaderCell>
-                    <TableHeaderCell>Expense</TableHeaderCell>
-                    <TableHeaderCell>Buy-at</TableHeaderCell>
-                    <TableHeaderCell>Sold-at</TableHeaderCell>
-                    <TableHeaderCell>Revenue</TableHeaderCell>
-                    <TableHeaderCell>Profit</TableHeaderCell>
-                    <TableHeaderCell>Profit Margin (%)</TableHeaderCell>
-                    <TableHeaderCell>Return on Cost (%)</TableHeaderCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {calculatedItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.itemName || '-'}</TableCell>
-                      <TableCell>
-                        {typeof item.expenseAmount === 'number'
-                          ? `$${item.expenseAmount.toFixed(2)}`
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {typeof item.buyAtPrice === 'number' ? `$${item.buyAtPrice.toFixed(2)}` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {typeof item.soldAtPrice === 'number'
-                          ? `$${item.soldAtPrice.toFixed(2)}`
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {item.revenue !== null ? `$${item.revenue.toFixed(2)}` : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          style={{
-                            color:
-                              item.profit === null
-                                ? 'var(--muted-foreground)'
-                                : item.profit >= 0
-                                  ? '#059669'
-                                  : '#dc2626',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {item.profit !== null ? `$${item.profit.toFixed(2)}` : 'N/A'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          style={{
-                            color:
-                              item.profitMargin === null
-                                ? 'var(--muted-foreground)'
-                                : item.profitMargin >= 0
-                                  ? '#059669'
-                                  : '#dc2626',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {item.profitMargin !== null ? `${item.profitMargin}%` : 'N/A'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          style={{
-                            color:
-                              item.returnOnCost === null
-                                ? 'var(--muted-foreground)'
-                                : item.returnOnCost >= 0
-                                  ? '#059669'
-                                  : '#dc2626',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {item.returnOnCost !== null ? `${item.returnOnCost}%` : 'N/A'}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </ResultsTable>
+              </SectionTitle>
+              <ResultsTableContainer>
+                <div style={{ overflowX: 'auto' }}>
+                  <ResultsTable>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell>Item Name</TableHeaderCell>
+                        <TableHeaderCell>Expense</TableHeaderCell>
+                        <TableHeaderCell>Buy-at</TableHeaderCell>
+                        <TableHeaderCell>Sold-at</TableHeaderCell>
+                        <TableHeaderCell>Revenue</TableHeaderCell>
+                        <TableHeaderCell>Profit</TableHeaderCell>
+                        <TableHeaderCell>Profit Margin (%)</TableHeaderCell>
+                        <TableHeaderCell>Return on Cost (%)</TableHeaderCell>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {calculatedItems.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell style={{ whiteSpace: 'nowrap' }}>{item.itemName || '-'}</TableCell>
+                          <TableCell style={{ whiteSpace: 'nowrap' }}>
+                            {typeof item.expenseAmount === 'number'
+                              ? `$${item.expenseAmount.toFixed(2)}`
+                              : '-'}
+                          </TableCell>
+                          <TableCell style={{ whiteSpace: 'nowrap' }}>
+                            {typeof item.buyAtPrice === 'number' ? `$${item.buyAtPrice.toFixed(2)}` : '-'}
+                          </TableCell>
+                          <TableCell style={{ whiteSpace: 'nowrap' }}>
+                            {typeof item.soldAtPrice === 'number'
+                              ? `$${item.soldAtPrice.toFixed(2)}`
+                              : '-'}
+                          </TableCell>
+                          <TableCell style={{ whiteSpace: 'nowrap' }}>
+                            {item.revenue !== null ? `$${item.revenue.toFixed(2)}` : 'N/A'}
+                          </TableCell>
+                          <TableCell style={{ whiteSpace: 'nowrap' }}>
+                            <span
+                              style={{
+                                color:
+                                  item.profit === null
+                                    ? TEXT_COLOR_MUTED
+                                    : item.profit >= 0
+                                      ? '#059669'
+                                      : '#dc2626',
+                                fontWeight: theme.typography.fontWeights.bold,
+                              }}
+                            >
+                              {item.profit !== null ? `$${item.profit.toFixed(2)}` : 'N/A'}
+                            </span>
+                          </TableCell>
+                          <TableCell style={{ whiteSpace: 'nowrap' }}>
+                            <span
+                              style={{
+                                color:
+                                  item.profitMargin === null
+                                    ? TEXT_COLOR_MUTED
+                                    : item.profitMargin >= 0
+                                      ? '#059669'
+                                      : '#dc2626',
+                                fontWeight: theme.typography.fontWeights.bold,
+                              }}
+                            >
+                              {item.profitMargin !== null ? `${item.profitMargin}%` : 'N/A'}
+                            </span>
+                          </TableCell>
+                          <TableCell style={{ whiteSpace: 'nowrap' }}>
+                            <span
+                              style={{
+                                color:
+                                  item.returnOnCost === null
+                                    ? TEXT_COLOR_MUTED
+                                    : item.returnOnCost >= 0
+                                      ? '#059669'
+                                      : '#dc2626',
+                                fontWeight: theme.typography.fontWeights.bold,
+                              }}
+                            >
+                              {item.returnOnCost !== null ? `${item.returnOnCost}%` : 'N/A'}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </ResultsTable>
+                </div>
+              </ResultsTableContainer>
             </FormCard>
           )}
 
-          {/* Summary Section */}
           {(totals.totalExpense > 0 || totals.totalRevenue !== 0 || totals.totalProfit !== 0) && (
             <SummaryCard>
               <SummaryTitle>
-                <Calculator size={20} />
+                <Calculator />
                 Summary
               </SummaryTitle>
               <SummaryGrid>
@@ -1110,9 +1184,8 @@ export default function ExpenseItemsPage() {
               </SummaryGrid>
             </SummaryCard>
           )}
-        </InnerContent>
-      </ContentArea>
-    </LayoutWrapper>
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
   );
 }
-

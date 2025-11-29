@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import styled from 'styled-components';
 import {
   CheckCircle,
   XCircle,
   Clock,
   Search,
-  Filter,
   Eye,
   FileText,
   DollarSign,
@@ -15,13 +15,571 @@ import {
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { useUserStore } from '@/store/userStore';
-import { cn } from '@/lib/utils';
+import { theme } from '@/components/common/theme';
+import { toast } from 'sonner';
+
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_LIGHT = '#e8f5e9';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
+`;
+
+const PageContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+`;
+
+const ContentContainer = styled.div`
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+`;
+
+const HeaderContent = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
+  
+  h1 {
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.md};
+  }
+  
+  p {
+    font-size: ${theme.typography.fontSizes.sm};
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: ${theme.spacing.xs} 0 0;
+    color: rgba(255, 255, 255, 0.95);
+  }
+`;
+
+const RefreshButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  padding: ${theme.spacing.sm} ${theme.spacing.lg};
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  color: #ffffff;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+  backdrop-filter: blur(8px);
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    
+    svg {
+      animation: spin 0.8s linear infinite;
+    }
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
+const ErrorBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const FiltersContainer = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: ${CardShadow};
+  transition: box-shadow ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: ${CardShadowHover};
+  }
+`;
+
+const FiltersGrid = styled.div`
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: ${theme.spacing.sm};
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: ${theme.spacing.sm};
+  }
+`;
+
+const SearchContainer = styled.div`
+  position: relative;
+  grid-column: span 1;
+
+  svg {
+    position: absolute;
+    left: ${theme.spacing.md};
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: ${TEXT_COLOR_MUTED};
+    pointer-events: none;
+  }
+`;
+
+const SearchInput = styled.input`
+  width: 70%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} 40px;
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_DARK};
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+`;
+
+const ApprovalsList = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  overflow: hidden;
+`;
+
+const EmptyState = styled.div`
+  padding: ${theme.spacing.xxl};
+  text-align: center;
+  color: ${TEXT_COLOR_MUTED};
+
+  svg {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto ${theme.spacing.md};
+    opacity: 0.5;
+  }
+
+  p {
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0;
+  }
+`;
+
+const ApprovalItemContainer = styled.div`
+  padding: ${theme.spacing.lg};
+  border-bottom: 1px solid ${theme.colors.border};
+  transition: all ${theme.transitions.default};
+  position: relative;
+
+  &:hover {
+    background-color: ${theme.colors.backgroundSecondary};
+    transform: translateX(4px);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: ${PRIMARY_COLOR};
+    transition: width ${theme.transitions.default};
+  }
+
+  &:hover::before {
+    width: 4px;
+  }
+`;
+
+const ApprovalItemContent = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: ${theme.spacing.lg};
+  flex-wrap: wrap;
+`;
+
+const ApprovalItemLeft = styled.div`
+  flex: 1;
+  min-width: 300px;
+`;
+
+const ApprovalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.md};
+  flex-wrap: wrap;
+`;
+
+const TypeIcon = styled.div<{ $type: string }>`
+  width: 48px;
+  height: 48px;
+  border-radius: ${theme.borderRadius.md};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${props => {
+    switch(props.$type) {
+      case 'revenue': return 'rgba(34, 197, 94, 0.12)';
+      case 'expense': return 'rgba(239, 68, 68, 0.12)';
+      default: return 'rgba(59, 130, 246, 0.12)';
+    }
+  }};
+  color: ${props => {
+    switch(props.$type) {
+      case 'revenue': return '#15803d';
+      case 'expense': return '#dc2626';
+      default: return '#1d4ed8';
+    }
+  }};
+  transition: transform ${theme.transitions.default};
+  flex-shrink: 0;
+
+  ${ApprovalItemContainer}:hover & {
+    transform: scale(1.1);
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2;
+  }
+`;
+
+const ApprovalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.xs};
+`;
+
+const ApprovalDescription = styled.p`
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_MUTED};
+  margin: 0;
+`;
+
+const ApprovalMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  margin-top: ${theme.spacing.md};
+  flex-wrap: wrap;
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_MUTED};
+`;
+
+const StatusBadge = styled.span<{ $status: string }>`
+  display: inline-flex;
+  align-items: center;
+  padding: ${theme.spacing.xs} ${theme.spacing.md};
+  border-radius: 999px;
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: ${props => {
+    switch(props.$status) {
+      case 'approved': return 'rgba(16, 185, 129, 0.12)';
+      case 'rejected': return 'rgba(239, 68, 68, 0.12)';
+      case 'cancelled': return 'rgba(107, 114, 128, 0.12)';
+      default: return 'rgba(251, 191, 36, 0.12)';
+    }
+  }};
+  color: ${props => {
+    switch(props.$status) {
+      case 'approved': return '#065f46';
+      case 'rejected': return '#991b1b';
+      case 'cancelled': return '#374151';
+      default: return '#b45309';
+    }
+  }};
+  border: 1px solid transparent;
+  transition: all ${theme.transitions.default};
+  
+  ${ApprovalItemContainer}:hover & {
+    transform: scale(1.05);
+  }
+`;
+
+const ApprovalActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  flex-shrink: 0;
+`;
+
+const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' | 'secondary' }>`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+
+  ${props => {
+    switch(props.$variant) {
+      case 'primary':
+        return `
+          background: ${PRIMARY_COLOR};
+          color: white;
+          border-color: ${PRIMARY_COLOR};
+          
+          &:hover:not(:disabled) {
+            background: #008800;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 170, 0, 0.2);
+          }
+        `;
+      case 'danger':
+        return `
+          background: #ef4444;
+          color: white;
+          border-color: #ef4444;
+          
+          &:hover:not(:disabled) {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.2);
+          }
+        `;
+      default:
+        return `
+          background: ${theme.colors.background};
+          color: ${TEXT_COLOR_DARK};
+          
+          &:hover:not(:disabled) {
+            background: ${theme.colors.backgroundSecondary};
+            border-color: ${PRIMARY_COLOR};
+            color: ${PRIMARY_COLOR};
+          }
+        `;
+    }
+  }}
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContent = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.xl};
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.lg};
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  resize: vertical;
+  min-height: 120px;
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${theme.spacing.lg};
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin-bottom: ${theme.spacing.sm};
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: ${theme.spacing.md};
+  
+  p {
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+  }
+`;
+
+const Spinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${theme.colors.border};
+  border-top-color: ${PRIMARY_COLOR};
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
 
 interface ApprovalItem {
   id: number;
@@ -47,13 +605,13 @@ export default function ApprovalsPage() {
   const { user } = useAuth();
   const { canApproveTransactions } = useUserStore();
   
-  // Also check user from auth context for approval permissions
   const canApprove = () => {
     if (canApproveTransactions()) return true;
     if (!user) return false;
     const role = user.role?.toLowerCase();
     return role === 'admin' || role === 'super_admin' || role === 'manager' || role === 'finance_manager';
   };
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
@@ -133,7 +691,9 @@ export default function ApprovalsPage() {
 
       setApprovals(allApprovals);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load approvals');
+      const errorMessage = err.response?.data?.detail || 'Failed to load approvals';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -141,7 +701,7 @@ export default function ApprovalsPage() {
 
   const handleApprove = async (item: ApprovalItem) => {
     if (!canApprove()) {
-      alert('You do not have permission to approve items');
+      toast.error('You do not have permission to approve items');
       return;
     }
 
@@ -150,20 +710,21 @@ export default function ApprovalsPage() {
 
     try {
       if (item.type === 'workflow' && item.workflow_id) {
-        // Approve workflow
         await apiClient.approveWorkflow(item.workflow_id);
+        toast.success('Approval workflow approved successfully');
       } else if (item.type === 'revenue' && item.revenue_entry_id) {
-        // Approve revenue entry directly
         await apiClient.approveItem(item.revenue_entry_id, 'revenue');
+        toast.success('Revenue entry approved successfully');
       } else if (item.type === 'expense' && item.expense_entry_id) {
-        // Approve expense entry directly
         await apiClient.approveItem(item.expense_entry_id, 'expense');
+        toast.success('Expense entry approved successfully');
       }
       
-      // Reload approvals
       await loadApprovals();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to approve item');
+      const errorMessage = err.response?.data?.detail || 'Failed to approve item';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setProcessingId(null);
     }
@@ -171,12 +732,12 @@ export default function ApprovalsPage() {
 
   const handleReject = async (item: ApprovalItem, reason: string) => {
     if (!canApprove()) {
-      alert('You do not have permission to reject items');
+      toast.error('You do not have permission to reject items');
       return;
     }
 
     if (!reason.trim()) {
-      alert('Please provide a rejection reason');
+      toast.error('Please provide a rejection reason');
       return;
     }
 
@@ -185,25 +746,36 @@ export default function ApprovalsPage() {
 
     try {
       if (item.type === 'workflow' && item.workflow_id) {
-        // Reject workflow
         await apiClient.rejectWorkflow(item.workflow_id, reason);
-      } else {
-        // For direct revenue/expense entries, we need to create a rejection workflow
-        // For now, show a message that these should be rejected through workflows
-        // In a full implementation, you would create a rejection workflow here
-        alert('To reject this entry, please create a rejection workflow or contact an administrator.');
-        return;
+        toast.success('Approval workflow rejected');
+      } else if (item.type === 'revenue' && item.revenue_entry_id) {
+        await apiClient.rejectItem(item.revenue_entry_id, 'revenue', reason);
+        toast.success('Revenue entry rejected');
+      } else if (item.type === 'expense' && item.expense_entry_id) {
+        await apiClient.rejectItem(item.expense_entry_id, 'expense', reason);
+        toast.success('Expense entry rejected');
       }
       
       setShowRejectModal(null);
       setRejectionReason('');
-      
-      // Reload approvals
       await loadApprovals();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to reject item');
+      const errorMessage = err.response?.data?.detail || 'Failed to reject item';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'revenue':
+        return <DollarSign />;
+      case 'expense':
+        return <CreditCard />;
+      default:
+        return <FileText />;
     }
   };
 
@@ -218,152 +790,111 @@ export default function ApprovalsPage() {
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  const getStatusBadge = (status: string) => {
-    const baseClasses = "inline-flex px-2 py-1 text-xs font-semibold rounded-full";
-    switch (status) {
-      case 'approved':
-        return cn(baseClasses, "bg-green-100 text-green-800");
-      case 'rejected':
-        return cn(baseClasses, "bg-red-100 text-red-800");
-      case 'cancelled':
-        return cn(baseClasses, "bg-gray-100 text-gray-800");
-      case 'pending':
-      default:
-        return cn(baseClasses, "bg-yellow-100 text-yellow-800");
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'revenue':
-        return <DollarSign className="h-4 w-4" />;
-      case 'expense':
-        return <CreditCard className="h-4 w-4" />;
-      case 'workflow':
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'revenue':
-        return 'text-green-600 bg-green-100';
-      case 'expense':
-        return 'text-red-600 bg-red-100';
-      case 'workflow':
-      default:
-        return 'text-blue-600 bg-blue-100';
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading approvals...</p>
-        </div>
-      </div>
+      <Layout>
+        <PageContainer>
+          <ContentContainer>
+            <LoadingContainer>
+              <Spinner />
+              <p>Loading approvals...</p>
+            </LoadingContainer>
+          </ContentContainer>
+        </PageContainer>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Approvals</h1>
-              <p className="text-muted-foreground mt-1">Manage pending approvals and review history</p>
-            </div>
-            <Button onClick={loadApprovals} variant="secondary" disabled={loading}>
-              <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-              Refresh
-            </Button>
-          </div>
-        </div>
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
+          <HeaderContainer>
+            <HeaderContent>
+              <div>
+                <h1>Approvals</h1>
+                <p>Manage pending approvals and review history</p>
+              </div>
+              <RefreshButton onClick={loadApprovals} disabled={loading}>
+                <RefreshCw />
+                Refresh
+              </RefreshButton>
+            </HeaderContent>
+          </HeaderContainer>
 
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </div>
-        )}
+          {error && (
+            <ErrorBanner>
+              <AlertCircle />
+              <span>{error}</span>
+            </ErrorBanner>
+          )}
 
-        {/* Filters */}
-        <div className="bg-card rounded-lg border border-border p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search approvals..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="all">All Types</option>
-              <option value="revenue">Revenue</option>
-              <option value="expense">Expense</option>
-              <option value="workflow">Workflow</option>
-            </select>
-          </div>
-        </div>
+          <FiltersContainer>
+            <FiltersGrid>
+              <SearchContainer>
+                <Search />
+                <SearchInput
+                  type="text"
+                  placeholder="Search approvals..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </SearchContainer>
+              
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="cancelled">Cancelled</option>
+              </Select>
+              
+              <Select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                <option value="all">All Types</option>
+                <option value="revenue">Revenue</option>
+                <option value="expense">Expense</option>
+                <option value="workflow">Workflow</option>
+              </Select>
+            </FiltersGrid>
+          </FiltersContainer>
 
-        {/* Approvals List */}
-        <div className="bg-card rounded-lg border border-border">
-          {filteredApprovals.length === 0 ? (
-            <div className="p-12 text-center">
-              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No approvals found</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {filteredApprovals.map((item) => (
-                <div key={`${item.type}-${item.id}`} className="p-6 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className={cn("p-2 rounded-md", getTypeColor(item.type))}>
+          <ApprovalsList>
+            {filteredApprovals.length === 0 ? (
+              <EmptyState>
+                <Clock />
+                <p>No approvals found</p>
+              </EmptyState>
+            ) : (
+              filteredApprovals.map((item) => (
+                <ApprovalItemContainer key={`${item.type}-${item.id}`}>
+                  <ApprovalItemContent>
+                    <ApprovalItemLeft>
+                      <ApprovalHeader>
+                        <TypeIcon $type={item.type}>
                           {getTypeIcon(item.type)}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-foreground">{item.title}</h3>
+                        </TypeIcon>
+                        <div style={{ flex: 1 }}>
+                          <ApprovalTitle>{item.title}</ApprovalTitle>
                           {item.description && (
-                            <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                            <ApprovalDescription>{item.description}</ApprovalDescription>
                           )}
                         </div>
-                        <span className={getStatusBadge(item.status)}>
+                        <StatusBadge $status={item.status}>
                           {item.status.toUpperCase()}
-                        </span>
-                      </div>
+                        </StatusBadge>
+                      </ApprovalHeader>
                       
-                      <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                        <span className="capitalize">{item.type}</span>
+                      <ApprovalMeta>
+                        <span style={{ textTransform: 'capitalize' }}>{item.type}</span>
                         {item.amount !== undefined && (
-                          <span className="font-medium text-foreground">
-                            ${item.amount.toLocaleString()}
+                          <span style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
+                            ${Number(item.amount).toLocaleString()}
                           </span>
                         )}
                         <span>
@@ -371,109 +902,107 @@ export default function ApprovalsPage() {
                           {new Date(item.created_at).toLocaleTimeString()}
                         </span>
                         {item.approved_at && (
-                          <span className="text-green-600">
+                          <span style={{ color: '#059669' }}>
                             Approved: {new Date(item.approved_at).toLocaleDateString()}
                           </span>
                         )}
                         {item.rejection_reason && (
-                          <span className="text-red-600">
+                          <span style={{ color: '#dc2626' }}>
                             Reason: {item.rejection_reason}
                           </span>
                         )}
-                      </div>
-                    </div>
+                      </ApprovalMeta>
+                    </ApprovalItemLeft>
                     
-                    <div className="flex items-center gap-2 ml-4">
+                    <ApprovalActions>
                       {item.status === 'pending' && canApprove() && (
                         <>
-                          <Button
-                            size="sm"
-                            variant="default"
+                          <ActionButton
+                            $variant="primary"
                             onClick={() => handleApprove(item)}
                             disabled={processingId === item.id}
                           >
-                            <CheckCircle className="h-4 w-4 mr-1" />
+                            <CheckCircle />
                             Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
+                          </ActionButton>
+                          <ActionButton
+                            $variant="danger"
                             onClick={() => setShowRejectModal(item.id)}
                             disabled={processingId === item.id}
                           >
-                            <XCircle className="h-4 w-4 mr-1" />
+                            <XCircle />
                             Reject
-                          </Button>
+                          </ActionButton>
                         </>
                       )}
-                      <Button
-                        size="sm"
-                        variant="secondary"
+                      <ActionButton
+                        $variant="secondary"
                         onClick={() => {
                           if (item.type === 'revenue') {
                             router.push(`/revenue/${item.revenue_entry_id}`);
                           } else if (item.type === 'expense') {
                             router.push(`/expenses/${item.expense_entry_id}`);
-                          } else {
+                          } else if (item.workflow_id) {
                             router.push(`/approvals/${item.workflow_id}`);
                           }
                         }}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
+                        <Eye />
                         View
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                      </ActionButton>
+                    </ApprovalActions>
+                  </ApprovalItemContent>
+                </ApprovalItemContainer>
+              ))
+            )}
+          </ApprovalsList>
 
-        {/* Rejection Modal */}
-        {showRejectModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg border border-border p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold mb-4">Reject Approval</h3>
-              <div className="mb-4">
-                <Label htmlFor="rejection-reason">Rejection Reason</Label>
-                <textarea
-                  id="rejection-reason"
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  className="w-full mt-2 px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  rows={4}
-                  placeholder="Please provide a reason for rejection..."
-                />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShowRejectModal(null);
-                    setRejectionReason('');
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    const item = approvals.find(a => a.id === showRejectModal);
-                    if (item) {
-                      handleReject(item, rejectionReason);
-                    }
-                  }}
-                  disabled={!rejectionReason.trim() || processingId !== null}
-                >
-                  Reject
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+          {/* Rejection Modal */}
+          {showRejectModal && (
+            <ModalOverlay onClick={() => {
+              setShowRejectModal(null);
+              setRejectionReason('');
+            }}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalTitle>Reject Approval</ModalTitle>
+                <div>
+                  <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                  <TextArea
+                    id="rejection-reason"
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Please provide a reason for rejection..."
+                    rows={4}
+                  />
+                </div>
+                <ModalActions>
+                  <ActionButton
+                    $variant="secondary"
+                    onClick={() => {
+                      setShowRejectModal(null);
+                      setRejectionReason('');
+                    }}
+                  >
+                    Cancel
+                  </ActionButton>
+                  <ActionButton
+                    $variant="danger"
+                    onClick={() => {
+                      const item = approvals.find(a => a.id === showRejectModal);
+                      if (item) {
+                        handleReject(item, rejectionReason);
+                      }
+                    }}
+                    disabled={!rejectionReason.trim() || processingId !== null}
+                  >
+                    Reject
+                  </ActionButton>
+                </ModalActions>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
   );
 }
-

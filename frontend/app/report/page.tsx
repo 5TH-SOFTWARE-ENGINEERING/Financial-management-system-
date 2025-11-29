@@ -8,6 +8,7 @@ import Layout from '@/components/layout';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { toast } from 'sonner';
+import { theme } from '@/components/common/theme';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -19,97 +20,139 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   FileText,
-  BarChart3
+  BarChart3,
+  AlertCircle
 } from 'lucide-react';
 
-// ──────────────────────────────────────────
-// Styled Components
-// ──────────────────────────────────────────
-const PageContainer = styled.div`
-  padding: 32px;
-  max-width: 800px;
-  margin: 0 auto;
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
 `;
 
-const Header = styled.div`
-  margin-bottom: 32px;
+const PageContainer = styled.div`
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
   
   h1 {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: var(--foreground);
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: #ffffff;
   }
   
   p {
-    color: var(--muted-foreground);
-    font-size: 16px;
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
   }
 `;
 
 const DateFilterCard = styled.div`
-  background: #fff;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  margin-bottom: 24px;
+  background: ${theme.colors.background};
+  padding: ${theme.spacing.lg};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  margin-bottom: ${theme.spacing.lg};
   display: flex;
-  gap: 16px;
+  gap: ${theme.spacing.md};
   align-items: flex-end;
   flex-wrap: wrap;
+  transition: box-shadow ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: ${CardShadowHover};
+  }
 `;
 
 const DateInputGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
   flex: 1;
   min-width: 200px;
 `;
 
 const ReportSection = styled.div`
-  margin-bottom: 32px;
+  margin-bottom: ${theme.spacing.xl};
 `;
 
 const ReportCard = styled.div`
-  background: #fff;
-  padding: 28px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  margin-bottom: 24px;
+  background: ${theme.colors.background};
+  padding: ${theme.spacing.xl};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  margin-bottom: ${theme.spacing.lg};
+  transition: box-shadow ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: ${CardShadowHover};
+  }
 `;
 
 const ReportHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: ${theme.spacing.lg};
+  padding-bottom: ${theme.spacing.md};
+  border-bottom: 2px solid ${theme.colors.border};
   
   h2 {
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--foreground);
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: ${theme.spacing.md};
+    margin: 0;
+    
+    svg {
+      width: 24px;
+      height: 24px;
+      color: ${PRIMARY_COLOR};
+    }
   }
   
   p {
-    color: var(--muted-foreground);
-    font-size: 14px;
-    margin-top: 4px;
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.sm};
+    margin: ${theme.spacing.xs} 0 0;
   }
 `;
 
 const SummaryGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
+  gap: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.xl};
 `;
 
 const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'profit' | 'cash' }>`
@@ -117,54 +160,64 @@ const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'profit' | 'cas
     if (p.$type === 'revenue') return '#f0fdf4';
     if (p.$type === 'expense') return '#fef2f2';
     if (p.$type === 'profit') return '#eff6ff';
-    return '#f9fafb';
+    return theme.colors.backgroundSecondary;
   }};
   border: 1px solid ${(p) => {
     if (p.$type === 'revenue') return '#bbf7d0';
     if (p.$type === 'expense') return '#fecaca';
     if (p.$type === 'profit') return '#bfdbfe';
-    return '#e5e7eb';
+    return theme.colors.border;
   }};
-  padding: 20px;
-  border-radius: 8px;
+  padding: ${theme.spacing.lg};
+  border-radius: ${theme.borderRadius.md};
+  transition: transform ${theme.transitions.default}, box-shadow ${theme.transitions.default};
+  box-shadow: ${CardShadow};
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: ${CardShadowHover};
+  }
   
   .label {
-    font-size: 14px;
-    color: var(--muted-foreground);
-    margin-bottom: 8px;
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
+    margin-bottom: ${theme.spacing.sm};
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: ${theme.spacing.xs};
+    font-weight: ${theme.typography.fontWeights.medium};
   }
   
   .value {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--foreground);
+    font-size: clamp(20px, 4vw, 28px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin-bottom: ${theme.spacing.xs};
   }
   
   .sub-value {
-    font-size: 14px;
-    color: var(--muted-foreground);
-    margin-top: 4px;
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
+    margin-top: ${theme.spacing.xs};
   }
 `;
 
 const CategoryTable = styled.table`
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 16px;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: ${theme.spacing.md};
   
   thead {
-    background: var(--muted);
-    border-bottom: 2px solid var(--border);
+    background: ${theme.colors.backgroundSecondary};
+    border-bottom: 2px solid ${theme.colors.border};
     
     th {
       text-align: left;
-      padding: 12px 16px;
-      font-weight: 600;
-      color: var(--foreground);
-      font-size: 14px;
+      padding: ${theme.spacing.md} ${theme.spacing.lg};
+      font-weight: ${theme.typography.fontWeights.medium};
+      color: ${TEXT_COLOR_MUTED};
+      font-size: ${theme.typography.fontSizes.xs};
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -172,21 +225,25 @@ const CategoryTable = styled.table`
   
   tbody {
     tr {
-      border-bottom: 1px solid var(--border);
-      transition: background-color 0.2s;
+      border-bottom: 1px solid ${theme.colors.border};
+      transition: background-color ${theme.transitions.default};
       
       &:hover {
-        background: var(--muted);
+        background: ${theme.colors.backgroundSecondary};
+      }
+      
+      &:last-child {
+        border-bottom: none;
       }
       
       td {
-        padding: 12px 16px;
-        color: var(--muted-foreground);
-        font-size: 14px;
+        padding: ${theme.spacing.md} ${theme.spacing.lg};
+        color: ${TEXT_COLOR_MUTED};
+        font-size: ${theme.typography.fontSizes.sm};
         
         &:last-child {
-          font-weight: 600;
-          color: var(--foreground);
+          font-weight: ${theme.typography.fontWeights.bold};
+          color: ${TEXT_COLOR_DARK};
         }
       }
     }
@@ -195,19 +252,20 @@ const CategoryTable = styled.table`
 
 const CashFlowTable = styled.table`
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 16px;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: ${theme.spacing.md};
   
   thead {
-    background: var(--muted);
-    border-bottom: 2px solid var(--border);
+    background: ${theme.colors.backgroundSecondary};
+    border-bottom: 2px solid ${theme.colors.border};
     
     th {
       text-align: left;
-      padding: 12px 16px;
-      font-weight: 600;
-      color: var(--foreground);
-      font-size: 14px;
+      padding: ${theme.spacing.md} ${theme.spacing.lg};
+      font-weight: ${theme.typography.fontWeights.medium};
+      color: ${TEXT_COLOR_MUTED};
+      font-size: ${theme.typography.fontSizes.xs};
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -215,31 +273,35 @@ const CashFlowTable = styled.table`
   
   tbody {
     tr {
-      border-bottom: 1px solid var(--border);
-      transition: background-color 0.2s;
+      border-bottom: 1px solid ${theme.colors.border};
+      transition: background-color ${theme.transitions.default};
       
       &:hover {
-        background: var(--muted);
+        background: ${theme.colors.backgroundSecondary};
+      }
+      
+      &:last-child {
+        border-bottom: none;
       }
       
       td {
-        padding: 12px 16px;
-        color: var(--muted-foreground);
-        font-size: 14px;
+        padding: ${theme.spacing.md} ${theme.spacing.lg};
+        color: ${TEXT_COLOR_MUTED};
+        font-size: ${theme.typography.fontSizes.sm};
         
         &:nth-child(2) {
           color: #059669;
-          font-weight: 500;
+          font-weight: ${theme.typography.fontWeights.medium};
         }
         
         &:nth-child(3) {
           color: #dc2626;
-          font-weight: 500;
+          font-weight: ${theme.typography.fontWeights.medium};
         }
         
         &:last-child {
-          font-weight: 600;
-          color: var(--foreground);
+          font-weight: ${theme.typography.fontWeights.bold};
+          color: ${TEXT_COLOR_DARK};
         }
       }
     }
@@ -247,63 +309,97 @@ const CashFlowTable = styled.table`
 `;
 
 const LoadingContainer = styled.div`
-  padding: 48px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: ${theme.spacing.md};
   
   p {
-    color: var(--muted-foreground);
-    margin-top: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0;
   }
 `;
 
 const Spinner = styled.div`
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${theme.colors.border};
+  border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto;
+  animation: spin 0.8s linear infinite;
   
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
 `;
 
-const ErrorMessage = styled.div`
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+const ErrorBanner = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+
+  svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 48px 24px;
-  color: var(--muted-foreground);
+  padding: ${theme.spacing.xxl} ${theme.spacing.lg};
+  color: ${TEXT_COLOR_MUTED};
   
   svg {
-    margin: 0 auto 16px;
-    color: var(--muted-foreground);
+    width: 48px;
+    height: 48px;
+    margin: 0 auto ${theme.spacing.md};
+    opacity: 0.5;
+    color: ${TEXT_COLOR_MUTED};
   }
   
   h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--foreground);
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.sm};
+    color: ${TEXT_COLOR_DARK};
   }
 `;
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: 12px;
-  margin-top: 16px;
+  gap: ${theme.spacing.md};
+  margin-top: ${theme.spacing.md};
+  flex-wrap: wrap;
+`;
+
+const SectionTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  margin: 0 0 ${theme.spacing.md};
+  color: ${TEXT_COLOR_DARK};
+`;
+
+const TwoColumnGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${theme.spacing.xl};
+  margin-top: ${theme.spacing.xl};
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: ${theme.spacing.lg};
+  }
 `;
 
 interface IncomeStatement {
@@ -353,28 +449,24 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Date filters - Default to last 12 months to ensure we capture all data
   const [startDate, setStartDate] = useState<string>(() => {
     const date = new Date();
-    date.setFullYear(date.getFullYear() - 1); // Last 12 months
-    date.setDate(1); // Start of month
+    date.setFullYear(date.getFullYear() - 1);
+    date.setDate(1);
     return date.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState<string>(() => {
     const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1); // Include today
+    tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
   });
   
-  // Report data
   const [financialSummary, setFinancialSummary] = useState<FinancialSummary | null>(null);
   const [incomeStatement, setIncomeStatement] = useState<IncomeStatement | null>(null);
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
 
-  // Load reports when user is available
   useEffect(() => {
     if (user) {
-      // Small delay to ensure state is ready
       const timer = setTimeout(() => {
         loadReports(true);
       }, 100);
@@ -382,12 +474,11 @@ export default function ReportPage() {
     }
   }, [user]);
 
-  // Reload when date filters change (with debounce)
   useEffect(() => {
     if (user && startDate && endDate) {
       const timer = setTimeout(() => {
         loadReports(true);
-      }, 300); // Debounce date changes
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [startDate, endDate]);
@@ -397,22 +488,17 @@ export default function ReportPage() {
     setError(null);
     
     try {
-      // Load reports - optionally without date filters to get all data
       const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
       
-      // Use Promise.allSettled to handle partial failures gracefully
       const [summaryResult, incomeResult, cashFlowResult] = await Promise.allSettled([
         apiClient.getFinancialSummary(dateParams.startDate, dateParams.endDate),
         apiClient.getIncomeStatement(dateParams.startDate, dateParams.endDate),
         apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
       ]);
       
-      // Handle summary result
       if (summaryResult.status === 'fulfilled') {
         const summaryData = summaryResult.value.data || summaryResult.value;
-        // Ensure we have valid data structure
         if (summaryData && (summaryData.financials || summaryData.revenue_by_category || summaryData.expenses_by_category)) {
-          // Financial summary loaded successfully
           if (process.env.NODE_ENV === 'development') {
             console.log('Financial Summary loaded:', {
               total_revenue: summaryData.financials?.total_revenue,
@@ -428,12 +514,8 @@ export default function ReportPage() {
         }
       } else {
         console.error('Failed to load financial summary:', summaryResult.reason);
-        // Try to load income statement as fallback
         if (incomeResult.status === 'fulfilled') {
           const incomeData = incomeResult.value.data;
-          // We can't get exact transaction counts from income statement alone,
-          // so we'll fetch them separately or use a reasonable estimate
-          // For now, use category count as a proxy (will be updated when we have actual data)
           const revenueCategories = Object.keys(incomeData.revenue.by_category).length;
           const expenseCategories = Object.keys(incomeData.expenses.by_category).length;
           setFinancialSummary({
@@ -454,15 +536,12 @@ export default function ReportPage() {
             generated_at: new Date().toISOString(),
           });
         } else {
-          // If both failed, set empty summary to show empty state
           setFinancialSummary(null);
         }
       }
       
-      // Handle income statement result
       if (incomeResult.status === 'fulfilled') {
         const incomeData = incomeResult.value.data || incomeResult.value;
-        // Ensure we have valid data structure
         if (incomeData && (incomeData.revenue || incomeData.expenses)) {
           setIncomeStatement(incomeData);
         } else {
@@ -476,10 +555,8 @@ export default function ReportPage() {
         setIncomeStatement(null);
       }
       
-      // Handle cash flow result
       if (cashFlowResult.status === 'fulfilled') {
         const cashFlowData = cashFlowResult.value.data || cashFlowResult.value;
-        // Ensure we have valid data structure
         if (cashFlowData && (cashFlowData.summary || cashFlowData.daily_cash_flow)) {
           setCashFlow(cashFlowData);
         } else {
@@ -493,10 +570,8 @@ export default function ReportPage() {
         setCashFlow(null);
       }
       
-      // If all failed, show error but don't throw (allow empty state display)
       if (summaryResult.status === 'rejected' && incomeResult.status === 'rejected' && cashFlowResult.status === 'rejected') {
         const firstError = summaryResult.reason || incomeResult.reason || cashFlowResult.reason;
-        // Extract error message
         let errorMsg = 'Failed to load reports';
         if (firstError?.response?.data?.detail) {
           const detail = firstError.response.data.detail;
@@ -510,7 +585,6 @@ export default function ReportPage() {
         }
         setError(errorMsg);
         toast.error(errorMsg);
-        // Set empty states
         setFinancialSummary(null);
         setIncomeStatement(null);
         setCashFlow(null);
@@ -519,11 +593,9 @@ export default function ReportPage() {
     } catch (err: any) {
       let errorMessage = 'Failed to load reports';
       
-      // Handle different error formats
       if (err.response?.data?.detail) {
         const detail = err.response.data.detail;
         
-        // If it's an array of validation errors (Pydantic format)
         if (Array.isArray(detail)) {
           errorMessage = detail.map((e: any) => {
             if (typeof e === 'string') return e;
@@ -531,15 +603,12 @@ export default function ReportPage() {
             return JSON.stringify(e);
           }).join(', ');
         }
-        // If it's a single validation error object
         else if (typeof detail === 'object' && detail.msg) {
           errorMessage = `${detail.loc?.join('.') || 'Field'}: ${detail.msg}`;
         }
-        // If it's a string
         else if (typeof detail === 'string') {
           errorMessage = detail;
         }
-        // Otherwise stringify it
         else {
           errorMessage = JSON.stringify(detail);
         }
@@ -592,12 +661,11 @@ export default function ReportPage() {
   return (
     <Layout>
       <PageContainer>
-        <Header>
+        <HeaderContainer>
           <h1>Financial Reports</h1>
           <p>Income Statement and Cash Flow Analysis</p>
-        </Header>
+        </HeaderContainer>
 
-        {/* Date Filters */}
         <DateFilterCard>
           <DateInputGroup>
             <Label htmlFor="startDate">Start Date</Label>
@@ -620,10 +688,9 @@ export default function ReportPage() {
           <ButtonRow>
             <Button 
               onClick={() => {
-                // Set date range to last year to show all data
                 const oneYearAgo = new Date();
                 oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-                oneYearAgo.setDate(1); // Start of month
+                oneYearAgo.setDate(1);
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 setStartDate(oneYearAgo.toISOString().split('T')[0]);
@@ -662,10 +729,10 @@ export default function ReportPage() {
         </DateFilterCard>
 
         {error && (
-          <ErrorMessage>
-            <BarChart3 size={18} />
+          <ErrorBanner>
+            <AlertCircle />
             <span>{error}</span>
-          </ErrorMessage>
+          </ErrorBanner>
         )}
 
         {loading ? (
@@ -675,13 +742,12 @@ export default function ReportPage() {
           </LoadingContainer>
         ) : (
           <>
-            {/* Financial Summary Report */}
             <ReportSection>
               <ReportCard>
                 <ReportHeader>
                   <div>
                     <h2>
-                      <BarChart3 size={24} />
+                      <BarChart3 />
                       Financial Summary Report
                     </h2>
                     <p>
@@ -744,11 +810,9 @@ export default function ReportPage() {
                       </SummaryCard>
                     </SummaryGrid>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginTop: '32px' }}>
+                    <TwoColumnGrid>
                       <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
-                          Top Revenue Categories
-                        </h3>
+                        <SectionTitle>Top Revenue Categories</SectionTitle>
                         <CategoryTable>
                           <thead>
                             <tr>
@@ -769,7 +833,7 @@ export default function ReportPage() {
                                 ))
                             ) : (
                               <tr>
-                                <td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                                <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
                                   No revenue data
                                 </td>
                               </tr>
@@ -779,9 +843,7 @@ export default function ReportPage() {
                       </div>
 
                       <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
-                          Top Expense Categories
-                        </h3>
+                        <SectionTitle>Top Expense Categories</SectionTitle>
                         <CategoryTable>
                           <thead>
                             <tr>
@@ -802,7 +864,7 @@ export default function ReportPage() {
                                 ))
                             ) : (
                               <tr>
-                                <td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                                <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
                                   No expense data
                                 </td>
                               </tr>
@@ -810,7 +872,7 @@ export default function ReportPage() {
                           </tbody>
                         </CategoryTable>
                       </div>
-                    </div>
+                    </TwoColumnGrid>
                   </>
                 ) : (
                   <EmptyState>
@@ -821,13 +883,12 @@ export default function ReportPage() {
               </ReportCard>
             </ReportSection>
 
-            {/* Income Statement (Profit & Loss) */}
             <ReportSection>
               <ReportCard>
                 <ReportHeader>
                   <div>
                     <h2>
-                      <FileText size={24} />
+                      <FileText />
                       Income Statement (Profit & Loss)
                     </h2>
                     <p>
@@ -871,10 +932,8 @@ export default function ReportPage() {
                       </SummaryCard>
                     </SummaryGrid>
 
-                    <div style={{ marginTop: '32px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
-                        Revenue by Category
-                      </h3>
+                    <div style={{ marginTop: theme.spacing.xl }}>
+                      <SectionTitle>Revenue by Category</SectionTitle>
                       <CategoryTable>
                         <thead>
                           <tr>
@@ -894,7 +953,7 @@ export default function ReportPage() {
                               ))
                           ) : (
                             <tr>
-                              <td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                              <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
                                 No revenue data for this period
                               </td>
                             </tr>
@@ -903,10 +962,8 @@ export default function ReportPage() {
                       </CategoryTable>
                     </div>
 
-                    <div style={{ marginTop: '32px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
-                        Expenses by Category
-                      </h3>
+                    <div style={{ marginTop: theme.spacing.xl }}>
+                      <SectionTitle>Expenses by Category</SectionTitle>
                       <CategoryTable>
                         <thead>
                           <tr>
@@ -926,7 +983,7 @@ export default function ReportPage() {
                               ))
                           ) : (
                             <tr>
-                              <td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                              <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
                                 No expense data for this period
                               </td>
                             </tr>
@@ -944,13 +1001,12 @@ export default function ReportPage() {
               </ReportCard>
             </ReportSection>
 
-            {/* Cash Flow Statement */}
             <ReportSection>
               <ReportCard>
                 <ReportHeader>
                   <div>
                     <h2>
-                      <BarChart3 size={24} />
+                      <BarChart3 />
                       Cash Flow Statement
                     </h2>
                     <p>
@@ -994,10 +1050,8 @@ export default function ReportPage() {
                       </SummaryCard>
                     </SummaryGrid>
 
-                    <div style={{ marginTop: '32px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
-                        Daily Cash Flow
-                      </h3>
+                    <div style={{ marginTop: theme.spacing.xl }}>
+                      <SectionTitle>Daily Cash Flow</SectionTitle>
                       <CashFlowTable>
                         <thead>
                           <tr>
@@ -1027,7 +1081,7 @@ export default function ReportPage() {
                               ))
                           ) : (
                             <tr>
-                              <td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                              <td colSpan={4} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
                                 No cash flow data for this period
                               </td>
                             </tr>
