@@ -1604,7 +1604,92 @@ The most common fix is simply **restarting the backend server** after making cod
 
 
    -->
+<!-- 
 
+Purpose of a Project in a Financial Management System
+1. Budget Planning and Allocation
+
+A project has its own budget separate from departments or routine operations.
+The system tracks:
+
+Initial project budget
+
+Approved changes
+
+Actual spending
+
+This ensures the project stays financially controlled.
+
+2. Expense and Cost Tracking
+
+Every cost (materials, labor, services, assets) can be linked to a specific project.
+This helps answer questions like:
+
+How much has this project cost so far?
+
+Are expenses within the approved limits?
+
+3. Financial Accountability
+
+Projects assign responsibility to project managers or teams.
+The system can show:
+
+Who approved expenses
+
+Who used funds
+
+How money was allocated
+
+This improves transparency.
+
+4. Performance Measurement
+
+Projects are evaluated by:
+
+Budget vs. actual costs
+
+Timeline vs. progress
+
+Return on investment (ROI)
+
+This helps management decide which projects are successful.
+
+5. Reporting and Analysis
+
+Projects allow the system to generate detailed reports such as:
+
+Project cost summary
+
+Forecast vs. actual spending
+
+Completion percentage and financial health
+
+These reports support strategic decision-making.
+
+6. Resource Allocation
+
+Projects help track:
+
+People assigned
+
+Equipment usage
+
+Material consumption
+
+This ensures efficient resource utilization.
+
+7. Compliance and Audit
+
+Projects create a clear audit trail of:
+
+Transactions
+
+Budget adjustments
+
+Approval workflows
+
+This supports audits and compliance with internal or external regulations.
+ -->
 
    <!-- 
 In a Financial Management System (FMS), a department exists to organize financial activities, responsibilities, and reporting within an organization. Its purpose includes:
