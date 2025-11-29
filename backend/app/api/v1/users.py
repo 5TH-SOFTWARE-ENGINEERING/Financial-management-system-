@@ -403,8 +403,8 @@ def read_user(
     if current_user.id == user_id:
         return user
 
-    # Manager sees subordinates
-    if current_user.role == UserRole.MANAGER:
+    # Manager and Finance Admin see subordinates
+    if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
         subs = user_crud.get_hierarchy(db, current_user.id)
         if user_id not in [s.id for s in subs]:
             raise HTTPException(status_code=403, detail="Not in your hierarchy")
@@ -453,8 +453,8 @@ def create_subordinate(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_min_role(UserRole.MANAGER))
 ):
-    """Manager creates accountant or employee under them"""
-    if current_user.role == UserRole.MANAGER:
+    """Manager or Finance Admin creates accountant or employee under them"""
+    if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
         if user_in.role not in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]:
             raise HTTPException(status_code=403, detail="Managers can only create accountant or employee")
         user_in.manager_id = current_user.id  # Force assignment
@@ -482,16 +482,38 @@ def update_user(
     user_id: int,
     user_update: UserUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_min_role(UserRole.ADMIN))
+    current_user: User = Depends(get_current_active_user)
 ):
     db_user = user_crud.get(db, id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Super Admin protection
     if db_user.role == UserRole.SUPER_ADMIN and current_user.role != UserRole.SUPER_ADMIN:
         raise HTTPException(status_code=403, detail="Cannot modify super admin")
 
-    return user_crud.update(db, db_obj=db_user, obj_in=user_update)
+    # Admin and Super Admin can update any user
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        return user_crud.update(db, db_obj=db_user, obj_in=user_update)
+    
+    # Finance Manager (Manager or Finance Admin) can update their subordinates (accountants and employees)
+    if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
+        # Check if target user is a subordinate
+        is_subordinate = db_user.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+        is_my_subordinate = db_user.manager_id == current_user.id
+        
+        if is_subordinate and is_my_subordinate:
+            # Prevent managers from changing role or manager_id to avoid hierarchy issues
+            if user_update.role is not None and user_update.role != db_user.role:
+                raise HTTPException(status_code=403, detail="Cannot change user role")
+            if user_update.manager_id is not None and user_update.manager_id != current_user.id:
+                raise HTTPException(status_code=403, detail="Cannot change manager assignment")
+            return user_crud.update(db, db_obj=db_user, obj_in=user_update)
+        else:
+            raise HTTPException(status_code=403, detail="You can only update your subordinates (accountants and employees)")
+    
+    # Other roles cannot update users
+    raise HTTPException(status_code=403, detail="Insufficient permissions")
 
 
 # ------------------------------------------------------------------
@@ -501,16 +523,38 @@ def update_user(
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_min_role(UserRole.SUPER_ADMIN))
+    current_user: User = Depends(get_current_active_user)
 ):
     db_user = user_crud.get(db, id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
+    
     if db_user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
 
-    user_crud.delete(db, id=user_id)
-    return {"message": "User deleted successfully"}
+    # Super Admin protection
+    if db_user.role == UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Cannot delete super admin")
+
+    # Admin and Super Admin can delete any user
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        user_crud.delete(db, id=user_id)
+        return {"message": "User deleted successfully"}
+    
+    # Finance Manager (Manager or Finance Admin) can delete their subordinates (accountants and employees)
+    if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
+        # Check if target user is a subordinate
+        is_subordinate = db_user.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+        is_my_subordinate = db_user.manager_id == current_user.id
+        
+        if is_subordinate and is_my_subordinate:
+            user_crud.delete(db, id=user_id)
+            return {"message": "User deleted successfully"}
+        else:
+            raise HTTPException(status_code=403, detail="You can only delete your subordinates (accountants and employees)")
+    
+    # Other roles cannot delete users
+    raise HTTPException(status_code=403, detail="Insufficient permissions")
 
 
 # ------------------------------------------------------------------
@@ -520,18 +564,35 @@ def delete_user(
 def deactivate_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_min_role(UserRole.ADMIN))
+    current_user: User = Depends(get_current_active_user)
 ):
     db_user = user_crud.get(db, id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    if db_user.role == UserRole.SUPER_ADMIN and current_user.role != UserRole.SUPER_ADMIN:
-        raise HTTPException(status_code=403, detail="Cannot deactivate super admin")
+    
     if db_user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
+    
+    if db_user.role == UserRole.SUPER_ADMIN and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Cannot deactivate super admin")
 
-    user_crud.update(db, db_obj=db_user, obj_in=UserUpdate(is_active=False))
-    return {"message": "User deactivated successfully"}
+    # Admin and Super Admin can deactivate any user
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        user_crud.update(db, db_obj=db_user, obj_in=UserUpdate(is_active=False))
+        return {"message": "User deactivated successfully"}
+    
+    # Finance Manager (Manager or Finance Admin) can deactivate their subordinates
+    if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
+        is_subordinate = db_user.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+        is_my_subordinate = db_user.manager_id == current_user.id
+        
+        if is_subordinate and is_my_subordinate:
+            user_crud.update(db, db_obj=db_user, obj_in=UserUpdate(is_active=False))
+            return {"message": "User deactivated successfully"}
+        else:
+            raise HTTPException(status_code=403, detail="You can only deactivate your subordinates (accountants and employees)")
+    
+    raise HTTPException(status_code=403, detail="Insufficient permissions")
 
 
 # ------------------------------------------------------------------
@@ -541,11 +602,26 @@ def deactivate_user(
 def activate_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_min_role(UserRole.ADMIN))
+    current_user: User = Depends(get_current_active_user)
 ):
     db_user = user_crud.get(db, id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    user_crud.update(db, db_obj=db_user, obj_in=UserUpdate(is_active=True))
-    return {"message": "User activated successfully"}
+    # Admin and Super Admin can activate any user
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        user_crud.update(db, db_obj=db_user, obj_in=UserUpdate(is_active=True))
+        return {"message": "User activated successfully"}
+    
+    # Finance Manager (Manager or Finance Admin) can activate their subordinates
+    if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
+        is_subordinate = db_user.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+        is_my_subordinate = db_user.manager_id == current_user.id
+        
+        if is_subordinate and is_my_subordinate:
+            user_crud.update(db, db_obj=db_user, obj_in=UserUpdate(is_active=True))
+            return {"message": "User activated successfully"}
+        else:
+            raise HTTPException(status_code=403, detail="You can only activate your subordinates (accountants and employees)")
+    
+    raise HTTPException(status_code=403, detail="Insufficient permissions")
