@@ -605,6 +605,10 @@ export default function RevenueListPage() {
   const [rejectPassword, setRejectPassword] = useState<string>('');
   const [rejectPasswordError, setRejectPasswordError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
+  const [deletePassword, setDeletePassword] = useState<string>('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   
   const canApprove = () => {
     if (canApproveTransactions()) return true;
@@ -684,17 +688,39 @@ export default function RevenueListPage() {
            revenue.description?.includes('Item Type:') === true;
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this revenue entry? This action cannot be undone.')) {
+  const handleDeleteClick = (id: number) => {
+    setShowDeleteModal(id);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(null);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
+  const handleDelete = async (id: number, password: string) => {
+    if (!password.trim()) {
+      setDeletePasswordError('Password is required');
       return;
     }
 
+    setDeletingId(id);
+    setDeletePasswordError(null);
+
     try {
-      await apiClient.deleteRevenue(id);
+      await apiClient.deleteRevenue(id, password.trim());
       toast.success('Revenue entry deleted successfully');
+      setShowDeleteModal(null);
+      setDeletePassword('');
       loadRevenues();
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to delete revenue entry');
+      const errorMessage = err.response?.data?.detail || 'Failed to delete revenue entry';
+      setDeletePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -947,11 +973,16 @@ export default function RevenueListPage() {
                             )}
                             <ActionButton
                               $variant="danger"
-                              onClick={() => handleDelete(revenue.id)}
+                              onClick={() => handleDeleteClick(revenue.id)}
+                              disabled={deletingId === revenue.id || approvingId === revenue.id || rejectingId === revenue.id}
                               style={{ color: '#dc2626' }}
                               title="Delete"
                             >
-                              <Trash2 />
+                              {deletingId === revenue.id ? (
+                                <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
+                              ) : (
+                                <Trash2 />
+                              )}
                             </ActionButton>
                           </ActionButtons>
                         </td>
@@ -1053,6 +1084,80 @@ export default function RevenueListPage() {
                       <>
                         <XCircle />
                         Reject
+                      </>
+                    )}
+                  </ActionButton>
+                </ModalActions>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+
+          {/* Delete Modal */}
+          {showDeleteModal && (
+            <ModalOverlay onClick={handleDeleteCancel}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalTitle>
+                  <ModalAlertIcon size={20} />
+                  Delete Revenue Entry
+                </ModalTitle>
+                
+                <WarningBox>
+                  <p>
+                    You are about to permanently delete this revenue entry. This action cannot be undone.
+                    Please enter your own password to verify this action.
+                  </p>
+                </WarningBox>
+
+                <FormGroup>
+                  <StyledLabel htmlFor="delete-password">
+                    Enter your own password to confirm deletion:
+                  </StyledLabel>
+                  <PasswordInput
+                    id="delete-password"
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => {
+                      setDeletePassword(e.target.value);
+                      setDeletePasswordError(null);
+                    }}
+                    placeholder="Enter your password"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && deletePassword.trim() && showDeleteModal !== null) {
+                        handleDelete(showDeleteModal, deletePassword);
+                      }
+                    }}
+                  />
+                  {deletePasswordError && (
+                    <ErrorText>{deletePasswordError}</ErrorText>
+                  )}
+                </FormGroup>
+
+                <ModalActions>
+                  <ActionButton
+                    $variant="secondary"
+                    onClick={handleDeleteCancel}
+                    disabled={deletingId === showDeleteModal}
+                  >
+                    Cancel
+                  </ActionButton>
+                  <ActionButton
+                    $variant="danger"
+                    onClick={() => {
+                      if (showDeleteModal !== null) {
+                        handleDelete(showDeleteModal, deletePassword);
+                      }
+                    }}
+                    disabled={!deletePassword.trim() || deletingId === showDeleteModal || showDeleteModal === null}
+                  >
+                    {deletingId === showDeleteModal ? (
+                      <>
+                        <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 />
+                        Delete
                       </>
                     )}
                   </ActionButton>

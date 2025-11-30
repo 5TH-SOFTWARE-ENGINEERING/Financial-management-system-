@@ -141,13 +141,44 @@ def update_expense_entry(
     return expense_crud.update(db, db_obj=entry, obj_in=expense_update)
 
 
-@router.delete("/{expense_id}")
+class DeleteExpenseRequest(BaseModel):
+    password: str
+
+@router.post("/{expense_id}/delete")
 def delete_expense_entry(
     expense_id: int,
+    delete_request: DeleteExpenseRequest,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Delete expense entry"""
+    """Delete expense entry - requires password verification"""
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deletion
+    if not delete_request.password or not delete_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to delete an expense entry."
+        )
+    
+    # Verify password
+    password_to_verify = delete_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to delete this expense entry."
+        )
+    
     entry = expense_crud.get(db, id=expense_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Expense entry not found")

@@ -134,13 +134,44 @@ def update_revenue_entry(
     return revenue_crud.update(db, db_obj=entry, obj_in=revenue_update)
 
 
-@router.delete("/{revenue_id}")
+class DeleteRevenueRequest(BaseModel):
+    password: str
+
+@router.post("/{revenue_id}/delete")
 def delete_revenue_entry(
     revenue_id: int,
+    delete_request: DeleteRevenueRequest,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Delete revenue entry"""
+    """Delete revenue entry - requires password verification"""
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deletion
+    if not delete_request.password or not delete_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to delete a revenue entry."
+        )
+    
+    # Verify password
+    password_to_verify = delete_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to delete this revenue entry."
+        )
+    
     entry = revenue_crud.get(db, id=revenue_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Revenue entry not found")

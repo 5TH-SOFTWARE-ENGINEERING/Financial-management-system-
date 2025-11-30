@@ -272,8 +272,8 @@ class ApiClient {
     return this.put(`/revenue/${revenueId}`, revenueData);
   }
 
-  async deleteRevenue(revenueId: number): Promise<ApiResponse<{ message: string }>> {
-    return this.delete(`/revenue/${revenueId}`);
+  async deleteRevenue(revenueId: number, password: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/revenue/${revenueId}/delete`, { password });
   }
 
   async getExpenses(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
@@ -296,8 +296,8 @@ class ApiClient {
     return this.put(`/expenses/${expenseId}`, expenseData);
   }
 
-  async deleteExpense(expenseId: number): Promise<ApiResponse<{ message: string }>> {
-    return this.delete(`/expenses/${expenseId}`);
+  async deleteExpense(expenseId: number, password: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/expenses/${expenseId}/delete`, { password });
   }
 
   // Transactions (combined revenues and expenses)
