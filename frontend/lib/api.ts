@@ -676,6 +676,18 @@ class ApiClient {
     return this.get('/approvals');
   }
 
+  async getApproval(approvalId: number): Promise<ApiResponse<any>> {
+    return this.get(`/approvals/${approvalId}`);
+  }
+
+  async getApprovalComments(approvalId: number): Promise<ApiResponse<any[]>> {
+    return this.get(`/approvals/${approvalId}/comments`);
+  }
+
+  async createApprovalComment(approvalId: number, comment: string): Promise<ApiResponse<any>> {
+    return this.post(`/approvals/${approvalId}/comments`, { comment });
+  }
+
   async approveItem(itemId: number, itemType: 'revenue' | 'expense'): Promise<ApiResponse<any>> {
     if (itemType === 'revenue') {
       return this.post(`/revenue/${itemId}/approve`);
