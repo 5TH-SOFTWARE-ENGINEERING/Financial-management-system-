@@ -251,6 +251,14 @@ class ApiClient {
     return this.post(`/users/${userId}/delete`, { password });
   }
 
+  async activateUser(userId: number): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/users/${userId}/activate`);
+  }
+
+  async deactivateUser(userId: number): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/users/${userId}/deactivate`);
+  }
+
   // Financial endpoints
   async getRevenues(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
     // For reports, we need all data, so increase limit significantly

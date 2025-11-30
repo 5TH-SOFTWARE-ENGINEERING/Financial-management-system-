@@ -10,6 +10,7 @@ import { AlertCircle, UserPlus, Edit, Trash2, Users, Loader2 } from 'lucide-reac
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -305,6 +306,7 @@ export default function EmployeeListPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadEmployees();
@@ -378,6 +380,31 @@ export default function EmployeeListPage() {
       toast.error(errorMessage);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleToggleActive = async (employee: Employee) => {
+    if (togglingId === employee.id) return;
+
+    setTogglingId(employee.id);
+    setError(null);
+
+    try {
+      if (employee.is_active) {
+        await apiClient.deactivateUser(employee.id);
+        toast.success(`${employee.full_name} has been deactivated`);
+      } else {
+        await apiClient.activateUser(employee.id);
+        toast.success(`${employee.full_name} has been activated`);
+      }
+      // Reload employees to get the latest data from server
+      await loadEmployees();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || `Failed to ${employee.is_active ? 'deactivate' : 'activate'} employee`;
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -462,9 +489,20 @@ export default function EmployeeListPage() {
                         <td>{employee.phone || 'N/A'}</td>
                         <td>{employee.department || 'N/A'}</td>
                         <td>
-                          <StatusBadge $active={employee.is_active}>
-                            {employee.is_active ? 'Active' : 'Inactive'}
-                          </StatusBadge>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <StatusBadge $active={employee.is_active}>
+                              {employee.is_active ? 'Active' : 'Inactive'}
+                            </StatusBadge>
+                            <Switch
+                              checked={employee.is_active}
+                              onCheckedChange={() => handleToggleActive(employee)}
+                              disabled={togglingId === employee.id || deleting}
+                              aria-label={`${employee.is_active ? 'Deactivate' : 'Activate'} ${employee.full_name}`}
+                            />
+                            {togglingId === employee.id && (
+                              <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', color: TEXT_COLOR_MUTED }} />
+                            )}
+                          </div>
                         </td>
                         <td>
                           <ActionButtons>
