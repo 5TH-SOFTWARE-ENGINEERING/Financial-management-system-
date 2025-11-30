@@ -237,25 +237,25 @@ export default function CreateEmployeePage() {
 
           <FormCard onSubmit={handleSubmit(onSubmit)}>
             <FormGroup>
-              <Label htmlFor="full_name">Full Name *</Label>
+              <Label htmlFor="full_name">Full Name </Label>
               <Input id="full_name" {...register('full_name')} disabled={loading} />
               {errors.full_name && <FieldError>{errors.full_name.message}</FieldError>}
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">Email </Label>
               <Input id="email" type="email" {...register('email')} disabled={loading} />
               {errors.email && <FieldError>{errors.email.message}</FieldError>}
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="username">Username *</Label>
+              <Label htmlFor="username">Username </Label>
               <Input id="username" {...register('username')} disabled={loading} />
               {errors.username && <FieldError>{errors.username.message}</FieldError>}
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="password">Password *</Label>
+              <Label htmlFor="password">Password </Label>
               <Input id="password" type="password" {...register('password')} disabled={loading} />
               {errors.password && <FieldError>{errors.password.message}</FieldError>}
             </FormGroup>
