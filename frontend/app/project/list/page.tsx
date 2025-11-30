@@ -2,104 +2,133 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
-import Navbar from '@/components/common/Navbar';
-import Sidebar from '@/components/common/Sidebar';
 import Link from 'next/link';
+import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, FolderKanban, Plus, Edit, Trash2, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/utils';
+import { theme } from '@/components/common/theme';
+
+// ──────────────────────────────────────────
+// Theme Constants
+// ──────────────────────────────────────────
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+const CardShadowHover = `
+  0 8px 12px -2px rgba(0, 0, 0, 0.08),
+  0 4px 6px -2px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
+`;
 
 // ──────────────────────────────────────────
 // Styled Components
 // ──────────────────────────────────────────
-const LayoutWrapper = styled.div`
-  display: flex;
-  background: #f5f6fa;
-  min-height: 100vh;
-`;
-
-const SidebarWrapper = styled.div`
-  width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    width: auto;
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding-left: 250px;
+const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
-`;
-
-const InnerContent = styled.div`
-  padding: 32px;
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
 `;
 
-const Header = styled.div`
+const ContentContainer = styled.div`
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+`;
+
+const HeaderContent = styled.div`
   display: flex;
-  justify-between;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-`;
-
-const HeaderText = styled.div`
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
+  
   h1 {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 4px;
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: #ffffff;
   }
   
   p {
-    color: var(--muted-foreground);
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.medium};
+    opacity: 0.9;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
   }
 `;
 
-const MessageBox = styled.div<{ type: 'error' | 'success' }>`
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
+const AddButton = styled(Button)`
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+  transition: all ${theme.transitions.default};
 
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+
+const MessageBox = styled.div<{ type: 'error' | 'success' }>`
+  padding: ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  display: flex;
+  gap: ${theme.spacing.sm};
+  align-items: center;
+  font-size: ${theme.typography.fontSizes.sm};
+
+  background: ${(p) => (p.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)')};
+  border: 1px solid ${(p) => (p.type === 'error' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)')};
+  color: ${(p) => (p.type === 'error' ? '#dc2626' : '#065f46')};
 `;
 
 const Card = styled.div`
-  background: #fff;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background: ${theme.colors.background};
+  padding: ${theme.spacing.lg};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
 `;
 
 const FiltersCard = styled.div`
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  margin-bottom: 20px;
+  background: ${theme.colors.background};
+  padding: ${theme.spacing.lg};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  margin-bottom: ${theme.spacing.lg};
   display: grid;
   grid-template-columns: 1fr auto auto;
-  gap: 16px;
+  gap: ${theme.spacing.md};
   align-items: center;
   
   @media (max-width: 768px) {
@@ -112,10 +141,12 @@ const SearchWrapper = styled.div`
   
   svg {
     position: absolute;
-    left: 12px;
+    left: ${theme.spacing.md};
     top: 50%;
     transform: translateY(-50%);
-    color: var(--muted-foreground);
+    color: ${TEXT_COLOR_MUTED};
+    width: 16px;
+    height: 16px;
   }
   
   input {
@@ -124,39 +155,41 @@ const SearchWrapper = styled.div`
 `;
 
 const Select = styled.select`
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 14px;
-  color: var(--foreground);
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_DARK};
   
   &:focus {
     outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
   }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 48px 24px;
+  padding: ${theme.spacing.xxl} ${theme.spacing.lg};
   
   svg {
-    margin: 0 auto 16px;
-    color: var(--muted-foreground);
+    margin: 0 auto ${theme.spacing.md};
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.5;
   }
   
   h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--foreground);
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin-bottom: ${theme.spacing.sm};
+    color: ${TEXT_COLOR_DARK};
   }
   
   p {
-    color: var(--muted-foreground);
-    margin-bottom: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+    margin-bottom: ${theme.spacing.md};
   }
 `;
 
@@ -166,15 +199,15 @@ const Table = styled.table`
 `;
 
 const TableHeader = styled.thead`
-  border-bottom: 1px solid var(--border);
-  background: var(--muted);
+  border-bottom: 2px solid ${theme.colors.border};
+  background: ${theme.colors.backgroundSecondary};
   
   th {
     text-align: left;
-    padding: 12px 16px;
-    font-weight: 600;
-    color: var(--foreground);
-    font-size: 14px;
+    padding: ${theme.spacing.md} ${theme.spacing.lg};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.xs};
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -182,57 +215,210 @@ const TableHeader = styled.thead`
 
 const TableBody = styled.tbody`
   tr {
-    border-bottom: 1px solid var(--border);
-    transition: background-color 0.2s;
+    border-bottom: 1px solid ${theme.colors.border};
+    transition: background-color ${theme.transitions.default};
     
     &:hover {
-      background: var(--muted);
+      background: ${theme.colors.backgroundSecondary};
+    }
+    
+    &:last-child {
+      border-bottom: none;
     }
     
     td {
-      padding: 12px 16px;
-      color: var(--muted-foreground);
-      font-size: 14px;
+      padding: ${theme.spacing.md} ${theme.spacing.lg};
+      color: ${TEXT_COLOR_DARK};
+      font-size: ${theme.typography.fontSizes.sm};
     }
   }
 `;
 
 const StatusBadge = styled.span<{ $active: boolean }>`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${(p) => (p.$active ? '#d1fae5' : '#f3f4f6')};
-  color: ${(p) => (p.$active ? '#065f46' : '#374151')};
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  background: ${(p) => (p.$active ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)')};
+  color: ${(p) => (p.$active ? '#065f46' : '#991b1b')};
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
+  align-items: center;
+`;
+
+const ProjectName = styled.div`
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+`;
+
+const ProjectDescription = styled.div`
+  font-size: ${theme.typography.fontSizes.xs};
+  color: ${TEXT_COLOR_MUTED};
+  margin-top: ${theme.spacing.xs};
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const BudgetAmount = styled.span`
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+`;
+
+const TableCell = styled.td`
+  white-space: nowrap;
+`;
+
+const TableWrapper = styled.div`
+  overflow-x: auto;
+`;
+
+const IconButton = styled(Button)`
+  height: 32px;
+  width: 32px;
+  padding: 0;
+`;
+
+const DeleteIconButton = styled(IconButton)`
+  color: #dc2626;
+  
+  &:hover {
+    color: #991b1b;
+  }
 `;
 
 const LoadingContainer = styled.div`
-  padding: 32px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  width: 100%;
   
   p {
-    color: var(--muted-foreground);
-    margin-top: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+    margin-top: ${theme.spacing.md};
   }
 `;
 
 const Spinner = styled.div`
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${theme.colors.border};
+  border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
   margin: 0 auto;
   
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContent = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.xl};
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.md};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin-bottom: ${theme.spacing.xs};
+`;
+
+const PasswordInput = styled(Input)`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${theme.spacing.lg};
+`;
+
+const ModalAlertIcon = styled(AlertCircle)`
+  color: #ef4444;
+`;
+
+const ButtonContent = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
 `;
 
 interface Project {
@@ -260,6 +446,11 @@ export default function ProjectListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadProjects();
@@ -296,17 +487,45 @@ export default function ProjectListPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+  const handleDeleteClick = (project: Project) => {
+    setProjectToDelete(project);
+    setShowDeleteModal(true);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+    setProjectToDelete(null);
+  };
+
+  const handleDelete = async () => {
+    if (!projectToDelete || !projectToDelete.id) return;
+
+    if (!deletePassword.trim()) {
+      setDeletePasswordError('Password is required');
       return;
     }
 
+    setDeleting(true);
+    setDeletePasswordError(null);
+    setError(null);
+
     try {
-      await apiClient.deleteProject(id);
+      await apiClient.deleteProject(projectToDelete.id, deletePassword.trim());
       toast.success('Project deleted successfully');
+      setShowDeleteModal(false);
+      setProjectToDelete(null);
+      setDeletePassword('');
       loadProjects();
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to delete project');
+      const errorMessage = err.response?.data?.detail || 'Failed to delete project';
+      setDeletePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -329,42 +548,37 @@ export default function ProjectListPage() {
 
   if (loading) {
     return (
-      <LayoutWrapper>
-        <SidebarWrapper>
-          <Sidebar />
-        </SidebarWrapper>
-        <ContentArea>
-          <Navbar />
-          <LoadingContainer>
-            <Spinner />
-            <p>Loading projects...</p>
-          </LoadingContainer>
-        </ContentArea>
-      </LayoutWrapper>
+      <Layout>
+        <PageContainer>
+          <ContentContainer>
+            <LoadingContainer>
+              <Spinner />
+              <p>Loading projects...</p>
+            </LoadingContainer>
+          </ContentContainer>
+        </PageContainer>
+      </Layout>
     );
   }
 
   return (
-    <LayoutWrapper>
-      <SidebarWrapper>
-        <Sidebar />
-      </SidebarWrapper>
-      <ContentArea>
-        <Navbar />
-
-        <InnerContent>
-          <Header>
-            <HeaderText>
-              <h1>Projects</h1>
-              <p>Manage your projects</p>
-            </HeaderText>
-            <Link href="/project/create">
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Project
-              </Button>
-            </Link>
-          </Header>
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
+          <HeaderContainer>
+            <HeaderContent>
+              <div>
+                <h1>Projects</h1>
+                <p>Manage your projects</p>
+              </div>
+              <Link href="/project/create">
+                <AddButton>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Project
+                </AddButton>
+              </Link>
+            </HeaderContent>
+          </HeaderContainer>
 
           {error && (
             <MessageBox type="error">
@@ -424,7 +638,7 @@ export default function ProjectListPage() {
                 )}
               </EmptyState>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <TableWrapper>
                 <Table>
                   <TableHeader>
                     <tr>
@@ -441,61 +655,134 @@ export default function ProjectListPage() {
                     {filteredProjects.map((project) => (
                       <tr key={project.id}>
                         <td>
-                          <div style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                          <ProjectName>
                             {project.name}
-                          </div>
+                          </ProjectName>
                           {project.description && (
-                            <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '4px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <ProjectDescription>
                               {project.description}
-                            </div>
+                            </ProjectDescription>
                           )}
                         </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{project.department_name || '-'}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
+                        <TableCell>{project.department_name || '-'}</TableCell>
+                        <TableCell>
                           {project.budget ? (
-                            <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
+                            <BudgetAmount>
                               ${project.budget.toLocaleString()}
-                            </span>
+                            </BudgetAmount>
                           ) : (
                             <span>-</span>
                           )}
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{formatDate(project.start_date)}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
+                        </TableCell>
+                        <TableCell>{formatDate(project.start_date)}</TableCell>
+                        <TableCell>
                           {project.end_date ? formatDate(project.end_date) : '-'}
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
+                        </TableCell>
+                        <TableCell>
                           <StatusBadge $active={project.is_active}>
                             {project.is_active ? 'Active' : 'Inactive'}
                           </StatusBadge>
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
+                        </TableCell>
+                        <TableCell>
                           <ActionButtons>
                             <Link href={`/project/edit/${project.id}`}>
-                              <Button variant="ghost" size="sm" style={{ height: '32px', width: '32px', padding: 0 }}>
+                              <IconButton variant="ghost" size="sm">
                                 <Edit className="h-4 w-4" />
-                              </Button>
+                              </IconButton>
                             </Link>
-                            <Button
+                            <DeleteIconButton
                               variant="ghost"
                               size="sm"
-                              style={{ height: '32px', width: '32px', padding: 0, color: 'var(--destructive)' }}
-                              onClick={() => handleDelete(project.id)}
+                              onClick={() => handleDeleteClick(project)}
+                              disabled={deleting}
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              {deleting && projectToDelete?.id === project.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </DeleteIconButton>
                           </ActionButtons>
-                        </td>
+                        </TableCell>
                       </tr>
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </TableWrapper>
             )}
           </Card>
-        </InnerContent>
-      </ContentArea>
-    </LayoutWrapper>
+
+          {/* Delete Confirmation Modal */}
+      {showDeleteModal && projectToDelete && (
+        <ModalOverlay onClick={handleDeleteCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <ModalAlertIcon size={20} />
+              Confirm Project Deletion
+            </ModalTitle>
+            <WarningBox>
+              <p>
+                You are about to permanently delete the project <strong>{projectToDelete.name}</strong>. This action cannot be undone.
+                Please enter your own password to verify this action.
+              </p>
+            </WarningBox>
+            <FormGroup>
+              <Label htmlFor="delete-password">
+                Enter your own password to confirm deletion of <strong>{projectToDelete.name}</strong>:
+              </Label>
+              <PasswordInput
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => {
+                  setDeletePassword(e.target.value);
+                  setDeletePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && deletePassword.trim()) {
+                    handleDelete();
+                  }
+                }}
+              />
+              {deletePasswordError && (
+                <ErrorText>{deletePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleDeleteCancel}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={!deletePassword.trim() || deleting}
+              >
+                {deleting ? (
+                  <ButtonContent>
+                    <Loader2 size={16} className="animate-spin" />
+                    Deleting...
+                  </ButtonContent>
+                ) : (
+                  <ButtonContent>
+                    <Trash2 size={16} />
+                    Delete Project
+                  </ButtonContent>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
   );
 }
 

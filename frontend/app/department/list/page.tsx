@@ -2,10 +2,11 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Building2, Plus, Edit, Trash2 } from 'lucide-react';
+import { AlertCircle, Building2, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
@@ -218,6 +219,97 @@ const DepartmentName = styled.div`
   }
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContent = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.xl};
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.md};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin-bottom: ${theme.spacing.xs};
+`;
+
+const PasswordInput = styled(Input)`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${theme.spacing.lg};
+`;
+
 interface Department {
   id: string;
   name: string;
@@ -235,6 +327,11 @@ export default function DepartmentListPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [departmentToDelete, setDepartmentToDelete] = useState<Department | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadDepartments();
@@ -259,17 +356,45 @@ export default function DepartmentListPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this department? This action cannot be undone.')) {
+  const handleDeleteClick = (department: Department) => {
+    setDepartmentToDelete(department);
+    setShowDeleteModal(true);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+    setDepartmentToDelete(null);
+  };
+
+  const handleDelete = async () => {
+    if (!departmentToDelete || !departmentToDelete.id) return;
+
+    if (!deletePassword.trim()) {
+      setDeletePasswordError('Password is required');
       return;
     }
 
+    setDeleting(true);
+    setDeletePasswordError(null);
+    setError(null);
+
     try {
-      await apiClient.deleteDepartment(id);
+      await apiClient.deleteDepartment(departmentToDelete.id, deletePassword.trim());
       toast.success('Department deleted successfully');
+      setShowDeleteModal(false);
+      setDepartmentToDelete(null);
+      setDeletePassword('');
       loadDepartments();
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to delete department');
+      const errorMessage = err.response?.data?.detail || 'Failed to delete department';
+      setDeletePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -364,9 +489,16 @@ export default function DepartmentListPage() {
                             <Button 
                               size="sm" 
                               variant="destructive"
-                              onClick={() => handleDelete(dept.id)}
+                              onClick={() => handleDeleteClick(dept)}
+                              disabled={deleting}
                             >
-                              <Trash2 className="h-4 w-4 mr-1" />
+                              {deleting && departmentToDelete?.id === dept.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                </>
+                              ) : (
+                                <Trash2 className="h-4 w-4 mr-1" />
+                              )}
                             </Button>
                           </ActionButtons>
                         </td>
@@ -379,6 +511,75 @@ export default function DepartmentListPage() {
           </Card>
         </ContentContainer>
       </PageContainer>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && departmentToDelete && (
+        <ModalOverlay onClick={handleDeleteCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <AlertCircle size={20} style={{ color: '#ef4444' }} />
+              Confirm Department Deletion
+            </ModalTitle>
+            <WarningBox>
+              <p>
+                You are about to permanently delete the department <strong>{departmentToDelete.name}</strong>. This action cannot be undone and will remove all users from this department.
+                Please enter your own password to verify this action.
+              </p>
+            </WarningBox>
+            <FormGroup>
+              <Label htmlFor="delete-password">
+                Enter your own password to confirm deletion of <strong>{departmentToDelete.name}</strong>:
+              </Label>
+              <PasswordInput
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => {
+                  setDeletePassword(e.target.value);
+                  setDeletePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && deletePassword.trim()) {
+                    handleDelete();
+                  }
+                }}
+              />
+              {deletePasswordError && (
+                <ErrorText>{deletePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleDeleteCancel}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={!deletePassword.trim() || deleting}
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Delete Department
+                  </>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </Layout>
   );
 }

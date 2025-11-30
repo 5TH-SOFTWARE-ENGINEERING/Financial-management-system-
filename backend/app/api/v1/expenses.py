@@ -11,6 +11,7 @@ from ...schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseOut, Expense
 from ...models.user import User, UserRole
 from ...models.approval import ApprovalStatus
 from ...api.deps import get_current_active_user, require_min_role
+from ...core.security import verify_password
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -191,6 +192,7 @@ def approve_expense_entry(
 
 class RejectRequest(BaseModel):
     reason: str
+    password: str
 
 
 @router.post("/{expense_id}/reject")
@@ -208,13 +210,50 @@ def reject_expense_entry(
     if entry.is_approved:
         raise HTTPException(status_code=400, detail="Entry already approved")
     
-    # Find the approval workflow for this expense entry
+    # Find the approval workflow for this expense entry, create one if it doesn't exist
     approval_workflow = approval_crud.get_by_expense_entry(db, expense_id)
     if approval_workflow is None:
-        raise HTTPException(status_code=404, detail="Approval workflow not found for this expense entry")
+        # Auto-create approval workflow if it doesn't exist
+        from ...schemas.approval import ApprovalCreate
+        from ...models.approval import ApprovalType
+        
+        approval_data = ApprovalCreate(
+            title=entry.title or f"Expense Entry #{expense_id}",
+            description=entry.description or f"Expense entry for {entry.title}",
+            type=ApprovalType.EXPENSE,
+            expense_entry_id=expense_id
+        )
+        approval_workflow = approval_crud.create(db, obj_in=approval_data, requester_id=entry.created_by_id)
     
     if approval_workflow.status != ApprovalStatus.PENDING:
         raise HTTPException(status_code=400, detail="Approval workflow is not pending")
+    
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before rejection
+    if not reject_request.password or not reject_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to reject an expense entry."
+        )
+    
+    # Verify password
+    password_to_verify = reject_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to reject this expense entry."
+        )
     
     # Check permissions - manager can reject if requester is their subordinate
     if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:

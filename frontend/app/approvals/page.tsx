@@ -13,7 +13,8 @@ import {
   DollarSign,
   CreditCard,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -512,6 +513,13 @@ const ModalTitle = styled.h3`
   font-weight: ${theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   margin: 0 0 ${theme.spacing.lg};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const ModalAlertIcon = styled(XCircle)`
+  color: #ef4444;
 `;
 
 const TextArea = styled.textarea`
@@ -554,6 +562,54 @@ const Label = styled.label`
   margin-bottom: ${theme.spacing.sm};
 `;
 
+const PasswordInput = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
 const LoadingContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -575,6 +631,14 @@ const Spinner = styled.div`
   border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
+const SpinningIcon = styled(Loader2)`
+  animation: spin 1s linear infinite;
   
   @keyframes spin {
     to { transform: rotate(360deg); }
@@ -620,6 +684,8 @@ export default function ApprovalsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
+  const [rejectPassword, setRejectPassword] = useState<string>('');
+  const [rejectPasswordError, setRejectPasswordError] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState<number | null>(null);
 
   useEffect(() => {
@@ -739,37 +805,45 @@ export default function ApprovalsPage() {
     }
   };
 
-  const handleReject = async (item: ApprovalItem, reason: string) => {
+  const handleReject = async (item: ApprovalItem, reason: string, password: string) => {
     if (!canApprove()) {
       toast.error('You do not have permission to reject items');
       return;
     }
 
     if (!reason.trim()) {
-      toast.error('Please provide a rejection reason');
+      setRejectPasswordError('Please provide a rejection reason');
+      return;
+    }
+
+    if (!password.trim()) {
+      setRejectPasswordError('Password is required');
       return;
     }
 
     setProcessingId(item.id);
     setError(null);
+    setRejectPasswordError(null);
 
     try {
       if (item.type === 'workflow' && item.workflow_id) {
-        await apiClient.rejectWorkflow(item.workflow_id, reason);
+        await apiClient.rejectWorkflow(item.workflow_id, reason, password.trim());
         toast.success('Approval workflow rejected');
       } else if (item.type === 'revenue' && item.revenue_entry_id) {
-        await apiClient.rejectItem(item.revenue_entry_id, 'revenue', reason);
+        await apiClient.rejectItem(item.revenue_entry_id, 'revenue', reason, password.trim());
         toast.success('Revenue entry rejected');
       } else if (item.type === 'expense' && item.expense_entry_id) {
-        await apiClient.rejectItem(item.expense_entry_id, 'expense', reason);
+        await apiClient.rejectItem(item.expense_entry_id, 'expense', reason, password.trim());
         toast.success('Expense entry rejected');
       }
       
       setShowRejectModal(null);
       setRejectionReason('');
+      setRejectPassword('');
       await loadApprovals();
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to reject item';
+      setRejectPasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -946,12 +1020,26 @@ export default function ApprovalsPage() {
                             onClick={() => handleApprove(item)}
                             disabled={processingId === item.id}
                           >
-                            <CheckCircle />
-                            Approve
+                            {processingId === item.id ? (
+                              <>
+                                <SpinningIcon size={16} />
+                                Approving...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle />
+                                Approve
+                              </>
+                            )}
                           </ActionButton>
                           <ActionButton
                             $variant="danger"
-                            onClick={() => setShowRejectModal(item.id)}
+                            onClick={() => {
+                              setShowRejectModal(item.id);
+                              setRejectionReason('');
+                              setRejectPassword('');
+                              setRejectPasswordError(null);
+                            }}
                             disabled={processingId === item.id}
                           >
                             <XCircle />
@@ -982,49 +1070,105 @@ export default function ApprovalsPage() {
           </ApprovalsList>
 
         {/* Rejection Modal */}
-        {showRejectModal && (
+        {showRejectModal && (() => {
+          const itemToReject = approvals.find(a => a.id === showRejectModal);
+          if (!itemToReject) return null;
+          
+          return (
             <ModalOverlay onClick={() => {
               setShowRejectModal(null);
               setRejectionReason('');
+              setRejectPassword('');
+              setRejectPasswordError(null);
             }}>
               <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalTitle>Reject Approval</ModalTitle>
-                <div>
-                <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                <ModalTitle>
+                  <ModalAlertIcon size={20} />
+                  Reject Approval
+                </ModalTitle>
+                
+                <WarningBox>
+                  <p>
+                    You are about to reject this approval request. This action cannot be undone.
+                    Please enter your own password to verify this action.
+                  </p>
+                </WarningBox>
+
+                <FormGroup>
+                  <Label htmlFor="rejection-reason">Rejection Reason</Label>
                   <TextArea
-                  id="rejection-reason"
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
+                    id="rejection-reason"
+                    value={rejectionReason}
+                    onChange={(e) => {
+                      setRejectionReason(e.target.value);
+                      setRejectPasswordError(null);
+                    }}
                     placeholder="Please provide a reason for rejection..."
-                  rows={4}
-                />
-              </div>
+                    rows={4}
+                  />
+                </FormGroup>
+
+                <FormGroup>
+                  <Label htmlFor="reject-password">
+                    Enter your own password to confirm rejection:
+                  </Label>
+                  <PasswordInput
+                    id="reject-password"
+                    type="password"
+                    value={rejectPassword}
+                    onChange={(e) => {
+                      setRejectPassword(e.target.value);
+                      setRejectPasswordError(null);
+                    }}
+                    placeholder="Enter your password"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && rejectionReason.trim() && rejectPassword.trim()) {
+                        handleReject(itemToReject, rejectionReason, rejectPassword);
+                      }
+                    }}
+                  />
+                  {rejectPasswordError && (
+                    <ErrorText>{rejectPasswordError}</ErrorText>
+                  )}
+                </FormGroup>
+
                 <ModalActions>
                   <ActionButton
                     $variant="secondary"
-                  onClick={() => {
-                    setShowRejectModal(null);
-                    setRejectionReason('');
-                  }}
-                >
-                  Cancel
+                    onClick={() => {
+                      setShowRejectModal(null);
+                      setRejectionReason('');
+                      setRejectPassword('');
+                      setRejectPasswordError(null);
+                    }}
+                    disabled={processingId === showRejectModal}
+                  >
+                    Cancel
                   </ActionButton>
                   <ActionButton
                     $variant="danger"
-                  onClick={() => {
-                    const item = approvals.find(a => a.id === showRejectModal);
-                    if (item) {
-                      handleReject(item, rejectionReason);
-                    }
-                  }}
-                  disabled={!rejectionReason.trim() || processingId !== null}
-                >
-                  Reject
+                    onClick={() => {
+                      handleReject(itemToReject, rejectionReason, rejectPassword);
+                    }}
+                    disabled={!rejectionReason.trim() || !rejectPassword.trim() || processingId === showRejectModal}
+                  >
+                    {processingId === showRejectModal ? (
+                      <>
+                        <SpinningIcon size={16} />
+                        Rejecting...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle />
+                        Reject
+                      </>
+                    )}
                   </ActionButton>
                 </ModalActions>
               </ModalContent>
             </ModalOverlay>
-          )}
+          );
+        })()}
         </ContentContainer>
       </PageContainer>
     </Layout>

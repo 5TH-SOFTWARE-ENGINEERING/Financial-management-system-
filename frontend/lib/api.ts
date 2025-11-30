@@ -696,12 +696,12 @@ class ApiClient {
     }
   }
 
-  async rejectItem(itemId: number, itemType: 'revenue' | 'expense', reason?: string): Promise<ApiResponse<any>> {
+  async rejectItem(itemId: number, itemType: 'revenue' | 'expense', reason: string, password: string): Promise<ApiResponse<any>> {
     // Reject revenue or expense entry through their respective endpoints
     if (itemType === 'revenue') {
-      return this.post(`/revenue/${itemId}/reject`, { reason: reason || 'No reason provided' });
+      return this.post(`/revenue/${itemId}/reject`, { reason: reason || 'No reason provided', password });
     } else {
-      return this.post(`/expenses/${itemId}/reject`, { reason: reason || 'No reason provided' });
+      return this.post(`/expenses/${itemId}/reject`, { reason: reason || 'No reason provided', password });
     }
   }
 
@@ -709,8 +709,8 @@ class ApiClient {
     return this.post(`/approvals/${workflowId}/approve`);
   }
 
-  async rejectWorkflow(workflowId: number, reason: string): Promise<ApiResponse<any>> {
-    return this.post(`/approvals/${workflowId}/reject`, { rejection_reason: reason });
+  async rejectWorkflow(workflowId: number, reason: string, password: string): Promise<ApiResponse<any>> {
+    return this.post(`/approvals/${workflowId}/reject`, { rejection_reason: reason, password });
   }
 
   // Notifications
@@ -833,8 +833,8 @@ class ApiClient {
     return this.put(`/departments/${departmentId}`, departmentData);
   }
 
-  async deleteDepartment(departmentId: string | number): Promise<ApiResponse<{ message: string }>> {
-    return this.delete(`/departments/${departmentId}`);
+  async deleteDepartment(departmentId: string | number, password: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/departments/${departmentId}/delete`, { password });
   }
 
   // Project endpoints
@@ -854,8 +854,8 @@ class ApiClient {
     return this.put(`/projects/${projectId}`, projectData);
   }
 
-  async deleteProject(projectId: number): Promise<ApiResponse<{ message: string }>> {
-    return this.delete(`/projects/${projectId}`);
+  async deleteProject(projectId: number, password: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/projects/${projectId}/delete`, { password });
   }
 
   // Audit Logs endpoints (Admin only)

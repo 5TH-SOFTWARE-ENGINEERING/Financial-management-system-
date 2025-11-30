@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from pydantic import BaseModel
 
 from ...core.database import get_db
 from ...crud.approval import approval as approval_crud, approval_comment
@@ -9,6 +10,7 @@ from ...schemas.approval import ApprovalCreate, ApprovalUpdate, ApprovalOut, App
 from ...models.user import User, UserRole
 from ...models.approval import ApprovalStatus, ApprovalType
 from ...api.deps import get_current_active_user, require_min_role
+from ...core.security import verify_password
 
 router = APIRouter()
 
@@ -182,14 +184,45 @@ def approve_approval(
     return {"message": "Approval approved successfully"}
 
 
+class RejectApprovalRequest(BaseModel):
+    rejection_reason: str
+    password: str
+
 @router.post("/{approval_id}/reject")
 def reject_approval(
     approval_id: int,
-    rejection_reason: str,
+    reject_request: RejectApprovalRequest,
     current_user: User = Depends(require_min_role(UserRole.MANAGER)),
     db: Session = Depends(get_db)
 ):
-    """Reject an approval workflow"""
+    """Reject an approval workflow - requires password verification"""
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before rejection
+    if not reject_request.password or not reject_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to reject an approval."
+        )
+    
+    # Verify password
+    password_to_verify = reject_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to reject this approval."
+        )
+    
     approval = approval_crud.get(db, id=approval_id)
     if approval is None:
         raise HTTPException(status_code=404, detail="Approval workflow not found")
@@ -205,7 +238,7 @@ def reject_approval(
         if approval.requester_id not in subordinate_ids:
             raise HTTPException(status_code=403, detail="Not enough permissions to reject this request")
     
-    approval_crud.reject(db, approval_id, current_user.id, rejection_reason)
+    approval_crud.reject(db, approval_id, current_user.id, reject_request.rejection_reason)
     return {"message": "Approval rejected successfully"}
 
 

@@ -439,6 +439,9 @@ const ModalTitle = styled.h3`
   font-weight: ${theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   margin: 0 0 ${theme.spacing.lg};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
 `;
 
 const StyledLabel = styled.label`
@@ -447,6 +450,58 @@ const StyledLabel = styled.label`
   font-weight: ${theme.typography.fontWeights.medium};
   color: ${TEXT_COLOR_DARK};
   margin-bottom: ${theme.spacing.sm};
+`;
+
+const PasswordInput = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const ModalAlertIcon = styled(XCircle)`
+  color: #ef4444;
 `;
 
 const TextArea = styled.textarea`
@@ -511,6 +566,8 @@ export default function ExpenseListPage() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [showRejectModal, setShowRejectModal] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
+  const [rejectPassword, setRejectPassword] = useState<string>('');
+  const [rejectPasswordError, setRejectPasswordError] = useState<string | null>(null);
   
   const canApprove = () => {
     if (canApproveTransactions()) return true;
@@ -572,26 +629,34 @@ export default function ExpenseListPage() {
     }
   };
 
-  const handleReject = async (id: number, reason: string) => {
+  const handleReject = async (id: number, reason: string, password: string) => {
     if (!canApprove()) {
       toast.error('You do not have permission to reject expenses');
       return;
     }
 
     if (!reason.trim()) {
-      toast.error('Please provide a rejection reason');
+      setRejectPasswordError('Please provide a rejection reason');
+      return;
+    }
+
+    if (!password.trim()) {
+      setRejectPasswordError('Password is required');
       return;
     }
 
     setRejectingId(id);
+    setRejectPasswordError(null);
     try {
-      await apiClient.rejectItem(id, 'expense', reason);
+      await apiClient.rejectItem(id, 'expense', reason, password.trim());
       toast.success('Expense rejected successfully');
       setShowRejectModal(null);
       setRejectionReason('');
+      setRejectPassword('');
       loadExpenses();
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to reject expense';
+      setRejectPasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setRejectingId(null);
@@ -790,7 +855,12 @@ export default function ExpenseListPage() {
                                 </ActionButton>
                                 <ActionButton
                                   $variant="danger"
-                                  onClick={() => setShowRejectModal(expense.id)}
+                                  onClick={() => {
+                                    setShowRejectModal(expense.id);
+                                    setRejectionReason('');
+                                    setRejectPassword('');
+                                    setRejectPasswordError(null);
+                                  }}
                                   disabled={approvingId === expense.id || rejectingId === expense.id}
                                 >
                                   <XCircle />
@@ -821,33 +891,81 @@ export default function ExpenseListPage() {
             <ModalOverlay onClick={() => {
               setShowRejectModal(null);
               setRejectionReason('');
+              setRejectPassword('');
+              setRejectPasswordError(null);
             }}>
               <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalTitle>Reject Expense Entry</ModalTitle>
-                <div>
+                <ModalTitle>
+                  <ModalAlertIcon size={20} />
+                  Reject Expense Entry
+                </ModalTitle>
+                
+                <WarningBox>
+                  <p>
+                    You are about to reject this expense entry. This action cannot be undone.
+                    Please enter your own password to verify this action.
+                  </p>
+                </WarningBox>
+
+                <FormGroup>
                   <StyledLabel htmlFor="rejection-reason">Rejection Reason *</StyledLabel>
                   <TextArea
                     id="rejection-reason"
                     value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
+                    onChange={(e) => {
+                      setRejectionReason(e.target.value);
+                      setRejectPasswordError(null);
+                    }}
                     placeholder="Please provide a reason for rejection..."
                     rows={4}
                   />
-                </div>
+                </FormGroup>
+
+                <FormGroup>
+                  <StyledLabel htmlFor="reject-password">
+                    Enter your own password to confirm rejection:
+                  </StyledLabel>
+                  <PasswordInput
+                    id="reject-password"
+                    type="password"
+                    value={rejectPassword}
+                    onChange={(e) => {
+                      setRejectPassword(e.target.value);
+                      setRejectPasswordError(null);
+                    }}
+                    placeholder="Enter your password"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && rejectionReason.trim() && rejectPassword.trim() && showRejectModal !== null) {
+                        handleReject(showRejectModal, rejectionReason, rejectPassword);
+                      }
+                    }}
+                  />
+                  {rejectPasswordError && (
+                    <ErrorText>{rejectPasswordError}</ErrorText>
+                  )}
+                </FormGroup>
+
                 <ModalActions>
                   <ActionButton
                     $variant="secondary"
                     onClick={() => {
                       setShowRejectModal(null);
                       setRejectionReason('');
+                      setRejectPassword('');
+                      setRejectPasswordError(null);
                     }}
+                    disabled={rejectingId === showRejectModal}
                   >
                     Cancel
                   </ActionButton>
                   <ActionButton
                     $variant="danger"
-                    onClick={() => handleReject(showRejectModal, rejectionReason)}
-                    disabled={!rejectionReason.trim() || rejectingId === showRejectModal}
+                    onClick={() => {
+                      if (showRejectModal !== null) {
+                        handleReject(showRejectModal, rejectionReason, rejectPassword);
+                      }
+                    }}
+                    disabled={!rejectionReason.trim() || !rejectPassword.trim() || rejectingId === showRejectModal || showRejectModal === null}
                   >
                     {rejectingId === showRejectModal ? (
                       <>
