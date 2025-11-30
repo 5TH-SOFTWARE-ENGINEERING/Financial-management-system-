@@ -1,8 +1,8 @@
 //components/common/Navbar.tsx
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import styled from 'styled-components';
 import {
   Search,
@@ -23,6 +23,7 @@ import { theme } from './theme';
 import apiClient from '@/lib/api';
 import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
+import { debounce } from '@/lib/utils';
 
 const PRIMARY_ACCENT = '#06b6d4'; 
 const PRIMARY_HOVER = '#0891b2';
@@ -609,6 +610,7 @@ export default function Navbar() {
   const { user: storeUser } = useUserStore();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -688,6 +690,47 @@ export default function Navbar() {
     const savedLanguage = localStorage.getItem('language') || 'EN';
     setLanguage(savedLanguage);
   }, []);
+
+  // Sync search input with URL query parameter when on search page
+  // Only sync when URL changes, not when local search state changes
+  useEffect(() => {
+    if (pathname === '/search') {
+      const queryParam = searchParams?.get('q') || '';
+      // Only update if different to avoid unnecessary re-renders
+      setSearch(prev => {
+        if (prev !== queryParam) {
+          return queryParam;
+        }
+        return prev;
+      });
+    } else {
+      // Clear search when leaving search page (only if it's not already empty)
+      setSearch(prev => prev ? '' : prev);
+    }
+  }, [pathname, searchParams]);
+
+  // Create debounced search navigation function
+  const navigateToSearch = useCallback((searchQuery: string) => {
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else if (pathname === '/search') {
+      // If on search page and query is empty, stay on search page but clear query
+      router.push('/search');
+    }
+  }, [router, pathname]);
+
+  // Create debounced function with useRef to maintain stability
+  const debouncedSearchRef = useRef<ReturnType<typeof debounce> | null>(null);
+  
+  useEffect(() => {
+    debouncedSearchRef.current = debounce(navigateToSearch, 500);
+    
+    return () => {
+      if (debouncedSearchRef.current) {
+        debouncedSearchRef.current = null;
+      }
+    };
+  }, [navigateToSearch]);
 
   // Load notifications when panel opens
   useEffect(() => {
@@ -920,13 +963,28 @@ export default function Navbar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    // Immediately navigate on form submit (Enter key)
     if (search.trim()) {
-      // Navigate to a search results page or filter current page
-      // For now, we'll just clear and show a message
-      // In a full implementation, this would route to a search page
-      router.push(`/search?q=${encodeURIComponent(search)}`);
+      router.push(`/search?q=${encodeURIComponent(search.trim())}`);
     }
   };
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearch(value);
+    
+    // Trigger debounced navigation
+    if (value.trim()) {
+      if (debouncedSearchRef.current) {
+        debouncedSearchRef.current(value);
+      }
+    } else {
+      // Clear search immediately if input is empty
+      if (pathname === '/search') {
+        router.push('/search');
+      }
+    }
+  }, [router, pathname]);
 
   // Get user data from either auth context or store
   const currentUser = storeUser || user;
@@ -968,7 +1026,7 @@ export default function Navbar() {
           <SearchInput
             placeholder="Search..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={handleSearchChange}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handleSearch(e);

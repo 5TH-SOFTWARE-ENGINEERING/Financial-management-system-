@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, FileText, DollarSign, Users, Building, FolderKanban } from 'lucide-react';
 import Link from 'next/link';
@@ -9,6 +9,8 @@ import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
+import { debounce } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -232,21 +234,97 @@ const UnauthenticatedContainer = styled.div`
   }
 `;
 
+const SearchInputWrapper = styled.div`
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const SearchInputContainer = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  svg {
+    position: absolute;
+    left: ${theme.spacing.md};
+    color: ${TEXT_COLOR_MUTED};
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+    z-index: 1;
+  }
+`;
+
+const SearchInput = styled(Input)`
+  width: 100%;
+  padding: ${theme.spacing.md} ${theme.spacing.md} ${theme.spacing.md} 48px;
+  font-size: ${theme.typography.fontSizes.md};
+  border: 2px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  transition: all ${theme.transitions.default};
+  
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+  
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+  }
+`;
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isAuthenticated } = useUserStore();
-  const query = searchParams.get('q') || '';
+  const initialQuery = searchParams.get('q') || '';
+  const [searchInput, setSearchInput] = useState(initialQuery);
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Update query from URL params on mount
   useEffect(() => {
-    if (query && isAuthenticated) {
-      performSearch(query);
+    if (initialQuery && initialQuery !== searchInput) {
+      setSearchInput(initialQuery);
+      setQuery(initialQuery);
     }
-  }, [query, isAuthenticated]);
+  }, [initialQuery]);
 
-  const performSearch = async (searchQuery: string) => {
+  // Create a stable search callback
+  const performSearchAndUpdateURL = useCallback((searchQuery: string) => {
+    if (searchQuery.trim()) {
+      setQuery(searchQuery);
+      // Update URL without causing a page reload
+      const params = new URLSearchParams();
+      params.set('q', searchQuery);
+      router.replace(`/search?${params.toString()}`, { scroll: false });
+    } else {
+      setQuery('');
+      setResults([]);
+      setLoading(false);
+      // Clear URL param
+      router.replace('/search', { scroll: false });
+    }
+  }, [router]);
+
+  // Create debounced function with useRef to maintain stability
+  const debouncedSearchRef = useRef<ReturnType<typeof debounce> | null>(null);
+  
+  useEffect(() => {
+    debouncedSearchRef.current = debounce(performSearchAndUpdateURL, 500);
+    
+    return () => {
+      // Cleanup on unmount
+      if (debouncedSearchRef.current) {
+        debouncedSearchRef.current = null;
+      }
+    };
+  }, [performSearchAndUpdateURL]);
+
+  const performSearch = useCallback(async (searchQuery: string) => {
     setLoading(true);
     try {
       // Search across multiple resources
@@ -299,7 +377,35 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Trigger search when query changes
+  useEffect(() => {
+    if (query && isAuthenticated) {
+      performSearch(query);
+    } else if (!query) {
+      setResults([]);
+      setLoading(false);
+    }
+  }, [query, isAuthenticated, performSearch]);
+
+  // Handle input change
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    
+    if (value.trim()) {
+      setLoading(true);
+      if (debouncedSearchRef.current) {
+        debouncedSearchRef.current(value.trim());
+      }
+    } else {
+      setQuery('');
+      setResults([]);
+      setLoading(false);
+      router.replace('/search', { scroll: false });
+    }
+  }, [router]);
 
   const getResultIcon = (type: string) => {
     switch (type) {
@@ -323,9 +429,9 @@ export default function SearchPage() {
       case 'user':
         return `/users/${id}`;
       case 'revenue':
-        return `/revenue/edit/${id}`;
+        return `/revenue/${id}`;
       case 'expense':
-        return `/expenses/edit/${id}`;
+        return `/expenses/${id}`;
       case 'project':
         return `/project/edit/${id}`;
       case 'department':
@@ -356,12 +462,25 @@ export default function SearchPage() {
           <HeaderContainer>
             <h1>
               <Search />
-              Search Results
+              Search
             </h1>
             <p>
-              {query ? `Results for "${query}"` : 'Enter a search query'}
+              {query ? `Results for "${query}"` : 'Search across users, revenue, expenses, projects, and departments'}
             </p>
           </HeaderContainer>
+
+          <SearchInputWrapper>
+            <SearchInputContainer>
+              <Search />
+              <SearchInput
+                type="text"
+                placeholder="Type to search..."
+                value={searchInput}
+                onChange={handleInputChange}
+                autoFocus
+              />
+            </SearchInputContainer>
+          </SearchInputWrapper>
 
           {loading ? (
             <LoadingContainer>
