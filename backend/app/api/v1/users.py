@@ -10,6 +10,7 @@ from ...crud import login_history as login_history_crud
 from ...schemas.user import UserCreate, UserOut, UserUpdate, UserChangePassword
 from ...models.user import User, UserRole
 from ...api.deps import get_current_active_user, require_min_role
+from ...core.security import verify_password
 
 
 router = APIRouter()
@@ -517,14 +518,45 @@ def update_user(
 
 
 # ------------------------------------------------------------------
-# DELETE /{user_id}
+# POST /{user_id}/delete - Delete user with password verification
 # ------------------------------------------------------------------
-@router.delete("/{user_id}")
+class DeleteUserRequest(BaseModel):
+    password: str
+
+@router.post("/{user_id}/delete")
 def delete_user(
     user_id: int,
+    delete_request: DeleteUserRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deletion
+    if not delete_request.password or not delete_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to delete a user."
+        )
+    
+    # Verify password
+    password_to_verify = delete_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to delete this user."
+        )
+
     db_user = user_crud.get(db, id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")

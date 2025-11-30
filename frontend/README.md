@@ -2564,3 +2564,7 @@ export default function Navbar() {
   );
 }
      -->
+
+     <!-- 
+     make the delete button to delete users by  ask password to verify and add warning 
+      -->

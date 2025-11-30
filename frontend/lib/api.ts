@@ -152,8 +152,8 @@ class ApiClient {
     return this.normalizeResponse<T>(response.data);
   }
 
-  private async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.client.delete<T>(url, config);
+  private async delete<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const response = await this.client.delete<T>(url, { ...config, data });
     return this.normalizeResponse<T>(response.data);
   }
 
@@ -247,8 +247,8 @@ class ApiClient {
     return this.put(`/users/${userId}`, userData);
   }
 
-  async deleteUser(userId: number): Promise<ApiResponse<{ message: string }>> {
-    return this.delete(`/users/${userId}`);
+  async deleteUser(userId: number, password: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/users/${userId}/delete`, { password });
   }
 
   // Financial endpoints

@@ -11,6 +11,7 @@ import {
   FileSpreadsheet,
   Globe,
   User, 
+  Users,
   LogOut,
   Settings,
   HelpCircle,
@@ -850,6 +851,11 @@ export default function Navbar() {
     setIsDropdownOpen(false);
   };
 
+  const handleUsersClick = () => {
+    router.push('/users');
+    setIsDropdownOpen(false);
+  };
+
   const handleSettingsClick = () => {
     router.push('/settings');
     setIsDropdownOpen(false);
@@ -1141,6 +1147,12 @@ export default function Navbar() {
             <User size={16} />
             <span>Profile</span>
           </DropdownItem>
+          {currentUser && (currentUser.role?.toLowerCase() === 'admin' || currentUser.role?.toLowerCase() === 'super_admin') && (
+            <DropdownItem onClick={handleUsersClick}>
+              <Users size={16} />
+              <span>Users</span>
+            </DropdownItem>
+          )}
           <DropdownItem onClick={handleSettingsClick}>
             <Settings size={16} />
             <span>Settings</span>

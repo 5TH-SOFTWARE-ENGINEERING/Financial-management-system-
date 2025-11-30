@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { formatDate } from '@/lib/utils';
@@ -154,7 +155,7 @@ const SearchWrapper = styled.div`
 `;
 
 const SearchInput = styled.input`
-  width: 100%;
+  width: 70%;
   padding: ${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} 40px;
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
@@ -410,6 +411,94 @@ const SubordinateList = styled.div`
   margin-top: ${theme.spacing.xs};
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContent = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.xl};
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: #111827;
+  margin: 0 0 ${theme.spacing.md};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: #111827;
+  margin-bottom: ${theme.spacing.xs};
+`;
+
+const PasswordInput = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: #111827;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  
+  &:focus {
+    outline: none;
+    border-color: ${theme.colors.primary || '#00AA00'};
+    box-shadow: 0 0 0 3px ${theme.colors.primary || '#00AA00'}15;
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${theme.spacing.lg};
+`;
+
 export default function UsersPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, allUsers, fetchAllUsers } = useUserStore();
@@ -417,6 +506,11 @@ export default function UsersPage() {
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !['admin', 'finance_manager'].includes(user?.role || ''))) {
@@ -440,6 +534,38 @@ export default function UsersPage() {
       }
       return newSet;
     });
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
+  const handleDelete = async () => {
+    if (!userToDelete || !deletePassword.trim()) {
+      setDeletePasswordError('Password is required');
+      return;
+    }
+
+    setDeleting(true);
+    setDeletePasswordError(null);
+
+    try {
+      await apiClient.deleteUser(userToDelete.id, deletePassword.trim());
+      toast.success('User deleted successfully');
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      setDeletePassword('');
+      fetchAllUsers();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to delete user';
+      setDeletePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const getSubordinates = (userId: string) => {
@@ -586,18 +712,14 @@ export default function UsersPage() {
               {(userRole === 'admin' || (userRole === 'finance_manager' && user?.id !== userId)) && 
                userItem.role !== 'admin' && userItem.role !== 'super_admin' && (
                 <ActionButton
-                  onClick={async (e) => {
+                  onClick={(e) => {
                     e.stopPropagation();
                     const userName = userItem.full_name || userItem.name || userItem.email;
-                    if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
-                      try {
-                        await apiClient.deleteUser(typeof userItem.id === 'string' ? parseInt(userItem.id) : userItem.id);
-                        toast.success('User deleted successfully');
-                        fetchAllUsers();
-                      } catch (err: any) {
-                        toast.error(err.response?.data?.detail || 'Failed to delete user');
-                      }
-                    }
+                    const userId = typeof userItem.id === 'string' ? parseInt(userItem.id) : userItem.id;
+                    setUserToDelete({ id: userId, name: userName });
+                    setShowDeleteModal(true);
+                    setDeletePassword('');
+                    setDeletePasswordError(null);
                   }}
                   data-destructive="true"
                   title="Delete user"
@@ -773,6 +895,76 @@ export default function UsersPage() {
           </UsersList>
         </UsersCard>
       </PageContainer>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && userToDelete && (
+        <ModalOverlay onClick={handleDeleteCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <AlertCircle size={20} style={{ color: '#dc2626' }} />
+              Delete User
+            </ModalTitle>
+
+            <WarningBox>
+              <p>
+                <strong>Warning:</strong> This action cannot be undone. All data associated with this user will be permanently deleted.
+              </p>
+            </WarningBox>
+
+            <FormGroup>
+              <Label htmlFor="delete-password">
+                Enter <strong>your own password</strong> to confirm deletion of <strong>{userToDelete.name}</strong>:
+              </Label>
+              <PasswordInput
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => {
+                  setDeletePassword(e.target.value);
+                  setDeletePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && deletePassword.trim()) {
+                    handleDelete();
+                  }
+                }}
+              />
+              {deletePasswordError && (
+                <ErrorText>{deletePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleDeleteCancel}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={!deletePassword.trim() || deleting}
+              >
+                {deleting ? (
+                  <>
+                    <Spinner size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Delete User
+                  </>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </Layout>
   );
 }

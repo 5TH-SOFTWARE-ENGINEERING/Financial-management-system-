@@ -280,6 +280,94 @@ const SubordinateName = styled.span`
   color: ${TEXT_COLOR_DARK};
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContent = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.xl};
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.md};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin-bottom: ${theme.spacing.xs};
+`;
+
+const PasswordInput = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${theme.spacing.lg};
+`;
+
 const LoadingContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -331,6 +419,9 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -380,23 +471,38 @@ export default function UserDetailPage() {
     }
   };
 
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
   const handleDelete = async () => {
     if (!userId || !user) return;
 
-    if (!confirm(`Are you sure you want to delete ${user.full_name}? This action cannot be undone.`)) {
+    if (!deletePassword.trim()) {
+      setDeletePasswordError('Password is required');
       return;
     }
 
     setDeleting(true);
+    setDeletePasswordError(null);
     setError(null);
 
     try {
-      await apiClient.deleteUser(userId);
+      await apiClient.deleteUser(userId, deletePassword.trim());
       toast.success('User deleted successfully');
+      setShowDeleteModal(false);
       router.push('/users');
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to delete user';
-      setError(errorMessage);
+      setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setDeleting(false);
@@ -528,8 +634,8 @@ export default function UserDetailPage() {
                user.role !== 'admin' && user.role !== 'super_admin' && (
                 <Button
                   variant="destructive"
-                  onClick={handleDelete}
-                  disabled={deleting}
+                  onClick={handleDeleteClick}
+                  disabled={deleting || showDeleteModal}
                 >
                   {deleting ? (
                     <>
@@ -684,6 +790,76 @@ export default function UserDetailPage() {
           </SidebarContent>
         </ContentGrid>
       </PageContainer>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <ModalOverlay onClick={handleDeleteCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <AlertCircle size={20} style={{ color: '#dc2626' }} />
+              Delete User
+            </ModalTitle>
+
+            <WarningBox>
+              <p>
+                <strong>Warning:</strong> This action cannot be undone. All data associated with this user will be permanently deleted.
+              </p>
+            </WarningBox>
+
+            <FormGroup>
+              <Label htmlFor="delete-password">
+                Enter <strong>your own password</strong> to confirm deletion of <strong>{user?.full_name}</strong>:
+              </Label>
+              <PasswordInput
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => {
+                  setDeletePassword(e.target.value);
+                  setDeletePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && deletePassword.trim()) {
+                    handleDelete();
+                  }
+                }}
+              />
+              {deletePasswordError && (
+                <ErrorText>{deletePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleDeleteCancel}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={!deletePassword.trim() || deleting}
+              >
+                {deleting ? (
+                  <>
+                    <Spinner size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Delete User
+                  </>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </Layout>
   );
 }
