@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
@@ -23,6 +24,289 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import Layout from '@/components/layout';
+import { theme } from '@/components/common/theme';
+
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+
+const PageContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const BackLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  color: ${TEXT_COLOR_MUTED};
+  text-decoration: none;
+  margin-bottom: ${theme.spacing.md};
+  transition: color ${theme.transitions.default};
+
+  &:hover {
+    color: ${TEXT_COLOR_DARK};
+  }
+`;
+
+const HeaderSection = styled.div`
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const HeaderContent = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
+`;
+
+const HeaderText = styled.div`
+  h1 {
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.sm};
+    color: ${TEXT_COLOR_DARK};
+  }
+
+  p {
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0;
+  }
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const ErrorBanner = styled.div`
+  padding: ${theme.spacing.md};
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  color: #dc2626;
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const ContentGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${theme.spacing.lg};
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 2fr 1fr;
+  }
+`;
+
+const MainContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.lg};
+`;
+
+const SidebarContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.lg};
+`;
+
+const Card = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.lg};
+  box-shadow: ${CardShadow};
+`;
+
+const CardTitle = styled.h2`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.lg};
+`;
+
+const UserHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const AvatarWrapper = styled.div`
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 170, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${PRIMARY_COLOR};
+  flex-shrink: 0;
+`;
+
+const UserInfo = styled.div`
+  h3 {
+    font-size: ${theme.typography.fontSizes.xxl};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0 0 ${theme.spacing.xs};
+  }
+`;
+
+const BadgeContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  flex-wrap: wrap;
+`;
+
+const Badge = styled.span<{ variant: 'admin' | 'manager' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
+  padding: ${theme.spacing.xs} ${theme.spacing.md};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.bold};
+  border-radius: 9999px;
+  display: inline-block;
+
+  ${(p) => {
+    switch (p.variant) {
+      case 'admin':
+        return 'background-color: #f3e8ff; color: #6b21a8;';
+      case 'manager':
+        return 'background-color: #dbeafe; color: #1e40af;';
+      case 'accountant':
+        return 'background-color: #dcfce7; color: #166534;';
+      case 'employee':
+        return 'background-color: #fed7aa; color: #9a3412;';
+      case 'active':
+        return 'background-color: #dcfce7; color: #166534;';
+      case 'inactive':
+        return 'background-color: #fee2e2; color: #991b1b;';
+      default:
+        return 'background-color: #f3f4f6; color: #374151;';
+    }
+  }}
+`;
+
+const InfoGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${theme.spacing.md};
+  padding-top: ${theme.spacing.md};
+  border-top: 1px solid ${theme.colors.border};
+
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+  }
+`;
+
+const InfoItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+`;
+
+const IconWrapper = styled.div`
+  color: ${TEXT_COLOR_MUTED};
+  flex-shrink: 0;
+`;
+
+const InfoContent = styled.div`
+  p:first-child {
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
+    margin: 0 0 ${theme.spacing.xs};
+  }
+
+  p:last-child {
+    font-size: ${theme.typography.fontSizes.sm};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0;
+  }
+`;
+
+const Section = styled.div`
+  p:first-child {
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
+    margin: 0 0 ${theme.spacing.sm};
+  }
+
+  p:last-child {
+    font-size: ${theme.typography.fontSizes.sm};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0;
+  }
+`;
+
+const SubordinateList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.sm};
+  margin-top: ${theme.spacing.sm};
+`;
+
+const SubordinateItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  padding: ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.backgroundSecondary};
+`;
+
+const SubordinateName = styled.span`
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: ${theme.spacing.xxl};
+  text-align: center;
+
+  p {
+    color: ${TEXT_COLOR_MUTED};
+    margin-top: ${theme.spacing.md};
+  }
+`;
+
+const Spinner = styled(Loader2)`
+  animation: spin 1s linear infinite;
+  color: ${PRIMARY_COLOR};
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
 
 interface UserDetail {
   id: number;
@@ -119,35 +403,35 @@ export default function UserDetailPage() {
     }
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleBadgeVariant = (role: string): 'admin' | 'manager' | 'accountant' | 'employee' | 'default' => {
     switch (role) {
       case 'admin':
-        return 'bg-purple-100 text-purple-800';
+        return 'admin';
       case 'finance_manager':
       case 'manager':
-        return 'bg-blue-100 text-blue-800';
+        return 'manager';
       case 'accountant':
-        return 'bg-green-100 text-green-800';
+        return 'accountant';
       case 'employee':
-        return 'bg-orange-100 text-orange-800';
+        return 'employee';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'default';
     }
   };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'admin':
-        return <Shield className="h-5 w-5" />;
+        return <Shield size={20} />;
       case 'finance_manager':
       case 'manager':
-        return <Building className="h-5 w-5" />;
+        return <Building size={20} />;
       case 'accountant':
-        return <UserCheck className="h-5 w-5" />;
+        return <UserCheck size={20} />;
       case 'employee':
-        return <Briefcase className="h-5 w-5" />;
+        return <Briefcase size={20} />;
       default:
-        return <User className="h-5 w-5" />;
+        return <User size={20} />;
     }
   };
 
@@ -175,32 +459,31 @@ export default function UserDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading user details...</p>
-        </div>
-      </div>
+      <Layout>
+        <PageContainer>
+          <LoadingContainer>
+            <Spinner size={32} />
+            <p>Loading user details...</p>
+          </LoadingContainer>
+        </PageContainer>
+      </Layout>
     );
   }
 
   if (error && !user) {
     return (
-      <div className="p-8">
-        <div className="mb-6">
-          <Link 
-            href="/users"
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-          >
-            <ArrowLeft className="h-4 w-4" />
+      <Layout>
+        <PageContainer>
+          <BackLink href="/users">
+            <ArrowLeft size={16} />
             Back to Users
-          </Link>
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2 text-red-700">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      </div>
+          </BackLink>
+          <ErrorBanner>
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </ErrorBanner>
+        </PageContainer>
+      </Layout>
     );
   }
 
@@ -211,194 +494,195 @@ export default function UserDetailPage() {
   const subordinates = getSubordinates();
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <Link 
-          href="/users"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Users
-        </Link>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">User Details</h1>
-            <p className="text-muted-foreground">View and manage user information</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (user.role === 'employee') {
-                  router.push(`/employees/edit/${user.id}`);
-                } else if (user.role === 'accountant') {
-                  router.push(`/accountants/edit/${user.id}`);
-                } else if (user.role === 'finance_manager' || user.role === 'manager') {
-                  router.push(`/finance/edit/${user.id}`);
-                } else {
-                  router.push(`/users/${user.id}/edit`);
-                }
-              }}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit User
-            </Button>
-            {(currentUser?.role === 'admin' || (currentUser?.role === 'finance_manager' && currentUser.id !== user.id.toString())) && (
+    <Layout>
+      <PageContainer>
+        <HeaderSection>
+          <BackLink href="/users">
+            <ArrowLeft size={16} />
+            Back to Users
+          </BackLink>
+          <HeaderContent>
+            <HeaderText>
+              <h1>User Details</h1>
+              <p>View and manage user information</p>
+            </HeaderText>
+            <ActionButtons>
               <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={deleting}
+                variant="outline"
+                onClick={() => {
+                  if (user.role === 'employee') {
+                    router.push(`/employees/edit/${user.id}`);
+                  } else if (user.role === 'accountant') {
+                    router.push(`/accountants/edit/${user.id}`);
+                  } else if (user.role === 'finance_manager' || user.role === 'manager') {
+                    router.push(`/finance/edit/${user.id}`);
+                  } else {
+                    router.push(`/users/${user.id}/edit`);
+                  }
+                }}
               >
-                {deleting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete User
-                  </>
-                )}
+                <Edit size={16} style={{ marginRight: theme.spacing.sm }} />
+                Edit User
               </Button>
-            )}
-          </div>
-        </div>
-      </div>
+              {(currentUser?.role === 'admin' || (currentUser?.role === 'finance_manager' && currentUser.id !== user.id.toString())) && (
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <>
+                      <Spinner size={16} style={{ marginRight: theme.spacing.sm }} />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                      Delete User
+                    </>
+                  )}
+                </Button>
+              )}
+            </ActionButtons>
+          </HeaderContent>
+        </HeaderSection>
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
+        {error && (
+          <ErrorBanner>
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </ErrorBanner>
+        )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Info Card */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-card rounded-lg border border-border p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-6">Personal Information</h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+        <ContentGrid>
+          <MainContent>
+            <Card>
+              <CardTitle>Personal Information</CardTitle>
+              <UserHeader>
+                <AvatarWrapper>
                   {getRoleIcon(user.role)}
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-foreground">{user.full_name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getRoleColor(user.role)}`}>
+                </AvatarWrapper>
+                <UserInfo>
+                  <h3>{user.full_name}</h3>
+                  <BadgeContainer>
+                    <Badge variant={getRoleBadgeVariant(user.role)}>
                       {getRoleDisplayName(user.role)}
-                    </span>
-                    <span className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                      user.is_active 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    </Badge>
+                    <Badge variant={user.is_active ? 'active' : 'inactive'}>
                       {user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                    </Badge>
+                  </BadgeContainer>
+                </UserInfo>
+              </UserHeader>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border">
-                <div className="flex items-center gap-3">
-                  <Mail className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="text-sm font-medium text-foreground">{user.email}</p>
-                  </div>
-                </div>
+              <InfoGrid>
+                <InfoItem>
+                  <IconWrapper>
+                    <Mail size={20} />
+                  </IconWrapper>
+                  <InfoContent>
+                    <p>Email</p>
+                    <p>{user.email}</p>
+                  </InfoContent>
+                </InfoItem>
 
-                <div className="flex items-center gap-3">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Username</p>
-                    <p className="text-sm font-medium text-foreground">{user.username}</p>
-                  </div>
-                </div>
+                <InfoItem>
+                  <IconWrapper>
+                    <User size={20} />
+                  </IconWrapper>
+                  <InfoContent>
+                    <p>Username</p>
+                    <p>{user.username}</p>
+                  </InfoContent>
+                </InfoItem>
 
                 {user.phone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Phone</p>
-                      <p className="text-sm font-medium text-foreground">{user.phone}</p>
-                    </div>
-                  </div>
+                  <InfoItem>
+                    <IconWrapper>
+                      <Phone size={20} />
+                    </IconWrapper>
+                    <InfoContent>
+                      <p>Phone</p>
+                      <p>{user.phone}</p>
+                    </InfoContent>
+                  </InfoItem>
                 )}
 
                 {user.department && (
-                  <div className="flex items-center gap-3">
-                    <Building className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Department</p>
-                      <p className="text-sm font-medium text-foreground">{user.department}</p>
-                    </div>
-                  </div>
+                  <InfoItem>
+                    <IconWrapper>
+                      <Building size={20} />
+                    </IconWrapper>
+                    <InfoContent>
+                      <p>Department</p>
+                      <p>{user.department}</p>
+                    </InfoContent>
+                  </InfoItem>
+                )}
+              </InfoGrid>
+            </Card>
+
+            <Card>
+              <CardTitle>Team Hierarchy</CardTitle>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+                <Section>
+                  <p>Manager</p>
+                  <p>{getManagerName()}</p>
+                </Section>
+                {subordinates.length > 0 && (
+                  <Section>
+                    <p>Subordinates ({subordinates.length})</p>
+                    <SubordinateList>
+                      {subordinates.map((sub) => (
+                        <SubordinateItem key={sub.id}>
+                          <SubordinateName>{sub.name}</SubordinateName>
+                          <Badge variant={getRoleBadgeVariant(sub.role)}>
+                            {getRoleDisplayName(sub.role)}
+                          </Badge>
+                        </SubordinateItem>
+                      ))}
+                    </SubordinateList>
+                  </Section>
                 )}
               </div>
-            </div>
-          </div>
+            </Card>
+          </MainContent>
 
-          {/* Hierarchy Card */}
-          <div className="bg-card rounded-lg border border-border p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-6">Team Hierarchy</h2>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Manager</p>
-                <p className="text-sm font-medium text-foreground">{getManagerName()}</p>
+          <SidebarContent>
+            <Card>
+              <CardTitle>Account Information</CardTitle>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+                <Section>
+                  <p>User ID</p>
+                  <p>#{user.id}</p>
+                </Section>
+                {user.created_at && (
+                  <Section>
+                    <p>Created</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <Calendar size={16} style={{ color: TEXT_COLOR_MUTED }} />
+                      <p style={{ margin: 0, fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
+                        {formatDate(user.created_at)}
+                      </p>
+                    </div>
+                  </Section>
+                )}
+                {user.updated_at && (
+                  <Section>
+                    <p>Last Updated</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <Calendar size={16} style={{ color: TEXT_COLOR_MUTED }} />
+                      <p style={{ margin: 0, fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
+                        {formatDate(user.updated_at)}
+                      </p>
+                    </div>
+                  </Section>
+                )}
               </div>
-              {subordinates.length > 0 && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Subordinates ({subordinates.length})</p>
-                  <div className="space-y-2">
-                    {subordinates.map((sub) => (
-                      <div key={sub.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                        <span className="text-sm font-medium text-foreground">{sub.name}</span>
-                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${getRoleColor(sub.role)}`}>
-                          {getRoleDisplayName(sub.role)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar Info */}
-        <div className="space-y-6">
-          <div className="bg-card rounded-lg border border-border p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Account Information</h2>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">User ID</p>
-                <p className="text-sm font-medium text-foreground">#{user.id}</p>
-              </div>
-              {user.created_at && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Created</p>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">{formatDate(user.created_at)}</p>
-                  </div>
-                </div>
-              )}
-              {user.updated_at && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Last Updated</p>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">{formatDate(user.updated_at)}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Card>
+          </SidebarContent>
+        </ContentGrid>
+      </PageContainer>
+    </Layout>
   );
 }
-

@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import styled from 'styled-components';
 import {
   Users,
   UserPlus,
   Search,
-  Filter,
   Edit,
   Trash2,
   Eye,
@@ -17,16 +17,398 @@ import {
   Briefcase,
   Shield,
   Calendar,
-  MoreVertical,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
-import { type User } from '@/lib/validation';
 import { formatDate } from '@/lib/utils';
-import { cn } from '@/lib/utils';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
+import Layout from '@/components/layout';
+import { theme } from '@/components/common/theme';
+import { Button } from '@/components/ui/button';
+
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+const CardShadow = `
+  0 2px 4px -1px rgba(0, 0, 0, 0.06),
+  0 1px 2px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+`;
+
+const PageContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+`;
+
+const HeaderCard = styled.div`
+  background: ${theme.colors.background};
+  border-bottom: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const HeaderContent = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
+`;
+
+const HeaderText = styled.div`
+  h1 {
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    margin: 0 0 ${theme.spacing.xs};
+    color: ${TEXT_COLOR_DARK};
+  }
+
+  p {
+    color: ${TEXT_COLOR_MUTED};
+    font-size: ${theme.typography.fontSizes.md};
+    margin: 0;
+  }
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const StatCard = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.lg};
+  box-shadow: ${CardShadow};
+`;
+
+const StatContent = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const StatInfo = styled.div`
+  p:first-child {
+    font-size: ${theme.typography.fontSizes.sm};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_MUTED};
+    margin: 0 0 ${theme.spacing.xs};
+  }
+
+  p:last-child {
+    font-size: clamp(20px, 2.5vw, 28px);
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0;
+  }
+`;
+
+const StatIcon = styled.div<{ color: string }>`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: ${(p) => p.color}20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${(p) => p.color};
+  flex-shrink: 0;
+`;
+
+const FiltersContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.lg};
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+  }
+`;
+
+const SearchWrapper = styled.div`
+  flex: 1;
+  position: relative;
+
+  svg {
+    position: absolute;
+    left: ${theme.spacing.md};
+    top: 50%;
+    transform: translateY(-50%);
+    color: ${TEXT_COLOR_MUTED};
+    pointer-events: none;
+  }
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} 40px;
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+  }
+`;
+
+const Select = styled.select`
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+  }
+`;
+
+const UsersCard = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+`;
+
+const CardHeader = styled.div`
+  padding: ${theme.spacing.lg};
+  border-bottom: 1px solid ${theme.colors.border};
+
+  h2 {
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0 0 ${theme.spacing.xs};
+  }
+
+  p {
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
+    margin: 0;
+  }
+`;
+
+const UsersList = styled.div`
+  max-height: 500px;
+  overflow-y: auto;
+  padding: ${theme.spacing.md};
+`;
+
+const UserItem = styled.div<{ level: number }>`
+  user-select: none;
+  margin-left: ${(p) => Math.min(p.level * 32, 96)}px;
+`;
+
+const UserRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.md};
+  transition: background-color ${theme.transitions.default};
+  cursor: pointer;
+
+  &:hover {
+    background: ${theme.colors.backgroundSecondary};
+  }
+`;
+
+const ChevronWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  width: 16px;
+  flex-shrink: 0;
+`;
+
+const AvatarWrapper = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 170, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${PRIMARY_COLOR};
+  flex-shrink: 0;
+`;
+
+const UserDetails = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const UserHeaderRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  flex-wrap: wrap;
+`;
+
+const UserName = styled.p`
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const Badge = styled.span<{ variant: 'admin' | 'finance_manager' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
+  display: inline-flex;
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.bold};
+  border-radius: 9999px;
+
+  ${(p) => {
+    switch (p.variant) {
+      case 'admin':
+        return 'background-color: #f3e8ff; color: #6b21a8;';
+      case 'finance_manager':
+        return 'background-color: #dbeafe; color: #1e40af;';
+      case 'accountant':
+        return 'background-color: #dcfce7; color: #166534;';
+      case 'employee':
+        return 'background-color: #fed7aa; color: #9a3412;';
+      case 'active':
+        return 'background-color: #dcfce7; color: #166534;';
+      case 'inactive':
+        return 'background-color: #fee2e2; color: #991b1b;';
+      default:
+        return 'background-color: #f3f4f6; color: #374151;';
+    }
+  }}
+`;
+
+const UserMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  margin-top: ${theme.spacing.xs};
+  flex-wrap: wrap;
+`;
+
+const MetaItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+  font-size: ${theme.typography.fontSizes.xs};
+  color: ${TEXT_COLOR_MUTED};
+`;
+
+const UserActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  flex-shrink: 0;
+`;
+
+const ActionButton = styled.button`
+  padding: ${theme.spacing.xs};
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: ${TEXT_COLOR_MUTED};
+  transition: color ${theme.transitions.default};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: ${TEXT_COLOR_DARK};
+  }
+
+  &[data-destructive='true'] {
+    color: #dc2626;
+
+    &:hover {
+      color: #b91c1c;
+    }
+  }
+`;
+
+const SubordinateCount = styled.span`
+  font-size: ${theme.typography.fontSizes.xs};
+  color: ${TEXT_COLOR_MUTED};
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: ${theme.spacing.xxl};
+  
+  svg {
+    margin: 0 auto ${theme.spacing.md};
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.5;
+  }
+
+  p {
+    color: ${TEXT_COLOR_MUTED};
+    margin: 0;
+    font-size: ${theme.typography.fontSizes.md};
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+`;
+
+const Spinner = styled(Loader2)`
+  animation: spin 1s linear infinite;
+  color: ${PRIMARY_COLOR};
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const AccessDeniedContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  text-align: center;
+`;
+
+const SubordinateList = styled.div`
+  margin-top: ${theme.spacing.xs};
+`;
 
 export default function UsersPage() {
   const router = useRouter();
@@ -76,44 +458,44 @@ export default function UsersPage() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const getRoleColor = (role: string) => {
+  const getRoleBadgeVariant = (role: string): 'admin' | 'finance_manager' | 'accountant' | 'employee' | 'default' => {
     switch (role) {
       case 'admin':
-        return 'bg-purple-100 text-purple-800';
+        return 'admin';
       case 'finance_manager':
-        return 'bg-blue-100 text-blue-800';
+        return 'finance_manager';
       case 'accountant':
-        return 'bg-green-100 text-green-800';
+        return 'accountant';
       case 'employee':
-        return 'bg-orange-100 text-orange-800';
+        return 'employee';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'default';
     }
   };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'admin':
-        return <Shield className="h-4 w-4" />;
+        return <Shield size={16} />;
       case 'finance_manager':
-        return <Building className="h-4 w-4" />;
+        return <Building size={16} />;
       case 'accountant':
-        return <UserCheck className="h-4 w-4" />;
+        return <UserCheck size={16} />;
       case 'employee':
-        return <Briefcase className="h-4 w-4" />;
+        return <Briefcase size={16} />;
       default:
-        return <UserCheck className="h-4 w-4" />;
+        return <UserCheck size={16} />;
     }
   };
 
   const getRoleDisplayName = (role: string) => {
-    const roleNames = {
+    const roleNames: Record<string, string> = {
       admin: 'Administrator',
       finance_manager: 'Finance Manager',
       accountant: 'Accountant',
       employee: 'Employee',
     };
-    return roleNames[role as keyof typeof roleNames] || role;
+    return roleNames[role] || role;
   };
 
   const renderUserHierarchy = (users: any[], level = 0) => {
@@ -124,83 +506,66 @@ export default function UsersPage() {
       const isExpanded = expandedUsers.has(userId);
       
       return (
-        <div key={userId} className="select-none">
-          <div 
-            className={cn(
-              "flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer",
-              level > 0 && `ml-${Math.min(level * 8, 24)}`
-            )}
-            onClick={() => subordinates.length > 0 && toggleUserExpansion(userId)}
-          >
-            {subordinates.length > 0 && (
-              <div className="flex items-center">
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-            )}
+        <UserItem key={userId} level={level}>
+          <UserRow onClick={() => subordinates.length > 0 && toggleUserExpansion(userId)}>
+            <ChevronWrapper>
+              {subordinates.length > 0 && (
+                isExpanded ? <ChevronDown size={16} style={{ color: TEXT_COLOR_MUTED }} /> : <ChevronRight size={16} style={{ color: TEXT_COLOR_MUTED }} />
+              )}
+            </ChevronWrapper>
             
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <AvatarWrapper>
               {getRoleIcon(userRole)}
-            </div>
+            </AvatarWrapper>
             
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-foreground truncate">
+            <UserDetails>
+              <UserHeaderRow>
+                <UserName>
                   {userItem.full_name || userItem.name || userItem.email}
-                </p>
-                <span className={cn(
-                  "inline-flex px-2 py-1 text-xs font-semibold rounded-full",
-                  getRoleColor(userRole)
-                )}>
+                </UserName>
+                <Badge variant={getRoleBadgeVariant(userRole)}>
                   {getRoleDisplayName(userRole)}
-                </span>
-                <span className={cn(
-                  "inline-flex px-2 py-1 text-xs font-semibold rounded-full",
-                  (userItem.is_active !== false) ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                )}>
-                  {(userItem.is_active !== false) ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div className="flex items-center gap-4 mt-1">
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Mail className="h-3 w-3 mr-1" />
+                </Badge>
+                <Badge variant={userItem.is_active !== false ? 'active' : 'inactive'}>
+                  {userItem.is_active !== false ? 'Active' : 'Inactive'}
+                </Badge>
+              </UserHeaderRow>
+              <UserMeta>
+                <MetaItem>
+                  <Mail size={12} />
                   {userItem.email}
-                </div>
+                </MetaItem>
                 {userItem.phone && (
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Phone className="h-3 w-3 mr-1" />
+                  <MetaItem>
+                    <Phone size={12} />
                     {userItem.phone}
-                  </div>
+                  </MetaItem>
                 )}
                 {userItem.created_at && (
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3 mr-1" />
+                  <MetaItem>
+                    <Calendar size={12} />
                     Joined {formatDate(userItem.created_at)}
-                  </div>
+                  </MetaItem>
                 )}
-              </div>
-            </div>
+              </UserMeta>
+            </UserDetails>
             
-            <div className="flex items-center gap-2">
+            <UserActions>
               {subordinates.length > 0 && (
-                <span className="text-xs text-muted-foreground">
+                <SubordinateCount>
                   {subordinates.length} {subordinates.length === 1 ? 'subordinate' : 'subordinates'}
-                </span>
+                </SubordinateCount>
               )}
-              <button 
+              <ActionButton
                 onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/users/${userItem.id}`);
                 }}
-                className="p-1 text-muted-foreground hover:text-foreground"
                 title="View details"
               >
-                <Eye className="h-4 w-4" />
-              </button>
-              <button 
+                <Eye size={16} />
+              </ActionButton>
+              <ActionButton
                 onClick={(e) => {
                   e.stopPropagation();
                   const role = userRole;
@@ -214,13 +579,12 @@ export default function UsersPage() {
                     router.push(`/users/${userItem.id}/edit`);
                   }
                 }}
-                className="p-1 text-muted-foreground hover:text-foreground"
                 title="Edit user"
               >
-                <Edit className="h-4 w-4" />
-              </button>
+                <Edit size={16} />
+              </ActionButton>
               {(userRole === 'admin' || (userRole === 'finance_manager' && user?.id !== userId)) && (
-                <button 
+                <ActionButton
                   onClick={async (e) => {
                     e.stopPropagation();
                     const userName = userItem.full_name || userItem.name || userItem.email;
@@ -234,42 +598,48 @@ export default function UsersPage() {
                       }
                     }
                   }}
-                  className="p-1 text-destructive hover:text-destructive/80"
+                  data-destructive="true"
                   title="Delete user"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                  <Trash2 size={16} />
+                </ActionButton>
               )}
-            </div>
-          </div>
+            </UserActions>
+          </UserRow>
           
           {isExpanded && subordinates.length > 0 && (
-            <div className="mt-1">
+            <SubordinateList>
               {renderUserHierarchy(subordinates, level + 1)}
-            </div>
+            </SubordinateList>
           )}
-        </div>
+        </UserItem>
       );
     });
   };
 
   if (isLoading || !isAuthenticated || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <Layout>
+        <LoadingContainer>
+          <Spinner size={32} />
+        </LoadingContainer>
+      </Layout>
     );
   }
 
   if (!['admin', 'finance_manager'].includes(user.role)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-foreground mb-2">Access Denied</h1>
-          <p className="text-muted-foreground">You don't have permission to access this page.</p>
-        </div>
-      </div>
+      <Layout>
+        <AccessDeniedContainer>
+          <Shield size={48} style={{ color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.md }} />
+          <h1 style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK, marginBottom: theme.spacing.sm }}>
+            Access Denied
+          </h1>
+          <p style={{ color: TEXT_COLOR_MUTED }}>
+            You don't have permission to access this page.
+          </p>
+        </AccessDeniedContainer>
+      </Layout>
     );
   }
 
@@ -278,151 +648,130 @@ export default function UsersPage() {
   const inactiveUsers = allUsers.filter((u: any) => u.is_active === false).length;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-card border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">User Management</h1>
-              <p className="text-muted-foreground">Manage users and team hierarchy</p>
-            </div>
-            <button
-              onClick={() => router.push('/employees/create')}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-            >
-              <UserPlus className="h-4 w-4" />
+    <Layout>
+      <PageContainer>
+        <HeaderCard>
+          <HeaderContent>
+            <HeaderText>
+              <h1>User Management</h1>
+              <p>Manage users and team hierarchy</p>
+            </HeaderText>
+            <Button onClick={() => router.push('/employees/create')}>
+              <UserPlus size={16} style={{ marginRight: theme.spacing.sm }} />
               Add User
-            </button>
-          </div>
-        </div>
-      </div>
+            </Button>
+          </HeaderContent>
+        </HeaderCard>
 
-      {/* Stats Cards */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-card rounded-lg border border-border p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold text-foreground">{totalUsers}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <Users className="h-4 w-4 text-blue-600" />
-              </div>
-            </div>
-          </div>
+        <StatsGrid>
+          <StatCard>
+            <StatContent>
+              <StatInfo>
+                <p>Total Users</p>
+                <p>{totalUsers}</p>
+              </StatInfo>
+              <StatIcon color="#2563eb">
+                <Users size={16} />
+              </StatIcon>
+            </StatContent>
+          </StatCard>
 
-          <div className="bg-card rounded-lg border border-border p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Users</p>
-                <p className="text-2xl font-bold text-green-600">{activeUsers}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                <UserCheck className="h-4 w-4 text-green-600" />
-              </div>
-            </div>
-          </div>
+          <StatCard>
+            <StatContent>
+              <StatInfo>
+                <p>Active Users</p>
+                <p style={{ color: '#16a34a' }}>{activeUsers}</p>
+              </StatInfo>
+              <StatIcon color="#16a34a">
+                <UserCheck size={16} />
+              </StatIcon>
+            </StatContent>
+          </StatCard>
 
-          <div className="bg-card rounded-lg border border-border p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Inactive Users</p>
-                <p className="text-2xl font-bold text-red-600">{inactiveUsers}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
-                <Shield className="h-4 w-4 text-red-600" />
-              </div>
-            </div>
-          </div>
+          <StatCard>
+            <StatContent>
+              <StatInfo>
+                <p>Inactive Users</p>
+                <p style={{ color: '#dc2626' }}>{inactiveUsers}</p>
+              </StatInfo>
+              <StatIcon color="#dc2626">
+                <Shield size={16} />
+              </StatIcon>
+            </StatContent>
+          </StatCard>
 
-          <div className="bg-card rounded-lg border border-border p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Team Size</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {user.role === 'admin' ? 'All' : getSubordinates(user.id).length}
-                </p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-                <Building className="h-4 w-4 text-purple-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          <StatCard>
+            <StatContent>
+              <StatInfo>
+                <p>Team Size</p>
+                <p>{user.role === 'admin' ? 'All' : getSubordinates(user.id).length}</p>
+              </StatInfo>
+              <StatIcon color="#9333ea">
+                <Building size={16} />
+              </StatIcon>
+            </StatContent>
+          </StatCard>
+        </StatsGrid>
 
-      {/* Filters and Search */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
+        <FiltersContainer>
+          <SearchWrapper>
+            <Search size={16} />
+            <SearchInput
               type="text"
               placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             />
-          </div>
-          <select
+          </SearchWrapper>
+          <Select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
           >
             <option value="all">All Roles</option>
             <option value="admin">Administrator</option>
             <option value="finance_manager">Finance Manager</option>
             <option value="accountant">Accountant</option>
             <option value="employee">Employee</option>
-          </select>
-          <select
+          </Select>
+          <Select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
+          </Select>
+        </FiltersContainer>
 
-      {/* Users List */}
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="bg-card rounded-lg border border-border">
-          <div className="p-6 border-b border-border">
-            <h2 className="text-lg font-semibold text-foreground">
-              {user.role === 'admin' ? 'All Users' : 'Your Team'}
-            </h2>
-            <p className="text-sm text-muted-foreground">
+        <UsersCard>
+          <CardHeader>
+            <h2>{user.role === 'admin' ? 'All Users' : 'Your Team'}</h2>
+            <p>
               {user.role === 'admin' 
                 ? 'View and manage all users in the system'
                 : 'View users in your team hierarchy'
               }
             </p>
-          </div>
+          </CardHeader>
           
-          <div className="max-h-96 overflow-y-auto">
+          <UsersList>
             {filteredUsers.length > 0 ? (
-              <div className="p-4 space-y-1">
+              <>
                 {renderUserHierarchy(
                   user.role === 'admin' 
                     ? filteredUsers.filter((u: any) => !u.managerId && !u.manager_id)
                     : filteredUsers.filter((u: any) => (u.managerId === user.id || u.manager_id?.toString() === user.id) || u.id === user.id)
                 )}
-              </div>
+              </>
             ) : (
-              <div className="p-8 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No users found</p>
-              </div>
+              <EmptyState>
+                <Users size={48} />
+                <p>No users found</p>
+              </EmptyState>
             )}
-          </div>
-        </div>
-      </div>
-
-    </div>
+          </UsersList>
+        </UsersCard>
+      </PageContainer>
+    </Layout>
   );
 }

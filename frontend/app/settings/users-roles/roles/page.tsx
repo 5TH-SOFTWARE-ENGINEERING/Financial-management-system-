@@ -111,7 +111,6 @@ const RolesPage: React.FC = () => {
       }));
       setRoles(transformedRoles);
     } catch (err: any) {
-      console.error('Failed to load roles:', err);
       setError(err.response?.data?.detail || 'Failed to load roles');
       setRoles([]);
     } finally {

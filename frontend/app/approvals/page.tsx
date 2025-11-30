@@ -623,22 +623,29 @@ export default function ApprovalsPage() {
   const [showRejectModal, setShowRejectModal] = useState<number | null>(null);
 
   useEffect(() => {
-    loadApprovals();
-  }, []);
+    if (user) {
+      loadApprovals();
+    }
+  }, [user]);
 
   const loadApprovals = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
     try {
-      // Fetch approval workflows
+      // Fetch approval workflows - only get pending ones for display
       const workflowsResponse = await apiClient.getApprovals();
       const workflows = (workflowsResponse.data || []).map((w: any) => ({
         id: w.id,
         type: 'workflow' as const,
         title: w.title || `${w.type} Approval`,
         description: w.description,
-        status: w.status?.toLowerCase() || 'pending',
+        status: (w.status?.value || w.status || 'pending')?.toLowerCase(),
         requester_id: w.requester_id,
         created_at: w.created_at,
         updated_at: w.updated_at,
@@ -656,7 +663,7 @@ export default function ApprovalsPage() {
         .map((r: any) => ({
           id: r.id,
           type: 'revenue' as const,
-          title: r.description || `Revenue Entry #${r.id}`,
+          title: r.title || r.description || `Revenue Entry #${r.id}`,
           description: r.description,
           amount: r.amount,
           status: 'pending' as const,
@@ -685,13 +692,15 @@ export default function ApprovalsPage() {
       const allApprovals = [...workflows, ...pendingRevenues, ...pendingExpenses];
       
       // Sort by created date (newest first)
-      allApprovals.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      allApprovals.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
 
       setApprovals(allApprovals);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load approvals';
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to load approvals';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

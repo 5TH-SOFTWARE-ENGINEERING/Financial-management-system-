@@ -513,7 +513,7 @@ export default function ReportPage() {
           setFinancialSummary(null);
         }
       } else {
-        console.error('Failed to load financial summary:', summaryResult.reason);
+        // Failed to load financial summary, try to use income statement data if available
         if (incomeResult.status === 'fulfilled') {
           const incomeData = incomeResult.value.data;
           const revenueCategories = Object.keys(incomeData.revenue.by_category).length;

@@ -475,9 +475,6 @@ const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
   
   // Force re-render by dispatching a resize event (helps with styled-components)
   window.dispatchEvent(new Event('themechange'));
-  
-  // Log for debugging
-  console.log(`Theme applied: ${theme} (${actualTheme})`);
 };
 
 const applyCompactView = (enabled: boolean): void => {
@@ -558,8 +555,6 @@ export default function GeneralSettingsPage() {
   };
 
   const handleThemeChange = (theme: 'light' | 'dark' | 'system') => {
-    console.log('Theme change requested:', theme);
-    
     // Apply theme immediately - this must happen synchronously for instant feedback
     applyTheme(theme);
     
@@ -583,8 +578,6 @@ export default function GeneralSettingsPage() {
         system: 'System'
       };
       toast.success(`Theme changed to ${themeNames[theme]}`);
-      
-      console.log('Theme change completed:', theme);
     } catch (error) {
       console.error('Failed to auto-save theme:', error);
       toast.error('Failed to save theme preference');

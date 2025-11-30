@@ -819,8 +819,6 @@ export default function Navbar() {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('Sign out clicked'); // Debug log
-    
     // Close dropdown immediately
     setIsDropdownOpen(false);
     
@@ -831,9 +829,7 @@ export default function Navbar() {
       // First, call backend logout API to invalidate session
       try {
         await apiClient.logout();
-        console.log('Backend logout successful');
       } catch (apiErr: any) {
-        console.error('Backend logout error (continuing anyway):', apiErr);
         // Continue with logout even if API call fails
       }
       
