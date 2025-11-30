@@ -583,7 +583,8 @@ export default function UsersPage() {
               >
                 <Edit size={16} />
               </ActionButton>
-              {(userRole === 'admin' || (userRole === 'finance_manager' && user?.id !== userId)) && (
+              {(userRole === 'admin' || (userRole === 'finance_manager' && user?.id !== userId)) && 
+               userItem.role !== 'admin' && userItem.role !== 'super_admin' && (
                 <ActionButton
                   onClick={async (e) => {
                     e.stopPropagation();

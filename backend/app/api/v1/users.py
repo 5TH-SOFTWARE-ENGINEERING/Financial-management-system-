@@ -536,7 +536,11 @@ def delete_user(
     if db_user.role == UserRole.SUPER_ADMIN:
         raise HTTPException(status_code=403, detail="Cannot delete super admin")
 
-    # Admin and Super Admin can delete any user
+    # Admin protection - prevent deleting admin users
+    if db_user.role == UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Cannot delete admin users")
+
+    # Admin and Super Admin can delete any user (except other admins/super admins)
     if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         user_crud.delete(db, id=user_id)
         return {"message": "User deleted successfully"}

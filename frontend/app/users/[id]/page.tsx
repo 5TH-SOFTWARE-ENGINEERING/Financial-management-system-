@@ -524,7 +524,8 @@ export default function UserDetailPage() {
                 <Edit size={16} style={{ marginRight: theme.spacing.sm }} />
                 Edit User
               </Button>
-              {(currentUser?.role === 'admin' || (currentUser?.role === 'finance_manager' && currentUser.id !== user.id.toString())) && (
+              {(currentUser?.role === 'admin' || (currentUser?.role === 'finance_manager' && currentUser.id !== user.id.toString())) && 
+               user.role !== 'admin' && user.role !== 'super_admin' && (
                 <Button
                   variant="destructive"
                   onClick={handleDelete}
