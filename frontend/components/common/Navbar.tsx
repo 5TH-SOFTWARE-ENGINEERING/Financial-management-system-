@@ -691,11 +691,13 @@ export default function Navbar() {
     setLanguage(savedLanguage);
   }, []);
 
+  // Extract query parameter value for stable dependency
+  const queryParam = searchParams?.get('q') || '';
+
   // Sync search input with URL query parameter when on search page
   // Only sync when URL changes, not when local search state changes
   useEffect(() => {
     if (pathname === '/search') {
-      const queryParam = searchParams?.get('q') || '';
       // Only update if different to avoid unnecessary re-renders
       setSearch(prev => {
         if (prev !== queryParam) {
@@ -707,7 +709,7 @@ export default function Navbar() {
       // Clear search when leaving search page (only if it's not already empty)
       setSearch(prev => prev ? '' : prev);
     }
-  }, [pathname, searchParams]);
+  }, [pathname, queryParam]);
 
   // Create debounced search navigation function
   const navigateToSearch = useCallback((searchQuery: string) => {
