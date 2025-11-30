@@ -403,14 +403,14 @@ const Sidebar: React.FC = () => {
                                 <ComponentGate componentId={ComponentId.FINANCE_MANAGER_CREATE}>
                                     <NavItem href="/finance/create" $active={pathname === '/finance-admin/create'} $collapsed={collapsed}>
                                         <UserPlus size={16} />
-                                        {!collapsed && 'Add Finance Manager'}
+                                        {!collapsed && 'Add Manager'}
                                     </NavItem>
                                 </ComponentGate>
                                 {/* Finance List Link */}
                                 <ComponentGate componentId={ComponentId.FINANCE_MANAGER_LIST}>
                                     <NavItem href="/finance/list" $active={pathname === '/finance-admin/list'} $collapsed={collapsed}>
                                         <List size={16} />
-                                        {!collapsed && 'All Finance Managers'}
+                                        {!collapsed && 'All Managers'}
                                     </NavItem>
                                 </ComponentGate>
                             </SubMenu>
