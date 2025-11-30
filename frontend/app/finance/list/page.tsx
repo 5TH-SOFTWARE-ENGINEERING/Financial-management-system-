@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 
 import apiClient from '@/lib/api';
 import Layout from '@/components/layout';
@@ -385,6 +386,7 @@ export default function FinanceListPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadFinanceManagers();
@@ -463,6 +465,31 @@ export default function FinanceListPage() {
       toast.error(errorMessage);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleToggleActive = async (manager: FinanceManager) => {
+    if (togglingId === manager.id) return;
+
+    setTogglingId(manager.id);
+    setError(null);
+
+    try {
+      if (manager.is_active) {
+        await apiClient.deactivateUser(manager.id);
+        toast.success(`${manager.full_name || manager.email} has been deactivated`);
+      } else {
+        await apiClient.activateUser(manager.id);
+        toast.success(`${manager.full_name || manager.email} has been activated`);
+      }
+      // Reload finance managers to get the latest data from server
+      await loadFinanceManagers();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || `Failed to ${manager.is_active ? 'deactivate' : 'activate'} finance manager`;
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -551,9 +578,20 @@ export default function FinanceListPage() {
                         <td style={{ whiteSpace: 'nowrap' }}>{m.phone || 'N/A'}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{m.department || 'N/A'}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>
-                          <StatusBadge $active={m.is_active}>
-                            {m.is_active ? 'Active' : 'Inactive'}
-                          </StatusBadge>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <StatusBadge $active={m.is_active}>
+                              {m.is_active ? 'Active' : 'Inactive'}
+                            </StatusBadge>
+                            <Switch
+                              checked={m.is_active}
+                              onCheckedChange={() => handleToggleActive(m)}
+                              disabled={togglingId === m.id || deleting}
+                              aria-label={`${m.is_active ? 'Deactivate' : 'Activate'} ${m.full_name || m.email}`}
+                            />
+                            {togglingId === m.id && (
+                              <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', color: TEXT_COLOR_MUTED }} />
+                            )}
+                          </div>
                         </td>
                         <td style={{ whiteSpace: 'nowrap' }}>
                           <ActionButtons>

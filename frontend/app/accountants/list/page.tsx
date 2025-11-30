@@ -10,6 +10,7 @@ import { AlertCircle, Edit, Trash2, UserPlus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -354,6 +355,7 @@ export default function AccountantListPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadAccountants();
@@ -430,6 +432,31 @@ export default function AccountantListPage() {
     }
   };
 
+  const handleToggleActive = async (accountant: Accountant) => {
+    if (togglingId === accountant.id) return;
+
+    setTogglingId(accountant.id);
+    setError(null);
+
+    try {
+      if (accountant.is_active) {
+        await apiClient.deactivateUser(accountant.id);
+        toast.success(`${accountant.full_name} has been deactivated`);
+      } else {
+        await apiClient.activateUser(accountant.id);
+        toast.success(`${accountant.full_name} has been activated`);
+      }
+      // Reload accountants to get the latest data from server
+      await loadAccountants();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || `Failed to ${accountant.is_active ? 'deactivate' : 'activate'} accountant`;
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   return (
     <Layout>
       <PageContainer>
@@ -494,9 +521,20 @@ export default function AccountantListPage() {
                           <td>{accountant.phone || 'N/A'}</td>
                           <td>{accountant.department || 'N/A'}</td>
                           <td>
-                            <StatusBadge $isActive={accountant.is_active}>
-                              {accountant.is_active ? 'Active' : 'Inactive'}
-                            </StatusBadge>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                              <StatusBadge $isActive={accountant.is_active}>
+                                {accountant.is_active ? 'Active' : 'Inactive'}
+                              </StatusBadge>
+                              <Switch
+                                checked={accountant.is_active}
+                                onCheckedChange={() => handleToggleActive(accountant)}
+                                disabled={togglingId === accountant.id || deleting}
+                                aria-label={`${accountant.is_active ? 'Deactivate' : 'Activate'} ${accountant.full_name}`}
+                              />
+                              {togglingId === accountant.id && (
+                                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', color: TEXT_COLOR_MUTED }} />
+                              )}
+                            </div>
                           </td>
                           <td>
                             <ActionButtons>
