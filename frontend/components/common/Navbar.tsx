@@ -1147,11 +1147,17 @@ export default function Navbar() {
             <User size={16} />
             <span>Profile</span>
           </DropdownItem>
-          {currentUser && (currentUser.role?.toLowerCase() === 'admin' || currentUser.role?.toLowerCase() === 'super_admin') && (
-            <DropdownItem onClick={handleUsersClick}>
-              <Users size={16} />
-              <span>Users</span>
-            </DropdownItem>
+          {currentUser && (
+            (currentUser.role?.toLowerCase() === 'admin' || 
+             currentUser.role?.toLowerCase() === 'super_admin' || 
+             currentUser.role?.toLowerCase() === 'finance_admin' ||
+             currentUser.role?.toLowerCase() === 'finance_manager'
+            ) && (
+              <DropdownItem onClick={handleUsersClick}>
+                <Users size={16} />
+                <span>Users</span>
+              </DropdownItem>
+            )
           )}
           <DropdownItem onClick={handleSettingsClick}>
             <Settings size={16} />
