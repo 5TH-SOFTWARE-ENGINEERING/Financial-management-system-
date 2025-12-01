@@ -813,7 +813,7 @@ export default function ExpenseItemsPage() {
             <GlobalSettingsTitle>Global Settings (Applied to All Items)</GlobalSettingsTitle>
             <FormGrid>
               <FormGroup>
-                <Label htmlFor="globalDate">Date *</Label>
+                <Label htmlFor="globalDate">Date </Label>
                 <Input
                   id="globalDate"
                   type="date"
@@ -823,7 +823,7 @@ export default function ExpenseItemsPage() {
                 />
               </FormGroup>
               <FormGroup>
-                <Label htmlFor="globalCategory">Category *</Label>
+                <Label htmlFor="globalCategory">Category </Label>
                 <Select
                   id="globalCategory"
                   value={globalCategory}
@@ -877,7 +877,7 @@ export default function ExpenseItemsPage() {
 
                 <FormGrid>
                   <FormGroup>
-                    <Label htmlFor={`itemName-${item.id}`}>Item Name / Type *</Label>
+                    <Label htmlFor={`itemName-${item.id}`}>Item Name / Type </Label>
                     <Input
                       id={`itemName-${item.id}`}
                       value={item.itemName}
@@ -923,7 +923,7 @@ export default function ExpenseItemsPage() {
                   </FormGroup>
 
                   <FormGroup>
-                    <Label htmlFor={`buyAtPrice-${item.id}`}>Buy-at Price *</Label>
+                    <Label htmlFor={`buyAtPrice-${item.id}`}>Buy-at Price </Label>
                     <Input
                       id={`buyAtPrice-${item.id}`}
                       type="number"
@@ -945,7 +945,7 @@ export default function ExpenseItemsPage() {
                   </FormGroup>
 
                   <FormGroup>
-                    <Label htmlFor={`soldAtPrice-${item.id}`}>Sold-at Price *</Label>
+                    <Label htmlFor={`soldAtPrice-${item.id}`}>Sold-at Price </Label>
                     <Input
                       id={`soldAtPrice-${item.id}`}
                       type="number"
