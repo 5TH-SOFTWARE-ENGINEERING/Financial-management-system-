@@ -17,7 +17,7 @@ from .core.database import engine, Base, get_db, SessionLocal
 from .api.v1 import (
     auth, users, revenue, expenses, dashboard,
     reports, approvals, notifications, admin,
-    projects, departments
+    projects, departments, analytics
 )
 from .utils.audit import AuditLogger, AuditAction
 
@@ -289,6 +289,7 @@ app.include_router(dashboard.router, prefix=f"{api_prefix}/dashboard", tags=["Da
 app.include_router(admin.router, prefix=f"{api_prefix}/admin", tags=["Admin"])
 app.include_router(projects.router, prefix=f"{api_prefix}/projects", tags=["Projects"])
 app.include_router(departments.router, prefix=f"{api_prefix}/departments", tags=["Departments"])
+app.include_router(analytics.router, prefix=f"{api_prefix}/analytics", tags=["Analytics"])
 
 
 # Health check endpoint

@@ -355,6 +355,49 @@ class ApiClient {
     return this.get('/dashboard/recent-activity', { params: { limit } });
   }
 
+  // Analytics
+  async getAdvancedKPIs(params?: {
+    period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
+    start_date?: string;
+    end_date?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.get('/analytics/kpis', { params });
+  }
+
+  async getTrendAnalysis(params?: {
+    metric?: 'revenue' | 'expenses' | 'profit';
+    period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
+    start_date?: string;
+    end_date?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.get('/analytics/trends', { params });
+  }
+
+  async getTimeSeriesData(params?: {
+    interval?: 'day' | 'week' | 'month' | 'quarter' | 'year';
+    period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
+    start_date?: string;
+    end_date?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.get('/analytics/time-series', { params });
+  }
+
+  async getCategoryBreakdown(params?: {
+    period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
+    start_date?: string;
+    end_date?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.get('/analytics/category-breakdown', { params });
+  }
+
+  async getAnalyticsOverview(params?: {
+    period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
+    start_date?: string;
+    end_date?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.get('/analytics/overview', { params });
+  }
+
   // Reports
   async getReports(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
     return this.get('/reports', { params: filters });
