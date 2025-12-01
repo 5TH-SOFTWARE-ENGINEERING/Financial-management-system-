@@ -2568,3 +2568,33 @@ export default function Navbar() {
      <!-- 
      make the delete button to delete users by  ask password to verify and add warning 
       -->
+
+      <!-- 
+      Next steps
+Install dependencies:
+   npm install
+Run tests:
+   # Unit tests  
+    npm run test  
+     # Watch mode 
+       npm run test:watch  
+        # With coverage 
+          npm run test:coverage  
+           # Integration/E2E tests  
+            npm run test:e2e
+Available test commands
+npm run test - Run all unit tests
+npm run test:watch - Watch mode for development
+npm run test:coverage - Generate coverage report
+npm run test:ci - CI mode with coverage
+npm run test:e2e - Run integration tests
+npm run test:e2e:ui - Playwright UI mode
+npm run test:all - Run both unit and E2E tests
+Test coverage
+The setup includes:
+50% minimum coverage threshold
+Example tests for components, utilities, and pages
+Mock data for testing
+Integration test examples
+All tests are ready to use. See TESTING.md for detailed documentation on writing and running tests.
+       -->
