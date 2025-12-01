@@ -198,7 +198,7 @@ const KPIPairGrid = styled.div`
 `;
 
 const KPIValue = styled.div`
-  font-size: clamp(36px, 4.5vw, 56px);
+  font-size: clamp(36px, 4.5vw, 20px);
   font-weight: ${theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   margin: ${theme.spacing.sm} 0;
