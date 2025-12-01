@@ -185,6 +185,18 @@ const KPIGrid = styled.div`
   }
 `;
 
+const KPIPairGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: ${theme.spacing.xl};
+  margin-bottom: ${theme.spacing.xl};
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: ${theme.spacing.lg};
+  }
+`;
+
 const KPIValue = styled.div`
   font-size: clamp(36px, 4.5vw, 56px);
   font-weight: ${theme.typography.fontWeights.bold};
@@ -660,7 +672,8 @@ const AnalyticsPage: React.FC = () => {
           {analyticsData && (
             <>
               <SectionTitle>Key Performance Indicators</SectionTitle>
-              <KPIGrid>
+              
+              <KPIPairGrid>
                 <KPICard>
                   <KPILabel>Total Revenue</KPILabel>
                   <KPIValue>
@@ -694,7 +707,9 @@ const AnalyticsPage: React.FC = () => {
                     </GrowthIndicator>
                   )}
                 </KPICard>
+              </KPIPairGrid>
 
+              <KPIPairGrid>
                 <KPICard>
                   <KPILabel>Net Profit</KPILabel>
                   <KPIValue>
@@ -721,7 +736,9 @@ const AnalyticsPage: React.FC = () => {
                     Expense Ratio: {analyticsData.kpis?.current_period?.expense_ratio?.toFixed(2) || 0}%
                   </KPILabel>
                 </KPICard>
+              </KPIPairGrid>
 
+              <KPIPairGrid>
                 <KPICard>
                   <KPILabel>Avg Daily Revenue</KPILabel>
                   <KPIValue>
@@ -735,7 +752,7 @@ const AnalyticsPage: React.FC = () => {
                     {formatCurrency(analyticsData.kpis?.current_period?.avg_daily_expenses || 0)}
                   </KPIValue>
                 </KPICard>
-              </KPIGrid>
+              </KPIPairGrid>
 
               <SectionTitle>Financial Trends</SectionTitle>
               <TwoColumnGrid>
