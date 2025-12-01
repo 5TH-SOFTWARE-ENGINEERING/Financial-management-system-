@@ -9,6 +9,17 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
+jest.mock('@/lib/rbac/auth-context', () => ({
+  useAuth: () => ({
+    user: {
+      id: '1',
+      role: 'admin',
+      userType: 'ADMIN',
+    },
+    isAuthenticated: true,
+  }),
+}))
+
 jest.mock('@/store/userStore', () => ({
   useUserStore: () => ({
     user: { id: '1', role: 'admin' },

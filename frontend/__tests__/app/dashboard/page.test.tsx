@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import DashboardPage from '@/app/dashboard/page'
 
 // Mock dependencies
@@ -24,12 +24,9 @@ jest.mock('@/lib/rbac', () => ({
 jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
-    getStats: jest.fn().mockResolvedValue({
-      totalUsers: 0,
-      totalRevenue: 0,
-      totalExpenses: 0,
-    }),
-    getRecentActivities: jest.fn().mockResolvedValue([]),
+    getDashboardOverview: jest.fn().mockResolvedValue({ data: {} }),
+    getDashboardRecentActivity: jest.fn().mockResolvedValue({ data: [] }),
+    getApprovals: jest.fn().mockResolvedValue({ data: [] }),
   },
 }))
 
@@ -40,9 +37,13 @@ jest.mock('@/components/layout', () => {
 })
 
 describe('DashboardPage', () => {
-  it('renders page component', () => {
+  it('renders page component', async () => {
     render(<DashboardPage />)
-    expect(screen.getByTestId('layout')).toBeInTheDocument()
+    
+    // Wait for layout to appear after loading completes
+    await waitFor(() => {
+      expect(screen.getByTestId('layout')).toBeInTheDocument()
+    }, { timeout: 5000 })
   })
 })
 

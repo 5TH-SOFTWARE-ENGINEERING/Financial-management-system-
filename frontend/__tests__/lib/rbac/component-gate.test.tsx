@@ -12,9 +12,9 @@ const mockUser = {
 }
 
 jest.mock('@/lib/rbac/auth-context', () => ({
-  useAuth: () => ({
+  useAuth: jest.fn(() => ({
     user: mockUser,
-  }),
+  })),
 }))
 
 jest.mock('@/lib/rbac/component-access', () => {
@@ -22,7 +22,13 @@ jest.mock('@/lib/rbac/component-access', () => {
   return {
     ...actual,
     canAccessComponent: jest.fn((userType, componentId) => {
-      return userType === UserType.ADMIN
+      // Always return true for ADMIN users
+      if (userType === UserType.ADMIN) {
+        return true
+      }
+      // Use actual implementation for others
+      const allowedComponents = actual.USER_TYPE_COMPONENT_MAP[userType] ?? []
+      return allowedComponents.includes(componentId)
     }),
   }
 })
@@ -30,6 +36,8 @@ jest.mock('@/lib/rbac/component-access', () => {
 describe('ComponentGate', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Reset user to ADMIN before each test
+    mockUser.userType = UserType.ADMIN
   })
 
   it('renders children when user has access', () => {
@@ -66,6 +74,11 @@ describe('ComponentGate', () => {
 })
 
 describe('withComponentAccess HOC', () => {
+  beforeEach(() => {
+    // Reset user to ADMIN for HOC tests
+    mockUser.userType = UserType.ADMIN
+  })
+
   it('wraps component with ComponentGate', () => {
     const TestComponent = () => <div>Test Component</div>
     const WrappedComponent = withComponentAccess(TestComponent, ComponentId.DASHBOARD)

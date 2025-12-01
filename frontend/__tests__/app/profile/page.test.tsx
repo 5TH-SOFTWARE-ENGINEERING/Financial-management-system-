@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import ProfilePage from '@/app/profile/page'
 
 // Mock dependencies
@@ -33,9 +33,14 @@ jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
     getCurrentUser: jest.fn().mockResolvedValue({
-      id: 1,
-      email: 'test@example.com',
-      full_name: 'Test User',
+      data: {
+        id: 1,
+        email: 'test@example.com',
+        full_name: 'Test User',
+        username: 'testuser',
+        role: 'admin',
+        is_active: true,
+      },
     }),
     updateUser: jest.fn(),
   },
@@ -48,12 +53,21 @@ jest.mock('sonner', () => ({
   },
 }))
 
+// Mock utility functions
+jest.mock('@/lib/utils', () => ({
+  getInitials: (name: string) => name?.split(' ').map((n: string) => n[0]).join('') || '',
+  formatUserType: (type: string) => type || 'User',
+  getUserColor: () => '#000000',
+}))
+
 describe('ProfilePage', () => {
-  it('renders profile page structure', () => {
+  it('renders profile page structure', async () => {
     render(<ProfilePage />)
-    // The page should render without crashing
-    // Verify basic structure is present
-    expect(document.body).toBeTruthy()
+    
+    // Wait for Profile heading to appear after loading completes
+    await waitFor(() => {
+      expect(screen.getByText(/Profile/i)).toBeInTheDocument()
+    }, { timeout: 5000 })
   })
 })
 

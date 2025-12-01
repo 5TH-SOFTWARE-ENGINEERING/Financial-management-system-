@@ -1,11 +1,13 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import LogsPage from '@/app/settings/logs/page'
 
 // Mock dependencies
 jest.mock('@/lib/rbac', () => ({
   ComponentGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  ComponentId: 'settings',
+  ComponentId: {
+    SETTINGS_VIEW: 'settings.view',
+  },
 }))
 
 jest.mock('@/lib/rbac/auth-context', () => ({
@@ -18,7 +20,8 @@ jest.mock('@/lib/rbac/auth-context', () => ({
 jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
-    getLogs: jest.fn().mockResolvedValue([]),
+    getAuditLogs: jest.fn().mockResolvedValue({ data: [] }),
+    getUsers: jest.fn().mockResolvedValue({ data: [] }),
     downloadLogs: jest.fn(),
   },
 }))
@@ -31,10 +34,13 @@ jest.mock('sonner', () => ({
 }))
 
 describe('LogsPage', () => {
-  it('renders page component', () => {
+  it('renders page component', async () => {
     render(<LogsPage />)
-    // Page should render without crashing
-    expect(document.body).toBeTruthy()
+    
+    // Wait for "Audit Logs" heading to appear after loading completes
+    await waitFor(() => {
+      expect(screen.getByText(/Audit Logs/i)).toBeInTheDocument()
+    }, { timeout: 5000 })
   })
 })
 
