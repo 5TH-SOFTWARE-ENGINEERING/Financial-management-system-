@@ -271,6 +271,15 @@ const SimpleBarChart = styled.div`
   flex: 1;
 `;
 
+const BarGroup = styled.div`
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+`;
+
 const Bar = styled.div<{ $height: number; $color: string; $max: number }>`
   flex: 1;
   background: ${props => props.$color};
@@ -283,6 +292,7 @@ const Bar = styled.div<{ $height: number; $color: string; $max: number }>`
   &:hover {
     opacity: 0.8;
     transform: scaleY(1.05);
+    z-index: 10;
   }
   
   &::after {
@@ -297,6 +307,11 @@ const Bar = styled.div<{ $height: number; $color: string; $max: number }>`
     margin-bottom: ${theme.spacing.xs};
     opacity: 0;
     transition: opacity ${theme.transitions.default};
+    background: ${theme.colors.background};
+    padding: 2px 4px;
+    border-radius: ${theme.borderRadius.sm};
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 20;
   }
   
   &:hover::after {
@@ -315,6 +330,33 @@ const ChartLabel = styled.div`
   text-align: center;
   font-size: ${theme.typography.fontSizes.xs};
   color: ${TEXT_COLOR_MUTED};
+`;
+
+const ChartLegend = styled.div`
+  display: flex;
+  gap: ${theme.spacing.lg};
+  justify-content: center;
+  margin-bottom: ${theme.spacing.md};
+  flex-wrap: wrap;
+`;
+
+const LegendItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_DARK};
+  
+  .legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: ${theme.borderRadius.sm};
+    flex-shrink: 0;
+  }
+  
+  .legend-label {
+    font-weight: ${theme.typography.fontWeights.medium};
+  }
 `;
 
 const LineChartContainer = styled.div`
@@ -514,11 +556,25 @@ const AnalyticsPage: React.FC = () => {
       return;
     }
 
+    // Don't load analytics if period is 'custom' but dates are not provided
+    if (period === 'custom' && (!startDate || !endDate)) {
+      setLoading(false);
+      setAnalyticsData(null);
+      return;
+    }
+
     loadAnalytics();
   }, [user, period, startDate, endDate]);
 
   const loadAnalytics = async () => {
     if (!user) return;
+
+    // Don't proceed if period is 'custom' but dates are not provided
+    if (period === 'custom' && (!startDate || !endDate)) {
+      setError(null);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -535,6 +591,8 @@ const AnalyticsPage: React.FC = () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to load analytics data';
       setError(errorMessage);
+      // Clear data on error
+      setAnalyticsData(null);
     } finally {
       setLoading(false);
     }
@@ -548,25 +606,46 @@ const AnalyticsPage: React.FC = () => {
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
   };
 
-  const renderBarChart = (labels: string[], data: number[], color: string) => {
-    if (!data || data.length === 0) return null;
+  const renderBarChart = (labels: string[], revenueData: number[], expenseData: number[]) => {
+    if (!revenueData || revenueData.length === 0) return null;
     
-    const maxValue = Math.max(...data, 1);
+    const allValues = [...(revenueData || []), ...(expenseData || [])];
+    const maxValue = Math.max(...allValues, 1);
+    const revenueColor = 'rgba(34, 197, 94, 0.7)';
+    const expenseColor = 'rgba(239, 68, 68, 0.7)';
     
     return (
       <>
+        <ChartLegend>
+          <LegendItem>
+            <div className="legend-color" style={{ background: revenueColor }} />
+            <span className="legend-label">Revenue</span>
+          </LegendItem>
+          <LegendItem>
+            <div className="legend-color" style={{ background: expenseColor }} />
+            <span className="legend-label">Expenses</span>
+          </LegendItem>
+        </ChartLegend>
         <SimpleBarChart>
-          {data.map((value, index) => (
-            <Bar
-              key={index}
-              $height={value}
-              $color={color}
-              $max={maxValue}
-            />
+          {labels.map((_, index) => (
+            <BarGroup key={index}>
+              <Bar
+                $height={revenueData[index] || 0}
+                $color={revenueColor}
+                $max={maxValue}
+                title={`Revenue: ${formatCurrency(revenueData[index] || 0)}`}
+              />
+              <Bar
+                $height={expenseData[index] || 0}
+                $color={expenseColor}
+                $max={maxValue}
+                title={`Expenses: ${formatCurrency(expenseData[index] || 0)}`}
+              />
+            </BarGroup>
           ))}
         </SimpleBarChart>
         <ChartLabels>
-          {labels.slice(0, data.length).map((label, index) => (
+          {labels.map((label, index) => (
             <ChartLabel key={index}>{label}</ChartLabel>
           ))}
         </ChartLabels>
@@ -755,23 +834,43 @@ const AnalyticsPage: React.FC = () => {
               </KPIPairGrid>
 
               <SectionTitle>Financial Trends</SectionTitle>
-              <TwoColumnGrid>
-                <ChartCard>
-                  <ChartTitle>Revenue vs Expenses Over Time</ChartTitle>
-                  {analyticsData.time_series && analyticsData.time_series.labels && (
-                    <>
-                      {renderBarChart(
-                        analyticsData.time_series.labels,
-                        analyticsData.time_series.revenue || [],
-                        'rgba(34, 197, 94, 0.6)'
-                      )}
-                    </>
-                  )}
-                </ChartCard>
-
-                <TrendCard $trend={analyticsData.trends?.profit?.trend?.direction || 'stable'}>
-                  <h4>Profit Trend</h4>
-                  <div className="trend-indicator">
+              <ChartCard>
+                <ChartTitle>Revenue vs Expenses Over Time</ChartTitle>
+                {analyticsData.time_series && analyticsData.time_series.labels && (
+                  <>
+                    {renderBarChart(
+                      analyticsData.time_series.labels || [],
+                      analyticsData.time_series.revenue || [],
+                      analyticsData.time_series.expenses || []
+                    )}
+                  </>
+                )}
+                
+                <div style={{ 
+                  marginTop: theme.spacing.xl, 
+                  paddingTop: theme.spacing.xl, 
+                  borderTop: `1px solid ${theme.colors.border}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center'
+                }}>
+                  <h4 style={{ 
+                    fontSize: `clamp(${theme.typography.fontSizes.lg}, 1.5vw, 22px)`,
+                    fontWeight: theme.typography.fontWeights.bold,
+                    color: TEXT_COLOR_DARK,
+                    margin: `${theme.spacing.lg} 0 ${theme.spacing.md}`,
+                    textAlign: 'center'
+                  }}>
+                    Profit Trend
+                  </h4>
+                  <div className="trend-indicator" style={{
+                    fontSize: theme.typography.fontSizes.lg,
+                    margin: `${theme.spacing.lg} 0`,
+                    transition: `transform ${theme.transitions.default}`,
+                    color: analyticsData.trends?.profit?.trend?.direction === 'increasing' ? '#059669' : 
+                           analyticsData.trends?.profit?.trend?.direction === 'decreasing' ? '#ef4444' : TEXT_COLOR_MUTED
+                  }}>
                     {analyticsData.trends?.profit?.trend?.direction === 'increasing' && (
                       <TrendingUp size={48} />
                     )}
@@ -782,15 +881,34 @@ const AnalyticsPage: React.FC = () => {
                       <Activity size={48} />
                     )}
                   </div>
-                  <p>Trend: {analyticsData.trends?.profit?.trend?.direction || 'stable'}</p>
-                  <p>Strength: {analyticsData.trends?.profit?.trend?.strength?.toFixed(1) || 0}%</p>
+                  <p style={{
+                    fontSize: theme.typography.fontSizes.sm,
+                    color: TEXT_COLOR_MUTED,
+                    margin: `${theme.spacing.sm} 0`,
+                    fontWeight: theme.typography.fontWeights.medium
+                  }}>
+                    Trend: {analyticsData.trends?.profit?.trend?.direction || 'stable'}
+                  </p>
+                  <p style={{
+                    fontSize: theme.typography.fontSizes.sm,
+                    color: TEXT_COLOR_MUTED,
+                    margin: `${theme.spacing.sm} 0`,
+                    fontWeight: theme.typography.fontWeights.medium
+                  }}>
+                    Strength: {analyticsData.trends?.profit?.trend?.strength?.toFixed(1) || 0}%
+                  </p>
                   {analyticsData.trends?.profit?.prediction?.next_value && (
-                    <p>
+                    <p style={{
+                      fontSize: theme.typography.fontSizes.sm,
+                      color: TEXT_COLOR_MUTED,
+                      margin: `${theme.spacing.sm} 0`,
+                      fontWeight: theme.typography.fontWeights.medium
+                    }}>
                       Predicted next: {formatCurrency(analyticsData.trends.profit.prediction.next_value)}
                     </p>
                   )}
-                </TrendCard>
-              </TwoColumnGrid>
+                </div>
+              </ChartCard>
 
               <SectionTitle>Category Breakdown</SectionTitle>
               <TwoColumnGrid>

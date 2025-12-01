@@ -250,8 +250,28 @@ def get_analytics_overview(
         user_role=current_user.role
     )
 
+    # Determine interval based on period
+    # Use monthly intervals for year and quarter periods for better visualization
+    if period == "year" or period == "quarter":
+        interval = "month"
+    elif period == "month":
+        interval = "day"
+    elif period == "week":
+        interval = "day"
+    elif period == "custom":
+        # For custom periods, determine interval based on date range
+        days_diff = (end_date_dt - start_date_dt).days
+        if days_diff > 180:  # More than 6 months, use monthly
+            interval = "month"
+        elif days_diff > 30:  # More than 1 month, use weekly
+            interval = "week"
+        else:
+            interval = "day"
+    else:
+        interval = "day"
+    
     time_series = analytics.get_time_series_data(
-        db, start_date_dt, end_date_dt, "day",
+        db, start_date_dt, end_date_dt, interval,
         user_id=current_user.id,
         user_role=current_user.role
     )
