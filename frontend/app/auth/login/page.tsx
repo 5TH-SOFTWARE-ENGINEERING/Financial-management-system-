@@ -48,11 +48,11 @@ const LoginContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: rgb(82, 80, 80);
+  background: rgb(35, 161, 148);
   font-family: ${theme.typography.fontFamily};
 `;
 const LoginCard = styled.div`
-  background: rgb(43, 42, 42);
+  background: rgb(84, 81, 81);
   padding: ${theme.spacing.xl};
   border-radius: ${theme.borderRadius.lg};
   box-shadow: ${theme.shadows.lg};

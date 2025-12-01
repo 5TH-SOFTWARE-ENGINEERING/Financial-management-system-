@@ -56,12 +56,12 @@ const ResetContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: rgb(82, 80, 80);
+  background: rgb(44, 122, 140);
   font-family: ${theme.typography.fontFamily};
 `;
 
 const ResetCard = styled.div`
-  background: rgb(43, 42, 42);
+  background: rgb(68, 65, 65);
   padding: ${theme.spacing.xl};
   border-radius: ${theme.borderRadius.lg};
   box-shadow: ${theme.shadows.lg};
