@@ -1,10 +1,9 @@
 # main.py
-
-from fastapi import FastAPI, Request, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBearer
+from fastapi import FastAPI, Request, HTTPException, status  # type: ignore
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+from fastapi.middleware.trustedhost import TrustedHostMiddleware  # type: ignore
+from fastapi.responses import JSONResponse  # type: ignore
+from fastapi.security import HTTPBearer  # type: ignore
 from contextlib import asynccontextmanager
 import logging
 import logging.config
@@ -184,7 +183,7 @@ def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
     
-    from fastapi.openapi.utils import get_openapi
+    from fastapi.openapi.utils import get_openapi  # type: ignore
     
     # Generate base OpenAPI schema
     openapi_schema = get_openapi(
@@ -313,39 +312,70 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4
 # Override default OpenAPI schema with custom one
 app.openapi = custom_openapi
 
-# Add CORS middleware
-# Handle wildcard or specific origins
-origins = settings.ALLOWED_ORIGINS.strip() if settings.ALLOWED_ORIGINS else ""
-if origins == "*":
-    # When using wildcard, credentials must be False
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-elif origins:
-    # Parse comma-separated origins
-    allowed_origins = [origin.strip() for origin in origins.split(",") if origin.strip()]
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# Add CORS middleware - MUST be added early, before other middleware
+# Default development origins (always included for local development)
+default_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+]
+
+# Determine allowed origins based on settings
+if settings.ALLOWED_ORIGINS:
+    origins_str = settings.ALLOWED_ORIGINS.strip()
+    if origins_str == "*":
+        # Wildcard mode - credentials must be False
+        logger.info("CORS: Using wildcard origins (credentials disabled)")
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=False,
+            allow_methods=["*"],
+            allow_headers=["*"],
+            expose_headers=["*"],
+        )
+    elif origins_str:
+        # Parse comma-separated origins
+        parsed_origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
+        # Merge with defaults and remove duplicates
+        all_origins = list(dict.fromkeys(default_origins + parsed_origins))
+        logger.info(f"CORS: Allowing origins: {all_origins}")
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=all_origins,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+            allow_headers=["*"],
+            expose_headers=["*"],
+            max_age=3600,
+        )
+    else:
+        # Empty string - use defaults
+        logger.info(f"CORS: Using default development origins: {default_origins}")
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=default_origins,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+            allow_headers=["*"],
+            expose_headers=["*"],
+            max_age=3600,
+        )
 else:
-    # Default CORS for development - allow localhost:3000 (Next.js default)
+    # No ALLOWED_ORIGINS set - always use defaults for development
+    logger.info(f"CORS: Using default development origins: {default_origins}")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"],
+        allow_origins=default_origins,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
         allow_headers=["*"],
+        expose_headers=["*"],
+        max_age=3600,
     )
 
-# Add trusted host middleware for production
+# Add trusted host middleware for production (after CORS)
 if not settings.DEBUG:
     allowed_hosts = [host.strip() for host in settings.ALLOWED_HOSTS.split(",")] if settings.ALLOWED_HOSTS else ["localhost", "127.0.0.1"]
     app.add_middleware(
@@ -353,6 +383,36 @@ if not settings.DEBUG:
         allowed_hosts=allowed_hosts
     )
 
+
+# CORS headers middleware (backup - ensures CORS headers are always present)
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    """Ensure CORS headers are always present"""
+    response = await call_next(request)
+    
+    # Get origin from request
+    origin = request.headers.get("Origin")
+    
+    # Default allowed origins
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ]
+    
+    # Check if origin is allowed
+    if origin and origin in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    
+    # Always add these headers for OPTIONS requests
+    if request.method == "OPTIONS":
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Max-Age"] = "3600"
+    
+    return response
 
 # Request timing middleware
 @app.middleware("http")
@@ -457,7 +517,7 @@ async def health_check():
     redis_status = "not_configured"
     if settings.REDIS_URL:
         try:
-            import redis
+            import redis  # type: ignore
             r = redis.from_url(settings.REDIS_URL)
             r.ping()
             redis_status = "healthy"
@@ -521,7 +581,7 @@ async def api_info():
 # Celery configuration (for background tasks)
 celery_app = None
 try:
-    from celery import Celery
+    from celery import Celery  # type: ignore
     
     celery_app = Celery(
         "app.main",
@@ -646,7 +706,7 @@ if celery_app:
 
 # Scheduled tasks (Celery Beat)
 if celery_app:
-    from celery.schedules import crontab
+    from celery.schedules import crontab  # type: ignore
     
     celery_app.conf.beat_schedule = {
         'daily-backup': {
@@ -666,7 +726,7 @@ if celery_app:
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
