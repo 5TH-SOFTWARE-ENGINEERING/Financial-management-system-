@@ -255,7 +255,7 @@ def get_analytics_overview(
     if period == "year" or period == "quarter":
         interval = "month"
     elif period == "month":
-        interval = "day"
+        interval = "day"  # Frontend will filter to show every 5th day
     elif period == "week":
         interval = "day"
     elif period == "custom":

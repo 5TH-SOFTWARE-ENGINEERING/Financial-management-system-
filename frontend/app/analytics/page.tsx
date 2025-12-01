@@ -361,13 +361,71 @@ const LegendItem = styled.div`
 
 const LineChartContainer = styled.div`
   position: relative;
-  height: 300px;
+  height: 350px;
   margin: ${theme.spacing.lg} 0;
+  padding: ${theme.spacing.md};
 `;
 
 const LineChartSVG = styled.svg`
   width: 100%;
   height: 100%;
+  overflow: visible;
+`;
+
+const LinePath = styled.path`
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: all ${theme.transitions.default};
+  
+  &:hover {
+    stroke-width: 4;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  }
+`;
+
+const LinePoint = styled.circle`
+  fill: white;
+  stroke-width: 2;
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+  
+  &:hover {
+    r: 6;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+`;
+
+const GridLine = styled.line`
+  stroke: ${theme.colors.border};
+  stroke-width: 1;
+  stroke-dasharray: 4, 4;
+  opacity: 0.5;
+`;
+
+const AxisLabel = styled.text`
+  font-size: ${theme.typography.fontSizes.xs};
+  fill: ${TEXT_COLOR_MUTED};
+  text-anchor: middle;
+`;
+
+const ChartTooltip = styled.div`
+  position: absolute;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity ${theme.transitions.default};
+  
+  &.visible {
+    opacity: 1;
+  }
 `;
 
 const TrendCard = styled.div<{ $trend: 'increasing' | 'decreasing' | 'stable' }>`
@@ -549,6 +607,12 @@ const AnalyticsPage: React.FC = () => {
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year' | 'custom'>('month');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [tooltip, setTooltip] = useState<{ visible: boolean; x: number; y: number; text: string }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    text: ''
+  });
 
   useEffect(() => {
     if (!user) {
@@ -606,13 +670,78 @@ const AnalyticsPage: React.FC = () => {
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
   };
 
-  const renderBarChart = (labels: string[], revenueData: number[], expenseData: number[]) => {
+  const handlePointHover = (e: React.MouseEvent<SVGCircleElement>, value: number, label: string, type: string) => {
+    const rect = e.currentTarget.closest('svg')?.getBoundingClientRect();
+    if (rect) {
+      setTooltip({
+        visible: true,
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top - 40,
+        text: `${type}: ${formatCurrency(value)} - ${label}`
+      });
+    }
+  };
+  
+  const handlePointLeave = () => {
+    setTooltip({ visible: false, x: 0, y: 0, text: '' });
+  };
+
+  const renderLineChart = (labels: string[], revenueData: number[], expenseData: number[]) => {
     if (!revenueData || revenueData.length === 0) return null;
     
-    const allValues = [...(revenueData || []), ...(expenseData || [])];
-    const maxValue = Math.max(...allValues, 1);
-    const revenueColor = 'rgba(34, 197, 94, 0.7)';
-    const expenseColor = 'rgba(239, 68, 68, 0.7)';
+    // Filter data for month period - show every 5th day
+    let filteredLabels = labels;
+    let filteredRevenue = revenueData;
+    let filteredExpenses = expenseData;
+    
+    if (period === 'month' && labels.length > 6) {
+      // Show every 5th day (day 0, 5, 10, 15, 20, 25, 30...)
+      const step = 5;
+      filteredLabels = labels.filter((_, index) => index % step === 0 || index === labels.length - 1);
+      filteredRevenue = revenueData.filter((_, index) => index % step === 0 || index === revenueData.length - 1);
+      filteredExpenses = expenseData.filter((_, index) => index % step === 0 || index === expenseData.length - 1);
+    }
+    
+    const allValues = [...(filteredRevenue || []), ...(filteredExpenses || [])];
+    const maxValue = Math.max(...allValues, 1) * 1.1; // Add 10% padding
+    
+    const padding = { top: 20, right: 20, bottom: 60, left: 60 };
+    const chartWidth = 800; // Approximate width
+    const chartHeight = 350;
+    const plotWidth = chartWidth - padding.left - padding.right;
+    const plotHeight = chartHeight - padding.top - padding.bottom;
+    
+    const revenueColor = '#22c55e';
+    const expenseColor = '#ef4444';
+    
+    // Generate path data for revenue line
+    const revenuePath = filteredRevenue.map((value, index) => {
+      const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
+      const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+    
+    // Generate path data for expense line
+    const expensePath = filteredExpenses.map((value, index) => {
+      const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
+      const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+    
+    // Generate grid lines
+    const gridLines = [];
+    for (let i = 0; i <= 5; i++) {
+      const y = padding.top + (i / 5) * plotHeight;
+      gridLines.push(
+        <GridLine
+          key={`grid-${i}`}
+          x1={padding.left}
+          y1={y}
+          x2={padding.left + plotWidth}
+          y2={y}
+        />
+      );
+    }
     
     return (
       <>
@@ -626,29 +755,98 @@ const AnalyticsPage: React.FC = () => {
             <span className="legend-label">Expenses</span>
           </LegendItem>
         </ChartLegend>
-        <SimpleBarChart>
-          {labels.map((_, index) => (
-            <BarGroup key={index}>
-              <Bar
-                $height={revenueData[index] || 0}
-                $color={revenueColor}
-                $max={maxValue}
-                title={`Revenue: ${formatCurrency(revenueData[index] || 0)}`}
-              />
-              <Bar
-                $height={expenseData[index] || 0}
-                $color={expenseColor}
-                $max={maxValue}
-                title={`Expenses: ${formatCurrency(expenseData[index] || 0)}`}
-              />
-            </BarGroup>
-          ))}
-        </SimpleBarChart>
-        <ChartLabels>
-          {labels.map((label, index) => (
-            <ChartLabel key={index}>{label}</ChartLabel>
-          ))}
-        </ChartLabels>
+        <LineChartContainer>
+          <LineChartSVG viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
+            {/* Grid lines */}
+            {gridLines}
+            
+            {/* Revenue line */}
+            <LinePath
+              d={revenuePath}
+              stroke={revenueColor}
+            />
+            
+            {/* Expense line */}
+            <LinePath
+              d={expensePath}
+              stroke={expenseColor}
+            />
+            
+            {/* Revenue data points */}
+            {filteredRevenue.map((value, index) => {
+              const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
+              const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
+              return (
+                <LinePoint
+                  key={`revenue-${index}`}
+                  cx={x}
+                  cy={y}
+                  r={4}
+                  stroke={revenueColor}
+                  fill={revenueColor}
+                  onMouseEnter={(e) => handlePointHover(e, value, filteredLabels[index], 'Revenue')}
+                  onMouseLeave={handlePointLeave}
+                />
+              );
+            })}
+            
+            {/* Expense data points */}
+            {filteredExpenses.map((value, index) => {
+              const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
+              const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
+              return (
+                <LinePoint
+                  key={`expense-${index}`}
+                  cx={x}
+                  cy={y}
+                  r={4}
+                  stroke={expenseColor}
+                  fill={expenseColor}
+                  onMouseEnter={(e) => handlePointHover(e, value, filteredLabels[index], 'Expenses')}
+                  onMouseLeave={handlePointLeave}
+                />
+              );
+            })}
+            
+            {/* X-axis labels */}
+            {filteredLabels.map((label, index) => {
+              const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
+              return (
+                <AxisLabel
+                  key={`label-${index}`}
+                  x={x}
+                  y={chartHeight - padding.bottom + 20}
+                >
+                  {label}
+                </AxisLabel>
+              );
+            })}
+            
+            {/* Y-axis labels */}
+            {[0, 1, 2, 3, 4, 5].map((i) => {
+              const value = (maxValue / 5) * (5 - i);
+              const y = padding.top + (i / 5) * plotHeight;
+              return (
+                <AxisLabel
+                  key={`y-label-${i}`}
+                  x={padding.left - 10}
+                  y={y + 4}
+                  textAnchor="end"
+                >
+                  ${(value / 1000).toFixed(0)}k
+                </AxisLabel>
+              );
+            })}
+          </LineChartSVG>
+          {tooltip.visible && (
+            <ChartTooltip
+              className={tooltip.visible ? 'visible' : ''}
+              style={{ left: tooltip.x, top: tooltip.y }}
+            >
+              {tooltip.text}
+            </ChartTooltip>
+          )}
+        </LineChartContainer>
       </>
     );
   };
@@ -838,7 +1036,7 @@ const AnalyticsPage: React.FC = () => {
                 <ChartTitle>Revenue vs Expenses Over Time</ChartTitle>
                 {analyticsData.time_series && analyticsData.time_series.labels && (
                   <>
-                    {renderBarChart(
+                    {renderLineChart(
                       analyticsData.time_series.labels || [],
                       analyticsData.time_series.revenue || [],
                       analyticsData.time_series.expenses || []
