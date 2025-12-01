@@ -289,10 +289,10 @@ const Badge = styled.span<{ $type: 'success' | 'warning' | 'danger' | 'info' }>`
   font-weight: 700;
   background-color: ${props => {
     switch(props.$type) {
-      case 'success': return 'rgba(16, 185, 129, 0.12)'; // Emerald-500
-      case 'warning': return 'rgba(251, 191, 36, 0.16)'; // Amber-400
-      case 'danger': return 'rgba(239, 68, 68, 0.18)'; // Red-500
-      case 'info': return 'rgba(99, 102, 241, 0.15)'; // Indigo-400
+      case 'success': return 'rgba(16, 185, 129, 0.12)'; 
+      case 'warning': return 'rgba(251, 191, 36, 0.16)'; 
+      case 'danger': return 'rgba(239, 68, 68, 0.18)'; 
+      case 'info': return 'rgba(99, 102, 241, 0.15)'; 
       default: return 'rgba(16, 185, 129, 0.12)';
     }
   }};
@@ -301,7 +301,7 @@ const Badge = styled.span<{ $type: 'success' | 'warning' | 'danger' | 'info' }>`
       case 'success': return '#065f46'; // Emerald-800
       case 'warning': return '#b45309'; // Amber-800
       case 'danger': return '#991b1b'; // Red-800
-      case 'info': return '#3730a3'; // Indigo-800
+      case 'info': return '#3730a3'; 
       default: return '#065f46';
     }
   }};
@@ -426,31 +426,61 @@ const AdminDashboard: React.FC = () => {
         setOverview(overviewData);
         
         // Fetch all pending approvals in real-time (workflows, revenue, expenses)
+        // Use deduplication logic to avoid counting items with workflows twice
         let totalPendingCount = 0;
+        let debugInfo: any = {};
+        
         try {
-          // Fetch pending approval workflows
+          // Fetch approval workflows to identify which entries have workflows
           const workflowsRes = await apiClient.getApprovals();
-          if (workflowsRes?.data && Array.isArray(workflowsRes.data)) {
-            const pendingWorkflows = workflowsRes.data.filter((w: any) => 
-              (w.status?.toLowerCase() === 'pending' || w.status === 'pending')
-            );
-            totalPendingCount += pendingWorkflows.length;
-          }
+          const workflows = workflowsRes?.data || [];
+          
+          // Count pending workflows
+          const pendingWorkflows = workflows.filter((w: any) => {
+            const status = w.status?.value || w.status || 'pending';
+            return status.toString().toLowerCase() === 'pending';
+          });
+          totalPendingCount += pendingWorkflows.length;
+          debugInfo.pendingWorkflowsCount = pendingWorkflows.length;
 
-          // Fetch pending revenue entries
+          // Collect all revenue/expense entry IDs that already have workflows
+          // This prevents duplication - if an entry has a workflow, we only count the workflow
+          const revenueIdsWithWorkflow = new Set(
+            workflows
+              .filter((w: any) => w.revenue_entry_id)
+              .map((w: any) => w.revenue_entry_id)
+          );
+          const expenseIdsWithWorkflow = new Set(
+            workflows
+              .filter((w: any) => w.expense_entry_id)
+              .map((w: any) => w.expense_entry_id)
+          );
+          debugInfo.revenueIdsWithWorkflow = revenueIdsWithWorkflow.size;
+          debugInfo.expenseIdsWithWorkflow = expenseIdsWithWorkflow.size;
+
+          // Fetch pending revenue entries - only count those WITHOUT workflows
           const revenuesRes = await apiClient.getRevenues({ is_approved: false });
           if (revenuesRes?.data && Array.isArray(revenuesRes.data)) {
-            const pendingRevenues = revenuesRes.data.filter((r: any) => !r.is_approved);
+            const pendingRevenues = revenuesRes.data.filter((r: any) => {
+              // Only count if not approved AND doesn't have an existing workflow
+              return !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
+            });
             totalPendingCount += pendingRevenues.length;
+            debugInfo.pendingRevenuesCount = pendingRevenues.length;
           }
 
-          // Fetch pending expense entries
+          // Fetch pending expense entries - only count those WITHOUT workflows
           const expensesRes = await apiClient.getExpenses({ is_approved: false });
           if (expensesRes?.data && Array.isArray(expensesRes.data)) {
-            const pendingExpenses = expensesRes.data.filter((e: any) => !e.is_approved);
+            const pendingExpenses = expensesRes.data.filter((e: any) => {
+              // Only count if not approved AND doesn't have an existing workflow
+              return !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
+            });
             totalPendingCount += pendingExpenses.length;
+            debugInfo.pendingExpensesCount = pendingExpenses.length;
           }
         } catch (err) {
+          console.error('Error fetching pending approvals:', err);
           // Fallback to overview count if direct fetching fails
           const overviewCount = overviewData.pending_approvals ?? 
                                overviewData.team_stats?.pending_approvals ?? 
@@ -458,6 +488,7 @@ const AdminDashboard: React.FC = () => {
           if (overviewCount !== undefined && overviewCount !== null) {
             totalPendingCount = Number(overviewCount) || 0;
           }
+          debugInfo.error = 'Failed to fetch approvals count';
         }
         
         setPendingApprovalsCount(Math.max(0, totalPendingCount));
@@ -471,6 +502,7 @@ const AdminDashboard: React.FC = () => {
             total_expenses: overviewData.financials?.total_expenses,
             profit: overviewData.financials?.profit,
             pending_approvals_count: totalPendingCount,
+            ...debugInfo,
           });
         }
         
