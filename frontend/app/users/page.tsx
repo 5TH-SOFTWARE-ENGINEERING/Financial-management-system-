@@ -568,11 +568,69 @@ export default function UsersPage() {
     }
   };
 
-  const getSubordinates = (userId: string) => {
-    return allUsers.filter((u: any) => (u.managerId === userId) || (u.manager_id?.toString() === userId));
+  // Get direct subordinates of a user from a given user list
+  const getSubordinates = (userId: string, usersList: any[]) => {
+    const userIdStr = userId.toString();
+    return usersList.filter((u: any) => {
+      const managerId = u.managerId?.toString() || u.manager_id?.toString();
+      return managerId === userIdStr;
+    });
   };
 
-  const filteredUsers = allUsers.filter((userItem: any) => {
+  // Get all users in a finance_manager's hierarchy recursively (including themselves)
+  const getAllTeamMembers = (managerId: string, users: any[] = allUsers): any[] => {
+    const managerIdStr = managerId.toString();
+    const teamMembers = new Set<string>();
+    
+    // Add the manager themselves
+    const manager = users.find((u: any) => u.id?.toString() === managerIdStr || u.id === managerIdStr);
+    if (manager) {
+      teamMembers.add(manager.id?.toString() || manager.id.toString());
+    }
+    
+    // Recursively add all subordinates
+    const addSubordinatesRecursively = (parentId: string) => {
+      const subordinates = users.filter((u: any) => {
+        const mgrId = u.managerId?.toString() || u.manager_id?.toString();
+        return mgrId === parentId.toString();
+      });
+      
+      subordinates.forEach((sub: any) => {
+        const subId = sub.id?.toString() || sub.id.toString();
+        if (!teamMembers.has(subId)) {
+          teamMembers.add(subId);
+          addSubordinatesRecursively(subId);
+        }
+      });
+    };
+    
+    addSubordinatesRecursively(managerIdStr);
+    
+    return users.filter((u: any) => {
+      const userId = u.id?.toString() || u.id.toString();
+      return teamMembers.has(userId);
+    });
+  };
+
+  // Get accessible users based on role
+  const getAccessibleUsers = (): any[] => {
+    if (!user) return [];
+    
+    if (user.role === 'admin') {
+      // Admin sees all users
+      return allUsers;
+    } else if (user.role === 'finance_manager') {
+      // Finance manager sees only their team (themselves + all subordinates recursively)
+      return getAllTeamMembers(user.id);
+    }
+    
+    return [];
+  };
+
+  // Get users that match search/filter criteria from accessible users
+  const accessibleUsers = getAccessibleUsers();
+  
+  const filteredUsers = accessibleUsers.filter((userItem: any) => {
     const userRole = (userItem.role || '').toLowerCase();
     const userName = userItem.full_name || userItem.name || userItem.email || '';
     const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -628,7 +686,9 @@ export default function UsersPage() {
     return users.map((userItem: any) => {
       const userRole = (userItem.role || '').toLowerCase();
       const userId = userItem.id?.toString() || userItem.id;
-      const subordinates = getSubordinates(userId);
+      // Get all subordinates from accessible users to maintain hierarchy structure
+      // The filteredUsers are already applied at the root level, so we show all subordinates
+      const subordinates = getSubordinates(userId, accessibleUsers);
       const isExpanded = expandedUsers.has(userId);
       
       return (
@@ -766,9 +826,10 @@ export default function UsersPage() {
     );
   }
 
-  const totalUsers = allUsers.length;
-  const activeUsers = allUsers.filter((u: any) => u.is_active !== false).length;
-  const inactiveUsers = allUsers.filter((u: any) => u.is_active === false).length;
+  // Calculate stats based on accessible users
+  const totalUsers = accessibleUsers.length;
+  const activeUsers = accessibleUsers.filter((u: any) => u.is_active !== false).length;
+  const inactiveUsers = accessibleUsers.filter((u: any) => u.is_active === false).length;
 
   return (
     <Layout>
@@ -827,7 +888,7 @@ export default function UsersPage() {
             <StatContent>
               <StatInfo>
                 <p>Team Size</p>
-                <p>{user.role === 'admin' ? 'All' : getSubordinates(user.id).length}</p>
+                <p>{user.role === 'admin' ? 'All' : (accessibleUsers.length - 1)}</p>
               </StatInfo>
               <StatIcon color="#9333ea">
                 <Building size={16} />
@@ -882,8 +943,21 @@ export default function UsersPage() {
               <>
                 {renderUserHierarchy(
                   user.role === 'admin' 
-                    ? filteredUsers.filter((u: any) => !u.managerId && !u.manager_id)
-                    : filteredUsers.filter((u: any) => (u.managerId === user.id || u.manager_id?.toString() === user.id) || u.id === user.id)
+                    ? filteredUsers.filter((u: any) => {
+                        // For admin: show top-level users (no manager) at root
+                        const managerId = u.managerId?.toString() || u.manager_id?.toString();
+                        return !managerId;
+                      })
+                    : (() => {
+                        // For finance_manager: always show themselves at root, regardless of filters
+                        // This ensures they can always see and manage their team
+                        const currentUserId = user.id?.toString() || user.id.toString();
+                        const self = accessibleUsers.find((u: any) => {
+                          const userId = u.id?.toString() || u.id?.toString();
+                          return userId === currentUserId;
+                        });
+                        return self ? [self] : [];
+                      })()
                 )}
               </>
             ) : (
