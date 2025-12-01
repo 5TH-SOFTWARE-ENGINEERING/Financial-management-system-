@@ -39,11 +39,11 @@ const PageContainer = styled.div`
 
 const ContentContainer = styled.div`
   flex: 1;
-  width: 97.5%;
-  max-width: 980px;
+  width: 100%;
+  max-width: 1600px;
   margin-left: auto;
-  margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  margin-right: auto;
+  padding: ${theme.spacing.sm} ${theme.spacing.lg} ${theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
@@ -93,9 +93,23 @@ const SectionTitle = styled.h2`
 
 const DashboardGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: ${theme.spacing.lg};
   margin-bottom: ${theme.spacing.xl};
+  width: 100%;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+  
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: ${theme.spacing.xl};
+  }
+  
+  @media (min-width: 1400px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
 `;
 
 const getIconColor = (IconComponent: React.FC<any>) => {
@@ -166,8 +180,8 @@ const StatsCard = styled.div<{ $IconComponent: React.FC<any>; $clickable?: boole
 `;
 
 const CardIcon = styled.div<{ $IconComponent: React.FC<any> }>`
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   border-radius: ${theme.borderRadius.md};
   background: ${props => getIconColor(props.$IconComponent).bg};
   display: flex;
@@ -622,30 +636,34 @@ const AdminDashboard: React.FC = () => {
           )}
           <SectionTitle>System Overview</SectionTitle>
           {overview ? (
-            <DashboardGrid>
-              {createStatsCard(
-                DollarSign, 
-                'Total Revenue', 
-                `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              )}
-              {createStatsCard(
-                CreditCard, 
-                'Total Expenses', 
-                `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              )}
-              {createStatsCard(
-                TrendingUp, 
-                'Net Profit', 
-                `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              )}
-              {createStatsCard(
-                ClipboardList, 
-                'Pending Approvals', 
-                pendingApprovals.toString(),
-                true,
-                handlePendingApprovalsClick
-              )}
-            </DashboardGrid>
+            <>
+              <DashboardGrid>
+                {createStatsCard(
+                  DollarSign, 
+                  'Total Revenue', 
+                  `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                )}
+                {createStatsCard(
+                  CreditCard, 
+                  'Total Expenses', 
+                  `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                )}
+              </DashboardGrid>
+              <DashboardGrid style={{ marginTop: theme.spacing.lg }}>
+                {createStatsCard(
+                  TrendingUp, 
+                  'Net Profit', 
+                  `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                )}
+                {createStatsCard(
+                  ClipboardList, 
+                  'Pending Approvals', 
+                  pendingApprovals.toString(),
+                  true,
+                  handlePendingApprovalsClick
+                )}
+              </DashboardGrid>
+            </>
           ) : (
             <EmptyState>
               <p>No overview data available. Please ensure you have revenue and expense entries.</p>
