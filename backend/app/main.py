@@ -172,6 +172,147 @@ app = FastAPI(
     lifespan=lifespan,                     # <-- new way
 )
 
+
+# ------------------------------------------------------------------
+# Custom OpenAPI Schema with Bearer Token Authorization
+# ------------------------------------------------------------------
+def custom_openapi():
+    """
+    Custom OpenAPI schema generator that adds Bearer token authentication
+    to Swagger UI for easy testing of protected endpoints.
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    from fastapi.openapi.utils import get_openapi
+    
+    # Generate base OpenAPI schema
+    openapi_schema = get_openapi(
+        title=settings.APP_NAME,
+        version=settings.VERSION,
+        description="""
+## Financial Management System API
+
+A comprehensive REST API for managing financial data, budgets, forecasts, revenue, expenses, and reporting with role-based access control.
+
+### 🔑 Authentication
+
+Most endpoints require JWT Bearer token authentication.
+
+**How to authenticate:**
+1. Use the `/api/v1/auth/login` endpoint to get your access token
+2. Click the 🔒 "Authorize" button at the top of this page
+3. Enter **ONLY the token value** (without "Bearer" prefix)
+4. Click "Authorize" and then "Close"
+
+Now all protected endpoints will automatically include your token in requests.
+
+**Example:** Just enter the token value:
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+(Swagger automatically adds "Bearer" prefix to the Authorization header)
+
+### 📚 Documentation
+- Interactive API testing available in Swagger UI
+- Alternative documentation at `/redoc`
+- OpenAPI specification at `/openapi.json`
+        """,
+        routes=app.routes,
+        tags=[
+            {"name": "Authentication", "description": "User authentication and authorization"},
+            {"name": "users", "description": "User management endpoints"},
+            {"name": "Revenue", "description": "Revenue entry management"},
+            {"name": "Expenses", "description": "Expense entry management"},
+            {"name": "Budgeting & Forecasting", "description": "FP&A features - budgets, scenarios, forecasts"},
+            {"name": "Analytics", "description": "Advanced analytics and insights"},
+            {"name": "Dashboard", "description": "Dashboard data and metrics"},
+            {"name": "Approvals", "description": "Approval workflow management"},
+            {"name": "Projects", "description": "Project management"},
+            {"name": "Departments", "description": "Department management"},
+            {"name": "Reports", "description": "Report generation and management"},
+            {"name": "Notifications", "description": "Notification system"},
+            {"name": "Admin", "description": "Administrative functions"},
+        ],
+    )
+    
+    # Ensure components section exists
+    if "components" not in openapi_schema:
+        openapi_schema["components"] = {}
+    
+    # Add Bearer token security scheme
+    openapi_schema["components"]["securitySchemes"] = {
+        "Bearer": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": """
+**JWT Bearer Token Authentication**
+
+**Step-by-step authentication:**
+
+1. **Login to get token:**
+   - Use the `/api/v1/auth/login` endpoint below
+   - Enter your username/email and password
+   - Copy the `access_token` from the response
+
+2. **Authorize in Swagger:**
+   - Click the 🔒 **"Authorize"** button at the top right of this page
+   - In the "Value" field, enter **ONLY the token** (without "Bearer" prefix)
+   - Example: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c`
+   - Click **"Authorize"** button
+   - Click **"Close"**
+
+3. **Test endpoints:**
+   - Now all protected endpoints will automatically include your token
+   - The Authorization header will be: `Authorization: Bearer <your_token>`
+
+**Important Notes:**
+- ✅ Enter **ONLY the token value** (Swagger automatically adds "Bearer" prefix)
+- ❌ Do NOT include "Bearer" in the value field
+- ⏱️ Token expires after 30 minutes (default)
+- 🔄 Re-authorize if you get 401 Unauthorized errors
+
+**Token Example:**
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+            """.strip()
+        }
+    }
+    
+    # Add servers
+    openapi_schema["servers"] = [
+        {
+            "url": "http://localhost:8000",
+            "description": "Development server"
+        },
+        {
+            "url": "https://api.example.com",
+            "description": "Production server (update with your production URL)"
+        }
+    ]
+    
+    # Add contact information
+    openapi_schema["info"]["contact"] = {
+        "name": "Finance Management System Support",
+        "email": "support@finance-system.com"
+    }
+    
+    # Add license
+    openapi_schema["info"]["license"] = {
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT"
+    }
+    
+    # Cache the schema
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+# Override default OpenAPI schema with custom one
+app.openapi = custom_openapi
+
 # Add CORS middleware
 # Handle wildcard or specific origins
 origins = settings.ALLOWED_ORIGINS.strip() if settings.ALLOWED_ORIGINS else ""
