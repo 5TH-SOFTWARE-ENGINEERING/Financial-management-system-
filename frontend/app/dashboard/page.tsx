@@ -7,7 +7,8 @@ import { ComponentGate, ComponentId } from '@/lib/rbac';
 import {
   Users, DollarSign, TrendingUp, FileText, Shield, Calendar,
   CreditCard, Activity, Briefcase, UserCheck,
-  ClipboardList, BarChart3, Wallet, ArrowRight, AlertCircle
+  ClipboardList, BarChart3, Wallet, ArrowRight, AlertCircle,
+  LineChart, Target, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -236,6 +237,77 @@ const ClickableIndicator = styled(ArrowRight)`
   }
 `;
 
+const GrowthIndicator = styled.div<{ $positive: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${props => props.$positive ? '#059669' : '#ef4444'};
+  margin-top: ${theme.spacing.xs};
+`;
+
+const AnalyticsButton = styled.button`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  border: none;
+  padding: ${theme.spacing.md} ${theme.spacing.xl};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.bold};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  transition: all ${theme.transitions.default};
+  box-shadow: ${CardShadow};
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: ${CardShadowHover};
+    opacity: 0.95;
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const AnalyticsSection = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  padding: ${theme.spacing.xl};
+  margin-top: ${theme.spacing.xl};
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: ${theme.spacing.lg};
+  
+  .analytics-info {
+    flex: 1;
+    min-width: 250px;
+    
+    h3 {
+      font-size: ${theme.typography.fontSizes.lg};
+      font-weight: ${theme.typography.fontWeights.bold};
+      color: ${TEXT_COLOR_DARK};
+      margin: 0 0 ${theme.spacing.sm};
+      display: flex;
+      align-items: center;
+      gap: ${theme.spacing.sm};
+    }
+    
+    p {
+      font-size: ${theme.typography.fontSizes.sm};
+      color: ${TEXT_COLOR_MUTED};
+      margin: 0;
+    }
+  }
+`;
+
 const TableContainer = styled.div`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
@@ -416,6 +488,7 @@ const AdminDashboard: React.FC = () => {
   const [overview, setOverview] = useState<any | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
+  const [analyticsData, setAnalyticsData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -431,9 +504,10 @@ const AdminDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const [overviewRes, activityRes] = await Promise.all([
+        const [overviewRes, activityRes, analyticsRes] = await Promise.all([
           apiClient.getDashboardOverview(),
           apiClient.getDashboardRecentActivity(8),
+          apiClient.getAdvancedKPIs({ period: 'month' }).catch(() => null), // Optional analytics
         ]);
         // Ensure overview data is properly set
         const overviewData = overviewRes.data || {};
@@ -529,6 +603,11 @@ const AdminDashboard: React.FC = () => {
           status: entry.status ?? (entry.is_approved ? 'approved' : 'pending'),
         }));
         setRecentActivity(activity);
+        
+        // Set analytics data if available
+        if (analyticsRes?.data) {
+          setAnalyticsData(analyticsRes.data);
+        }
       } catch (err: any) {
         const errorMessage = err.response?.data?.detail || err.message || 'Failed to load dashboard data';
         setError(errorMessage);
@@ -585,12 +664,18 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleAnalyticsClick = () => {
+    router.push('/analytics');
+  };
+
   const createStatsCard = (
     Icon: React.FC<any>, 
     title: string, 
     value: string, 
     clickable: boolean = false,
-    onClick?: () => void
+    onClick?: () => void,
+    growth?: number,
+    growthLabel?: string
   ) => (
     <StatsCard 
       $IconComponent={Icon} 
@@ -603,6 +688,12 @@ const AdminDashboard: React.FC = () => {
         {value}
         {clickable && <ClickableIndicator />}
       </CardValue>
+      {growth !== undefined && growth !== null && !isNaN(growth) && (
+        <GrowthIndicator $positive={growth >= 0}>
+          {growth >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+          {growthLabel || `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`} vs previous period
+        </GrowthIndicator>
+      )}
     </StatsCard>
   );
 
@@ -641,19 +732,28 @@ const AdminDashboard: React.FC = () => {
                 {createStatsCard(
                   DollarSign, 
                   'Total Revenue', 
-                  `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  false,
+                  undefined,
+                  analyticsData?.growth?.revenue_growth_percent
                 )}
                 {createStatsCard(
                   CreditCard, 
                   'Total Expenses', 
-                  `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  false,
+                  undefined,
+                  analyticsData?.growth?.expense_growth_percent
                 )}
               </DashboardGrid>
               <DashboardGrid style={{ marginTop: theme.spacing.lg }}>
                 {createStatsCard(
                   TrendingUp, 
                   'Net Profit', 
-                  `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  false,
+                  undefined,
+                  analyticsData?.growth?.profit_growth_percent
                 )}
                 {createStatsCard(
                   ClipboardList, 
@@ -719,6 +819,23 @@ const AdminDashboard: React.FC = () => {
               </tbody>
             </Table>
           </TableContainer>
+
+          <AnalyticsSection>
+            <div className="analytics-info">
+              <h3>
+                <BarChart3 size={24} />
+                Advanced Analytics
+              </h3>
+              <p>
+                Get real-time insights into KPIs, trends, profitability analysis, and detailed financial reports.
+                View comprehensive analytics with customizable dashboards and reporting tools.
+              </p>
+            </div>
+            <AnalyticsButton onClick={handleAnalyticsClick}>
+              <LineChart size={20} />
+              View Analytics
+            </AnalyticsButton>
+          </AnalyticsSection>
 
         </ContentContainer>
       </PageContainer>
