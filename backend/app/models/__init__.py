@@ -10,6 +10,7 @@ from .audit import AuditLog
 from .notification import Notification
 from .project import Project
 from .login_history import LoginHistory
+from .budget import Budget, BudgetItem, BudgetScenario, Forecast, BudgetVariance, BudgetType, BudgetPeriod, BudgetStatus
 
 __all__ = [
     "User", "UserRole", "Role",
@@ -17,5 +18,7 @@ __all__ = [
     "ApprovalWorkflow", "ApprovalComment",
     "Report", "ReportSchedule",
     "AuditLog", "Notification",
-    "Project", "LoginHistory"
+    "Project", "LoginHistory",
+    "Budget", "BudgetItem", "BudgetScenario", "Forecast", "BudgetVariance",
+    "BudgetType", "BudgetPeriod", "BudgetStatus"
 ]

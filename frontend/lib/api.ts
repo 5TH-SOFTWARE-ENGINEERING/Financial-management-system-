@@ -940,6 +940,110 @@ class ApiClient {
     return this.get('/admin/audit/logs', { params });
   }
 
+  // ============================================================================
+  // BUDGETING & FORECASTING (FP&A)
+  // ============================================================================
+
+  // Budget Management
+  async getBudgets(params?: { skip?: number; limit?: number; status?: string; department?: string }) {
+    return this.get('/budgeting/budgets', { params });
+  }
+
+  async getBudget(id: number) {
+    return this.get(`/budgeting/budgets/${id}`);
+  }
+
+  async createBudget(data: any) {
+    return this.post('/budgeting/budgets', data);
+  }
+
+  async createBudgetFromTemplate(templateName: string, data: any) {
+    const params: any = {
+      template_name: templateName
+    };
+    if (data.name) params.name = data.name;
+    if (data.start_date) params.start_date = data.start_date;
+    if (data.end_date) params.end_date = data.end_date;
+    if (data.department) params.department = data.department;
+    if (data.project) params.project = data.project;
+    
+    return this.post(`/budgeting/budgets/from-template`, {}, { params });
+  }
+
+  async updateBudget(id: number, data: any) {
+    return this.put(`/budgeting/budgets/${id}`, data);
+  }
+
+  async deleteBudget(id: number) {
+    return this.delete(`/budgeting/budgets/${id}`);
+  }
+
+  async validateBudget(id: number) {
+    return this.post(`/budgeting/budgets/${id}/validate`);
+  }
+
+  // Budget Items
+  async getBudgetItems(budgetId: number) {
+    return this.get(`/budgeting/budgets/${budgetId}/items`);
+  }
+
+  async createBudgetItem(budgetId: number, data: any) {
+    return this.post(`/budgeting/budgets/${budgetId}/items`, data);
+  }
+
+  async updateBudgetItem(budgetId: number, itemId: number, data: any) {
+    return this.put(`/budgeting/budgets/${budgetId}/items/${itemId}`, data);
+  }
+
+  async deleteBudgetItem(budgetId: number, itemId: number) {
+    return this.delete(`/budgeting/budgets/${budgetId}/items/${itemId}`);
+  }
+
+  // Scenario Planning
+  async getScenarios(budgetId: number) {
+    return this.get(`/budgeting/budgets/${budgetId}/scenarios`);
+  }
+
+  async createScenario(budgetId: number, data: any) {
+    return this.post(`/budgeting/budgets/${budgetId}/scenarios`, data);
+  }
+
+  async compareScenarios(budgetId: number, scenarioIds: number[]) {
+    return this.post(`/budgeting/budgets/${budgetId}/scenarios/compare`, { scenario_ids: scenarioIds });
+  }
+
+  // Forecasting
+  async getForecasts(params?: { skip?: number; limit?: number }) {
+    return this.get('/budgeting/forecasts', { params });
+  }
+
+  async createForecast(data: any) {
+    return this.post('/budgeting/forecasts', data);
+  }
+
+  async getForecast(id: number) {
+    return this.get(`/budgeting/forecasts/${id}`);
+  }
+
+  async deleteForecast(id: number) {
+    return this.delete(`/budgeting/forecasts/${id}`);
+  }
+
+  // Variance Analysis
+  async calculateVariance(budgetId: number, periodStart: string, periodEnd: string) {
+    return this.post(`/budgeting/budgets/${budgetId}/variance`, {}, {
+      params: { period_start: periodStart, period_end: periodEnd }
+    });
+  }
+
+  async getVarianceHistory(budgetId: number, params?: { skip?: number; limit?: number }) {
+    return this.get(`/budgeting/budgets/${budgetId}/variance`, { params });
+  }
+
+  async getVarianceSummary(budgetId: number) {
+    return this.get(`/budgeting/budgets/${budgetId}/variance/summary`);
+  }
+
   // Generic request method
   async request<T = any>(config: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.request<T>(config);

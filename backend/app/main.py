@@ -17,8 +17,9 @@ from .core.database import engine, Base, get_db, SessionLocal
 from .api.v1 import (
     auth, users, revenue, expenses, dashboard,
     reports, approvals, notifications, admin,
-    projects, departments, analytics
+    projects, departments, analytics, budgeting
 )
+
 from .utils.audit import AuditLogger, AuditAction
 
 # --- Critical imports for default admin creation ---
@@ -290,6 +291,7 @@ app.include_router(admin.router, prefix=f"{api_prefix}/admin", tags=["Admin"])
 app.include_router(projects.router, prefix=f"{api_prefix}/projects", tags=["Projects"])
 app.include_router(departments.router, prefix=f"{api_prefix}/departments", tags=["Departments"])
 app.include_router(analytics.router, prefix=f"{api_prefix}/analytics", tags=["Analytics"])
+app.include_router(budgeting.router, prefix=f"{api_prefix}/budgeting", tags=["Budgeting & Forecasting"])
 
 
 # Health check endpoint
