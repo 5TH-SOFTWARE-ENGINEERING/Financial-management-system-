@@ -356,7 +356,44 @@ const ApprovalTitle = styled.h3`
 const ApprovalDescription = styled.p`
   font-size: ${theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_MUTED};
-  margin: 0;
+  margin: ${theme.spacing.xs} 0 0 0;
+  line-height: 1.6;
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  letter-spacing: 0.01em;
+  
+  /* Limit height and add ellipsis for very long descriptions */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: calc(1.6em * 3); /* 3 lines with line-height */
+  
+  /* Smooth transition on hover to show full text */
+  transition: all ${theme.transitions.default};
+  
+  /* Better text rendering */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  ${ApprovalItemContainer}:hover & {
+    display: block;
+    -webkit-line-clamp: unset;
+    max-height: none;
+    overflow: visible;
+    color: ${TEXT_COLOR_DARK};
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    font-size: ${theme.typography.fontSizes.xs};
+    -webkit-line-clamp: 2;
+    max-height: calc(1.6em * 2);
+  }
 `;
 
 const ApprovalMeta = styled.div`

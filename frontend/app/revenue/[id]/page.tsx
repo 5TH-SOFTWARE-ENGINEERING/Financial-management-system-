@@ -169,15 +169,45 @@ const InfoContent = styled.div`
 `;
 
 const Description = styled.div`
-  padding: ${theme.spacing.md};
+  padding: ${theme.spacing.lg};
   background: ${theme.colors.backgroundSecondary};
   border-radius: ${theme.borderRadius.md};
   margin-top: ${theme.spacing.md};
+  border-left: 3px solid ${PRIMARY_COLOR};
+  transition: all ${theme.transitions.default};
+  
+  &:hover {
+    background: ${theme.colors.background};
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
   
   p {
     margin: 0;
     color: ${TEXT_COLOR_DARK};
-    line-height: 1.6;
+    line-height: 1.7;
+    font-size: ${theme.typography.fontSizes.sm};
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    letter-spacing: 0.01em;
+    
+    /* Better text rendering */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* Handle long text gracefully */
+    max-width: 100%;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    padding: ${theme.spacing.md};
+    
+    p {
+      font-size: ${theme.typography.fontSizes.xs};
+      line-height: 1.6;
+    }
   }
 `;
 
@@ -281,6 +311,62 @@ const ModalActions = styled.div`
   justify-content: flex-end;
 `;
 
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin-bottom: ${theme.spacing.sm};
+`;
+
+const PasswordInput = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
 interface RevenueDetail {
   id: number;
   title: string;
@@ -312,8 +398,13 @@ export default function RevenueDetailPage() {
   const [revenue, setRevenue] = useState<RevenueDetail | null>(null);
   const [processing, setProcessing] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectPassword, setRejectPassword] = useState('');
+  const [rejectPasswordError, setRejectPasswordError] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [relatedApprovalId, setRelatedApprovalId] = useState<number | null>(null);
 
   const canApprove = () => {
@@ -399,28 +490,41 @@ export default function RevenueDetailPage() {
     }
   };
 
-  const handleReject = async (reason: string) => {
+  const handleReject = async (reason: string, password: string) => {
     if (!revenueId || !canApprove()) {
       toast.error('You do not have permission to reject revenue');
       return;
     }
 
     if (!reason.trim()) {
-      toast.error('Please provide a rejection reason');
+      setRejectPasswordError('Please provide a rejection reason');
+      return;
+    }
+
+    if (reason.trim().length < 10) {
+      setRejectPasswordError('Rejection reason must be at least 10 characters long');
+      return;
+    }
+
+    if (!password.trim()) {
+      setRejectPasswordError('Password is required');
       return;
     }
 
     setProcessing(true);
     setError(null);
+    setRejectPasswordError(null);
 
     try {
-      await apiClient.rejectItem(revenueId, 'revenue', reason);
+      await apiClient.rejectItem(revenueId, 'revenue', reason, password.trim());
       toast.success('Revenue entry rejected');
       setShowRejectModal(false);
       setRejectionReason('');
+      setRejectPassword('');
       await loadRevenue();
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to reject revenue';
+      setRejectPasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -428,22 +532,27 @@ export default function RevenueDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (password: string) => {
     if (!revenueId || !revenue) return;
 
-    if (!confirm('Are you sure you want to delete this revenue entry? This action cannot be undone.')) {
+    if (!password.trim()) {
+      setDeletePasswordError('Password is required');
       return;
     }
 
     setDeleting(true);
     setError(null);
+    setDeletePasswordError(null);
 
     try {
-      await apiClient.deleteRevenue(revenueId);
+      await apiClient.deleteRevenue(revenueId, password.trim());
       toast.success('Revenue entry deleted successfully');
+      setShowDeleteModal(false);
+      setDeletePassword('');
       router.push('/revenue/list');
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to delete revenue';
+      setDeletePasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -550,7 +659,12 @@ export default function RevenueDetailPage() {
                   </Button>
                   <Button
                     variant="destructive"
-                    onClick={() => setShowRejectModal(true)}
+                    onClick={() => {
+                      setShowRejectModal(true);
+                      setRejectionReason('');
+                      setRejectPassword('');
+                      setRejectPasswordError(null);
+                    }}
                     disabled={processing}
                   >
                     <XCircle size={16} style={{ marginRight: theme.spacing.sm }} />
@@ -573,20 +687,15 @@ export default function RevenueDetailPage() {
               {canEdit() && (
                 <Button
                   variant="destructive"
-                  onClick={handleDelete}
+                  onClick={() => {
+                    setShowDeleteModal(true);
+                    setDeletePassword('');
+                    setDeletePasswordError(null);
+                  }}
                   disabled={processing || deleting}
                 >
-                  {deleting ? (
-                    <>
-                      <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
-                      Delete
-                    </>
-                  )}
+                  <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                  Delete
                 </Button>
               )}
             </ActionButtons>
@@ -758,31 +867,171 @@ export default function RevenueDetailPage() {
           <ModalOverlay onClick={() => {
             setShowRejectModal(false);
             setRejectionReason('');
+            setRejectPassword('');
+            setRejectPasswordError(null);
           }}>
             <ModalContent onClick={(e) => e.stopPropagation()}>
-              <ModalTitle>Reject Revenue Entry</ModalTitle>
-              <TextArea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Please provide a reason for rejection..."
-                rows={4}
-              />
+              <ModalTitle>
+                <XCircle size={20} style={{ color: '#ef4444', marginRight: theme.spacing.sm }} />
+                Reject Revenue Entry
+              </ModalTitle>
+              
+              <WarningBox>
+                <p>
+                  You are about to reject this revenue entry. This action cannot be undone.
+                  Please enter your own password to verify this action.
+                </p>
+              </WarningBox>
+
+              <FormGroup>
+                <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                <TextArea
+                  id="rejection-reason"
+                  value={rejectionReason}
+                  onChange={(e) => {
+                    setRejectionReason(e.target.value);
+                    setRejectPasswordError(null);
+                  }}
+                  placeholder="Please provide a reason for rejection (minimum 10 characters)..."
+                  rows={4}
+                />
+                {rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10 && (
+                  <ErrorText>Rejection reason must be at least 10 characters long</ErrorText>
+                )}
+              </FormGroup>
+
+              <FormGroup>
+                <Label htmlFor="reject-password">
+                  Enter your own password to confirm rejection:
+                </Label>
+                <PasswordInput
+                  id="reject-password"
+                  type="password"
+                  value={rejectPassword}
+                  onChange={(e) => {
+                    setRejectPassword(e.target.value);
+                    setRejectPasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && rejectionReason.trim().length >= 10 && rejectPassword.trim()) {
+                      handleReject(rejectionReason, rejectPassword);
+                    }
+                  }}
+                />
+                {rejectPasswordError && (
+                  <ErrorText>{rejectPasswordError}</ErrorText>
+                )}
+              </FormGroup>
+
               <ModalActions>
                 <Button
                   variant="outline"
                   onClick={() => {
                     setShowRejectModal(false);
                     setRejectionReason('');
+                    setRejectPassword('');
+                    setRejectPasswordError(null);
                   }}
+                  disabled={processing}
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={() => handleReject(rejectionReason)}
-                  disabled={!rejectionReason.trim() || processing}
+                  onClick={() => handleReject(rejectionReason, rejectPassword)}
+                  disabled={!rejectionReason.trim() || rejectionReason.trim().length < 10 || !rejectPassword.trim() || processing}
                 >
-                  Reject
+                  {processing ? (
+                    <>
+                      <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                      Rejecting...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle size={16} style={{ marginRight: theme.spacing.sm }} />
+                      Reject
+                    </>
+                  )}
+                </Button>
+              </ModalActions>
+            </ModalContent>
+          </ModalOverlay>
+        )}
+
+        {/* Delete Modal with Password Verification */}
+        {showDeleteModal && (
+          <ModalOverlay onClick={() => {
+            setShowDeleteModal(false);
+            setDeletePassword('');
+            setDeletePasswordError(null);
+          }}>
+            <ModalContent onClick={(e) => e.stopPropagation()}>
+              <ModalTitle>
+                <Trash2 size={20} style={{ color: '#ef4444', marginRight: theme.spacing.sm }} />
+                Delete Revenue Entry
+              </ModalTitle>
+              
+              <WarningBox>
+                <p>
+                  <strong>Warning:</strong> You are about to permanently delete this revenue entry. 
+                  This action cannot be undone. Please enter your password to confirm this deletion.
+                </p>
+              </WarningBox>
+
+              <FormGroup>
+                <Label htmlFor="delete-password">
+                  Enter your password to confirm deletion:
+                </Label>
+                <PasswordInput
+                  id="delete-password"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => {
+                    setDeletePassword(e.target.value);
+                    setDeletePasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && deletePassword.trim()) {
+                      handleDelete(deletePassword);
+                    }
+                  }}
+                  autoFocus
+                />
+                {deletePasswordError && (
+                  <ErrorText>{deletePasswordError}</ErrorText>
+                )}
+              </FormGroup>
+
+              <ModalActions>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeletePassword('');
+                    setDeletePasswordError(null);
+                  }}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDelete(deletePassword)}
+                  disabled={!deletePassword.trim() || deleting}
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                      Delete
+                    </>
+                  )}
                 </Button>
               </ModalActions>
             </ModalContent>
