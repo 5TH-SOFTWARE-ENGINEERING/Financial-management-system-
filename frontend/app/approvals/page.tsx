@@ -682,11 +682,11 @@ export default function ApprovalsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [processingId, setProcessingId] = useState<number | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [rejectPassword, setRejectPassword] = useState<string>('');
   const [rejectPasswordError, setRejectPasswordError] = useState<string | null>(null);
-  const [showRejectModal, setShowRejectModal] = useState<number | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -704,7 +704,7 @@ export default function ApprovalsPage() {
     setError(null);
     
     try {
-      // Fetch approval workflows - only get pending ones for display
+      // Fetch approval workflows - get all workflows regardless of status
       const workflowsResponse = await apiClient.getApprovals();
       const workflows = (workflowsResponse.data || []).map((w: any) => ({
         id: w.id,
@@ -722,10 +722,28 @@ export default function ApprovalsPage() {
         workflow_id: w.id,
       }));
 
-      // Fetch pending revenue entries
+      // Collect all revenue/expense entry IDs that already have workflows
+      // This prevents duplication - if an entry has a workflow, we only show the workflow
+      const revenueIdsWithWorkflow = new Set(
+        workflows
+          .filter((w: any) => w.revenue_entry_id)
+          .map((w: any) => w.revenue_entry_id)
+      );
+      const expenseIdsWithWorkflow = new Set(
+        workflows
+          .filter((w: any) => w.expense_entry_id)
+          .map((w: any) => w.expense_entry_id)
+      );
+
+      // Fetch pending revenue entries - only show those WITHOUT workflows
       const revenuesResponse = await apiClient.getRevenues({ is_approved: false });
       const pendingRevenues = (revenuesResponse.data || [])
-        .filter((r: any) => !r.is_approved)
+        .filter((r: any) => {
+          // Only include if:
+          // 1. Not approved yet
+          // 2. Doesn't have an existing workflow (to avoid duplication)
+          return !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
+        })
         .map((r: any) => ({
           id: r.id,
           type: 'revenue' as const,
@@ -738,10 +756,15 @@ export default function ApprovalsPage() {
           revenue_entry_id: r.id,
         }));
 
-      // Fetch pending expense entries
+      // Fetch pending expense entries - only show those WITHOUT workflows
       const expensesResponse = await apiClient.getExpenses({ is_approved: false });
       const pendingExpenses = (expensesResponse.data || [])
-        .filter((e: any) => !e.is_approved)
+        .filter((e: any) => {
+          // Only include if:
+          // 1. Not approved yet
+          // 2. Doesn't have an existing workflow (to avoid duplication)
+          return !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
+        })
         .map((e: any) => ({
           id: e.id,
           type: 'expense' as const,
@@ -754,7 +777,7 @@ export default function ApprovalsPage() {
           expense_entry_id: e.id,
         }));
 
-      // Combine all approvals
+      // Combine all approvals (workflows + standalone entries without workflows)
       const allApprovals = [...workflows, ...pendingRevenues, ...pendingExpenses];
       
       // Sort by created date (newest first)
@@ -780,7 +803,8 @@ export default function ApprovalsPage() {
       return;
     }
 
-    setProcessingId(item.id);
+    const itemKey = `${item.type}-${item.id}`;
+    setProcessingId(itemKey);
     setError(null);
 
     try {
@@ -797,7 +821,26 @@ export default function ApprovalsPage() {
       
       await loadApprovals();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to approve item';
+      // Handle different error types
+      let errorMessage = 'Failed to approve item';
+      
+      if (err.response) {
+        const status = err.response.status;
+        const detail = err.response.data?.detail || err.response.data?.message;
+        
+        if (status === 403) {
+          errorMessage = detail || 'You do not have permission to approve this item';
+        } else if (status === 400) {
+          errorMessage = detail || 'Invalid request. The item may already be processed.';
+        } else if (status === 404) {
+          errorMessage = detail || 'Item not found. It may have been deleted.';
+        } else {
+          errorMessage = detail || `Error: ${status}`;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -816,12 +859,18 @@ export default function ApprovalsPage() {
       return;
     }
 
+    if (reason.trim().length < 10) {
+      setRejectPasswordError('Rejection reason must be at least 10 characters long');
+      return;
+    }
+
     if (!password.trim()) {
       setRejectPasswordError('Password is required');
       return;
     }
 
-    setProcessingId(item.id);
+    const itemKey = `${item.type}-${item.id}`;
+    setProcessingId(itemKey);
     setError(null);
     setRejectPasswordError(null);
 
@@ -842,7 +891,28 @@ export default function ApprovalsPage() {
       setRejectPassword('');
       await loadApprovals();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to reject item';
+      // Handle different error types
+      let errorMessage = 'Failed to reject item';
+      
+      if (err.response) {
+        const status = err.response.status;
+        const detail = err.response.data?.detail || err.response.data?.message;
+        
+        if (status === 403) {
+          errorMessage = detail || 'You do not have permission to reject this item or the password is incorrect';
+        } else if (status === 400) {
+          errorMessage = detail || 'Invalid request. Please check your input.';
+        } else if (status === 404) {
+          errorMessage = detail || 'Item not found. It may have been deleted.';
+        } else if (status === 500) {
+          errorMessage = detail || 'Server error. Please try again later.';
+        } else {
+          errorMessage = detail || `Error: ${status}`;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setRejectPasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -982,6 +1052,11 @@ export default function ApprovalsPage() {
                           <ApprovalTitle>
                             {item.title.includes('Item Type:') ? getItemType(item.title) : item.title}
                           </ApprovalTitle>
+                          {item.description && (
+                            <ApprovalDescription>
+                              {item.description}
+                            </ApprovalDescription>
+                          )}
                         </div>
                         <StatusBadge $status={item.status}>
                           {item.status.toUpperCase()}
@@ -996,12 +1071,19 @@ export default function ApprovalsPage() {
                           </span>
                         )}
                         <span>
-                          {new Date(item.created_at).toLocaleDateString()} at{' '}
-                          {new Date(item.created_at).toLocaleTimeString()}
+                          {item.created_at ? (
+                            <>
+                              {new Date(item.created_at).toLocaleDateString()} at{' '}
+                              {new Date(item.created_at).toLocaleTimeString()}
+                            </>
+                          ) : (
+                            'Date not available'
+                          )}
                         </span>
                         {item.approved_at && (
                           <span style={{ color: '#059669' }}>
-                            Approved: {new Date(item.approved_at).toLocaleDateString()}
+                            Approved: {new Date(item.approved_at).toLocaleDateString()} at{' '}
+                            {new Date(item.approved_at).toLocaleTimeString()}
                           </span>
                         )}
                         {item.rejection_reason && (
@@ -1015,12 +1097,12 @@ export default function ApprovalsPage() {
                     <ApprovalActions>
                       {item.status === 'pending' && canApprove() && (
                         <>
-                          <ActionButton
-                            $variant="primary"
-                            onClick={() => handleApprove(item)}
-                            disabled={processingId === item.id}
-                          >
-                            {processingId === item.id ? (
+                      <ActionButton
+                        $variant="primary"
+                        onClick={() => handleApprove(item)}
+                        disabled={processingId === `${item.type}-${item.id}`}
+                      >
+                        {processingId === `${item.type}-${item.id}` ? (
                               <>
                                 <SpinningIcon size={16} />
                                 Approving...
@@ -1035,12 +1117,12 @@ export default function ApprovalsPage() {
                           <ActionButton
                             $variant="danger"
                             onClick={() => {
-                              setShowRejectModal(item.id);
+                              setShowRejectModal(`${item.type}-${item.id}`);
                               setRejectionReason('');
                               setRejectPassword('');
                               setRejectPasswordError(null);
                             }}
-                            disabled={processingId === item.id}
+                            disabled={processingId === `${item.type}-${item.id}`}
                           >
                             <XCircle />
                             Reject
@@ -1071,7 +1153,7 @@ export default function ApprovalsPage() {
 
         {/* Rejection Modal */}
         {showRejectModal && (() => {
-          const itemToReject = approvals.find(a => a.id === showRejectModal);
+          const itemToReject = approvals.find(a => `${a.type}-${a.id}` === showRejectModal);
           if (!itemToReject) return null;
           
           return (
@@ -1103,9 +1185,12 @@ export default function ApprovalsPage() {
                       setRejectionReason(e.target.value);
                       setRejectPasswordError(null);
                     }}
-                    placeholder="Please provide a reason for rejection..."
+                    placeholder="Please provide a reason for rejection (minimum 10 characters)..."
                     rows={4}
                   />
+                  {rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10 && (
+                    <ErrorText>Rejection reason must be at least 10 characters long</ErrorText>
+                  )}
                 </FormGroup>
 
                 <FormGroup>
@@ -1122,7 +1207,7 @@ export default function ApprovalsPage() {
                     }}
                     placeholder="Enter your password"
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && rejectionReason.trim() && rejectPassword.trim()) {
+                      if (e.key === 'Enter' && rejectionReason.trim().length >= 10 && rejectPassword.trim()) {
                         handleReject(itemToReject, rejectionReason, rejectPassword);
                       }
                     }}
@@ -1150,7 +1235,7 @@ export default function ApprovalsPage() {
                     onClick={() => {
                       handleReject(itemToReject, rejectionReason, rejectPassword);
                     }}
-                    disabled={!rejectionReason.trim() || !rejectPassword.trim() || processingId === showRejectModal}
+                    disabled={!rejectionReason.trim() || rejectionReason.trim().length < 10 || !rejectPassword.trim() || processingId === showRejectModal}
                   >
                     {processingId === showRejectModal ? (
                       <>
