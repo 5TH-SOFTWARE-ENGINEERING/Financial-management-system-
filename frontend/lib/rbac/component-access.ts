@@ -36,6 +36,13 @@ export enum ComponentId {    
     REPORT_EDIT = 'report.edit',
     REPORT_DELETE = 'report.delete',
 
+    // Forecast management components
+    FORECAST_LIST = 'forecast.list',
+    FORECAST_VIEW = 'forecast.view',
+    FORECAST_CREATE = 'forecast.create',
+    FORECAST_EDIT = 'forecast.edit',
+    FORECAST_DELETE = 'forecast.delete',
+
     // Department management components
     DEPARTMENT_LIST = 'department.list',
     DEPARTMENT_CREATE = 'department.create',
@@ -101,6 +108,7 @@ export enum ComponentId {    
     SIDEBAR_EXPENSE = 'sidebar.expense',
     SIDEBAR_TRANSACTION = 'sidebar.transaction',
     SIDEBAR_REPORT = 'sidebar.report',
+    SIDEBAR_FORECAST = 'sidebar.forecast',
     SIDEBAR_DEPARTMENT = 'sidebar.department',
     SIDEBAR_PROJECT = 'sidebar.project',
     
@@ -143,6 +151,11 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.REPORT_CREATE,
         ComponentId.REPORT_EDIT,
         ComponentId.REPORT_DELETE,
+        ComponentId.FORECAST_LIST,
+        ComponentId.FORECAST_VIEW,
+        ComponentId.FORECAST_CREATE,
+        ComponentId.FORECAST_EDIT,
+        ComponentId.FORECAST_DELETE,
         ComponentId.DEPARTMENT_LIST,
         ComponentId.DEPARTMENT_CREATE,
         ComponentId.DEPARTMENT_EDIT,
@@ -182,6 +195,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_EXPENSE,
         ComponentId.SIDEBAR_TRANSACTION,
         ComponentId.SIDEBAR_REPORT,
+        ComponentId.SIDEBAR_FORECAST,
         ComponentId.SIDEBAR_BUDGETS,
         ComponentId.SIDEBAR_DEPARTMENT,
         ComponentId.SIDEBAR_PROJECT,
@@ -217,6 +231,11 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.REPORT_CREATE,
         ComponentId.REPORT_EDIT,
         ComponentId.REPORT_DELETE,
+        ComponentId.FORECAST_LIST,
+        ComponentId.FORECAST_VIEW,
+        ComponentId.FORECAST_CREATE,
+        ComponentId.FORECAST_EDIT,
+        ComponentId.FORECAST_DELETE,
         ComponentId.DEPARTMENT_LIST,
         ComponentId.DEPARTMENT_CREATE,
         ComponentId.DEPARTMENT_EDIT,
@@ -246,6 +265,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_EXPENSE,
         ComponentId.SIDEBAR_TRANSACTION,
         ComponentId.SIDEBAR_REPORT,
+        ComponentId.SIDEBAR_FORECAST,
         ComponentId.SIDEBAR_BUDGETS,
         ComponentId.SIDEBAR_DEPARTMENT,
         ComponentId.SIDEBAR_PROJECT,
@@ -268,6 +288,8 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.TRANSACTION_LIST,
         ComponentId.REPORT_LIST,
         ComponentId.REPORT_CREATE,
+        ComponentId.FORECAST_LIST,
+        ComponentId.FORECAST_VIEW,
         ComponentId.PROFILE_VIEW,
         ComponentId.PROFILE_EDIT,
         // Sidebar
@@ -275,6 +297,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_EXPENSE,
         ComponentId.SIDEBAR_TRANSACTION,
         ComponentId.SIDEBAR_REPORT,
+        ComponentId.SIDEBAR_FORECAST,
     ],
     
     [UserType.EMPLOYEE]: [
@@ -287,11 +310,14 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.REVENUE_EDIT,
         ComponentId.EXPENSE_CREATE,
         ComponentId.EXPENSE_EDIT,
+        ComponentId.FORECAST_LIST,
+        ComponentId.FORECAST_VIEW,
         ComponentId.PROFILE_VIEW,
         ComponentId.PROFILE_EDIT,
         // Sidebar
         ComponentId.SIDEBAR_REVENUE,
         ComponentId.SIDEBAR_EXPENSE,
+        ComponentId.SIDEBAR_FORECAST,
     ],
 };
 
