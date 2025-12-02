@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  DollarSign, Save, X, Plus, Trash2, AlertCircle, CheckCircle, ArrowLeft
+  DollarSign, Save, X, Plus, Trash2, AlertCircle, CheckCircle, ArrowLeft, Loader2
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -243,6 +243,96 @@ const Spinner = styled.div`
   }
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContent = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.xl};
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.lg};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin-bottom: ${theme.spacing.sm};
+`;
+
+const PasswordInput = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${theme.spacing.lg};
+`;
+
 interface BudgetItem {
   id?: number;
   name: string;
@@ -271,6 +361,12 @@ const BudgetEditPage: React.FC = () => {
   });
   const [items, setItems] = useState<BudgetItem[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteItemIndex, setDeleteItemIndex] = useState<number | null>(null);
+  const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const id = params?.id ? parseInt(params.id as string) : null;
@@ -334,19 +430,49 @@ const BudgetEditPage: React.FC = () => {
     ));
   };
 
-  const handleRemoveItem = async (index: number, itemId?: number) => {
+  const handleRemoveItemClick = (index: number, itemId?: number) => {
     if (itemId && budgetId) {
-      // Delete existing item from server
-      try {
-        await apiClient.deleteBudgetItem(budgetId, itemId);
-        toast.success('Item deleted');
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to delete item');
-        return;
-      }
+      // Existing item - require password verification
+      setDeleteItemIndex(index);
+      setDeleteItemId(itemId);
+      setDeletePassword('');
+      setDeletePasswordError(null);
+      setShowDeleteModal(true);
+    } else {
+      // New item not yet saved - can remove directly from local state
+      setItems(prev => prev.filter((_, i) => i !== index));
     }
-    // Remove from local state
-    setItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteItem = async (password: string) => {
+    if (!budgetId || deleteItemIndex === null || !deleteItemId) return;
+
+    if (!password.trim()) {
+      setDeletePasswordError('Password is required');
+      return;
+    }
+
+    setDeleting(true);
+    setDeletePasswordError(null);
+
+    try {
+      await apiClient.deleteBudgetItem(budgetId, deleteItemId, password.trim());
+      toast.success('Item deleted');
+      // Remove from local state
+      setItems(prev => prev.filter((_, i) => i !== deleteItemIndex));
+      setShowDeleteModal(false);
+      setDeleteItemIndex(null);
+      setDeleteItemId(null);
+      setDeletePassword('');
+      // Reload items to sync with server
+      loadItems(budgetId);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete item';
+      setDeletePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleSaveItem = async (index: number, item: BudgetItem) => {
@@ -658,7 +784,7 @@ const BudgetEditPage: React.FC = () => {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRemoveItem(index, item.id)}
+                          onClick={() => handleRemoveItemClick(index, item.id)}
                           style={{ color: '#ef4444', borderColor: '#ef4444' }}
                         >
                           <Trash2 size={14} />
@@ -709,6 +835,89 @@ const BudgetEditPage: React.FC = () => {
               </Button>
             </ActionButtons>
           </form>
+
+          {/* Delete Modal with Password Verification */}
+          {showDeleteModal && (
+            <ModalOverlay onClick={() => {
+              setShowDeleteModal(false);
+              setDeleteItemIndex(null);
+              setDeleteItemId(null);
+              setDeletePassword('');
+              setDeletePasswordError(null);
+            }}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalTitle>
+                  <Trash2 size={20} style={{ color: '#ef4444' }} />
+                  Delete Budget Item
+                </ModalTitle>
+                
+                <WarningBox>
+                  <p>
+                    <strong>Warning:</strong> You are about to permanently delete this budget item. 
+                    This action cannot be undone. Please enter your password to confirm this deletion.
+                  </p>
+                </WarningBox>
+
+                <FormGroup>
+                  <Label htmlFor="delete-password">
+                    Enter your password to confirm deletion:
+                  </Label>
+                  <PasswordInput
+                    id="delete-password"
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => {
+                      setDeletePassword(e.target.value);
+                      setDeletePasswordError(null);
+                    }}
+                    placeholder="Enter your password"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && deletePassword.trim()) {
+                        handleDeleteItem(deletePassword);
+                      }
+                    }}
+                    autoFocus
+                  />
+                  {deletePasswordError && (
+                    <ErrorText>{deletePasswordError}</ErrorText>
+                  )}
+                </FormGroup>
+
+                <ModalActions>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeleteItemIndex(null);
+                      setDeleteItemId(null);
+                      setDeletePassword('');
+                      setDeletePasswordError(null);
+                    }}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDeleteItem(deletePassword)}
+                    disabled={!deletePassword.trim() || deleting}
+                  >
+                    {deleting ? (
+                      <>
+                        <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                        Delete
+                      </>
+                    )}
+                  </Button>
+                </ModalActions>
+              </ModalContent>
+            </ModalOverlay>
+          )}
         </ContentContainer>
       </PageContainer>
     </Layout>
