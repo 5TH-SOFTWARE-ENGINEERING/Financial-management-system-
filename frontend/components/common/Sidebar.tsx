@@ -7,7 +7,7 @@ import styled from 'styled-components';
 import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List, Calculator,
-    DollarSign, Plus, FileText, TrendingUp,
+    DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3,
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -265,7 +265,7 @@ const Sidebar: React.FC = () => {
     const isOpen = (key: string) => openSections[key] || pathname.includes(`/${key}`);
 
     useEffect(() => {
-        const paths = ['revenue', 'expense', 'transaction', 'report', 'forecast', 'budget', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
+        const paths = ['revenue', 'expense', 'transaction', 'report', 'forecast', 'scenario', 'variance', 'budget', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
         const newOpen = { ...openSections };
         paths.forEach(p => {
             if (pathname.includes(`/${p}`)) newOpen[p] = true; 
@@ -412,6 +412,90 @@ const Sidebar: React.FC = () => {
                 )}
             </>
         </ComponentGate>
+
+        {/* Scenarios - Only for Admin and Finance Admin */}
+        {(isAdmin || isFinanceAdmin) && (
+            <ComponentGate componentId={ComponentId.SIDEBAR_SCENARIO}>
+                <>
+                    <DropdownHeader
+                        onClick={() => toggleSection('scenario')}
+                        $open={isOpen('scenario')}
+                        $active={pathname.includes('/scenario')}
+                        $collapsed={collapsed}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <GitCompare />
+                            {!collapsed && <span style={{ marginLeft: '12px' }}>Scenarios</span>}
+                        </div>
+                        {!collapsed && <ChevronDown size={16} />}
+                    </DropdownHeader>
+                    {isOpen('scenario') && (
+                        <SubMenu $collapsed={collapsed}>
+                            <ComponentGate componentId={ComponentId.SCENARIO_CREATE}>
+                                <NavItem href="/scenarios/create" $active={pathname === '/scenarios/create'} $collapsed={collapsed}>
+                                    <Plus size={16} />
+                                    {!collapsed && 'new scenario'}
+                                </NavItem>
+                            </ComponentGate>
+                            <ComponentGate componentId={ComponentId.SCENARIO_LIST}>
+                                <NavItem href="/scenarios/list" $active={pathname === '/scenarios/list'} $collapsed={collapsed}>
+                                    <List size={16} />
+                                    {!collapsed && 'scenarios'}
+                                </NavItem>
+                            </ComponentGate>
+                            <ComponentGate componentId={ComponentId.SCENARIO_COMPARE}>
+                                <NavItem href="/scenarios/campare" $active={pathname.includes('/scenarios/campare')} $collapsed={collapsed}>
+                                    <GitCompare size={16} />
+                                    {!collapsed && 'compare scenarios'}
+                                </NavItem>
+                            </ComponentGate>
+                        </SubMenu>
+                    )}
+                </>
+            </ComponentGate>
+        )}
+
+        {/* Variance - Only for Admin and Finance Admin */}
+        {(isAdmin || isFinanceAdmin) && (
+            <ComponentGate componentId={ComponentId.SIDEBAR_VARIANCE}>
+                <>
+                    <DropdownHeader
+                        onClick={() => toggleSection('variance')}
+                        $open={isOpen('variance')}
+                        $active={pathname.includes('/variance')}
+                        $collapsed={collapsed}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <BarChart3 />
+                            {!collapsed && <span style={{ marginLeft: '12px' }}>Variance</span>}
+                        </div>
+                        {!collapsed && <ChevronDown size={16} />}
+                    </DropdownHeader>
+                    {isOpen('variance') && (
+                        <SubMenu $collapsed={collapsed}>
+                            <ComponentGate componentId={ComponentId.VARIANCE_CALCULATE}>
+                                <NavItem href="/variance/calculatevariance" $active={pathname.includes('/variance/calculatevariance')} $collapsed={collapsed}>
+                                    <Calculator size={16} />
+                                    {!collapsed && 'calculate variance'}
+                                </NavItem>
+                            </ComponentGate>
+                            <ComponentGate componentId={ComponentId.VARIANCE_HISTORY}>
+                                <NavItem href="/variance/variancehistory" $active={pathname.includes('/variance/variancehistory')} $collapsed={collapsed}>
+                                    <FileText size={16} />
+                                    {!collapsed && 'variance history'}
+                                </NavItem>
+                            </ComponentGate>
+                            <ComponentGate componentId={ComponentId.VARIANCE_SUMMARY}>
+                                <NavItem href="/variance/variancesummery" $active={pathname.includes('/variance/variancesummery')} $collapsed={collapsed}>
+                                    <BarChart3 size={16} />
+                                    {!collapsed && 'variance summary'}
+                                </NavItem>
+                            </ComponentGate>
+                        </SubMenu>
+                    )}
+                </>
+            </ComponentGate>
+        )}
 
         {/* Budgets - Only for Admin and Finance Admin */}
         {(isAdmin || isFinanceAdmin) && (
