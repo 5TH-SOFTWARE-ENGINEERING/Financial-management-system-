@@ -294,7 +294,7 @@ const ForecastCreatePage: React.FC = () => {
               </h2>
 
               <FormGroup>
-                <label>Forecast Name *</label>
+                <label>Forecast Name </label>
                 <Input
                   type="text"
                   value={formData.name}
@@ -315,7 +315,7 @@ const ForecastCreatePage: React.FC = () => {
 
               <TwoColumnGrid>
                 <FormGroup>
-                  <label>Forecast Type *</label>
+                  <label>Forecast Type </label>
                   <select
                     value={formData.forecast_type}
                     onChange={(e) => handleInputChange('forecast_type', e.target.value)}
@@ -329,7 +329,7 @@ const ForecastCreatePage: React.FC = () => {
                 </FormGroup>
 
                 <FormGroup>
-                  <label>Period Type *</label>
+                  <label>Period Type </label>
                   <select
                     value={formData.period_type}
                     onChange={(e) => handleInputChange('period_type', e.target.value)}
@@ -344,7 +344,7 @@ const ForecastCreatePage: React.FC = () => {
 
               <TwoColumnGrid>
                 <FormGroup>
-                  <label>Forecast Start Date *</label>
+                  <label>Forecast Start Date </label>
                   <Input
                     type="date"
                     value={formData.start_date}
@@ -354,7 +354,7 @@ const ForecastCreatePage: React.FC = () => {
                 </FormGroup>
 
                 <FormGroup>
-                  <label>Forecast End Date *</label>
+                  <label>Forecast End Date </label>
                   <Input
                     type="date"
                     value={formData.end_date}
@@ -371,7 +371,7 @@ const ForecastCreatePage: React.FC = () => {
               </h2>
 
               <FormGroup>
-                <label>Method *</label>
+                <label>Method </label>
                 <select
                   value={formData.method}
                   onChange={(e) => handleInputChange('method', e.target.value)}
