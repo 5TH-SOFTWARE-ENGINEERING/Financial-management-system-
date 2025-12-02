@@ -42,10 +42,10 @@ const PageContainer = styled.div`
 const ContentContainer = styled.div`
   flex: 1;
   width: 100%;
-  max-width: 1600px;
+  max-width: 980px;
   margin-left: auto;
-  margin-right: auto;
-  padding: ${theme.spacing.sm} ${theme.spacing.lg} ${theme.spacing.sm};
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
