@@ -397,7 +397,7 @@ const Sidebar: React.FC = () => {
                             <ComponentGate componentId={ComponentId.FORECAST_CREATE}>
                                 <NavItem href="/forecast/create" $active={pathname === '/forecast/create'} $collapsed={collapsed}>
                                     <Plus size={16} />
-                                    {!collapsed && 'Create'}
+                                    {!collapsed && 'new forecast'}
                                 </NavItem>
                             </ComponentGate>
                         )}
@@ -405,7 +405,7 @@ const Sidebar: React.FC = () => {
                         <ComponentGate componentId={ComponentId.FORECAST_LIST}>
                             <NavItem href="/forecast/list" $active={pathname === '/forecast/list'} $collapsed={collapsed}>
                                 <List size={16} />
-                                {!collapsed && 'List'}
+                                {!collapsed && 'forecasts'}
                             </NavItem>
                         </ComponentGate>
                     </SubMenu>
@@ -433,11 +433,11 @@ const Sidebar: React.FC = () => {
                         <SubMenu $collapsed={collapsed}>
                             <NavItem href="/budgets/create" $active={pathname === '/budgets/create'} $collapsed={collapsed}>
                                 <Plus size={16} />
-                                {!collapsed && 'Create'}
+                                {!collapsed && 'new budget'}
                             </NavItem>
                             <NavItem href="/budgets" $active={pathname === '/budgets'} $collapsed={collapsed}>
                                 <List size={16} />
-                                {!collapsed && 'List'}
+                                {!collapsed && 'budgets'}
                             </NavItem>
                             <NavItem href="/budgets/additems" $active={pathname.includes('/budgets/additems')} $collapsed={collapsed}>
                                 <Calculator size={16} />
