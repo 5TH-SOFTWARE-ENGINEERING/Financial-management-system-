@@ -37,9 +37,10 @@ const PageContainer = styled.div`
 const ContentContainer = styled.div`
   flex: 1;
   width: 100%;
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: ${theme.spacing.lg};
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
 `;
 
 const BackLink = styled(Link)`

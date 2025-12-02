@@ -33,9 +33,10 @@ const PageContainer = styled.div`
 const ContentContainer = styled.div`
   flex: 1;
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: ${theme.spacing.lg};
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
@@ -316,7 +317,7 @@ const BudgetCreatePage: React.FC = () => {
               </h2>
 
               <FormGroup>
-                <label>Budget Name *</label>
+                <label>Budget Name </label>
                 <Input
                   type="text"
                   value={formData.name}
@@ -337,7 +338,7 @@ const BudgetCreatePage: React.FC = () => {
 
               <TwoColumnGrid>
                 <FormGroup>
-                  <label>Period *</label>
+                  <label>Period </label>
                   <select
                     value={formData.period}
                     onChange={(e) => handleInputChange('period', e.target.value)}
@@ -366,7 +367,7 @@ const BudgetCreatePage: React.FC = () => {
 
               <TwoColumnGrid>
                 <FormGroup>
-                  <label>Start Date *</label>
+                  <label>Start Date </label>
                   <Input
                     type="date"
                     value={formData.start_date}
@@ -376,7 +377,7 @@ const BudgetCreatePage: React.FC = () => {
                 </FormGroup>
 
                 <FormGroup>
-                  <label>End Date *</label>
+                  <label>End Date </label>
                   <Input
                     type="date"
                     value={formData.end_date}

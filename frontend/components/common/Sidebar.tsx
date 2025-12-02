@@ -7,6 +7,7 @@ import styled from 'styled-components';
 import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List, Calculator,
+    DollarSign, Plus, FileText,
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -264,7 +265,7 @@ const Sidebar: React.FC = () => {
     const isOpen = (key: string) => openSections[key] || pathname.includes(`/${key}`);
 
     useEffect(() => {
-        const paths = ['revenue', 'expense', 'transaction', 'report', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
+        const paths = ['revenue', 'expense', 'transaction', 'report', 'budget', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
         const newOpen = { ...openSections };
         paths.forEach(p => {
             if (pathname.includes(`/${p}`)) newOpen[p] = true; 
@@ -372,6 +373,46 @@ const Sidebar: React.FC = () => {
                 {!collapsed && 'Reports'}
             </NavItem>
         </ComponentGate>
+
+        {/* Budgets - Only for Admin and Finance Admin */}
+        {(isAdmin || isFinanceAdmin) && (
+            <ComponentGate componentId={ComponentId.SIDEBAR_BUDGETS}>
+                <>
+                    <DropdownHeader
+                        onClick={() => toggleSection('budget')}
+                        $open={isOpen('budget')}
+                        $active={pathname.includes('/budget')}
+                        $collapsed={collapsed}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <DollarSign />
+                            {!collapsed && <span style={{ marginLeft: '12px' }}>Budgets</span>}
+                        </div>
+                        {!collapsed && <ChevronDown size={16} />}
+                    </DropdownHeader>
+                    {isOpen('budget') && (
+                        <SubMenu $collapsed={collapsed}>
+                            <NavItem href="/budgets/create" $active={pathname === '/budgets/create'} $collapsed={collapsed}>
+                                <Plus size={16} />
+                                {!collapsed && 'Create'}
+                            </NavItem>
+                            <NavItem href="/budgets" $active={pathname === '/budgets'} $collapsed={collapsed}>
+                                <List size={16} />
+                                {!collapsed && 'List'}
+                            </NavItem>
+                            <NavItem href="/budgets/additems" $active={pathname.includes('/budgets/additems')} $collapsed={collapsed}>
+                                <Calculator size={16} />
+                                {!collapsed && 'Add Items'}
+                            </NavItem>
+                            <NavItem href="/budgets/listitems" $active={pathname.includes('/budgets/listitems')} $collapsed={collapsed}>
+                                <FileText size={16} />
+                                {!collapsed && 'List Items'}
+                            </NavItem>
+                        </SubMenu>
+                    )}
+                </>
+            </ComponentGate>
+        )}
 
         {/* ==============================================
             ADMINISTRATION SECTION 🛡️
