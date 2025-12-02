@@ -172,6 +172,7 @@ const DropdownHeader = styled.div<{ $open?: boolean; $collapsed?: boolean; $acti
     margin: 2px ${theme.spacing.sm};
     border-radius: ${theme.borderRadius.sm};
     font-weight: ${props => (props.$active ? theme.typography.fontWeights.medium : 400)};
+    gap: ${props => (props.$collapsed ? theme.spacing.xs : '0')};
 
     &:hover {
         background: ${theme.colors.backgroundSecondary};
@@ -187,13 +188,13 @@ const DropdownHeader = styled.div<{ $open?: boolean; $collapsed?: boolean; $acti
         width: 20px;
         height: 20px;
         flex-shrink: 0;
-        margin-right: ${props => (props.$collapsed ? 0 : theme.spacing.md)};
+        margin-right: ${props => (props.$collapsed ? theme.spacing.xs : theme.spacing.md)};
     }
 
     svg:last-child {
         transition: transform ${theme.transitions.default};
         transform: ${props => (props.$open ? 'rotate(180deg)' : 'rotate(0)')};
-        display: ${props => (props.$collapsed ? 'none' : 'block')};
+        display: block;
         width: 16px;
         height: 16px;
         flex-shrink: 0;
@@ -309,7 +310,7 @@ const Sidebar: React.FC = () => {
                         <ArrowDownCircle />
                         {!collapsed && <span style={{ marginLeft: '12px' }}>Revenue</span>}
                     </div>
-                    {!collapsed && <ChevronDown size={16} />}
+                    <ChevronDown size={16} />
                 </DropdownHeader>
                 {isOpen('revenue') && (
                     <SubMenu $collapsed={collapsed}> 
@@ -338,7 +339,7 @@ const Sidebar: React.FC = () => {
                         <ArrowUpCircle />
                         {!collapsed && <span style={{ marginLeft: '12px' }}>Expenses</span>}
                     </div>
-                    {!collapsed && <ChevronDown size={16} />}
+                    <ChevronDown size={16} />
                 </DropdownHeader>
                 {isOpen('expense') && (
                     <SubMenu $collapsed={collapsed}>
@@ -388,7 +389,7 @@ const Sidebar: React.FC = () => {
                         <TrendingUp />
                         {!collapsed && <span style={{ marginLeft: '12px' }}>Forecasts</span>}
                     </div>
-                    {!collapsed && <ChevronDown size={16} />}
+                    <ChevronDown size={16} />
                 </DropdownHeader>
                 {isOpen('forecast') && (
                     <SubMenu $collapsed={collapsed}>
@@ -427,7 +428,7 @@ const Sidebar: React.FC = () => {
                             <GitCompare />
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Scenarios</span>}
                         </div>
-                        {!collapsed && <ChevronDown size={16} />}
+                        <ChevronDown size={16} />
                     </DropdownHeader>
                     {isOpen('scenario') && (
                         <SubMenu $collapsed={collapsed}>
@@ -469,7 +470,7 @@ const Sidebar: React.FC = () => {
                             <BarChart3 />
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Variance</span>}
                         </div>
-                        {!collapsed && <ChevronDown size={16} />}
+                        <ChevronDown size={16} />
                     </DropdownHeader>
                     {isOpen('variance') && (
                         <SubMenu $collapsed={collapsed}>
@@ -511,7 +512,7 @@ const Sidebar: React.FC = () => {
                             <DollarSign />
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Budgets</span>}
                         </div>
-                        {!collapsed && <ChevronDown size={16} />}
+                        <ChevronDown size={16} />
                     </DropdownHeader>
                     {isOpen('budget') && (
                         <SubMenu $collapsed={collapsed}>
@@ -559,7 +560,7 @@ const Sidebar: React.FC = () => {
                                 <Shield style={{ color: '#e74c3c' }} />
                                 {!collapsed && <span style={{ marginLeft: '12px' }}>Finance</span>}
                             </div>
-                            {!collapsed && <ChevronDown size={16} />}
+                            <ChevronDown size={16} />
                         </DropdownHeader>
                         {isOpen('finance-admin') && (
                             <SubMenu $collapsed={collapsed}>
@@ -596,7 +597,7 @@ const Sidebar: React.FC = () => {
                             <Wallet />
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Accountants</span>}
                         </div>
-                        {!collapsed && <ChevronDown size={16} />}
+                        <ChevronDown size={16} />
                     </DropdownHeader>
                     {isOpen('accountant') && (
                         <SubMenu $collapsed={collapsed}>
@@ -632,7 +633,7 @@ const Sidebar: React.FC = () => {
                             <Users />
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Employees</span>}
                         </div>
-                        {!collapsed && <ChevronDown size={16} />}
+                        <ChevronDown size={16} />
                     </DropdownHeader>
                     {isOpen('employee') && (
                         <SubMenu $collapsed={collapsed}>
