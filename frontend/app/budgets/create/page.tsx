@@ -280,20 +280,43 @@ const BudgetCreatePage: React.FC = () => {
 
     try {
       setLoading(true);
+      
+      // Convert dates to ISO datetime strings (backend expects datetime objects)
+      const startDate = formData.start_date ? new Date(formData.start_date + 'T00:00:00Z').toISOString() : '';
+      const endDate = formData.end_date ? new Date(formData.end_date + 'T23:59:59Z').toISOString() : '';
+      
       const budgetData = {
-        ...formData,
+        name: formData.name.trim(),
+        description: formData.description?.trim() || null,
+        period: formData.period,
+        start_date: startDate,
+        end_date: endDate,
+        department: formData.department?.trim() || null,
+        project: formData.project?.trim() || null,
+        status: formData.status,
         items: items.map(item => ({
-          ...item,
+          name: item.name.trim(),
+          description: item.description?.trim() || null,
           type: item.type,
-          amount: parseFloat(item.amount.toString())
-        }))
+          category: item.category.trim(),
+          amount: parseFloat(item.amount.toString()) || 0
+        })).filter(item => item.name && item.category) // Filter out empty items
       };
 
       await apiClient.createBudget(budgetData);
       toast.success('Budget created successfully!');
       router.push('/budgets');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create budget');
+      console.error('Budget creation error:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to create budget';
+      if (Array.isArray(errorMessage)) {
+        // Handle validation errors array
+        toast.error(errorMessage.join(', '));
+      } else if (typeof errorMessage === 'object' && errorMessage.msg) {
+        toast.error(errorMessage.msg);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
