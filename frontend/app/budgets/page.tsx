@@ -286,6 +286,75 @@ const Spinner = styled.div`
   }
 `;
 
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.lg};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin-bottom: ${theme.spacing.sm};
+`;
+
+const PasswordInput = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${theme.spacing.lg};
+`;
+
 interface Budget {
   id: number;
   name: string;
@@ -310,6 +379,11 @@ const BudgetsPage: React.FC = () => {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteBudgetId, setDeleteBudgetId] = useState<number | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadBudgets();
@@ -329,15 +403,37 @@ const BudgetsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this budget?')) return;
-    
+  const handleDeleteClick = (id: number) => {
+    setDeleteBudgetId(id);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async (password: string) => {
+    if (!deleteBudgetId) return;
+
+    if (!password.trim()) {
+      setDeletePasswordError('Password is required');
+      return;
+    }
+
+    setDeleting(true);
+    setDeletePasswordError(null);
+
     try {
-      await apiClient.deleteBudget(id);
+      await apiClient.deleteBudget(deleteBudgetId, password.trim());
       toast.success('Budget deleted successfully');
+      setShowDeleteModal(false);
+      setDeleteBudgetId(null);
+      setDeletePassword('');
       loadBudgets();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete budget');
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete budget';
+      setDeletePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -507,7 +603,10 @@ const BudgetsPage: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(budget.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(budget.id);
+                      }}
                       style={{ color: '#ef4444', borderColor: '#ef4444' }}
                     >
                       <Trash2 size={14} />
@@ -541,6 +640,87 @@ const BudgetsPage: React.FC = () => {
                     loadBudgets();
                   }}
                 />
+              </ModalContent>
+            </ModalOverlay>
+          )}
+
+          {/* Delete Modal with Password Verification */}
+          {showDeleteModal && (
+            <ModalOverlay onClick={() => {
+              setShowDeleteModal(false);
+              setDeleteBudgetId(null);
+              setDeletePassword('');
+              setDeletePasswordError(null);
+            }}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalTitle>
+                  <Trash2 size={20} style={{ color: '#ef4444' }} />
+                  Delete Budget
+                </ModalTitle>
+                
+                <WarningBox>
+                  <p>
+                    <strong>Warning:</strong> You are about to permanently delete this budget. 
+                    This action cannot be undone. Please enter your password to confirm this deletion.
+                  </p>
+                </WarningBox>
+
+                <FormGroup>
+                  <Label htmlFor="delete-password">
+                    Enter your password to confirm deletion:
+                  </Label>
+                  <PasswordInput
+                    id="delete-password"
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => {
+                      setDeletePassword(e.target.value);
+                      setDeletePasswordError(null);
+                    }}
+                    placeholder="Enter your password"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && deletePassword.trim()) {
+                        handleDelete(deletePassword);
+                      }
+                    }}
+                    autoFocus
+                  />
+                  {deletePasswordError && (
+                    <ErrorText>{deletePasswordError}</ErrorText>
+                  )}
+                </FormGroup>
+
+                <ModalActions>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeleteBudgetId(null);
+                      setDeletePassword('');
+                      setDeletePasswordError(null);
+                    }}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDelete(deletePassword)}
+                    disabled={!deletePassword.trim() || deleting}
+                  >
+                    {deleting ? (
+                      <>
+                        <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                        Delete
+                      </>
+                    )}
+                  </Button>
+                </ModalActions>
               </ModalContent>
             </ModalOverlay>
           )}

@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
 import json
+from pydantic import BaseModel
 
 from ...core.database import get_db
+from ...core.security import verify_password
 from ...api.deps import get_current_active_user
 from ...models.user import User, UserRole
 from ...models.budget import BudgetStatus, BudgetType, BudgetPeriod
@@ -178,6 +180,59 @@ def delete_budget(
     
     budget.delete(db, budget_id)
     return None
+
+
+class DeleteBudgetRequest(BaseModel):
+    password: str
+
+@router.post("/budgets/{budget_id}/delete")
+def delete_budget_with_password(
+    budget_id: int,
+    delete_request: DeleteBudgetRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a budget - requires password verification"""
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deletion
+    if not delete_request.password or not delete_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to delete a budget."
+        )
+    
+    # Verify password
+    password_to_verify = delete_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to delete this budget."
+        )
+    
+    # Check budget exists
+    budget_obj = budget.get(db, budget_id)
+    if not budget_obj:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    
+    # Check permissions
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        if budget_obj.created_by_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Delete the budget
+    budget.delete(db, budget_id)
+    return {"message": "Budget deleted successfully"}
 
 
 @router.post("/budgets/{budget_id}/validate", response_model=BudgetValidationResult)

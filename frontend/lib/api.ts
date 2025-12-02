@@ -974,8 +974,8 @@ class ApiClient {
     return this.put(`/budgeting/budgets/${id}`, data);
   }
 
-  async deleteBudget(id: number) {
-    return this.delete(`/budgeting/budgets/${id}`);
+  async deleteBudget(id: number, password: string) {
+    return this.post(`/budgeting/budgets/${id}/delete`, { password });
   }
 
   async validateBudget(id: number) {
