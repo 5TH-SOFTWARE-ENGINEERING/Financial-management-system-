@@ -1,9 +1,9 @@
 # app/api/deps.py
 from typing import Generator
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
-from jose import JWTError
+from fastapi import Depends, HTTPException, status  # type: ignore
+from fastapi.security import OAuth2PasswordBearer  # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
+from jose import JWTError  # type: ignore
 
 from ..core.database import get_db, SessionLocal
 from ..core.security import verify_token

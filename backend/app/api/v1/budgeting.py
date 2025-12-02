@@ -4,12 +4,12 @@ Budgeting & Forecasting (FP&A) API
 Provides endpoints for budget management, scenario planning, forecasting, and variance analysis
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query, status  # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
 from typing import List, Optional
 from datetime import datetime, timedelta
 import json
-from pydantic import BaseModel
+from pydantic import BaseModel  # type: ignore
 
 from ...core.database import get_db
 from ...core.security import verify_password
