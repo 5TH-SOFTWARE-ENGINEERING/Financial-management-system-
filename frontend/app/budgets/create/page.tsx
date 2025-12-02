@@ -282,8 +282,18 @@ const BudgetCreatePage: React.FC = () => {
       setLoading(true);
       
       // Convert dates to ISO datetime strings (backend expects datetime objects)
-      const startDate = formData.start_date ? new Date(formData.start_date + 'T00:00:00Z').toISOString() : '';
-      const endDate = formData.end_date ? new Date(formData.end_date + 'T23:59:59Z').toISOString() : '';
+      // Pydantic accepts ISO 8601 format datetime strings
+      const startDate = formData.start_date 
+        ? new Date(formData.start_date + 'T00:00:00').toISOString() 
+        : '';
+      const endDate = formData.end_date 
+        ? new Date(formData.end_date + 'T23:59:59').toISOString() 
+        : '';
+      
+      if (!startDate || !endDate) {
+        toast.error('Start date and end date are required');
+        return;
+      }
       
       const budgetData = {
         name: formData.name.trim(),
@@ -308,15 +318,35 @@ const BudgetCreatePage: React.FC = () => {
       router.push('/budgets');
     } catch (error: any) {
       console.error('Budget creation error:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to create budget';
-      if (Array.isArray(errorMessage)) {
-        // Handle validation errors array
-        toast.error(errorMessage.join(', '));
-      } else if (typeof errorMessage === 'object' && errorMessage.msg) {
-        toast.error(errorMessage.msg);
-      } else {
-        toast.error(errorMessage);
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'Failed to create budget';
+      
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        
+        // Handle Pydantic validation errors
+        if (Array.isArray(errorData.detail)) {
+          const validationErrors = errorData.detail.map((err: any) => {
+            if (err.loc && err.msg) {
+              return `${err.loc.join('.')}: ${err.msg}`;
+            }
+            return err.msg || JSON.stringify(err);
+          });
+          errorMessage = validationErrors.join('\n');
+        } else if (typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail;
+        } else if (errorData.detail?.msg) {
+          errorMessage = errorData.detail.msg;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+      
+      toast.error(errorMessage);
+      setValidationErrors(errorMessage.split('\n'));
     } finally {
       setLoading(false);
     }
