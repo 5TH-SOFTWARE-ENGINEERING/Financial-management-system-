@@ -995,8 +995,8 @@ class ApiClient {
     return this.put(`/budgeting/budgets/${budgetId}/items/${itemId}`, data);
   }
 
-  async deleteBudgetItem(budgetId: number, itemId: number) {
-    return this.delete(`/budgeting/budgets/${budgetId}/items/${itemId}`);
+  async deleteBudgetItem(budgetId: number, itemId: number, password: string) {
+    return this.post(`/budgeting/budgets/${budgetId}/items/${itemId}/delete`, { password });
   }
 
   // Scenario Planning

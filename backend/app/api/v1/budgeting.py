@@ -351,6 +351,60 @@ def delete_budget_item(
     return None
 
 
+class DeleteBudgetItemRequest(BaseModel):
+    password: str
+
+@router.post("/budgets/{budget_id}/items/{item_id}/delete")
+def delete_budget_item_with_password(
+    budget_id: int,
+    item_id: int,
+    delete_request: DeleteBudgetItemRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a budget item - requires password verification"""
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deletion
+    if not delete_request.password or not delete_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to delete a budget item."
+        )
+    
+    # Verify password
+    password_to_verify = delete_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to delete this budget item."
+        )
+    
+    # Check item exists
+    item_obj = budget_item.get(db, item_id)
+    if not item_obj or item_obj.budget_id != budget_id:
+        raise HTTPException(status_code=404, detail="Budget item not found")
+    
+    # Delete the budget item
+    budget_item.delete(db, item_id)
+    
+    # Recalculate totals
+    totals = budget.calculate_totals(db, budget_id)
+    budget.update(db, budget_id, totals)
+    
+    return {"message": "Budget item deleted successfully"}
+
+
 # ============================================================================
 # SCENARIO PLANNING
 # ============================================================================
