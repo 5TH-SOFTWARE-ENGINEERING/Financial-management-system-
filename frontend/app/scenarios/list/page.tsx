@@ -42,10 +42,10 @@ const PageContainer = styled.div`
 const ContentContainer = styled.div`
   flex: 1;
   width: 100%;
-  max-width: 1600px;
+  max-width: 980px;
   margin-left: auto;
-  margin-right: auto;
-  padding: ${theme.spacing.sm} ${theme.spacing.lg} ${theme.spacing.sm};
+  margin-right: 0;
+  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
 `;
 
 const BackLink = styled(Link)`
@@ -129,14 +129,14 @@ const ScenarioHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: ${theme.spacing.md};
-  
-  h3 {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.bold};
-    color: ${TEXT_COLOR_DARK};
-    margin: 0;
-    flex: 1;
-  }
+`;
+
+const ScenarioTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0;
+  flex: 1;
 `;
 
 const ScenarioTypeBadge = styled.span<{ $type: string }>`
@@ -423,7 +423,7 @@ const ScenarioListPage: React.FC = () => {
                     onClick={() => router.push(`/scenarios/campare?budget_id=${selectedBudgetId}`)}
                   >
                     <ScenarioHeader>
-                      <h3>{scenario.name}</h3>
+                      <ScenarioTitle>{scenario.name}</ScenarioTitle>
                       <ScenarioTypeBadge $type={scenario.scenario_type}>
                         {scenario.scenario_type.replace('_', ' ')}
                       </ScenarioTypeBadge>
