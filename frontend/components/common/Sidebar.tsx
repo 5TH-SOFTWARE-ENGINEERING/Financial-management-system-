@@ -7,7 +7,7 @@ import styled from 'styled-components';
 import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List, Calculator,
-    DollarSign, Plus, FileText,
+    DollarSign, Plus, FileText, TrendingUp,
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -265,7 +265,7 @@ const Sidebar: React.FC = () => {
     const isOpen = (key: string) => openSections[key] || pathname.includes(`/${key}`);
 
     useEffect(() => {
-        const paths = ['revenue', 'expense', 'transaction', 'report', 'budget', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
+        const paths = ['revenue', 'expense', 'transaction', 'report', 'forecast', 'budget', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
         const newOpen = { ...openSections };
         paths.forEach(p => {
             if (pathname.includes(`/${p}`)) newOpen[p] = true; 
@@ -275,6 +275,7 @@ const Sidebar: React.FC = () => {
     const isAdmin = hasUserType(UserType.ADMIN) || user?.userType?.toLowerCase() === "admin";
     const isFinanceAdmin = hasUserType(UserType.FINANCE_ADMIN) || user?.userType?.toLowerCase() === "finance_admin";
     const isEmployee = hasUserType(UserType.EMPLOYEE) || user?.userType?.toLowerCase() === "employee";
+    const isAccountant = hasUserType(UserType.ACCOUNTANT) || user?.userType?.toLowerCase() === "accountant";
     
     return (
         <SidebarContainer $collapsed={collapsed}> 
@@ -372,6 +373,44 @@ const Sidebar: React.FC = () => {
                 <PieChart />
                 {!collapsed && 'Reports'}
             </NavItem>
+        </ComponentGate>
+
+        {/* Forecasts - Full access for Admin and Finance Admin, View only for Accountant and Employee */}
+        <ComponentGate componentId={ComponentId.SIDEBAR_FORECAST}>
+            <>
+                <DropdownHeader
+                    onClick={() => toggleSection('forecast')}
+                    $open={isOpen('forecast')}
+                    $active={pathname.includes('/forecast')}
+                    $collapsed={collapsed}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <TrendingUp />
+                        {!collapsed && <span style={{ marginLeft: '12px' }}>Forecasts</span>}
+                    </div>
+                    {!collapsed && <ChevronDown size={16} />}
+                </DropdownHeader>
+                {isOpen('forecast') && (
+                    <SubMenu $collapsed={collapsed}>
+                        {/* Create - Only for Admin and Finance Admin */}
+                        {(isAdmin || isFinanceAdmin) && (
+                            <ComponentGate componentId={ComponentId.FORECAST_CREATE}>
+                                <NavItem href="/forecast/create" $active={pathname === '/forecast/create'} $collapsed={collapsed}>
+                                    <Plus size={16} />
+                                    {!collapsed && 'Create'}
+                                </NavItem>
+                            </ComponentGate>
+                        )}
+                        {/* List - Available for all authorized users */}
+                        <ComponentGate componentId={ComponentId.FORECAST_LIST}>
+                            <NavItem href="/forecast/list" $active={pathname === '/forecast/list'} $collapsed={collapsed}>
+                                <List size={16} />
+                                {!collapsed && 'List'}
+                            </NavItem>
+                        </ComponentGate>
+                    </SubMenu>
+                )}
+            </>
         </ComponentGate>
 
         {/* Budgets - Only for Admin and Finance Admin */}
