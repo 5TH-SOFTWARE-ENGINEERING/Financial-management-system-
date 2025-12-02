@@ -1,7 +1,18 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+*.env
+.envrc
 
-# dependencies
-/node_modules
+# Dependencies
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -9,36 +20,162 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npm
+.yarn-integrity
 
-# testing
+# Build Outputs
+/.next/
+/out/
+/build
+/dist
+/.cache
+.next
+out
+build
+dist
+
+# Testing
 /coverage
+/coverage.lcov
+/.nyc_output
 /test-results
 /playwright-report
 /playwright/.cache
+/.playwright
+*.spec.js.snap
+*.test.js.snap
+__snapshots__/
+.jest/
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Logs
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 .pnpm-debug.log*
+*.log.*
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
+tsconfig.tsbuildinfo
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+.fleet/
+.zed/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+
+# Deployment
+.vercel
+.vercel.json
+.netlify
+.netlify.toml
+.firebase
+.firebaserc
+firebase-debug.log
+firestore-debug.log
+.functions/
+.now
+*.pem
+
+# Runtime Data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage and Reports
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+playwright-report/
+junit.xml
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+
+# Storybook (if used)
+storybook-static/
+storybook-build/
+
+# PWA Files
+**/public/sw.js
+**/public/workbox-*.js
+**/public/worker-*.js
+**/public/sw.js.map
+**/public/workbox-*.js.map
+**/public/worker-*.js.map
+
+# Misc
+.eslintcache
+.stylelintcache
+.stylelintignore
+*.local
+.cache/
+.turbo/
+.wrangler/
+.wrangler.toml
+
+# Sentry (if used)
+.sentryclirc
+
+# Bundle Analyzer
+.next/analyze/
+.analyze/
+
+# Optional: Uncomment if using these tools
+# # Turborepo
+# .turbo/
+# 
+# # Turbopack
+# .turbopack/
+# 
+# # Remix (if migrating from Remix)
+# /.remix/
+# 
+# # Parcel
+# .parcel-cache/
+# 
+# # Webpack
+# .webpack/
+
+# Local Development
+.local/
+.local.*
