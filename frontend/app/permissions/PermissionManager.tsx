@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import { theme } from '@/components/common/theme';
 import {Button} from '@/components/ui/button';
 import {Checkbox} from '@/components/ui/checkbox';
-import { Save, Filter, Copy, Check } from 'lucide-react';
+import { Save, Filter, Copy, Check, Loader2 } from 'lucide-react';
 import { Resource, Action, UserType } from '@/lib/rbac/models';
 import { 
   Table, 
@@ -20,123 +20,281 @@ import { useUserStore } from '@/store/userStore';
 import { useAuth } from '@/lib/rbac/auth-context';
 
 // Styled components
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#6b7280';
+const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+
 const Container = styled.div`
-  padding: 24px;
+  min-height: 100vh;
+  background: ${BACKGROUND_GRADIENT};
+  padding: ${theme.spacing.lg};
+`;
+
+const HeaderContainer = styled.div`
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  color: #ffffff;
+  padding: ${theme.spacing.xl};
+  margin: -${theme.spacing.lg} -${theme.spacing.lg} ${theme.spacing.xl};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
 `;
 
 const Title = styled.h1`
-  font-size: 24px;
-  margin-bottom: 24px;
-  color: #111827;
+  font-size: clamp(28px, 3.5vw, 36px);
+  font-weight: ${theme.typography.fontWeights.bold};
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
 `;
 
 const Subtitle = styled.h2`
-  font-size: 18px;
-  margin-bottom: 16px;
-  margin-top: 24px;
-  color: #111827;
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  margin-bottom: ${theme.spacing.md};
+  margin-top: ${theme.spacing.xl};
+  color: ${TEXT_COLOR_DARK};
 `;
 
 const Card = styled.div`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 24px;
-  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: ${theme.spacing.xl};
+  margin-bottom: ${theme.spacing.xl};
+  border: 1px solid ${theme.colors.border};
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
 `;
 
 const SearchInput = styled.input`
   width: 100%;
   max-width: 400px;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  padding: ${theme.spacing.md};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
-  margin-bottom: 24px;
   font-size: ${theme.typography.fontSizes.sm};
+  transition: all 0.2s ease;
+  background: ${theme.colors.background};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+  }
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 12px;
-  margin-top: 24px;
+  gap: ${theme.spacing.md};
+  margin-top: ${theme.spacing.xl};
   justify-content: flex-end;
+  flex-wrap: wrap;
 `;
 
 const SelectionCard = styled.div`
-  padding: 16px;
+  padding: ${theme.spacing.lg};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
-  margin-bottom: 20px;
+  margin-bottom: ${theme.spacing.lg};
+  background: ${PRIMARY_COLOR}08;
 `;
 
 const SelectionHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: ${theme.spacing.md};
+  flex-wrap: wrap;
+  gap: ${theme.spacing.md};
 `;
 
 const FilterContainer = styled.div`
   display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.xl};
   align-items: center;
+  flex-wrap: wrap;
+  background: ${theme.colors.background};
+  padding: ${theme.spacing.lg};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 `;
 
 const Select = styled.select`
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  padding: ${theme.spacing.md};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
-  background-color: white;
+  background-color: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
 `;
 
 const FilterLabel = styled.label`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
   font-size: ${theme.typography.fontSizes.sm};
-  color: ${theme.colors.textSecondary};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
   
   svg {
-    color: ${theme.colors.primary};
+    color: ${PRIMARY_COLOR};
   }
 `;
 
 const TemplateContainer = styled.div`
-  margin-top: 24px;
-  margin-bottom: 24px;
+  margin-top: ${theme.spacing.xl};
+  margin-bottom: ${theme.spacing.xl};
+  padding: ${theme.spacing.lg};
+  background: ${PRIMARY_COLOR}05;
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${PRIMARY_COLOR}20;
 `;
 
 const TemplateControls = styled.div`
   display: flex;
-  gap: 16px;
-  margin-top: 16px;
+  gap: ${theme.spacing.md};
+  margin-top: ${theme.spacing.md};
+  flex-wrap: wrap;
+  align-items: center;
 `;
 
 const TemplateName = styled.input`
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  padding: ${theme.spacing.md};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
   min-width: 250px;
+  background: ${theme.colors.background};
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
 `;
 
 const TemplateSelect = styled.select`
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  padding: ${theme.spacing.md};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
   min-width: 250px;
+  background: ${theme.colors.background};
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
 `;
 
 const SuccessMessage = styled.div`
-  color: ${theme.colors.primary};
+  color: #059669;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${theme.spacing.sm};
   font-size: ${theme.typography.fontSizes.sm};
-  margin-top: 8px;
+  margin-top: ${theme.spacing.md};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  background: #d1fae5;
+  border-radius: ${theme.borderRadius.sm};
+  border: 1px solid #6ee7b7;
+`;
+
+const ErrorMessage = styled.div`
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  font-size: ${theme.typography.fontSizes.sm};
+  padding: ${theme.spacing.md};
+  background: #fee2e2;
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid #fecaca;
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: ${theme.spacing.md};
+`;
+
+const Spinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${theme.colors.border};
+  border-top-color: ${PRIMARY_COLOR};
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
+const StatusBadge = styled.span<{ $active: boolean }>`
+  display: inline-block;
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  background: ${props => props.$active ? '#d1fae5' : '#fecaca'};
+  color: ${props => props.$active ? '#065f46' : '#991b1b'};
+`;
+
+const UserTypeBadge = styled.span`
+  display: inline-block;
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  background: #dbeafe;
+  color: #1e40af;
+  text-transform: capitalize;
+`;
+
+const TableWrapper = styled.div`
+  overflow-x: auto;
+  margin-top: ${theme.spacing.lg};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: ${theme.spacing.xl} * 2;
+  color: ${TEXT_COLOR_MUTED};
+  
+  p {
+    font-size: ${theme.typography.fontSizes.md};
+    margin-top: ${theme.spacing.md};
+  }
 `;
 
 // Interfaces
@@ -465,6 +623,20 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     }
   };
 
+  // Load templates from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTemplates = localStorage.getItem('permission_templates');
+      if (savedTemplates) {
+        try {
+          setTemplates(JSON.parse(savedTemplates));
+        } catch (err) {
+          console.error('Failed to load templates:', err);
+        }
+      }
+    }
+  }, []);
+
   // Template handlers
   const handleSaveTemplate = () => {
     if (!selectedUser || !newTemplateName.trim()) return;
@@ -472,15 +644,34 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     const userToTemplate = userPermissions.find(u => u.userId === selectedUser);
     if (!userToTemplate) return;
     
+    // Check if template name already exists
+    const templateExists = templates.some(t => 
+      t.name.toLowerCase() === newTemplateName.trim().toLowerCase() && 
+      t.userType === userToTemplate.userType
+    );
+    
+    if (templateExists) {
+      setError('Template with this name already exists for this user type');
+      return;
+    }
+    
     const newTemplate: RoleTemplate = {
       id: `template-${Date.now()}`,
-      name: newTemplateName,
+      name: newTemplateName.trim(),
       userType: userToTemplate.userType,
-      permissions: [...userToTemplate.permissions]
+      permissions: JSON.parse(JSON.stringify(userToTemplate.permissions))
     };
     
-    setTemplates(prev => [...prev, newTemplate]);
+    const updatedTemplates = [...templates, newTemplate];
+    setTemplates(updatedTemplates);
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('permission_templates', JSON.stringify(updatedTemplates));
+    }
+    
     setNewTemplateName('');
+    setError(null);
     
     // Show saved message
     setShowSavedMessage(true);
@@ -500,7 +691,10 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     if (!selectedUser || !selectedTemplate) return;
     
     const template = templates.find(t => t.id === selectedTemplate);
-    if (!template) return;
+    if (!template) {
+      setError('Template not found');
+      return;
+    }
     
     setUserPermissions(prev => 
       prev.map(user => {
@@ -513,6 +707,10 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
         return user;
       })
     );
+    
+    setError(null);
+    setSuccess('Template applied successfully!');
+    setTimeout(() => setSuccess(null), 3000);
   };
   
   // Clean up timeout on unmount
@@ -544,42 +742,37 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   if (loading && userPermissions.length === 0) {
     return (
       <Container>
-        <Title>{title}</Title>
-        <div style={{ textAlign: 'center', padding: '40px' }}>
+        <HeaderContainer>
+          <Title>{title}</Title>
+        </HeaderContainer>
+        <LoadingContainer>
+          <Spinner />
           <p>Loading users...</p>
-        </div>
+        </LoadingContainer>
       </Container>
     );
   }
 
   return (
     <Container>
-      <Title>{title}</Title>
+      <HeaderContainer>
+        <Title>{title}</Title>
+        <p style={{ marginTop: theme.spacing.sm, opacity: 0.9, fontSize: theme.typography.fontSizes.md }}>
+          Manage user permissions and access controls
+        </p>
+      </HeaderContainer>
       
       {error && (
-        <div style={{
-          backgroundColor: '#fee2e2',
-          color: '#b91c1c',
-          padding: '0.75rem',
-          borderRadius: '0.25rem',
-          marginBottom: '1.25rem',
-          fontSize: '0.875rem'
-        }}>
+        <ErrorMessage>
           {error}
-        </div>
+        </ErrorMessage>
       )}
       
       {success && (
-        <div style={{
-          backgroundColor: '#dcfce7',
-          color: '#166534',
-          padding: '0.75rem',
-          borderRadius: '0.25rem',
-          marginBottom: '1.25rem',
-          fontSize: '0.875rem'
-        }}>
+        <SuccessMessage>
+          <Check size={16} />
           {success}
-        </div>
+        </SuccessMessage>
       )}
       
       <FilterContainer>
@@ -606,36 +799,54 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
       </FilterContainer>
       
       <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>User Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.map(user => (
-              <TableRow key={user.userId}>
-                <TableCell>{user.userName}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.userType}</TableCell>
-                <TableCell>{user.isActive ? 'Active' : 'Inactive'}</TableCell>
-                <TableCell>
-                  <Button 
-                    size="sm" 
-                    variant="secondary"
-                    onClick={() => setSelectedUser(user.userId)}
-                  >
-                    {selectedUser === user.userId ? 'Editing' : 'Edit Permissions'}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {filteredUsers.length === 0 ? (
+          <EmptyState>
+            <p>No users found matching your criteria.</p>
+          </EmptyState>
+        ) : (
+          <TableWrapper>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>User Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map(user => (
+                  <TableRow key={user.userId}>
+                    <TableCell style={{ fontWeight: theme.typography.fontWeights.medium }}>
+                      {user.userName}
+                    </TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <UserTypeBadge>
+                        {user.userType.replace(/_/g, ' ')}
+                      </UserTypeBadge>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge $active={user.isActive}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </StatusBadge>
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        size="sm" 
+                        variant={selectedUser === user.userId ? "default" : "secondary"}
+                        onClick={() => setSelectedUser(user.userId)}
+                      >
+                        {selectedUser === user.userId ? 'Editing' : 'Edit Permissions'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableWrapper>
+        )}
       </Card>
       
       {selectedUserData && (
@@ -694,109 +905,134 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
               </SuccessMessage>
             )}
           </TemplateContainer>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Resource</TableHead>
-                <TableHead>View</TableHead>
-                <TableHead>Create</TableHead>
-                <TableHead>Edit</TableHead>
-                <TableHead>Delete</TableHead>
-                <TableHead>Manage All</TableHead>
-                <TableHead>Select All</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allResources.map(resource => {
-                // Find if this user has permissions for this resource
-                const resourcePermission = selectedUserData.permissions.find(
-                  p => p.resource === resource
-                );
-                
-                // Check if all permissions are selected
-                const allSelected = areAllActionsSelected(selectedUserData.permissions, resource);
-                
-                return (
-                  <TableRow key={resource}>
-                    <TableCell>{resource}</TableCell>
-                    <TableCell>
-                      <Checkbox 
-                        checked={resourcePermission?.actions[Action.READ] || false}
-                        onCheckedChange={(checked) => handlePermissionChange(
-                          selectedUserData.userId, 
-                          resource, 
-                          Action.READ, 
-                          checked === true
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Checkbox 
-                        checked={resourcePermission?.actions[Action.CREATE] || false}
-                        onCheckedChange={(checked) => handlePermissionChange(
-                          selectedUserData.userId, 
-                          resource, 
-                          Action.CREATE, 
-                          checked === true
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Checkbox 
-                        checked={resourcePermission?.actions[Action.UPDATE] || false}
-                        onCheckedChange={(checked) => handlePermissionChange(
-                          selectedUserData.userId, 
-                          resource, 
-                          Action.UPDATE, 
-                          checked === true
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Checkbox 
-                        checked={resourcePermission?.actions[Action.DELETE] || false}
-                        onCheckedChange={(checked) => handlePermissionChange(
-                          selectedUserData.userId, 
-                          resource, 
-                          Action.DELETE, 
-                          checked === true
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Checkbox 
-                        checked={resourcePermission?.actions[Action.MANAGE] || false}
-                        onCheckedChange={(checked) => handlePermissionChange(
-                          selectedUserData.userId, 
-                          resource, 
-                          Action.MANAGE, 
-                          checked === true
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Checkbox 
-                        checked={allSelected}
-                        onCheckedChange={(checked) => handleToggleAllForResource(
-                          selectedUserData.userId,
-                          resource,
-                          checked === true
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <TableWrapper>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead style={{ fontWeight: theme.typography.fontWeights.bold }}>Resource</TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>View</TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>Create</TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>Edit</TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>Delete</TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>Manage All</TableHead>
+                  <TableHead style={{ textAlign: 'center', fontWeight: theme.typography.fontWeights.bold }}>Select All</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allResources.map(resource => {
+                  // Find if this user has permissions for this resource
+                  const resourcePermission = selectedUserData.permissions.find(
+                    p => p.resource === resource
+                  );
+                  
+                  // Check if all permissions are selected
+                  const allSelected = areAllActionsSelected(selectedUserData.permissions, resource);
+                  
+                  return (
+                    <TableRow key={resource} style={{ 
+                      backgroundColor: allSelected ? `${PRIMARY_COLOR}08` : 'transparent' 
+                    }}>
+                      <TableCell style={{ fontWeight: theme.typography.fontWeights.medium }}>
+                        {resource.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                      </TableCell>
+                      <TableCell style={{ textAlign: 'center' }}>
+                        <Checkbox 
+                          checked={resourcePermission?.actions[Action.READ] || false}
+                          onCheckedChange={(checked) => handlePermissionChange(
+                            selectedUserData.userId, 
+                            resource, 
+                            Action.READ, 
+                            checked === true
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell style={{ textAlign: 'center' }}>
+                        <Checkbox 
+                          checked={resourcePermission?.actions[Action.CREATE] || false}
+                          onCheckedChange={(checked) => handlePermissionChange(
+                            selectedUserData.userId, 
+                            resource, 
+                            Action.CREATE, 
+                            checked === true
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell style={{ textAlign: 'center' }}>
+                        <Checkbox 
+                          checked={resourcePermission?.actions[Action.UPDATE] || false}
+                          onCheckedChange={(checked) => handlePermissionChange(
+                            selectedUserData.userId, 
+                            resource, 
+                            Action.UPDATE, 
+                            checked === true
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell style={{ textAlign: 'center' }}>
+                        <Checkbox 
+                          checked={resourcePermission?.actions[Action.DELETE] || false}
+                          onCheckedChange={(checked) => handlePermissionChange(
+                            selectedUserData.userId, 
+                            resource, 
+                            Action.DELETE, 
+                            checked === true
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell style={{ textAlign: 'center' }}>
+                        <Checkbox 
+                          checked={resourcePermission?.actions[Action.MANAGE] || false}
+                          onCheckedChange={(checked) => handlePermissionChange(
+                            selectedUserData.userId, 
+                            resource, 
+                            Action.MANAGE, 
+                            checked === true
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell style={{ textAlign: 'center' }}>
+                        <Checkbox 
+                          checked={allSelected}
+                          onCheckedChange={(checked) => handleToggleAllForResource(
+                            selectedUserData.userId,
+                            resource,
+                            checked === true
+                          )}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableWrapper>
           
           <ButtonGroup>
-            <Button variant="secondary" onClick={() => setSelectedUser(null)}>
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setSelectedUser(null);
+                setError(null);
+                setSuccess(null);
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSavePermissions} disabled={loading}>
-              <Save size={16} />
-              Save Permissions
+            <Button 
+              onClick={handleSavePermissions} 
+              disabled={loading || !selectedUser}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" style={{ marginRight: theme.spacing.sm }} />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={16} style={{ marginRight: theme.spacing.sm }} />
+                  Save Permissions
+                </>
+              )}
             </Button>
           </ButtonGroup>
         </Card>
