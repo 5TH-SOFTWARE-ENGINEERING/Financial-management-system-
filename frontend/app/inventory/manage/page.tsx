@@ -164,6 +164,17 @@ const StatsGrid = styled.div`
   margin-bottom: ${theme.spacing.xl};
 `;
 
+const ParallelStatsContainer = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${theme.spacing.lg};
+  grid-column: 1 / -1;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
 const StatCard = styled.div`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
@@ -650,33 +661,37 @@ export default function InventoryManagePage() {
                 </StatContent>
               </StatCard>
             )}
-            {summary.total_selling_value !== undefined && (
-              <StatCard>
-                <StatContent>
-                  <StatInfo>
-                    <p>Total Selling Value</p>
-                    <p>${Number(summary.total_selling_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                  </StatInfo>
-                  <StatIcon $iconType="trending-up" $size={24} $active={true}>
-                    <TrendingUp size={24} />
-                  </StatIcon>
-                </StatContent>
-              </StatCard>
-            )}
-            {summary.potential_profit !== undefined && (
-              <StatCard>
-                <StatContent>
-                  <StatInfo>
-                    <p>Potential Profit</p>
-                    <p style={{ color: '#16a34a' }}>
-                      ${Number(summary.potential_profit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </StatInfo>
-                  <StatIcon $iconType="trending-up" $size={24} $active={true}>
-                    <TrendingUp size={24} />
-                  </StatIcon>
-                </StatContent>
-              </StatCard>
+            {(summary.total_selling_value !== undefined || summary.potential_profit !== undefined) && (
+              <ParallelStatsContainer>
+                {summary.total_selling_value !== undefined && (
+                  <StatCard>
+                    <StatContent>
+                      <StatInfo>
+                        <p>Total Selling Value</p>
+                        <p>${Number(summary.total_selling_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      </StatInfo>
+                      <StatIcon $iconType="trending-up" $size={24} $active={true}>
+                        <TrendingUp size={24} />
+                      </StatIcon>
+                    </StatContent>
+                  </StatCard>
+                )}
+                {summary.potential_profit !== undefined && (
+                  <StatCard>
+                    <StatContent>
+                      <StatInfo>
+                        <p>Potential Profit</p>
+                        <p style={{ color: '#16a34a' }}>
+                          ${Number(summary.potential_profit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </StatInfo>
+                      <StatIcon $iconType="trending-up" $size={24} $active={true}>
+                        <TrendingUp size={24} />
+                      </StatIcon>
+                    </StatContent>
+                  </StatCard>
+                )}
+              </ParallelStatsContainer>
             )}
           </StatsGrid>
         )}
@@ -863,7 +878,7 @@ export default function InventoryManagePage() {
               </ModalHeader>
 
               <FormGroup>
-                <Label htmlFor="item_name">Item Name *</Label>
+                <Label htmlFor="item_name">Item Name :</Label>
                 <Input
                   id="item_name"
                   value={formData.item_name}
@@ -874,7 +889,7 @@ export default function InventoryManagePage() {
 
               <FormRow>
                 <FormGroup>
-                  <Label htmlFor="buying_price">Buying Price *</Label>
+                  <Label htmlFor="buying_price">Buying Price: </Label>
                   <Input
                     id="buying_price"
                     type="number"
@@ -885,7 +900,7 @@ export default function InventoryManagePage() {
                   />
                 </FormGroup>
                 <FormGroup>
-                  <Label htmlFor="expense_amount">Expense Amount</Label>
+                  <Label htmlFor="expense_amount">Expense Amount: </Label>
                   <Input
                     id="expense_amount"
                     type="number"
@@ -899,7 +914,7 @@ export default function InventoryManagePage() {
 
               <FormRow>
                 <FormGroup>
-                  <Label htmlFor="selling_price">Selling Price *</Label>
+                  <Label htmlFor="selling_price">Selling Price: </Label>
                   <Input
                     id="selling_price"
                     type="number"
@@ -910,7 +925,7 @@ export default function InventoryManagePage() {
                   />
                 </FormGroup>
                 <FormGroup>
-                  <Label htmlFor="quantity">Initial Stock</Label>
+                  <Label htmlFor="quantity">Initial Stock: </Label>
                   <Input
                     id="quantity"
                     type="number"
@@ -923,7 +938,7 @@ export default function InventoryManagePage() {
 
               <FormRow>
                 <FormGroup>
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category">Category: </Label>
                   <Input
                     id="category"
                     value={formData.category}
@@ -932,7 +947,7 @@ export default function InventoryManagePage() {
                   />
                 </FormGroup>
                 <FormGroup>
-                  <Label htmlFor="sku">SKU</Label>
+                  <Label htmlFor="sku">SKU: </Label>
                   <Input
                     id="sku"
                     value={formData.sku}
@@ -943,7 +958,7 @@ export default function InventoryManagePage() {
               </FormRow>
 
               <FormGroup>
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">Description: </Label>
                 <textarea
                   id="description"
                   value={formData.description}
