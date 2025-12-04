@@ -1442,7 +1442,9 @@ export default function SecuritySettingsPage() {
               <ModalHeader>
                 <ModalTitle>Disable Two-Factor Authentication</ModalTitle>
                 <CloseButton onClick={() => setShow2FADisable(false)} disabled={loading}>
-                  <X size={20} />
+                  <IconWrapper $iconType="x" $size={20} $active={false}>
+                    <X size={20} />
+                  </IconWrapper>
                 </CloseButton>
               </ModalHeader>
 
