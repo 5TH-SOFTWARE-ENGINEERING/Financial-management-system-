@@ -16,7 +16,8 @@ from .core.database import engine, Base, get_db, SessionLocal
 from .api.v1 import (
     auth, users, revenue, expenses, dashboard,
     reports, approvals, notifications, admin,
-    projects, departments, analytics, budgeting
+    projects, departments, analytics, budgeting,
+    inventory, sales
 )
 
 from .utils.audit import AuditLogger, AuditAction
@@ -388,8 +389,6 @@ if not settings.DEBUG:
 @app.middleware("http")
 async def add_cors_headers(request: Request, call_next):
     """Ensure CORS headers are always present"""
-    response = await call_next(request)
-    
     # Get origin from request
     origin = request.headers.get("Origin")
     
@@ -401,16 +400,25 @@ async def add_cors_headers(request: Request, call_next):
         "http://127.0.0.1:3001",
     ]
     
-    # Check if origin is allowed
+    # Handle OPTIONS preflight requests
+    if request.method == "OPTIONS":
+        response = JSONResponse(content={}, status_code=200)
+        if origin and origin in allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+        response.headers["Access-Control-Max-Age"] = "3600"
+        return response
+    
+    # Process the actual request
+    response = await call_next(request)
+    
+    # Add CORS headers to response
     if origin and origin in allowed_origins:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
-    
-    # Always add these headers for OPTIONS requests
-    if request.method == "OPTIONS":
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Max-Age"] = "3600"
+        response.headers["Access-Control-Expose-Headers"] = "*"
     
     return response
 
@@ -493,6 +501,8 @@ app.include_router(projects.router, prefix=f"{api_prefix}/projects", tags=["Proj
 app.include_router(departments.router, prefix=f"{api_prefix}/departments", tags=["Departments"])
 app.include_router(analytics.router, prefix=f"{api_prefix}/analytics", tags=["Analytics"])
 app.include_router(budgeting.router, prefix=f"{api_prefix}/budgeting", tags=["Budgeting & Forecasting"])
+app.include_router(inventory.router, prefix=f"{api_prefix}/inventory", tags=["Inventory"])
+app.include_router(sales.router, prefix=f"{api_prefix}/sales", tags=["Sales"])
 
 
 # Health check endpoint

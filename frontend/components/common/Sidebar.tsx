@@ -7,7 +7,7 @@ import styled from 'styled-components';
 import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List, Calculator,
-    DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3,
+    DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3, Package, ShoppingCart, BookOpen,
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -266,7 +266,7 @@ const Sidebar: React.FC = () => {
     const isOpen = (key: string) => openSections[key] || pathname.includes(`/${key}`);
 
     useEffect(() => {
-        const paths = ['revenue', 'expense', 'transaction', 'report', 'forecast', 'scenario', 'variance', 'budget', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
+        const paths = ['revenue', 'expense', 'transaction', 'inventory', 'report', 'forecast', 'scenario', 'variance', 'budget', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
         const newOpen = { ...openSections };
         paths.forEach(p => {
             if (pathname.includes(`/${p}`)) newOpen[p] = true; 
@@ -275,6 +275,7 @@ const Sidebar: React.FC = () => {
     }, [pathname]);
     const isAdmin = hasUserType(UserType.ADMIN) || user?.userType?.toLowerCase() === "admin";
     const isFinanceAdmin = hasUserType(UserType.FINANCE_ADMIN) || user?.userType?.toLowerCase() === "finance_admin";
+    const isManager = user?.role?.toLowerCase() === "manager";
     const isEmployee = hasUserType(UserType.EMPLOYEE) || user?.userType?.toLowerCase() === "employee";
     const isAccountant = hasUserType(UserType.ACCOUNTANT) || user?.userType?.toLowerCase() === "accountant";
     
@@ -366,6 +367,56 @@ const Sidebar: React.FC = () => {
                 <Receipt />
                 {!collapsed && 'Transactions'}
             </NavItem>
+        </ComponentGate>
+
+        {/* Inventory & Sales */}
+        <ComponentGate componentId={ComponentId.SIDEBAR_TRANSACTION}>
+            <>
+                <DropdownHeader
+                    onClick={() => toggleSection('inventory')}
+                    $open={isOpen('inventory')}
+                    $active={pathname.includes('/inventory') || pathname.includes('/sales')}
+                    $collapsed={collapsed}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <Package />
+                        {!collapsed && <span style={{ marginLeft: '12px' }}>Inventory & Sales</span>}
+                    </div>
+                    <ChevronDown size={16} />
+                </DropdownHeader>
+                {isOpen('inventory') && (
+                    <SubMenu $collapsed={collapsed}>
+                        {/* Inventory Management - Finance Admin and Manager */}
+                        {(isAdmin || isFinanceAdmin || isManager) && (
+                            <NavItem href="/inventory/manage" $active={pathname === '/inventory/manage'} $collapsed={collapsed}>
+                                <Package size={16} />
+                                {!collapsed && 'Manage Inventory'}
+                            </NavItem>
+                        )}
+                        {/* Sales - Employee only */}
+                        {isEmployee && (
+                            <NavItem href="/inventory/sales" $active={pathname === '/inventory/sales'} $collapsed={collapsed}>
+                                <ShoppingCart size={16} />
+                                {!collapsed && 'Sales'}
+                            </NavItem>
+                        )}
+                        {/* Accounting Dashboard - Accountant only */}
+                        {isAccountant && (
+                            <NavItem href="/sales/accounting" $active={pathname === '/sales/accounting'} $collapsed={collapsed}>
+                                <BookOpen size={16} />
+                                {!collapsed && 'Accounting'}
+                            </NavItem>
+                        )}
+                        {/* Finance Admin can also access Accounting Dashboard */}
+                        {(isAdmin || isFinanceAdmin) && (
+                            <NavItem href="/sales/accounting" $active={pathname === '/sales/accounting'} $collapsed={collapsed}>
+                                <BookOpen size={16} />
+                                {!collapsed && 'Accounting'}
+                            </NavItem>
+                        )}
+                    </SubMenu>
+                )}
+            </>
         </ComponentGate>
 
         {/* Reports */}

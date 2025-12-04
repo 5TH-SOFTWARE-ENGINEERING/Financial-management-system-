@@ -1,0 +1,329 @@
+# app/api/v1/sales.py
+"""
+Sales Management API
+Role-based access control:
+- Employee: Can create sales (sell items)
+- Accountant: Can view sales and post them to ledger
+- Finance Admin: Can view all sales and profit information
+"""
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from datetime import datetime
+
+from ...core.database import get_db
+from ...api.deps import get_current_active_user
+from ...models.user import User, UserRole
+from ...models.sale import Sale, SaleStatus, JournalEntry
+from ...crud.sale import sale as sale_crud
+from ...crud.inventory import inventory as inventory_crud
+from ...schemas.sale import (
+    SaleCreate, SaleOut, SalePostRequest, JournalEntryOut, 
+    SalesSummaryOut, ReceiptOut
+)
+
+router = APIRouter()
+
+
+def _format_sale_output(sale: Sale, current_user: User) -> dict:
+    """Format sale output with role-based field visibility"""
+    sale_dict = {
+        'id': sale.id,
+        'item_id': sale.item_id,
+        'item_name': sale.item.item_name if sale.item else 'Unknown',
+        'quantity_sold': sale.quantity_sold,
+        'selling_price': sale.selling_price,
+        'total_sale': sale.total_sale,
+        'status': sale.status,
+        'receipt_number': sale.receipt_number,
+        'customer_name': sale.customer_name,
+        'customer_email': sale.customer_email,
+        'notes': sale.notes,
+        'sold_by_id': sale.sold_by_id,
+        'sold_by_name': sale.sold_by.full_name if sale.sold_by else None,
+        'posted_by_id': sale.posted_by_id,
+        'posted_by_name': sale.posted_by.full_name if sale.posted_by else None,
+        'posted_at': sale.posted_at,
+        'created_at': sale.created_at,
+        'updated_at': sale.updated_at,
+    }
+    
+    # Finance Admin can see cost information (if needed in future)
+    # For now, all roles see the same sale information
+    return sale_dict
+
+
+def _can_create_sale(user_role: UserRole) -> bool:
+    """Check if user can create sales"""
+    # Handle enum instances
+    if isinstance(user_role, UserRole):
+        if user_role in [UserRole.EMPLOYEE, UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            return True
+        # Also check by value
+        if user_role.value in ['employee', 'accountant', 'finance_manager', 'finance_admin', 'admin', 'super_admin']:
+            return True
+    
+    # Normalize the role to a string for comparison
+    role_str = None
+    if isinstance(user_role, UserRole):
+        role_str = user_role.value
+    elif hasattr(user_role, 'value'):
+        role_str = str(user_role.value)
+    else:
+        role_str = str(user_role)
+    
+    # Normalize to lowercase for comparison
+    role_str = role_str.lower() if role_str else ''
+    
+    return role_str in ['employee', 'accountant', 'finance_manager', 'finance_admin', 'admin', 'super_admin']
+
+
+@router.post("/", response_model=SaleOut, status_code=status.HTTP_201_CREATED)
+def create_sale(
+    sale_data: SaleCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new sale (Employee, Accountant, Finance Admin, Admin, Super Admin)"""
+    # Check permissions
+    if not _can_create_sale(current_user.role):
+        # Get role value for error message
+        role_value = None
+        if isinstance(current_user.role, UserRole):
+            role_value = current_user.role.value
+        elif hasattr(current_user.role, 'value'):
+            role_value = str(current_user.role.value)
+        else:
+            role_value = str(current_user.role)
+        
+        raise HTTPException(
+            status_code=403,
+            detail=f"Only employees, accountants, finance admins, or admins can create sales. Your role: {role_value}"
+        )
+    
+    try:
+        sale = sale_crud.create(db, sale_data, current_user.id)
+        return _format_sale_output(sale, current_user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/", response_model=List[SaleOut])
+def get_sales(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    status: Optional[SaleStatus] = Query(None),
+    item_id: Optional[int] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get sales (Accountant and Finance Admin can see all, Employee sees own)"""
+    # Parse dates
+    start_date_dt = None
+    end_date_dt = None
+    if start_date:
+        try:
+            start_date_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format. Use ISO format.")
+    if end_date:
+        try:
+            end_date_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format. Use ISO format.")
+    
+    # Filter by user role
+    sold_by_id = None
+    if current_user.role == UserRole.EMPLOYEE:
+        # Employees can only see their own sales
+        sold_by_id = current_user.id
+    
+    sales = sale_crud.get_multi(
+        db, skip=skip, limit=limit, status=status,
+        sold_by_id=sold_by_id, item_id=item_id,
+        start_date=start_date_dt, end_date=end_date_dt
+    )
+    
+    return [_format_sale_output(s, current_user) for s in sales]
+
+
+@router.get("/{sale_id}", response_model=SaleOut)
+def get_sale(
+    sale_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get specific sale"""
+    sale = sale_crud.get(db, sale_id)
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    
+    # Check permissions
+    if current_user.role == UserRole.EMPLOYEE and sale.sold_by_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only view your own sales"
+        )
+    
+    return _format_sale_output(sale, current_user)
+
+
+@router.post("/{sale_id}/post", response_model=SaleOut)
+def post_sale(
+    sale_id: int,
+    post_data: SalePostRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Post a sale to ledger (Accountant only)"""
+    # Check permissions
+    if current_user.role not in [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only accountants can post sales to ledger"
+        )
+    
+    try:
+        sale = sale_crud.post_sale(db, sale_id, post_data, current_user.id)
+        return _format_sale_output(sale, current_user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{sale_id}/cancel", response_model=SaleOut)
+def cancel_sale(
+    sale_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Cancel a sale (Finance Admin only)"""
+    if current_user.role not in [UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only Finance Admin can cancel sales"
+        )
+    
+    try:
+        sale = sale_crud.cancel_sale(db, sale_id, current_user.id)
+        return _format_sale_output(sale, current_user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/summary/overview", response_model=SalesSummaryOut)
+def get_sales_summary(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get sales summary (Accountant and Finance Admin)"""
+    if current_user.role not in [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only accountants and finance admins can view sales summary"
+        )
+    
+    # Parse dates
+    start_date_dt = None
+    end_date_dt = None
+    if start_date:
+        try:
+            start_date_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format")
+    if end_date:
+        try:
+            end_date_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format")
+    
+    summary = sale_crud.get_sales_summary(db, start_date_dt, end_date_dt)
+    return summary
+
+
+@router.get("/receipt/{sale_id}", response_model=ReceiptOut)
+def get_receipt(
+    sale_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get receipt for a sale"""
+    sale = sale_crud.get_receipt(db, sale_id)
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    
+    # Check permissions
+    if current_user.role == UserRole.EMPLOYEE and sale.sold_by_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only view receipts for your own sales"
+        )
+    
+    return {
+        'receipt_number': sale.receipt_number or f"RCP-{sale.id}",
+        'sale_id': sale.id,
+        'item_name': sale.item.item_name if sale.item else 'Unknown',
+        'quantity_sold': sale.quantity_sold,
+        'selling_price': sale.selling_price,
+        'total_sale': sale.total_sale,
+        'customer_name': sale.customer_name,
+        'sold_by_name': sale.sold_by.full_name if sale.sold_by else None,
+        'created_at': sale.created_at,
+    }
+
+
+@router.get("/journal-entries/list", response_model=List[JournalEntryOut])
+def get_journal_entries(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get journal entries (Accountant and Finance Admin)"""
+    if current_user.role not in [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only accountants and finance admins can view journal entries"
+        )
+    
+    # Parse dates
+    start_date_dt = None
+    end_date_dt = None
+    if start_date:
+        try:
+            start_date_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format")
+    if end_date:
+        try:
+            end_date_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format")
+    
+    entries = sale_crud.get_journal_entries(db, skip=skip, limit=limit, start_date=start_date_dt, end_date=end_date_dt)
+    
+    result = []
+    for entry in entries:
+        result.append({
+            'id': entry.id,
+            'sale_id': entry.sale_id,
+            'entry_date': entry.entry_date,
+            'description': entry.description,
+            'debit_account': entry.debit_account,
+            'debit_amount': entry.debit_amount,
+            'credit_account': entry.credit_account,
+            'credit_amount': entry.credit_amount,
+            'reference_number': entry.reference_number,
+            'notes': entry.notes,
+            'posted_by_id': entry.posted_by_id,
+            'posted_by_name': entry.posted_by.full_name if entry.posted_by else None,
+            'posted_at': entry.posted_at,
+        })
+    
+    return result
+

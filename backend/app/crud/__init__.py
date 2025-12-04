@@ -5,6 +5,8 @@ from .approval import approval, approval_comment
 from .report import report
 from .audit import audit_log
 from .notification import notification
+from .inventory import inventory
+from .sale import sale
 
 __all__ = [
     "user",
@@ -16,4 +18,6 @@ __all__ = [
     "report",
     "audit_log",
     "notification",
+    "inventory",
+    "sale",
 ]

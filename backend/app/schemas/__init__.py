@@ -5,6 +5,8 @@ from .approval import ApprovalCreate, ApprovalUpdate, ApprovalOut, ApprovalComme
 from .report import ReportCreate, ReportUpdate, ReportOut
 from .audit import AuditLogOut
 from .notification import NotificationCreate, NotificationUpdate, NotificationOut
+from .inventory import InventoryItemCreate, InventoryItemUpdate, InventoryItemOut, InventoryItemPublicOut, InventoryAuditLogOut
+from .sale import SaleCreate, SaleOut, SalePostRequest, JournalEntryOut, SalesSummaryOut, ReceiptOut
 
 __all__ = [
     "UserCreate",
@@ -31,4 +33,15 @@ __all__ = [
     "NotificationCreate",
     "NotificationUpdate",
     "NotificationOut",
+    "InventoryItemCreate",
+    "InventoryItemUpdate",
+    "InventoryItemOut",
+    "InventoryItemPublicOut",
+    "InventoryAuditLogOut",
+    "SaleCreate",
+    "SaleOut",
+    "SalePostRequest",
+    "JournalEntryOut",
+    "SalesSummaryOut",
+    "ReceiptOut",
 ]

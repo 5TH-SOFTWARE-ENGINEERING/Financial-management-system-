@@ -21,7 +21,8 @@ import {
   ArrowDownRight,
   FileText,
   BarChart3,
-  AlertCircle
+  AlertCircle,
+  ShoppingCart
 } from 'lucide-react';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -408,6 +409,10 @@ interface IncomeStatement {
     total: number;
     by_category: Record<string, number>;
   };
+  sales: {
+    total: number;
+    by_category?: Record<string, number>;
+  };
   expenses: {
     total: number;
     by_category: Record<string, number>;
@@ -430,14 +435,17 @@ interface FinancialSummary {
   period: { start_date?: string; end_date?: string };
   financials: {
     total_revenue: number;
+    total_sales: number;
     total_expenses: number;
     profit: number;
     profit_margin: number;
   };
   revenue_by_category: Record<string, number>;
+  sales_by_category?: Record<string, number>;
   expenses_by_category: Record<string, number>;
   transaction_counts: {
     revenue: number;
+    sales: number;
     expenses: number;
     total: number;
   };
@@ -490,24 +498,74 @@ export default function ReportPage() {
     try {
       const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
       
+      // Fetch sales data for the period
+      let salesData: any[] = [];
+      try {
+        const salesResponse = await apiClient.getSales({
+          status: 'posted', // Only include posted sales in reports
+          limit: 10000,
+          start_date: dateParams.startDate ? new Date(dateParams.startDate + 'T00:00:00').toISOString() : undefined,
+          end_date: dateParams.endDate ? new Date(dateParams.endDate + 'T23:59:59').toISOString() : undefined,
+        });
+        const salesArray = Array.isArray(salesResponse?.data) 
+          ? salesResponse.data 
+          : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
+            ? (salesResponse.data as any).data || [] 
+            : []);
+        salesData = salesArray || [];
+      } catch (err) {
+        console.warn('Failed to fetch sales data for reports:', err);
+        // Continue without sales data
+      }
+      
       const [summaryResult, incomeResult, cashFlowResult] = await Promise.allSettled([
         apiClient.getFinancialSummary(dateParams.startDate, dateParams.endDate),
         apiClient.getIncomeStatement(dateParams.startDate, dateParams.endDate),
         apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
       ]);
       
+      // Calculate sales totals
+      const totalSales = salesData.reduce((sum: number, s: any) => sum + Number(s.total_sale || 0), 0);
+      const salesByCategory: Record<string, number> = {};
+      salesData.forEach((s: any) => {
+        const category = s.item?.category || 'Sales';
+        salesByCategory[category] = (salesByCategory[category] || 0) + Number(s.total_sale || 0);
+      });
+
       if (summaryResult.status === 'fulfilled') {
         const summaryData = summaryResult.value.data || summaryResult.value;
         if (summaryData && (summaryData.financials || summaryData.revenue_by_category || summaryData.expenses_by_category)) {
+          // Enhance summary with sales data
+          const enhancedSummary = {
+            ...summaryData,
+            financials: {
+              ...summaryData.financials,
+              total_sales: totalSales,
+              total_revenue: (summaryData.financials?.total_revenue || 0) + totalSales,
+              profit: (summaryData.financials?.total_revenue || 0) + totalSales - (summaryData.financials?.total_expenses || 0),
+              profit_margin: ((summaryData.financials?.total_revenue || 0) + totalSales) > 0 
+                ? (((summaryData.financials?.total_revenue || 0) + totalSales - (summaryData.financials?.total_expenses || 0)) / ((summaryData.financials?.total_revenue || 0) + totalSales)) * 100
+                : 0,
+            },
+            sales_by_category: salesByCategory,
+            transaction_counts: {
+              ...summaryData.transaction_counts,
+              sales: salesData.length,
+              total: (summaryData.transaction_counts?.total || 0) + salesData.length,
+            },
+          };
+          
           if (process.env.NODE_ENV === 'development') {
             console.log('Financial Summary loaded:', {
-              total_revenue: summaryData.financials?.total_revenue,
-              total_expenses: summaryData.financials?.total_expenses,
-              revenue_categories: Object.keys(summaryData.revenue_by_category || {}).length,
-              expense_categories: Object.keys(summaryData.expenses_by_category || {}).length,
+              total_revenue: enhancedSummary.financials?.total_revenue,
+              total_sales: enhancedSummary.financials?.total_sales,
+              total_expenses: enhancedSummary.financials?.total_expenses,
+              revenue_categories: Object.keys(enhancedSummary.revenue_by_category || {}).length,
+              sales_categories: Object.keys(enhancedSummary.sales_by_category || {}).length,
+              expense_categories: Object.keys(enhancedSummary.expenses_by_category || {}).length,
             });
           }
-          setFinancialSummary(summaryData);
+          setFinancialSummary(enhancedSummary);
         } else {
           console.warn('Invalid summary data structure:', summaryData);
           setFinancialSummary(null);
@@ -521,17 +579,22 @@ export default function ReportPage() {
           setFinancialSummary({
             period: { start_date: startDate, end_date: endDate },
             financials: {
-              total_revenue: incomeData.revenue.total,
+              total_revenue: (incomeData.revenue.total || 0) + totalSales,
+              total_sales: totalSales,
               total_expenses: incomeData.expenses.total,
-              profit: incomeData.profit,
-              profit_margin: incomeData.profit_margin,
+              profit: (incomeData.revenue.total || 0) + totalSales - incomeData.expenses.total,
+              profit_margin: ((incomeData.revenue.total || 0) + totalSales) > 0
+                ? (((incomeData.revenue.total || 0) + totalSales - incomeData.expenses.total) / ((incomeData.revenue.total || 0) + totalSales)) * 100
+                : 0,
             },
             revenue_by_category: incomeData.revenue.by_category,
+            sales_by_category: salesByCategory,
             expenses_by_category: incomeData.expenses.by_category,
             transaction_counts: {
               revenue: revenueCategories > 0 ? revenueCategories : 0,
+              sales: salesData.length,
               expenses: expenseCategories > 0 ? expenseCategories : 0,
-              total: revenueCategories + expenseCategories,
+              total: revenueCategories + expenseCategories + salesData.length,
             },
             generated_at: new Date().toISOString(),
           });
@@ -543,7 +606,23 @@ export default function ReportPage() {
       if (incomeResult.status === 'fulfilled') {
         const incomeData = incomeResult.value.data || incomeResult.value;
         if (incomeData && (incomeData.revenue || incomeData.expenses)) {
-          setIncomeStatement(incomeData);
+          // Enhance income statement with sales data
+          const enhancedIncome = {
+            ...incomeData,
+            sales: {
+              total: totalSales,
+              by_category: salesByCategory,
+            },
+            revenue: {
+              ...incomeData.revenue,
+              total: (incomeData.revenue?.total || 0) + totalSales,
+            },
+            profit: (incomeData.revenue?.total || 0) + totalSales - (incomeData.expenses?.total || 0),
+            profit_margin: ((incomeData.revenue?.total || 0) + totalSales) > 0
+              ? (((incomeData.revenue?.total || 0) + totalSales - (incomeData.expenses?.total || 0)) / ((incomeData.revenue?.total || 0) + totalSales)) * 100
+              : 0,
+          };
+          setIncomeStatement(enhancedIncome);
         } else {
           if (process.env.NODE_ENV === 'development') {
             console.warn('Invalid income statement data structure:', incomeData);
@@ -558,7 +637,38 @@ export default function ReportPage() {
       if (cashFlowResult.status === 'fulfilled') {
         const cashFlowData = cashFlowResult.value.data || cashFlowResult.value;
         if (cashFlowData && (cashFlowData.summary || cashFlowData.daily_cash_flow)) {
-          setCashFlow(cashFlowData);
+          // Enhance cash flow with sales data
+          const salesByDay: Record<string, { inflow: number; outflow: number; net: number }> = {};
+          salesData.forEach((sale: any) => {
+            const saleDate = sale.created_at ? new Date(sale.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+            if (!salesByDay[saleDate]) {
+              salesByDay[saleDate] = { inflow: 0, outflow: 0, net: 0 };
+            }
+            salesByDay[saleDate].inflow += Number(sale.total_sale || 0);
+            salesByDay[saleDate].net += Number(sale.total_sale || 0);
+          });
+
+          // Merge sales into daily cash flow
+          const enhancedDailyFlow = { ...cashFlowData.daily_cash_flow };
+          Object.entries(salesByDay).forEach(([date, flow]) => {
+            if (enhancedDailyFlow[date]) {
+              enhancedDailyFlow[date].inflow += flow.inflow;
+              enhancedDailyFlow[date].net += flow.net;
+            } else {
+              enhancedDailyFlow[date] = flow;
+            }
+          });
+
+          const enhancedCashFlow = {
+            ...cashFlowData,
+            summary: {
+              ...cashFlowData.summary,
+              total_inflow: (cashFlowData.summary?.total_inflow || 0) + totalSales,
+              net_cash_flow: (cashFlowData.summary?.net_cash_flow || 0) + totalSales,
+            },
+            daily_cash_flow: enhancedDailyFlow,
+          };
+          setCashFlow(enhancedCashFlow);
         } else {
           if (process.env.NODE_ENV === 'development') {
             console.warn('Invalid cash flow data structure:', cashFlowData);
@@ -771,7 +881,19 @@ export default function ReportPage() {
                           {formatCurrency(financialSummary.financials?.total_revenue || 0)}
                         </div>
                         <div className="sub-value">
-                          {financialSummary.transaction_counts.revenue} revenue transactions
+                          {financialSummary.transaction_counts?.revenue || 0} revenue transactions
+                        </div>
+                      </SummaryCard>
+                      <SummaryCard $type="revenue">
+                        <div className="label">
+                          <ShoppingCart size={16} />
+                          Total Sales
+                        </div>
+                        <div className="value">
+                          {formatCurrency(financialSummary.financials?.total_sales || 0)}
+                        </div>
+                        <div className="sub-value">
+                          {financialSummary.transaction_counts?.sales || 0} sales transactions
                         </div>
                       </SummaryCard>
                       <SummaryCard $type="expense">
@@ -805,7 +927,7 @@ export default function ReportPage() {
                         </div>
                         <div className="value">{financialSummary.transaction_counts?.total || 0}</div>
                         <div className="sub-value">
-                          {financialSummary.transaction_counts?.revenue || 0} revenue + {financialSummary.transaction_counts?.expenses || 0} expenses
+                          {financialSummary.transaction_counts?.revenue || 0} revenue + {financialSummary.transaction_counts?.sales || 0} sales + {financialSummary.transaction_counts?.expenses || 0} expenses
                         </div>
                       </SummaryCard>
                     </SummaryGrid>
@@ -843,7 +965,7 @@ export default function ReportPage() {
                       </div>
 
                       <div>
-                        <SectionTitle>Top Expense Categories</SectionTitle>
+                        <SectionTitle>Top Sales Categories</SectionTitle>
                         <CategoryTable>
                           <thead>
                             <tr>
@@ -852,8 +974,8 @@ export default function ReportPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {financialSummary.expenses_by_category && Object.entries(financialSummary.expenses_by_category).length > 0 ? (
-                              Object.entries(financialSummary.expenses_by_category)
+                            {financialSummary.sales_by_category && Object.entries(financialSummary.sales_by_category).length > 0 ? (
+                              Object.entries(financialSummary.sales_by_category)
                                 .sort(([, a], [, b]) => (b as number) - (a as number))
                                 .slice(0, 5)
                                 .map(([category, amount]) => (
@@ -865,7 +987,7 @@ export default function ReportPage() {
                             ) : (
                               <tr>
                                 <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
-                                  No expense data
+                                  No sales data
                                 </td>
                               </tr>
                             )}
@@ -873,6 +995,37 @@ export default function ReportPage() {
                         </CategoryTable>
                       </div>
                     </TwoColumnGrid>
+
+                    <div style={{ marginTop: theme.spacing.xl }}>
+                      <SectionTitle>Top Expense Categories</SectionTitle>
+                      <CategoryTable>
+                        <thead>
+                          <tr>
+                            <th>Category</th>
+                            <th style={{ textAlign: 'right' }}>Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {financialSummary.expenses_by_category && Object.entries(financialSummary.expenses_by_category).length > 0 ? (
+                            Object.entries(financialSummary.expenses_by_category)
+                              .sort(([, a], [, b]) => (b as number) - (a as number))
+                              .slice(0, 5)
+                              .map(([category, amount]) => (
+                                <tr key={category}>
+                                  <td>{capitalize(category)}</td>
+                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount as number)}</td>
+                                </tr>
+                              ))
+                          ) : (
+                            <tr>
+                              <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+                                No expense data
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </CategoryTable>
+                    </div>
                   </>
                 ) : (
                   <EmptyState>
@@ -907,6 +1060,18 @@ export default function ReportPage() {
                         </div>
                         <div className="value">
                           {formatCurrency(incomeStatement.revenue?.total || 0)}
+                        </div>
+                        <div className="sub-value">
+                          Includes sales revenue
+                        </div>
+                      </SummaryCard>
+                      <SummaryCard $type="revenue">
+                        <div className="label">
+                          <ShoppingCart size={16} />
+                          Sales Revenue
+                        </div>
+                        <div className="value">
+                          {formatCurrency(incomeStatement.sales?.total || 0)}
                         </div>
                       </SummaryCard>
                       <SummaryCard $type="expense">
@@ -961,6 +1126,30 @@ export default function ReportPage() {
                         </tbody>
                       </CategoryTable>
                     </div>
+
+                    {incomeStatement.sales?.by_category && Object.entries(incomeStatement.sales.by_category).length > 0 && (
+                      <div style={{ marginTop: theme.spacing.xl }}>
+                        <SectionTitle>Sales by Category</SectionTitle>
+                        <CategoryTable>
+                          <thead>
+                            <tr>
+                              <th>Category</th>
+                              <th style={{ textAlign: 'right' }}>Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(incomeStatement.sales.by_category)
+                              .sort(([, a], [, b]) => (b as number) - (a as number))
+                              .map(([category, amount]) => (
+                                <tr key={category}>
+                                  <td>{capitalize(category)}</td>
+                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount as number)}</td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </CategoryTable>
+                      </div>
+                    )}
 
                     <div style={{ marginTop: theme.spacing.xl }}>
                       <SectionTitle>Expenses by Category</SectionTitle>

@@ -9,7 +9,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Search,
-  TrendingUp
+  TrendingUp,
+  ShoppingCart
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -287,7 +288,7 @@ const TableBody = styled.tbody`
   }
 `;
 
-const TypeBadge = styled.span<{ $type: 'revenue' | 'expense' }>`
+const TypeBadge = styled.span<{ $type: 'revenue' | 'expense' | 'sale' }>`
   display: inline-flex;
   align-items: center;
   gap: ${theme.spacing.xs};
@@ -295,8 +296,18 @@ const TypeBadge = styled.span<{ $type: 'revenue' | 'expense' }>`
   border-radius: ${theme.borderRadius.sm};
   font-size: ${theme.typography.fontSizes.xs};
   font-weight: ${theme.typography.fontWeights.medium};
-  background: ${props => props.$type === 'revenue' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'};
-  color: ${props => props.$type === 'revenue' ? '#065f46' : '#991b1b'};
+  background: ${props => {
+    if (props.$type === 'revenue') return 'rgba(16, 185, 129, 0.12)';
+    if (props.$type === 'expense') return 'rgba(239, 68, 68, 0.12)';
+    if (props.$type === 'sale') return 'rgba(59, 130, 246, 0.12)';
+    return 'rgba(107, 114, 128, 0.12)';
+  }};
+  color: ${props => {
+    if (props.$type === 'revenue') return '#065f46';
+    if (props.$type === 'expense') return '#991b1b';
+    if (props.$type === 'sale') return '#1e40af';
+    return '#374151';
+  }};
 `;
 
 const AmountCell = styled.td<{ $isExpense: boolean }>`
@@ -313,13 +324,23 @@ const CategoryBadge = styled.span`
   color: #1e40af;
 `;
 
-const StatusBadge = styled.span<{ $approved: boolean }>`
+const StatusBadge = styled.span<{ $approved: boolean; $status?: string }>`
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
   border-radius: ${theme.borderRadius.sm};
   font-size: ${theme.typography.fontSizes.xs};
   font-weight: ${theme.typography.fontWeights.medium};
-  background: ${props => props.$approved ? 'rgba(16, 185, 129, 0.12)' : 'rgba(251, 191, 36, 0.12)'};
-  color: ${props => props.$approved ? '#065f46' : '#92400e'};
+  background: ${props => {
+    if (props.$status === 'posted') return 'rgba(16, 185, 129, 0.12)';
+    if (props.$status === 'cancelled') return 'rgba(239, 68, 68, 0.12)';
+    if (props.$approved) return 'rgba(16, 185, 129, 0.12)';
+    return 'rgba(251, 191, 36, 0.12)';
+  }};
+  color: ${props => {
+    if (props.$status === 'posted') return '#065f46';
+    if (props.$status === 'cancelled') return '#991b1b';
+    if (props.$approved) return '#065f46';
+    return '#92400e';
+  }};
   margin-right: ${theme.spacing.sm};
 `;
 
@@ -379,7 +400,7 @@ const TransactionDescription = styled.div`
 
 interface Transaction {
   id: string;
-  transaction_type: 'revenue' | 'expense';
+  transaction_type: 'revenue' | 'expense' | 'sale';
   title: string;
   description?: string | null;
   category: string;
@@ -391,6 +412,11 @@ interface Transaction {
   source?: string | null;
   vendor?: string | null;
   created_at: string;
+  status?: 'pending' | 'posted' | 'cancelled';
+  item_name?: string;
+  quantity_sold?: number;
+  receipt_number?: string;
+  customer_name?: string;
 }
 
 export default function TransactionListPage() {
@@ -411,8 +437,41 @@ export default function TransactionListPage() {
     setError(null);
     
     try {
-      const response = await apiClient.getTransactions();
-      setTransactions(response.data || []);
+      // Fetch revenues, expenses, and sales
+      const [transactionsResponse, salesResponse] = await Promise.all([
+        apiClient.getTransactions().catch(() => ({ data: [] })),
+        apiClient.getSales({ limit: 1000 }).catch(() => ({ data: [] })),
+      ]);
+
+      const transactions = transactionsResponse.data || [];
+      
+      // Transform sales to transaction format
+      const salesData: any = salesResponse?.data || [];
+      const salesTransactions = (Array.isArray(salesData) ? salesData : (salesData?.data || [])).map((sale: any) => ({
+        id: `sale-${sale.id}`,
+        transaction_type: 'sale' as const,
+        title: sale.item_name || `Sale #${sale.id}`,
+        description: sale.customer_name ? `Customer: ${sale.customer_name}` : sale.notes || `Receipt: ${sale.receipt_number || `#${sale.id}`}`,
+        category: 'Sales',
+        amount: sale.total_sale || 0,
+        date: sale.created_at || sale.date,
+        is_approved: sale.status === 'posted',
+        created_at: sale.created_at,
+        status: sale.status || 'pending',
+        item_name: sale.item_name,
+        quantity_sold: sale.quantity_sold,
+        receipt_number: sale.receipt_number,
+        customer_name: sale.customer_name,
+      }));
+
+      // Combine all transactions and sort by date
+      const allTransactions = [...transactions, ...salesTransactions].sort((a, b) => {
+        const dateA = new Date(a.date || a.created_at || 0).getTime();
+        const dateB = new Date(b.date || b.created_at || 0).getTime();
+        return dateB - dateA; // Most recent first
+      });
+
+      setTransactions(allTransactions);
     } catch (err: any) {
       let errorMessage = 'Failed to load transactions';
       
@@ -441,12 +500,26 @@ export default function TransactionListPage() {
       transaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.source?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.vendor?.toLowerCase().includes(searchTerm.toLowerCase());
+      transaction.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.receipt_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesType = typeFilter === 'all' || transaction.transaction_type === typeFilter;
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'approved' && transaction.is_approved) ||
-      (statusFilter === 'pending' && !transaction.is_approved);
+    
+    // Handle status filter - include sales status
+    let matchesStatus = false;
+    if (statusFilter === 'all') {
+      matchesStatus = true;
+    } else if (statusFilter === 'approved') {
+      matchesStatus = transaction.is_approved || transaction.status === 'posted';
+    } else if (statusFilter === 'pending') {
+      matchesStatus = !transaction.is_approved && transaction.status !== 'posted' && transaction.status !== 'cancelled';
+    } else if (statusFilter === 'posted') {
+      matchesStatus = transaction.status === 'posted';
+    } else {
+      matchesStatus = transaction.status === statusFilter;
+    }
     
     return matchesSearch && matchesType && matchesStatus;
   });
@@ -455,11 +528,15 @@ export default function TransactionListPage() {
     .filter(t => t.transaction_type === 'revenue')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
+  const totalSales = filteredTransactions
+    .filter(t => t.transaction_type === 'sale')
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  
   const totalExpenses = filteredTransactions
     .filter(t => t.transaction_type === 'expense')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
-  const netAmount = totalRevenue - totalExpenses;
+  const netAmount = totalRevenue + totalSales - totalExpenses;
 
   if (loading) {
     return (
@@ -497,6 +574,10 @@ export default function TransactionListPage() {
               <div className="label">Total Revenue</div>
               <div className="value">{formatCurrency(totalRevenue)}</div>
             </SummaryCard>
+            <SummaryCard $type="revenue">
+              <div className="label">Total Sales</div>
+              <div className="value">{formatCurrency(totalSales)}</div>
+            </SummaryCard>
             <SummaryCard $type="expense">
               <div className="label">Total Expenses</div>
               <div className="value">{formatCurrency(totalExpenses)}</div>
@@ -529,12 +610,15 @@ export default function TransactionListPage() {
                 <option value="all">All Types</option>
                 <option value="revenue">Revenue</option>
                 <option value="expense">Expense</option>
+                <option value="sale">Sales</option>
               </Select>
               
               <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="all">All Status</option>
                 <option value="approved">Approved</option>
+                <option value="posted">Posted</option>
                 <option value="pending">Pending</option>
+                <option value="cancelled">Cancelled</option>
               </Select>
             </FiltersGrid>
           </FiltersContainer>
@@ -564,17 +648,38 @@ export default function TransactionListPage() {
                     {filteredTransactions.map((transaction) => {
                       const originalId = transaction.id.split('-')[1];
                       const isExpense = transaction.transaction_type === 'expense';
+                      const isSale = transaction.transaction_type === 'sale';
                       
                       return (
                         <tr key={transaction.id}>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <TypeBadge $type={transaction.transaction_type}>
-                              {isExpense ? <ArrowDownRight size={12} /> : <ArrowUpRight size={12} />}
-                              {transaction.transaction_type === 'revenue' ? 'Revenue' : 'Expense'}
+                              {isExpense ? (
+                                <ArrowDownRight size={12} />
+                              ) : isSale ? (
+                                <ShoppingCart size={12} />
+                              ) : (
+                                <ArrowUpRight size={12} />
+                              )}
+                              {transaction.transaction_type === 'revenue' 
+                                ? 'Revenue' 
+                                : transaction.transaction_type === 'expense' 
+                                ? 'Expense' 
+                                : 'Sale'}
                             </TypeBadge>
                           </td>
                           <td>
                             <TransactionTitle>{transaction.title}</TransactionTitle>
+                            {isSale && transaction.item_name && (
+                              <TransactionDescription>
+                                {transaction.quantity_sold && `${transaction.quantity_sold}x `}
+                                {transaction.item_name}
+                                {transaction.receipt_number && ` • ${transaction.receipt_number}`}
+                              </TransactionDescription>
+                            )}
+                            {transaction.description && !isSale && (
+                              <TransactionDescription>{transaction.description}</TransactionDescription>
+                            )}
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <CategoryBadge>{transaction.category || 'N/A'}</CategoryBadge>
@@ -584,8 +689,17 @@ export default function TransactionListPage() {
                           </AmountCell>
                           <td style={{ whiteSpace: 'nowrap' }}>{formatDate(transaction.date)}</td>
                           <td style={{ whiteSpace: 'nowrap' }}>
-                            <StatusBadge $approved={transaction.is_approved}>
-                              {transaction.is_approved ? 'Approved' : 'Pending'}
+                            <StatusBadge 
+                              $approved={transaction.is_approved} 
+                              $status={transaction.status}
+                            >
+                              {transaction.status === 'posted' 
+                                ? 'Posted' 
+                                : transaction.status === 'cancelled'
+                                ? 'Cancelled'
+                                : transaction.is_approved 
+                                ? 'Approved' 
+                                : 'Pending'}
                             </StatusBadge>
                             {transaction.is_recurring && (
                               <RecurringBadge>Recurring</RecurringBadge>
@@ -593,11 +707,19 @@ export default function TransactionListPage() {
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <ActionButtons>
-                              <Link href={isExpense ? `/expenses/edit/${originalId}` : `/revenue/edit/${originalId}`}>
-                                <Button size="sm" variant="secondary">
-                                  View
-                                </Button>
-                              </Link>
+                              {isSale ? (
+                                <Link href={`/sales/accounting?sale_id=${originalId}`}>
+                                  <Button size="sm" variant="secondary">
+                                    View
+                                  </Button>
+                                </Link>
+                              ) : (
+                                <Link href={isExpense ? `/expenses/edit/${originalId}` : `/revenue/edit/${originalId}`}>
+                                  <Button size="sm" variant="secondary">
+                                    View
+                                  </Button>
+                                </Link>
+                              )}
                             </ActionButtons>
                           </td>
                         </tr>

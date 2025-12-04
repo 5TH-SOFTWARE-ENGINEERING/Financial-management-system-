@@ -91,12 +91,16 @@ class ApiClient {
         // Handle 403 Forbidden - user doesn't have permission
         if (error.response?.status === 403) {
           const url = error.config?.url || '';
-          // Only log 403s for non-backup endpoints to reduce noise
-          // Backup endpoints will show proper error messages in the UI
-          if (!url.includes('/backup')) {
-            if (typeof window !== 'undefined') {
-              console.warn('Access forbidden:', error.response?.data?.detail || 'Insufficient permissions');
-            }
+          // Suppress warnings for expected 403s on role-restricted endpoints
+          // These are handled gracefully by the calling code
+          const suppressWarnings = url.includes('/inventory/summary') || 
+                                   url.includes('/sales/summary') || 
+                                   url.includes('/sales/summary/overview') ||
+                                   url.includes('/sales/journal-entries') ||
+                                   url.includes('/backup');
+          
+          if (!suppressWarnings && typeof window !== 'undefined') {
+            console.warn('Access forbidden:', error.response?.data?.detail || 'Insufficient permissions');
           }
         }
         
@@ -1088,6 +1092,123 @@ class ApiClient {
 
   async getVarianceSummary(budgetId: number) {
     return this.get(`/budgeting/budgets/${budgetId}/variance/summary`);
+  }
+
+  // ============================================================================
+  // INVENTORY MANAGEMENT API
+  // ============================================================================
+  
+  async createInventoryItem(itemData: {
+    item_name: string;
+    buying_price: number;
+    expense_amount?: number;
+    selling_price: number;
+    quantity: number;
+    description?: string;
+    category?: string;
+    sku?: string;
+    is_active?: boolean;
+  }) {
+    return this.post('/inventory/items', itemData);
+  }
+
+  async getInventoryItems(params?: {
+    skip?: number;
+    limit?: number;
+    category?: string;
+    is_active?: boolean;
+    search?: string;
+  }) {
+    return this.get('/inventory/items', { params });
+  }
+
+  async getInventoryItem(itemId: number) {
+    return this.get(`/inventory/items/${itemId}`);
+  }
+
+  async updateInventoryItem(itemId: number, itemData: {
+    item_name?: string;
+    buying_price?: number;
+    expense_amount?: number;
+    selling_price?: number;
+    quantity?: number;
+    description?: string;
+    category?: string;
+    sku?: string;
+    is_active?: boolean;
+  }) {
+    return this.put(`/inventory/items/${itemId}`, itemData);
+  }
+
+  async getInventoryAuditLogs(itemId: number, params?: { skip?: number; limit?: number }) {
+    return this.get(`/inventory/items/${itemId}/audit`, { params });
+  }
+
+  async getLowStockItems(threshold?: number) {
+    return this.get('/inventory/items/low-stock/list', { params: { threshold } });
+  }
+
+  async getInventorySummary() {
+    return this.get('/inventory/summary');
+  }
+
+  // ============================================================================
+  // SALES API
+  // ============================================================================
+
+  async createSale(saleData: {
+    item_id: number;
+    quantity_sold: number;
+    customer_name?: string;
+    customer_email?: string;
+    notes?: string;
+  }) {
+    return this.post('/sales/', saleData);
+  }
+
+  async getSales(params?: {
+    skip?: number;
+    limit?: number;
+    status?: 'pending' | 'posted' | 'cancelled';
+    item_id?: number;
+    start_date?: string;
+    end_date?: string;
+  }) {
+    return this.get('/sales', { params });
+  }
+
+  async getSale(saleId: number) {
+    return this.get(`/sales/${saleId}`);
+  }
+
+  async postSale(saleId: number, postData: {
+    debit_account?: string;
+    credit_account?: string;
+    reference_number?: string;
+    notes?: string;
+  }) {
+    return this.post(`/sales/${saleId}/post`, postData);
+  }
+
+  async cancelSale(saleId: number) {
+    return this.post(`/sales/${saleId}/cancel`, {});
+  }
+
+  async getSalesSummary(params?: { start_date?: string; end_date?: string }) {
+    return this.get('/sales/summary/overview', { params });
+  }
+
+  async getReceipt(saleId: number) {
+    return this.get(`/sales/receipt/${saleId}`);
+  }
+
+  async getJournalEntries(params?: {
+    skip?: number;
+    limit?: number;
+    start_date?: string;
+    end_date?: string;
+  }) {
+    return this.get('/sales/journal-entries/list', { params });
   }
 
   // Generic request method

@@ -505,8 +505,10 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchNotifications();
-      // Set up real-time updates every 15 seconds
-      const interval = setInterval(fetchNotifications, 15000);
+      // Set up real-time updates every 30 seconds (reduced frequency to avoid excessive requests)
+      const interval = setInterval(() => {
+        fetchNotifications();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated, user]);
@@ -516,8 +518,13 @@ export default function NotificationsPage() {
     setError(null);
     
     try {
-      const response = await apiClient.getNotifications();
-      const apiNotifications = (response.data || []).map((notif: any) => ({
+      const response: any = await apiClient.getNotifications();
+      // Handle both direct array response and wrapped response
+      const notificationsData = Array.isArray(response?.data) 
+        ? response.data 
+        : (response?.data?.data || []);
+      
+      const apiNotifications = (notificationsData || []).map((notif: any) => ({
         id: notif.id,
         type: mapNotificationType(notif.notification_type || notif.type || 'info'),
         title: notif.title || 'Notification',
@@ -525,7 +532,7 @@ export default function NotificationsPage() {
         is_read: notif.is_read || notif.read || false,
         created_at: notif.created_at || notif.createdAt || new Date().toISOString(),
         action_url: notif.action_url || notif.actionUrl || null,
-        notification_type: notif.notification_type,
+        notification_type: notif.notification_type || notif.type,
         priority: notif.priority,
       }));
       
@@ -536,9 +543,10 @@ export default function NotificationsPage() {
       
       setNotifications(apiNotifications);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load notifications';
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to load notifications';
       setError(errorMessage);
       console.error('Failed to fetch notifications:', err);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -546,15 +554,40 @@ export default function NotificationsPage() {
 
   const mapNotificationType = (type: string): 'success' | 'error' | 'warning' | 'info' => {
     const normalized = type?.toLowerCase() || 'info';
-    if (normalized.includes('approval_decision') || normalized.includes('approved') || normalized.includes('success')) {
+    
+    // Success types
+    if (normalized.includes('approval_decision') || 
+        normalized.includes('approved') || 
+        normalized.includes('success') ||
+        normalized.includes('posted') ||
+        normalized.includes('sale_completed') ||
+        normalized.includes('inventory_created')) {
       return 'success';
     }
-    if (normalized.includes('rejected') || normalized.includes('error') || normalized.includes('failed') || normalized.includes('budget_exceeded')) {
+    
+    // Error types
+    if (normalized.includes('rejected') || 
+        normalized.includes('error') || 
+        normalized.includes('failed') || 
+        normalized.includes('budget_exceeded') ||
+        normalized.includes('sale_cancelled') ||
+        normalized.includes('inventory_error') ||
+        normalized.includes('low_stock')) {
       return 'error';
     }
-    if (normalized.includes('approval_request') || normalized.includes('pending') || normalized.includes('warning') || normalized.includes('deadline')) {
+    
+    // Warning types
+    if (normalized.includes('approval_request') || 
+        normalized.includes('pending') || 
+        normalized.includes('warning') || 
+        normalized.includes('deadline') ||
+        normalized.includes('sale_pending') ||
+        normalized.includes('inventory_low') ||
+        normalized.includes('stock_alert')) {
       return 'warning';
     }
+    
+    // Default to info
     return 'info';
   };
 
@@ -574,11 +607,13 @@ export default function NotificationsPage() {
         )
       );
       
-      toast.success('Notification marked as read');
+      // Don't show toast for individual mark as read to avoid spam
+      // toast.success('Notification marked as read');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to mark notification as read';
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to mark notification as read';
       toast.error(errorMessage);
-      fetchNotifications();
+      // Refresh on error to ensure consistency
+      await fetchNotifications();
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -602,9 +637,9 @@ export default function NotificationsPage() {
       
       toast.success('All notifications marked as read');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to mark all notifications as read';
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to mark all notifications as read';
       toast.error(errorMessage);
-      fetchNotifications();
+      await fetchNotifications();
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -632,9 +667,9 @@ export default function NotificationsPage() {
       
       toast.success('Notification deleted');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete notification';
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to delete notification';
       toast.error(errorMessage);
-      fetchNotifications();
+      await fetchNotifications();
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -705,10 +740,13 @@ export default function NotificationsPage() {
               <HeaderActions>
                 <ActionButton
                   $variant="secondary"
-                  onClick={fetchNotifications}
+                  onClick={async () => {
+                    await fetchNotifications();
+                    toast.success('Notifications refreshed');
+                  }}
                   disabled={loading}
                 >
-                  <RefreshCw />
+                  <RefreshCw style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                   Refresh
                 </ActionButton>
                 {unreadCount > 0 && (
@@ -822,6 +860,12 @@ export default function NotificationsPage() {
                       $isRead={notification.is_read}
                       $type={notification.type}
                       onClick={() => {
+                        // Mark as read when clicked
+                        if (!notification.is_read) {
+                          markAsRead(notification.id);
+                        }
+                        
+                        // Navigate to action URL if available
                         if (notification.action_url) {
                           router.push(notification.action_url);
                         }
@@ -845,6 +889,10 @@ export default function NotificationsPage() {
                               <ViewDetailsLink
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  // Mark as read when viewing details
+                                  if (!notification.is_read) {
+                                    markAsRead(notification.id);
+                                  }
                                   router.push(notification.action_url!);
                                 }}
                               >

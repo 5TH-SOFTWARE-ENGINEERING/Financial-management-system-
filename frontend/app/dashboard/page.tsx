@@ -8,7 +8,7 @@ import {
   Users, DollarSign, TrendingUp, FileText, Shield, Calendar,
   CreditCard, Activity, Briefcase, UserCheck,
   ClipboardList, BarChart3, Wallet, ArrowRight, AlertCircle,
-  LineChart, Target, ArrowUpRight, ArrowDownRight
+  LineChart, Target, ArrowUpRight, ArrowDownRight, Package, ShoppingCart, BookOpen
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -489,6 +489,8 @@ const AdminDashboard: React.FC = () => {
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
   const [analyticsData, setAnalyticsData] = useState<any | null>(null);
+  const [inventorySummary, setInventorySummary] = useState<any | null>(null);
+  const [salesSummary, setSalesSummary] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -504,11 +506,53 @@ const AdminDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const [overviewRes, activityRes, analyticsRes] = await Promise.all([
+        // Load role-specific data
+        const userRole = user?.role?.toLowerCase();
+        const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'admin';
+        const isAccountant = userRole === 'accountant';
+        const isManager = userRole === 'manager';
+        const isEmployee = userRole === 'employee';
+        
+        const promises: Promise<any>[] = [
           apiClient.getDashboardOverview(),
           apiClient.getDashboardRecentActivity(8),
           apiClient.getAdvancedKPIs({ period: 'month' }).catch(() => null), // Optional analytics
-        ]);
+        ];
+        
+        // Load inventory summary for Finance Admin and Managers
+        if (isFinanceAdmin || isManager) {
+          promises.push(
+            apiClient.getInventorySummary().catch((err: any) => {
+              // Silently handle 403 errors (expected for non-finance admins/managers)
+              if (err.response?.status === 403) {
+                return null;
+              }
+              console.warn('Failed to load inventory summary:', err);
+              return null;
+            })
+          );
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+        
+        // Load sales summary ONLY for Accountants and Finance Admins (NOT managers)
+        // Managers do not have access to sales summary
+        if ((isAccountant || isFinanceAdmin) && !isManager) {
+          promises.push(
+            apiClient.getSalesSummary().catch((err: any) => {
+              // Silently handle 403 errors (expected for managers and other non-authorized roles)
+              if (err.response?.status === 403) {
+                return null;
+              }
+              console.warn('Failed to load sales summary:', err);
+              return null;
+            })
+          );
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+        
+        const [overviewRes, activityRes, analyticsRes, inventoryRes, salesRes] = await Promise.all(promises);
         // Ensure overview data is properly set
         const overviewData = overviewRes.data || {};
         setOverview(overviewData);
@@ -607,6 +651,16 @@ const AdminDashboard: React.FC = () => {
         // Set analytics data if available
         if (analyticsRes?.data) {
           setAnalyticsData(analyticsRes.data);
+        }
+        
+        // Set inventory summary if available
+        if (inventoryRes?.data) {
+          setInventorySummary(inventoryRes.data);
+        }
+        
+        // Set sales summary if available
+        if (salesRes?.data) {
+          setSalesSummary(salesRes.data);
         }
       } catch (err: any) {
         const errorMessage = err.response?.data?.detail || err.message || 'Failed to load dashboard data';
@@ -763,6 +817,98 @@ const AdminDashboard: React.FC = () => {
                   handlePendingApprovalsClick
                 )}
               </DashboardGrid>
+              
+              {/* Inventory & Sales Section - Role-based */}
+              {(user?.role === 'finance_manager' || user?.role === 'admin' || user?.role === 'manager') && inventorySummary && (
+                <>
+                  <SectionTitle>Inventory Overview</SectionTitle>
+                  <DashboardGrid>
+                    {createStatsCard(
+                      Package,
+                      'Total Items',
+                      (inventorySummary.total_items || 0).toString(),
+                      true,
+                      () => router.push('/inventory/manage')
+                    )}
+                    {createStatsCard(
+                      DollarSign,
+                      'Inventory Value',
+                      `$${Number(inventorySummary.total_selling_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      false
+                    )}
+                    {createStatsCard(
+                      TrendingUp,
+                      'Potential Profit',
+                      `$${Number(inventorySummary.potential_profit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      false
+                    )}
+                    {createStatsCard(
+                      DollarSign,
+                      'Total Cost',
+                      `$${Number(inventorySummary.total_cost_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      false
+                    )}
+                  </DashboardGrid>
+                </>
+              )}
+              
+              {/* Sales Summary - For Accountants and Finance Admins */}
+              {(user?.role === 'accountant' || user?.role === 'finance_manager' || user?.role === 'admin') && salesSummary && (
+                <>
+                  <SectionTitle>Sales Overview</SectionTitle>
+                  <DashboardGrid>
+                    {createStatsCard(
+                      ShoppingCart,
+                      'Total Sales',
+                      (salesSummary.total_sales || 0).toString(),
+                      true,
+                      () => router.push('/sales/accounting')
+                    )}
+                    {createStatsCard(
+                      DollarSign,
+                      'Total Revenue',
+                      `$${Number(salesSummary.total_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      false
+                    )}
+                    {createStatsCard(
+                      Activity,
+                      'Pending Sales',
+                      (salesSummary.pending_sales || 0).toString(),
+                      true,
+                      () => router.push('/sales/accounting?tab=sales&status=pending')
+                    )}
+                    {createStatsCard(
+                      FileText,
+                      'Posted Sales',
+                      (salesSummary.posted_sales || 0).toString(),
+                      false
+                    )}
+                  </DashboardGrid>
+                </>
+              )}
+              
+              {/* Quick Actions for Employees */}
+              {user?.role === 'employee' && (
+                <>
+                  <SectionTitle>Quick Actions</SectionTitle>
+                  <DashboardGrid>
+                    {createStatsCard(
+                      ShoppingCart,
+                      'Make a Sale',
+                      'Start Selling',
+                      true,
+                      () => router.push('/inventory/sales')
+                    )}
+                    {createStatsCard(
+                      Package,
+                      'View Items',
+                      'Browse',
+                      true,
+                      () => router.push('/inventory/sales')
+                    )}
+                  </DashboardGrid>
+                </>
+              )}
             </>
           ) : (
             <EmptyState>

@@ -11,6 +11,9 @@ from .notification import Notification
 from .project import Project
 from .login_history import LoginHistory
 from .budget import Budget, BudgetItem, BudgetScenario, Forecast, BudgetVariance, BudgetType, BudgetPeriod, BudgetStatus
+from .inventory import InventoryItem
+from .sale import Sale, SaleStatus, JournalEntry
+from .inventory_audit import InventoryAuditLog, InventoryChangeType
 
 __all__ = [
     "User", "UserRole", "Role",
@@ -20,5 +23,8 @@ __all__ = [
     "AuditLog", "Notification",
     "Project", "LoginHistory",
     "Budget", "BudgetItem", "BudgetScenario", "Forecast", "BudgetVariance",
-    "BudgetType", "BudgetPeriod", "BudgetStatus"
+    "BudgetType", "BudgetPeriod", "BudgetStatus",
+    "InventoryItem",
+    "Sale", "SaleStatus", "JournalEntry",
+    "InventoryAuditLog", "InventoryChangeType"
 ]

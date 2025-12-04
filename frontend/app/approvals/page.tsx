@@ -14,7 +14,8 @@ import {
   CreditCard,
   AlertCircle,
   RefreshCw,
-  Loader2
+  Loader2,
+  ShoppingCart
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -684,11 +685,11 @@ const SpinningIcon = styled(Loader2)`
 
 interface ApprovalItem {
   id: number;
-  type: 'revenue' | 'expense' | 'workflow';
+  type: 'revenue' | 'expense' | 'workflow' | 'sale';
   title: string;
   description?: string;
   amount?: number;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'posted';
   requester?: string;
   requester_id?: number;
   approver?: string;
@@ -699,6 +700,10 @@ interface ApprovalItem {
   revenue_entry_id?: number;
   expense_entry_id?: number;
   workflow_id?: number;
+  sale_id?: number;
+  item_name?: string;
+  quantity_sold?: number;
+  receipt_number?: string;
 }
 
 export default function ApprovalsPage() {
@@ -814,8 +819,38 @@ export default function ApprovalsPage() {
           expense_entry_id: e.id,
         }));
 
-      // Combine all approvals (workflows + standalone entries without workflows)
-      const allApprovals = [...workflows, ...pendingRevenues, ...pendingExpenses];
+      // Fetch pending sales - only for accountants and finance admins
+      let pendingSales: any[] = [];
+      if (user?.role === 'accountant' || user?.role === 'finance_manager' || user?.role === 'admin') {
+        try {
+          const salesResponse: any = await apiClient.getSales({ status: 'pending', limit: 1000 });
+          const salesData = Array.isArray(salesResponse?.data) 
+            ? salesResponse.data 
+            : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
+              ? (salesResponse.data as any).data || [] 
+              : []);
+          pendingSales = (salesData || []).map((s: any) => ({
+            id: s.id,
+            type: 'sale' as const,
+            title: s.item_name || `Sale #${s.id}`,
+            description: s.customer_name ? `Customer: ${s.customer_name}` : `Receipt: ${s.receipt_number || `#${s.id}`}`,
+            amount: s.total_sale,
+            status: s.status || 'pending',
+            requester_id: s.sold_by_id,
+            created_at: s.created_at,
+            sale_id: s.id,
+            item_name: s.item_name,
+            quantity_sold: s.quantity_sold,
+            receipt_number: s.receipt_number,
+          }));
+        } catch (err: any) {
+          console.error('Error fetching sales:', err);
+          // Don't fail the entire load if sales fetch fails
+        }
+      }
+
+      // Combine all approvals (workflows + standalone entries without workflows + sales)
+      const allApprovals = [...workflows, ...pendingRevenues, ...pendingExpenses, ...pendingSales];
       
       // Sort by created date (newest first)
       allApprovals.sort((a, b) => {
@@ -840,6 +875,14 @@ export default function ApprovalsPage() {
       return;
     }
 
+    // For sales, check if user is accountant or finance admin
+    if (item.type === 'sale') {
+      if (user?.role !== 'accountant' && user?.role !== 'finance_manager' && user?.role !== 'admin') {
+        toast.error('Only accountants can post sales to ledger');
+        return;
+      }
+    }
+
     const itemKey = `${item.type}-${item.id}`;
     setProcessingId(itemKey);
     setError(null);
@@ -854,6 +897,14 @@ export default function ApprovalsPage() {
       } else if (item.type === 'expense' && item.expense_entry_id) {
         await apiClient.approveItem(item.expense_entry_id, 'expense');
         toast.success('Expense entry approved successfully');
+      } else if (item.type === 'sale' && item.sale_id) {
+        // Post sale to ledger (default accounts)
+        await apiClient.postSale(item.sale_id, {
+          debit_account: 'Cash',
+          credit_account: 'Sales Revenue',
+          reference_number: item.receipt_number || undefined,
+        });
+        toast.success('Sale posted to ledger successfully');
       }
       
       await loadApprovals();
@@ -891,6 +942,14 @@ export default function ApprovalsPage() {
       return;
     }
 
+    // For sales, only finance admins can cancel
+    if (item.type === 'sale') {
+      if (user?.role !== 'finance_manager' && user?.role !== 'admin') {
+        toast.error('Only finance admins can cancel sales');
+        return;
+      }
+    }
+
     if (!reason.trim()) {
       setRejectPasswordError('Please provide a rejection reason');
       return;
@@ -921,6 +980,10 @@ export default function ApprovalsPage() {
       } else if (item.type === 'expense' && item.expense_entry_id) {
         await apiClient.rejectItem(item.expense_entry_id, 'expense', reason, password.trim());
         toast.success('Expense entry rejected');
+      } else if (item.type === 'sale' && item.sale_id) {
+        // Cancel sale (only finance admins)
+        await apiClient.cancelSale(item.sale_id);
+        toast.success('Sale cancelled successfully');
       }
       
       setShowRejectModal(null);
@@ -964,6 +1027,8 @@ export default function ApprovalsPage() {
         return <DollarSign />;
       case 'expense':
         return <CreditCard />;
+      case 'sale':
+        return <ShoppingCart />;
       default:
         return <FileText />;
     }
@@ -988,9 +1053,22 @@ export default function ApprovalsPage() {
   const filteredApprovals = approvals.filter(item => {
     const matchesSearch = 
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.receipt_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.item_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+    // Handle status filter - "posted" should match "approved" for sales, and "approved" should match "posted" for sales
+    let matchesStatus = false;
+    if (statusFilter === 'all') {
+      matchesStatus = true;
+    } else if (statusFilter === 'approved' && item.status === 'posted') {
+      matchesStatus = true; // Show posted sales when filtering for approved
+    } else if (statusFilter === 'posted' && item.status === 'approved') {
+      matchesStatus = true; // Show approved items when filtering for posted
+    } else {
+      matchesStatus = item.status === statusFilter;
+    }
+    
     const matchesType = typeFilter === 'all' || item.type === typeFilter;
     
     return matchesSearch && matchesStatus && matchesType;
@@ -1054,6 +1132,7 @@ export default function ApprovalsPage() {
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
+              <option value="posted">Posted</option>
               <option value="rejected">Rejected</option>
               <option value="cancelled">Cancelled</option>
               </Select>
@@ -1066,6 +1145,7 @@ export default function ApprovalsPage() {
               <option value="revenue">Revenue</option>
               <option value="expense">Expense</option>
               <option value="workflow">Workflow</option>
+              <option value="sale">Sales</option>
               </Select>
             </FiltersGrid>
           </FiltersContainer>
@@ -1095,16 +1175,27 @@ export default function ApprovalsPage() {
                             </ApprovalDescription>
                           )}
                         </div>
-                        <StatusBadge $status={item.status}>
-                          {item.status.toUpperCase()}
+                        <StatusBadge $status={item.status === 'posted' ? 'approved' : item.status}>
+                          {item.status === 'posted' ? 'POSTED' : item.status.toUpperCase()}
                         </StatusBadge>
                       </ApprovalHeader>
                       
                       <ApprovalMeta>
                         <span style={{ textTransform: 'capitalize' }}>{item.type}</span>
+                        {item.type === 'sale' && item.item_name && (
+                          <span style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
+                            Item: {item.item_name}
+                            {item.quantity_sold && ` (Qty: ${item.quantity_sold})`}
+                          </span>
+                        )}
                         {item.amount !== undefined && (
                           <span style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
-                            ${Number(item.amount).toLocaleString()}
+                            ${Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        )}
+                        {item.type === 'sale' && item.receipt_number && (
+                          <span style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                            Receipt: {item.receipt_number}
                           </span>
                         )}
                         <span>
@@ -1142,28 +1233,30 @@ export default function ApprovalsPage() {
                         {processingId === `${item.type}-${item.id}` ? (
                               <>
                                 <SpinningIcon size={16} />
-                                Approving...
+                                {item.type === 'sale' ? 'Posting...' : 'Approving...'}
                               </>
                             ) : (
                               <>
                                 <CheckCircle />
-                                Approve
+                                {item.type === 'sale' ? 'Post to Ledger' : 'Approve'}
                               </>
                             )}
                           </ActionButton>
-                          <ActionButton
-                            $variant="danger"
-                            onClick={() => {
-                              setShowRejectModal(`${item.type}-${item.id}`);
-                              setRejectionReason('');
-                              setRejectPassword('');
-                              setRejectPasswordError(null);
-                            }}
-                            disabled={processingId === `${item.type}-${item.id}`}
-                          >
-                            <XCircle />
-                            Reject
-                          </ActionButton>
+                          {(item.type !== 'sale' || (user?.role === 'finance_manager' || user?.role === 'admin')) && (
+                            <ActionButton
+                              $variant="danger"
+                              onClick={() => {
+                                setShowRejectModal(`${item.type}-${item.id}`);
+                                setRejectionReason('');
+                                setRejectPassword('');
+                                setRejectPasswordError(null);
+                              }}
+                              disabled={processingId === `${item.type}-${item.id}`}
+                            >
+                              <XCircle />
+                              {item.type === 'sale' ? 'Cancel' : 'Reject'}
+                            </ActionButton>
+                          )}
                         </>
                       )}
                       <ActionButton
@@ -1173,6 +1266,8 @@ export default function ApprovalsPage() {
                             router.push(`/revenue/${item.revenue_entry_id}`);
                           } else if (item.type === 'expense') {
                             router.push(`/expenses/${item.expense_entry_id}`);
+                          } else if (item.type === 'sale' && item.sale_id) {
+                            router.push(`/sales/accounting?sale_id=${item.sale_id}`);
                           } else if (item.workflow_id) {
                             router.push(`/approvals/${item.workflow_id}`);
                           }
