@@ -21,6 +21,88 @@ import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
 
+// Icon color mapping for different icon types
+const getIconColor = (iconType: string, active: boolean = false): string => {
+    if (active) {
+        // Active state colors (brighter)
+        const activeColors: Record<string, string> = {
+            'database': '#3b82f6',           // Blue
+            'download': '#22c55e',           // Green
+            'trash2': '#ef4444',             // Red
+            'refresh-cw': '#06b6d4',         // Cyan
+            'hard-drive': '#8b5cf6',         // Purple
+            'clock': '#f59e0b',              // Amber
+            'file-text': '#6366f1',           // Indigo
+            'alert-triangle': '#f59e0b',     // Amber
+            'check-circle': '#22c55e',        // Green
+            'loader': '#3b82f6',             // Blue
+            'x': '#6b7280',                  // Gray
+        };
+        return activeColors[iconType] || '#6b7280';
+    } else {
+        // Inactive state colors (muted but colorful)
+        const inactiveColors: Record<string, string> = {
+            'database': '#60a5fa',           // Light Blue
+            'download': '#4ade80',           // Light Green
+            'trash2': '#f87171',             // Light Red
+            'refresh-cw': '#22d3ee',         // Light Cyan
+            'hard-drive': '#a78bfa',         // Light Purple
+            'clock': '#fbbf24',              // Light Amber
+            'file-text': '#818cf8',           // Light Indigo
+            'alert-triangle': '#fbbf24',      // Light Amber
+            'check-circle': '#4ade80',        // Light Green
+            'loader': '#60a5fa',             // Light Blue
+            'x': '#9ca3af',                  // Light Gray
+        };
+        return inactiveColors[iconType] || '#9ca3af';
+    }
+};
+
+// Icon styled components
+const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : '#6b7280'};
+    opacity: ${props => props.$active ? 1 : 0.8};
+    transition: all 0.2s ease;
+    
+    svg {
+        width: ${props => props.$size ? `${props.$size}px` : '18px'};
+        height: ${props => props.$size ? `${props.$size}px` : '18px'};
+        transition: all 0.2s ease;
+    }
+
+    &:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+`;
+
+const TitleIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const CardIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const ButtonIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const DetailIcon = styled(IconWrapper)`
+    margin-right: 0.25rem;
+`;
+
+const MessageIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const ModalIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
 // Styled components
 const Container = styled.div`
   max-width: 1200px;
@@ -525,7 +607,9 @@ export default function BackupSettingsPage() {
         <Container>
           <Header>
             <Title>
-              <Database size={24} />
+              <TitleIcon $iconType="database" $size={24} $active={true}>
+                <Database size={24} />
+              </TitleIcon>
               Backup Management
             </Title>
           </Header>
