@@ -281,7 +281,7 @@ export default function AccountingDashboard() {
     if (!user) {
       return; // Wait for user to load
     }
-    const hasAccess = user.role === 'accountant' || user.role === 'finance_manager' || user.role === 'admin';
+    const hasAccess = user.role === 'accountant' || user.role === 'finance_manager' || user.role === 'finance_admin' || user.role === 'admin';
     if (!hasAccess) {
       router.push('/dashboard');
       return;
@@ -294,7 +294,7 @@ export default function AccountingDashboard() {
 
   const loadData = async () => {
     // Double-check permissions before making API calls
-    if (!user || (user.role !== 'accountant' && user.role !== 'finance_manager' && user.role !== 'admin')) {
+    if (!user || (user.role !== 'accountant' && user.role !== 'finance_manager' && user.role !== 'finance_admin' && user.role !== 'admin')) {
       return;
     }
     
@@ -331,13 +331,26 @@ export default function AccountingDashboard() {
       
       const summaryData = summaryRes.data || (summaryRes.data as any)?.data || null;
       
-      const journalData = Array.isArray(journalRes.data) 
-        ? journalRes.data 
-        : (Array.isArray((journalRes.data as any)?.data) ? (journalRes.data as any).data : []);
+      // Handle journal entries - backend returns array directly or wrapped
+      let journalData: JournalEntry[] = [];
+      if (Array.isArray(journalRes.data)) {
+        journalData = journalRes.data;
+      } else if (journalRes.data && Array.isArray((journalRes.data as any)?.data)) {
+        journalData = (journalRes.data as any).data;
+      } else if (Array.isArray(journalRes)) {
+        // In case the response is the array directly
+        journalData = journalRes as any;
+      } else if (journalRes && typeof journalRes === 'object' && 'data' in journalRes) {
+        // Try to extract from nested structure
+        const nested = (journalRes as any).data;
+        if (Array.isArray(nested)) {
+          journalData = nested;
+        }
+      }
       
       setSales(salesData as Sale[]);
       setSummary(summaryData);
-      setJournalEntries(journalData as JournalEntry[]);
+      setJournalEntries(journalData);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to load data';
       toast.error(errorMessage);
@@ -366,6 +379,11 @@ export default function AccountingDashboard() {
       toast.success('Sale posted to ledger successfully');
       setShowPostModal(false);
       setSelectedSale(null);
+      // Switch to journal tab to show the new entry
+      setActiveTab('journal');
+      // Small delay to ensure backend transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 500));
+      // Reload data to get the new journal entry
       await loadData();
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to post sale';
@@ -373,7 +391,7 @@ export default function AccountingDashboard() {
     }
   };
 
-  if (!user || (user.role !== 'accountant' && user.role !== 'finance_manager' && user.role !== 'admin')) {
+  if (!user || (user.role !== 'accountant' && user.role !== 'finance_manager' && user.role !== 'finance_admin' && user.role !== 'admin')) {
     return null;
   }
 
