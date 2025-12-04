@@ -503,7 +503,7 @@ export default function ReportPage() {
       try {
         const salesResponse = await apiClient.getSales({
           status: 'posted', // Only include posted sales in reports
-          limit: 10000,
+          limit: 1000, // Backend maximum is 1000
           start_date: dateParams.startDate ? new Date(dateParams.startDate + 'T00:00:00').toISOString() : undefined,
           end_date: dateParams.endDate ? new Date(dateParams.endDate + 'T23:59:59').toISOString() : undefined,
         });

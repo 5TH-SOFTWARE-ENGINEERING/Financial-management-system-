@@ -1216,7 +1216,20 @@ class ApiClient {
     start_date?: string;
     end_date?: string;
   }) {
-    return this.get('/sales', { params });
+    // Enforce backend maximum limit of 1000 to prevent 422 errors
+    // Backend has a hard limit of 1000 (le=1000), so cap any higher values
+    let safeLimit: number | undefined = params?.limit;
+    if (safeLimit !== undefined && safeLimit > 1000) {
+      console.warn(`getSales: Limit ${safeLimit} exceeds backend maximum of 1000. Capping to 1000.`);
+      safeLimit = 1000;
+    }
+    
+    const safeParams = params ? {
+      ...params,
+      limit: safeLimit
+    } : undefined;
+    
+    return this.get('/sales', { params: safeParams });
   }
 
   async getSale(saleId: number) {

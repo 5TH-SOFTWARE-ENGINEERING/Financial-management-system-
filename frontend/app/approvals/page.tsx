@@ -706,6 +706,7 @@ interface ApprovalItem {
   item_name?: string;
   quantity_sold?: number;
   receipt_number?: string;
+  sold_by_id?: number; // Track who sold the item (for sales)
 }
 
 export default function ApprovalsPage() {
@@ -857,29 +858,42 @@ export default function ApprovalsPage() {
         }));
 
       // Fetch pending sales - for accountants, finance managers, managers, and admins
+      // IMPORTANT: Fetch ALL pending sales including those sold by employees
       let pendingSales: any[] = [];
       const userRole = user?.role?.toLowerCase();
       const canViewSales = userRole === 'accountant' || 
                           userRole === 'finance_manager' || 
                           userRole === 'admin' || 
                           userRole === 'super_admin' ||
-                          userRole === 'manager';
+                          userRole === 'manager' ||
+                          userRole === 'finance_admin';
       
       if (canViewSales) {
         try {
-          const salesResponse: any = await apiClient.getSales({ status: 'pending', limit: 1000 });
+          // Fetch all pending sales - don't filter by sold_by_id, get ALL pending sales
+          // This ensures employee sales are visible for approval
+          // IMPORTANT: Backend limit is 1000, so we must use that maximum
+          // Enforce limit to prevent 422 errors
+          const maxLimit = 1000; // Backend maximum
+          const salesResponse: any = await apiClient.getSales({ 
+            status: 'pending', 
+            limit: maxLimit
+          });
           const salesData = Array.isArray(salesResponse?.data) 
             ? salesResponse.data 
             : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
               ? (salesResponse.data as any).data || [] 
               : []);
           
-          // Filter and map pending sales - ensure we only include truly pending sales
+          // Filter and map pending sales - include ALL pending sales regardless of who sold them
           pendingSales = (salesData || [])
             .filter((s: any) => {
-              // Double-check status is pending
+              // Check status - accept 'pending' in various formats
               const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
-              return saleStatus === 'pending';
+              const isPending = saleStatus === 'pending' || saleStatus === 'PENDING';
+              
+              // Include all pending sales, regardless of sold_by_id (employee or otherwise)
+              return isPending;
             })
             .map((s: any) => {
               const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
@@ -896,21 +910,67 @@ export default function ApprovalsPage() {
                 item_name: s.item_name,
                 quantity_sold: s.quantity_sold,
                 receipt_number: s.receipt_number,
+                sold_by_id: s.sold_by_id, // Keep track of who sold it
               };
             });
           
+          // Log for debugging - show all pending sales including employee sales
           if (process.env.NODE_ENV === 'development') {
-            console.log('Pending sales fetched:', {
-              count: pendingSales.length,
-              sales: pendingSales.map(s => ({ id: s.id, title: s.title, status: s.status }))
+            console.log('Pending sales fetched (including employee sales):', {
+              totalCount: pendingSales.length,
+              sales: pendingSales.map(s => ({ 
+                id: s.id, 
+                title: s.title, 
+                status: s.status,
+                sold_by_id: s.sold_by_id,
+                amount: s.amount
+              }))
             });
           }
         } catch (err: any) {
-          console.error('Error fetching sales:', err);
-          // Don't fail the entire load if sales fetch fails
-          // Only show error if it's a permission issue
-          if (err.response?.status !== 403) {
+          console.error('Error fetching sales for approvals:', err);
+          // Handle 422 (validation error) - likely due to limit being too high
+          if (err.response?.status === 422) {
+            console.warn('Sales API validation error (likely limit too high). Retrying with lower limit...');
+            try {
+              // Retry with a lower limit
+              const retryResponse: any = await apiClient.getSales({ 
+                status: 'pending', 
+                limit: 1000  // Use backend maximum
+              });
+              const retryData = Array.isArray(retryResponse?.data) 
+                ? retryResponse.data 
+                : (retryResponse?.data && typeof retryResponse.data === 'object' && 'data' in retryResponse.data 
+                  ? (retryResponse.data as any).data || [] 
+                  : []);
+              
+              pendingSales = (retryData || [])
+                .filter((s: any) => {
+                  const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
+                  return saleStatus === 'pending' || saleStatus === 'PENDING';
+                })
+                .map((s: any) => ({
+                  id: s.id,
+                  type: 'sale' as const,
+                  title: s.item_name || `Sale #${s.id}`,
+                  description: s.customer_name ? `Customer: ${s.customer_name}` : `Receipt: ${s.receipt_number || `#${s.id}`}`,
+                  amount: s.total_sale,
+                  status: 'pending' as const,
+                  requester_id: s.sold_by_id,
+                  created_at: s.created_at,
+                  sale_id: s.id,
+                  item_name: s.item_name,
+                  quantity_sold: s.quantity_sold,
+                  receipt_number: s.receipt_number,
+                  sold_by_id: s.sold_by_id,
+                }));
+            } catch (retryErr: any) {
+              console.error('Retry also failed:', retryErr);
+              // Still allow the page to load with other approvals
+            }
+          } else if (err.response?.status !== 403) {
             console.warn('Failed to fetch sales for approvals:', err.message);
+            // Still allow the page to load with other approvals
           }
         }
       }
@@ -1301,6 +1361,11 @@ export default function ApprovalsPage() {
                           <span style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
                             Item: {item.item_name}
                             {item.quantity_sold && ` (Qty: ${item.quantity_sold})`}
+                          </span>
+                        )}
+                        {item.type === 'sale' && item.sold_by_id && (
+                          <span style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                            Sold by: User #{item.sold_by_id}
                           </span>
                         )}
                         {item.amount !== undefined && (
