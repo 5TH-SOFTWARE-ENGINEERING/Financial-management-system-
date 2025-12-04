@@ -504,17 +504,19 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      fetchNotifications();
+      fetchNotifications(true);
       // Set up real-time updates every 30 seconds (reduced frequency to avoid excessive requests)
       const interval = setInterval(() => {
-        fetchNotifications();
+        fetchNotifications(false); // Don't show loading on background refresh
       }, 30000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated, user]);
 
-  const fetchNotifications = async () => {
-    setLoading(true);
+  const fetchNotifications = async (showLoading: boolean = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     setError(null);
     
     try {
@@ -546,9 +548,15 @@ export default function NotificationsPage() {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to load notifications';
       setError(errorMessage);
       console.error('Failed to fetch notifications:', err);
-      toast.error(errorMessage);
+      
+      // Only show toast on initial load or manual refresh, not on background updates
+      if (showLoading) {
+        toast.error(errorMessage);
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -561,7 +569,10 @@ export default function NotificationsPage() {
         normalized.includes('success') ||
         normalized.includes('posted') ||
         normalized.includes('sale_completed') ||
-        normalized.includes('inventory_created')) {
+        normalized.includes('inventory_created') ||
+        normalized === 'system_alert' ||
+        normalized.includes('completed') ||
+        normalized.includes('confirmed')) {
       return 'success';
     }
     
@@ -572,7 +583,9 @@ export default function NotificationsPage() {
         normalized.includes('budget_exceeded') ||
         normalized.includes('sale_cancelled') ||
         normalized.includes('inventory_error') ||
-        normalized.includes('low_stock')) {
+        normalized.includes('low_stock') ||
+        normalized.includes('cancelled') ||
+        normalized.includes('denied')) {
       return 'error';
     }
     
@@ -583,7 +596,9 @@ export default function NotificationsPage() {
         normalized.includes('deadline') ||
         normalized.includes('sale_pending') ||
         normalized.includes('inventory_low') ||
-        normalized.includes('stock_alert')) {
+        normalized.includes('stock_alert') ||
+        normalized.includes('reminder') ||
+        normalized.includes('alert')) {
       return 'warning';
     }
     
@@ -741,7 +756,7 @@ export default function NotificationsPage() {
                 <ActionButton
                   $variant="secondary"
                   onClick={async () => {
-                    await fetchNotifications();
+                    await fetchNotifications(true);
                     toast.success('Notifications refreshed');
                   }}
                   disabled={loading}
