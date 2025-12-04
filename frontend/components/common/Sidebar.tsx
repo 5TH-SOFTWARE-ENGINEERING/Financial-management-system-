@@ -790,7 +790,7 @@ const Sidebar: React.FC = () => {
                                 {/* Finance Create Link */}
                                 <ComponentGate componentId={ComponentId.FINANCE_MANAGER_CREATE}>
                                     <NavItem href="/finance/create" $active={pathname === '/finance-admin/create'} $collapsed={collapsed}>
-                                        <NavIcon $active={pathname === '/finance-admin/create'} $collapsed={collapsed} $size={16}>
+                                        <NavIcon $active={pathname === '/finance-admin/create'} $collapsed={collapsed} $size={16} $iconType="plus">
                                             <UserPlus />
                                         </NavIcon>
                                         {!collapsed && 'Add Manager'}
@@ -799,7 +799,7 @@ const Sidebar: React.FC = () => {
                                 {/* Finance List Link */}
                                 <ComponentGate componentId={ComponentId.FINANCE_MANAGER_LIST}>
                                     <NavItem href="/finance/list" $active={pathname === '/finance-admin/list'} $collapsed={collapsed}>
-                                        <NavIcon $active={pathname === '/finance-admin/list'} $collapsed={collapsed} $size={16}>
+                                        <NavIcon $active={pathname === '/finance-admin/list'} $collapsed={collapsed} $size={16} $iconType="list">
                                             <List />
                                         </NavIcon>
                                         {!collapsed && 'All Managers'}
@@ -821,7 +821,7 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <DropdownIcon $active={pathname.includes('/accountant')} $collapsed={collapsed}>
+                            <DropdownIcon $active={pathname.includes('/accountant')} $collapsed={collapsed} $iconType="wallet">
                                 <Wallet />
                             </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Accountants</span>}
