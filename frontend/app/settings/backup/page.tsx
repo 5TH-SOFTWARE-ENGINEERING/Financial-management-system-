@@ -772,21 +772,29 @@ export default function BackupSettingsPage() {
                   <BackupItem key={backup.name}>
                     <BackupInfo>
                       <BackupName>
-                        <Database size={16} />
+                        <DetailIcon $iconType="database" $size={16} $active={true}>
+                          <Database size={16} />
+                        </DetailIcon>
                         {backup.name}
                       </BackupName>
                       <BackupDetails>
                         <BackupDetailItem>
-                          <Clock size={12} />
+                          <DetailIcon $iconType="clock" $size={12} $active={false}>
+                            <Clock size={12} />
+                          </DetailIcon>
                           {formatDate(backup.created_at)}
                         </BackupDetailItem>
                         <BackupDetailItem>
-                          <HardDrive size={12} />
+                          <DetailIcon $iconType="hard-drive" $size={12} $active={false}>
+                            <HardDrive size={12} />
+                          </DetailIcon>
                           {formatFileSize(backup.size)}
                         </BackupDetailItem>
                         {backup.metadata?.include_files && (
                           <BackupDetailItem>
-                            <FileText size={12} />
+                            <DetailIcon $iconType="file-text" $size={12} $active={true}>
+                              <FileText size={12} />
+                            </DetailIcon>
                             Includes files
                           </BackupDetailItem>
                         )}
@@ -803,8 +811,11 @@ export default function BackupSettingsPage() {
                         size="sm"
                         onClick={() => openRestoreModal(backup)}
                         disabled={loading}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                       >
-                        <Download size={14} />
+                        <ButtonIcon $iconType="download" $size={14} $active={true}>
+                          <Download size={14} />
+                        </ButtonIcon>
                         Restore
                       </Button>
                       <Button
@@ -812,8 +823,11 @@ export default function BackupSettingsPage() {
                         size="sm"
                         onClick={() => openDeleteModal(backup)}
                         disabled={loading}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                       >
-                        <Trash2 size={14} />
+                        <ButtonIcon $iconType="trash2" $size={14} $active={true}>
+                          <Trash2 size={14} />
+                        </ButtonIcon>
                       </Button>
                     </BackupActions>
                   </BackupItem>
@@ -829,19 +843,25 @@ export default function BackupSettingsPage() {
             <ModalContent onClick={(e) => e.stopPropagation()}>
               <ModalHeader>
                 <ModalTitle>
-                  <AlertTriangle size={20} />
+                  <ModalIcon $iconType="alert-triangle" $size={20} $active={true}>
+                    <AlertTriangle size={20} />
+                  </ModalIcon>
                   Confirm Restore
                 </ModalTitle>
                 <CloseButton
                   onClick={() => setShowRestoreModal(false)}
                   disabled={loading}
                 >
-                  <X size={20} />
+                  <IconWrapper $iconType="x" $size={20} $active={false}>
+                    <X size={20} />
+                  </IconWrapper>
                 </CloseButton>
               </ModalHeader>
               <div>
                 <Message type="warning">
-                  <AlertTriangle size={16} />
+                  <MessageIcon $iconType="alert-triangle" $size={16} $active={true}>
+                    <AlertTriangle size={16} />
+                  </MessageIcon>
                   <span>
                     This action will restore the backup and may overwrite current data. This cannot be undone.
                   </span>
