@@ -6,7 +6,7 @@ import styled from 'styled-components';
 import {
   Package, Plus, Edit, Trash2, Search, Filter,
   DollarSign, TrendingUp, AlertCircle, CheckCircle,
-  Loader2, Eye, EyeOff, Save, X
+  Loader2, Eye, EyeOff, Save, X, Power, PowerOff
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -37,6 +37,8 @@ const getIconColor = (iconType: string, active: boolean = false): string => {
             'eye-off': '#6b7280',           // Gray
             'save': '#22c55e',              // Green
             'x': '#6b7280',                 // Gray
+            'power': '#22c55e',             // Green
+            'power-off': '#f59e0b',         // Amber
         };
         return activeColors[iconType] || '#6b7280';
     } else {
@@ -57,6 +59,8 @@ const getIconColor = (iconType: string, active: boolean = false): string => {
             'eye-off': '#9ca3af',           // Light Gray
             'save': '#4ade80',              // Light Green
             'x': '#9ca3af',                 // Light Gray
+            'power': '#4ade80',             // Light Green
+            'power-off': '#fbbf24',         // Light Amber
         };
         return inactiveColors[iconType] || '#9ca3af';
     }
@@ -848,8 +852,8 @@ export default function InventoryManagePage() {
                           }}
                           title="Deactivate"
                         >
-                          <ActionIcon $iconType="eye-off" $size={16} $active={true}>
-                            <EyeOff size={16} />
+                          <ActionIcon $iconType="power-off" $size={16} $active={true}>
+                            <PowerOff size={16} />
                           </ActionIcon>
                         </ActionButton>
                       ) : (
@@ -863,8 +867,8 @@ export default function InventoryManagePage() {
                           }}
                           title="Activate"
                         >
-                          <ActionIcon $iconType="eye" $size={16} $active={true}>
-                            <Eye size={16} />
+                          <ActionIcon $iconType="power" $size={16} $active={true}>
+                            <Power size={16} />
                           </ActionIcon>
                         </ActionButton>
                       )}
@@ -1199,12 +1203,12 @@ export default function InventoryManagePage() {
                   ) : (
                     <>
                       {isActivating ? (
-                        <ButtonIcon $iconType="check-circle" $size={16} $active={true}>
-                          <CheckCircle size={16} />
+                        <ButtonIcon $iconType="power" $size={16} $active={true}>
+                          <Power size={16} />
                         </ButtonIcon>
                       ) : (
-                        <ButtonIcon $iconType="eye-off" $size={16} $active={true}>
-                          <EyeOff size={16} />
+                        <ButtonIcon $iconType="power-off" $size={16} $active={true}>
+                          <PowerOff size={16} />
                         </ButtonIcon>
                       )}
                       {isActivating ? 'Activate' : 'Deactivate'} Item
