@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from ...core.database import get_db
 from ...crud.user import user as user_crud
 from ...crud import login_history as login_history_crud
-from ...schemas.user import UserCreate, UserOut, UserUpdate, UserChangePassword
+from ...schemas.user import UserCreate, UserOut, UserUpdate, UserChangePassword, UserPermissionsUpdate
 from ...models.user import User, UserRole
 from ...api.deps import get_current_active_user, require_min_role
 from ...core.security import verify_password
@@ -746,5 +746,74 @@ def activate_user(
             return {"message": "User activated successfully"}
         else:
             raise HTTPException(status_code=403, detail="You can only activate your subordinates (accountants and employees)")
+    
+    raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+
+# ------------------------------------------------------------------
+# GET /{user_id}/permissions - Get user permissions
+# ------------------------------------------------------------------
+@router.get("/{user_id}/permissions")
+def get_user_permissions(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get user permissions. Only admins and finance admins can view permissions."""
+    db_user = user_crud.get(db, id=user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Admin and Super Admin can view any user's permissions
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        return {"permissions": db_user.permissions or []}
+    
+    # Finance Manager (Manager or Finance Admin) can view their subordinates' permissions
+    if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
+        is_subordinate = db_user.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+        is_my_subordinate = db_user.manager_id == current_user.id
+        
+        if is_subordinate and is_my_subordinate:
+            return {"permissions": db_user.permissions or []}
+        else:
+            raise HTTPException(status_code=403, detail="You can only view permissions for your subordinates (accountants and employees)")
+    
+    raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+
+# ------------------------------------------------------------------
+# PUT /{user_id}/permissions - Update user permissions
+# ------------------------------------------------------------------
+@router.put("/{user_id}/permissions")
+def update_user_permissions(
+    user_id: int,
+    permissions_update: UserPermissionsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update user permissions. Only admins and finance admins can update permissions."""
+    db_user = user_crud.get(db, id=user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Super Admin protection
+    if db_user.role == UserRole.SUPER_ADMIN and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Cannot modify super admin permissions")
+    
+    # Admin and Super Admin can update any user's permissions
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        user_crud.update(db, db_obj=db_user, obj_in=UserUpdate(permissions=permissions_update.permissions))
+        return {"message": "Permissions updated successfully", "permissions": permissions_update.permissions}
+    
+    # Finance Manager (Manager or Finance Admin) can update their subordinates' permissions
+    if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
+        is_subordinate = db_user.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+        is_my_subordinate = db_user.manager_id == current_user.id
+        
+        if is_subordinate and is_my_subordinate:
+            user_crud.update(db, db_obj=db_user, obj_in=UserUpdate(permissions=permissions_update.permissions))
+            return {"message": "Permissions updated successfully", "permissions": permissions_update.permissions}
+        else:
+            raise HTTPException(status_code=403, detail="You can only update permissions for your subordinates (accountants and employees)")
     
     raise HTTPException(status_code=403, detail="Insufficient permissions")

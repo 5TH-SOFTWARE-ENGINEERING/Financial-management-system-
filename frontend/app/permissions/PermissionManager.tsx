@@ -449,29 +449,48 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
         const response = await apiClient.getUsers();
         const apiUsers = response.data || [];
         
-        // Load saved permissions from localStorage (or could be from backend)
-        const savedPermissionsKey = 'user_permissions';
-        const savedPermissions = typeof window !== 'undefined' 
-          ? JSON.parse(localStorage.getItem(savedPermissionsKey) || '{}')
-          : {};
+        // Load permissions from backend for each user
+        const usersWithPermissions = await Promise.allSettled(
+          apiUsers.map(async (apiUser: any) => {
+            const userType = mapRoleToUserType(apiUser.role);
+            
+            // Try to load permissions from backend
+            let permissions = getDefaultPermissions(userType);
+            try {
+              const permResponse = await apiClient.getUserPermissions(apiUser.id);
+              // If backend returns permissions and it's a non-empty array, use them
+              // Empty array or null/undefined means use defaults
+              if (permResponse.data?.permissions && 
+                  Array.isArray(permResponse.data.permissions) && 
+                  permResponse.data.permissions.length > 0) {
+                permissions = permResponse.data.permissions;
+              }
+            } catch (permErr: any) {
+              // If 403 (forbidden) or 404 (not found), user doesn't have permissions set yet, use defaults
+              // This is expected for new users or users without custom permissions
+              if (permErr.response?.status === 403 || permErr.response?.status === 404) {
+                // Use defaults, no error needed
+              } else {
+                // Other errors (network, server error, etc.) - log but continue with defaults
+                console.warn(`Failed to load permissions for user ${apiUser.id}:`, permErr);
+              }
+            }
+            
+            return {
+              userId: apiUser.id.toString(),
+              userName: apiUser.full_name || apiUser.username || apiUser.email,
+              email: apiUser.email,
+              userType: userType,
+              isActive: apiUser.is_active,
+              permissions: permissions,
+            };
+          })
+        );
         
-        // Convert API users to UserPermissions format
-        const users: UserPermissions[] = apiUsers.map((apiUser: any) => {
-          const userType = mapRoleToUserType(apiUser.role);
-          
-          // Check if we have saved permissions for this user, otherwise use defaults
-          const savedPerms = savedPermissions[apiUser.id.toString()];
-          const permissions = savedPerms || getDefaultPermissions(userType);
-          
-          return {
-            userId: apiUser.id.toString(),
-            userName: apiUser.full_name || apiUser.username || apiUser.email,
-            email: apiUser.email,
-            userType: userType,
-            isActive: apiUser.is_active,
-            permissions: permissions,
-          };
-        });
+        // Convert Promise.allSettled results to UserPermissions array
+        const users: UserPermissions[] = usersWithPermissions
+          .filter((result): result is PromiseFulfilledResult<UserPermissions> => result.status === 'fulfilled')
+          .map(result => result.value);
         
         // Filter users based on managedUserTypes
         const filteredUsers = users.filter(user => 
@@ -601,23 +620,20 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
         throw new Error('Selected user not found');
       }
       
-      // Save permissions to localStorage
-      // In a production app, this would be sent to a backend API endpoint
-      const savedPermissionsKey = 'user_permissions';
-      const savedPermissions = typeof window !== 'undefined' 
-        ? JSON.parse(localStorage.getItem(savedPermissionsKey) || '{}')
-        : {};
-      
-      savedPermissions[selectedUser] = selectedUserData.permissions;
-      
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(savedPermissionsKey, JSON.stringify(savedPermissions));
+      // Save permissions to backend API
+      const userId = parseInt(selectedUser, 10);
+      if (isNaN(userId)) {
+        throw new Error('Invalid user ID');
       }
+      
+      await apiClient.updateUserPermissions(userId, selectedUserData.permissions);
       
       setSuccess('Permissions saved successfully!');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to save permissions');
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to save permissions';
+      setError(errorMessage);
+      console.error('Error saving permissions:', err);
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 # app/models/user.py
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum as SAEnum, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -34,6 +34,7 @@ class User(Base):
     is_2fa_enabled = Column(Boolean, default=False, nullable=False)  # Whether 2FA is enabled
     ip_restriction_enabled = Column(Boolean, default=False, nullable=False)  # Whether IP restriction is enabled
     allowed_ips = Column(String, nullable=True)  # JSON array of allowed IP addresses
+    permissions = Column(JSON, nullable=True)  # Custom permissions: [{"resource": "REVENUES", "actions": {"READ": true, "CREATE": true}}]
 
     manager = relationship("User", remote_side=[id], back_populates="subordinates")
     subordinates = relationship("User", back_populates="manager")

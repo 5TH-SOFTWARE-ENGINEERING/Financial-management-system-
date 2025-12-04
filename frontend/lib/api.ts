@@ -277,6 +277,15 @@ class ApiClient {
     return this.post(`/users/${userId}/deactivate`, { password });
   }
 
+  // Permission endpoints
+  async getUserPermissions(userId: number): Promise<ApiResponse<{ permissions: any[] }>> {
+    return this.get(`/users/${userId}/permissions`);
+  }
+
+  async updateUserPermissions(userId: number, permissions: any[]): Promise<ApiResponse<{ message: string; permissions: any[] }>> {
+    return this.put(`/users/${userId}/permissions`, { permissions });
+  }
+
   // Financial endpoints
   async getRevenues(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
     // For reports, we need all data, so increase limit significantly

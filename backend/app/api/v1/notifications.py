@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List
+import logging
 
 from ...core.database import get_db
 from ...crud.notification import notification as notification_crud
@@ -9,6 +10,7 @@ from ...models.user import User, UserRole
 from ...api.deps import get_current_active_user, require_min_role
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=List[NotificationOut])
@@ -20,11 +22,31 @@ def read_notifications(
     db: Session = Depends(get_db)
 ):
     """Get current user's notifications"""
-    if unread_only:
-        notifications = notification_crud.get_unread(db, current_user.id, skip, limit)
-    else:
-        notifications = notification_crud.get_by_user(db, current_user.id, skip, limit)
-    return notifications
+    try:
+        if unread_only:
+            notifications = notification_crud.get_unread(db, current_user.id, skip, limit)
+        else:
+            notifications = notification_crud.get_by_user(db, current_user.id, skip, limit)
+        return notifications
+    except Exception as e:
+        logger.error(f"Error fetching notifications for user {current_user.id}: {str(e)}", exc_info=True)
+        # Return empty list as a safe default
+        return []
+
+
+@router.get("/unread/count")
+def get_unread_count(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get count of unread notifications"""
+    try:
+        count = notification_crud.get_unread_count(db, current_user.id)
+        return {"unread_count": count}
+    except Exception as e:
+        logger.error(f"Error fetching unread notification count for user {current_user.id}: {str(e)}", exc_info=True)
+        # Return 0 as a safe default instead of crashing
+        return {"unread_count": 0}
 
 
 @router.get("/{notification_id}", response_model=NotificationOut)
@@ -110,16 +132,6 @@ def delete_notification(
     
     notification_crud.delete(db, notification_id)
     return {"message": "Notification deleted successfully"}
-
-
-@router.get("/unread/count")
-def get_unread_count(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Get count of unread notifications"""
-    count = notification_crud.get_unread_count(db, current_user.id)
-    return {"unread_count": count}
 
 
 @router.post("/create-broadcast")

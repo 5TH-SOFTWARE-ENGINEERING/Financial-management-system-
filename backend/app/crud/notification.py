@@ -28,9 +28,16 @@ class CRUDNotification:
         return db.query(Notification).filter(Notification.priority == priority).order_by(desc(Notification.created_at)).offset(skip).limit(limit).all()
 
     def get_unread_count(self, db: Session, user_id: int) -> int:
-        return db.query(Notification).filter(
-            and_(Notification.user_id == user_id, Notification.is_read == False)
-        ).count()
+        try:
+            return db.query(Notification).filter(
+                and_(Notification.user_id == user_id, Notification.is_read == False)
+            ).count()
+        except Exception as e:
+            # Log error and return 0 as safe default
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error getting unread count for user {user_id}: {str(e)}", exc_info=True)
+            return 0
 
     def create(self, db: Session, obj_in: NotificationCreate) -> Notification:
         db_obj = Notification(

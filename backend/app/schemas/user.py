@@ -49,6 +49,7 @@ class UserUpdate(BaseModel):
     department: Optional[str] = None
     is_active: Optional[bool] = None
     manager_id: Optional[int] = None
+    permissions: Optional[list[dict]] = None  # Custom permissions
 
 
 class RoleCreate(RoleBase):
@@ -108,3 +109,10 @@ class UserChangePassword(BaseModel):
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters long')
         return v
+
+
+# ------------------------------------------------------------------
+# Permissions
+# ------------------------------------------------------------------
+class UserPermissionsUpdate(BaseModel):
+    permissions: list[dict]  # [{"resource": "REVENUES", "actions": {"READ": true, "CREATE": true}}]
