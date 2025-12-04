@@ -535,7 +535,9 @@ export default function NotificationsSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              <Bell size={18} />
+              <CardIcon $iconType="bell" $size={18} $active={true}>
+                <Bell size={18} />
+              </CardIcon>
               Notification Preferences
             </CardTitle>
           </CardHeader>
