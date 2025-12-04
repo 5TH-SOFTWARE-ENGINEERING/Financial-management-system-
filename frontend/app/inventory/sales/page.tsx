@@ -203,6 +203,48 @@ const ReceiptContent = styled.div`
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 `;
 
+const CustomerInfoSection = styled.div`
+  margin-top: ${theme.spacing.lg};
+`;
+
+const FormField = styled.div`
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const NotesTextarea = styled.textarea`
+  width: 100%;
+  padding: ${theme.spacing.sm};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  min-height: 60px;
+  font-family: inherit;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin-bottom: ${theme.spacing.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  resize: vertical;
+  transition: all ${theme.transitions.default};
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const CompleteSaleButton = styled(Button)`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.spacing.sm};
+`;
+
 interface InventoryItem {
   id: number;
   item_name: string;
@@ -571,56 +613,50 @@ export default function SalesPage() {
                   </SummaryRow>
                 </SummaryCard>
 
-                <div style={{ marginTop: theme.spacing.lg }}>
-                  <Label htmlFor="customer_name">Customer Name (Optional)</Label>
-                  <Input
-                    id="customer_name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    style={{ marginBottom: theme.spacing.md }}
-                  />
-                  <Label htmlFor="customer_email">Customer Email (Optional)</Label>
-                  <Input
-                    id="customer_email"
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    style={{ marginBottom: theme.spacing.md }}
-                  />
-                  <Label htmlFor="notes">Notes (Optional)</Label>
-                  <textarea
-                    id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: theme.spacing.sm,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: theme.borderRadius.md,
-                      minHeight: '60px',
-                      fontFamily: 'inherit',
-                      fontSize: theme.typography.fontSizes.sm,
-                      marginBottom: theme.spacing.md,
-                    }}
-                  />
-                  <Button
+                <CustomerInfoSection>
+                  <FormField>
+                    <Label htmlFor="customer_name">Customer Name (Optional)</Label>
+                    <Input
+                      id="customer_name"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                    />
+                  </FormField>
+                  <FormField>
+                    <Label htmlFor="customer_email">Customer Email (Optional)</Label>
+                    <Input
+                      id="customer_email"
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                    />
+                  </FormField>
+                  <FormField>
+                    <Label htmlFor="notes">Notes (Optional)</Label>
+                    <NotesTextarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Add any additional notes about this sale..."
+                    />
+                  </FormField>
+                  <CompleteSaleButton
                     onClick={handleCompleteSale}
                     disabled={processing}
-                    style={{ width: '100%' }}
                   >
                     {processing ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" style={{ marginRight: theme.spacing.sm }} />
+                        <Loader2 size={16} className="animate-spin" />
                         Processing...
                       </>
                     ) : (
                       <>
-                        <Receipt size={16} style={{ marginRight: theme.spacing.sm }} />
+                        <Receipt size={16} />
                         Complete Sale
                       </>
                     )}
-                  </Button>
-                </div>
+                  </CompleteSaleButton>
+                </CustomerInfoSection>
               </>
             )}
           </Card>
