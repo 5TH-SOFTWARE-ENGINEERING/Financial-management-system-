@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+import logging
 
 from ...core.database import get_db
+
+logger = logging.getLogger(__name__)
 from ...crud.revenue import revenue as revenue_crud
 from ...crud.user import user as user_crud
 from ...crud.approval import approval as approval_crud
@@ -28,43 +31,78 @@ def read_revenue_entries(
     db: Session = Depends(get_db)
 ):
     """Get revenue entries with optional filtering"""
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        # Admins and Finance Managers can see all entries
-        # For reports, allow fetching all data by using a very high limit
-        effective_limit = limit if limit <= 10000 else 10000
-        if start_date and end_date:
-            entries = revenue_crud.get_by_date_range(db, start_date, end_date, skip, effective_limit)
-        elif category:
-            entries = revenue_crud.get_by_category(db, category, skip, effective_limit)
+    try:
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            # Admins and Finance Managers can see all entries
+            # For reports, allow fetching all data by using a very high limit
+            effective_limit = limit if limit <= 10000 else 10000
+            try:
+                if start_date and end_date:
+                    entries = revenue_crud.get_by_date_range(db, start_date, end_date, skip, effective_limit)
+                elif category:
+                    entries = revenue_crud.get_by_category(db, category, skip, effective_limit)
+                else:
+                    entries = revenue_crud.get_multi(db, skip, effective_limit)
+            except Exception as e:
+                logger.error(f"Error fetching revenue entries for admin: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to retrieve revenue entries: {str(e)}"
+                )
+        elif current_user.role == UserRole.MANAGER:
+            # Managers can see their own entries and their subordinates' entries
+            try:
+                subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                subordinate_ids.append(current_user.id)
+            except Exception as e:
+                logger.error(f"Error fetching hierarchy for manager: {str(e)}")
+                subordinate_ids = [current_user.id]
+            
+            try:
+                if start_date and end_date:
+                    all_entries = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+                elif category:
+                    all_entries = revenue_crud.get_by_category(db, category, 0, 1000)
+                else:
+                    all_entries = revenue_crud.get_multi(db, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching revenue entries for manager: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to retrieve revenue entries: {str(e)}"
+                )
+            
+            entries = [entry for entry in all_entries if entry.created_by_id in subordinate_ids]
+            entries = entries[skip:skip + limit]
         else:
-            entries = revenue_crud.get_multi(db, skip, effective_limit)
-    elif current_user.role == UserRole.MANAGER:
-        # Managers can see their own entries and their subordinates' entries
-        subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-        subordinate_ids.append(current_user.id)
+            # Regular users can only see their own entries
+            try:
+                if start_date and end_date:
+                    all_entries = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+                elif category:
+                    all_entries = revenue_crud.get_by_category(db, category, 0, 1000)
+                else:
+                    all_entries = revenue_crud.get_multi(db, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching revenue entries for user: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to retrieve revenue entries: {str(e)}"
+                )
+            
+            entries = [entry for entry in all_entries if entry.created_by_id == current_user.id]
+            entries = entries[skip:skip + limit]
         
-        if start_date and end_date:
-            all_entries = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
-        elif category:
-            all_entries = revenue_crud.get_by_category(db, category, 0, 1000)
-        else:
-            all_entries = revenue_crud.get_multi(db, 0, 1000)
-        
-        entries = [entry for entry in all_entries if entry.created_by_id in subordinate_ids]
-        entries = entries[skip:skip + limit]
-    else:
-        # Regular users can only see their own entries
-        if start_date and end_date:
-            all_entries = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
-        elif category:
-            all_entries = revenue_crud.get_by_category(db, category, 0, 1000)
-        else:
-            all_entries = revenue_crud.get_multi(db, 0, 1000)
-        
-        entries = [entry for entry in all_entries if entry.created_by_id == current_user.id]
-        entries = entries[skip:skip + limit]
-    
-    return entries
+        return entries
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in read_revenue_entries: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while retrieving revenue entries: {str(e)}"
+        )
 
 
 @router.get("/{revenue_id}", response_model=RevenueOut)
