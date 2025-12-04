@@ -524,10 +524,16 @@ export default function ReportPage() {
         apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
       ]);
       
-      // Calculate sales totals
-      const totalSales = salesData.reduce((sum: number, s: any) => sum + Number(s.total_sale || 0), 0);
+      // Filter to only include POSTED sales for revenue/profit calculations
+      // This ensures revenue and net profit are only calculated from approved sales
+      const postedSalesData = salesData.filter((s: any) => 
+        s.status === 'posted' || s.status === 'POSTED' || s.status?.toLowerCase() === 'posted'
+      );
+      
+      // Calculate sales totals - ONLY from POSTED (approved) sales
+      const totalSales = postedSalesData.reduce((sum: number, s: any) => sum + Number(s.total_sale || 0), 0);
       const salesByCategory: Record<string, number> = {};
-      salesData.forEach((s: any) => {
+      postedSalesData.forEach((s: any) => {
         const category = s.item?.category || 'Sales';
         salesByCategory[category] = (salesByCategory[category] || 0) + Number(s.total_sale || 0);
       });
@@ -550,8 +556,8 @@ export default function ReportPage() {
             sales_by_category: salesByCategory,
             transaction_counts: {
               ...summaryData.transaction_counts,
-              sales: salesData.length,
-              total: (summaryData.transaction_counts?.total || 0) + salesData.length,
+              sales: postedSalesData.length, // Only count POSTED sales
+              total: (summaryData.transaction_counts?.total || 0) + postedSalesData.length,
             },
           };
           
@@ -592,9 +598,9 @@ export default function ReportPage() {
             expenses_by_category: incomeData.expenses.by_category,
             transaction_counts: {
               revenue: revenueCategories > 0 ? revenueCategories : 0,
-              sales: salesData.length,
+              sales: postedSalesData.length, // Only count POSTED sales
               expenses: expenseCategories > 0 ? expenseCategories : 0,
-              total: revenueCategories + expenseCategories + salesData.length,
+              total: revenueCategories + expenseCategories + postedSalesData.length,
             },
             generated_at: new Date().toISOString(),
           });
@@ -637,9 +643,9 @@ export default function ReportPage() {
       if (cashFlowResult.status === 'fulfilled') {
         const cashFlowData = cashFlowResult.value.data || cashFlowResult.value;
         if (cashFlowData && (cashFlowData.summary || cashFlowData.daily_cash_flow)) {
-          // Enhance cash flow with sales data
+          // Enhance cash flow with sales data - ONLY from POSTED (approved) sales
           const salesByDay: Record<string, { inflow: number; outflow: number; net: number }> = {};
-          salesData.forEach((sale: any) => {
+          postedSalesData.forEach((sale: any) => {
             const saleDate = sale.created_at ? new Date(sale.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
             if (!salesByDay[saleDate]) {
               salesByDay[saleDate] = { inflow: 0, outflow: 0, net: 0 };

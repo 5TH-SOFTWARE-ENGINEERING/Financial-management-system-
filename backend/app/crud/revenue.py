@@ -26,18 +26,28 @@ class CRUDRevenue:
         return db.query(RevenueEntry).filter(RevenueEntry.category == category).offset(skip).limit(limit).all()
 
     def get_total_by_period(self, db: Session, start_date: datetime, end_date: datetime) -> float:
+        """Get total revenue for period - ONLY approved entries"""
         result = db.query(func.sum(RevenueEntry.amount)).filter(
-            and_(RevenueEntry.date >= start_date, RevenueEntry.date <= end_date)
+            and_(
+                RevenueEntry.date >= start_date,
+                RevenueEntry.date <= end_date,
+                RevenueEntry.is_approved == True  # Only include approved revenue
+            )
         ).scalar()
         return result or 0.0
 
     def get_summary_by_category(self, db: Session, start_date: datetime, end_date: datetime) -> List[dict]:
+        """Get revenue summary by category - ONLY approved entries"""
         result = db.query(
             RevenueEntry.category,
             func.sum(RevenueEntry.amount).label('total'),
             func.count(RevenueEntry.id).label('count')
         ).filter(
-            and_(RevenueEntry.date >= start_date, RevenueEntry.date <= end_date)
+            and_(
+                RevenueEntry.date >= start_date,
+                RevenueEntry.date <= end_date,
+                RevenueEntry.is_approved == True  # Only include approved revenue
+            )
         ).group_by(RevenueEntry.category).all()
         
         return [

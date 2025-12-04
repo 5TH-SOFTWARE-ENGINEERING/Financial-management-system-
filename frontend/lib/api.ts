@@ -501,14 +501,23 @@ class ApiClient {
       });
     }
 
-    // Calculate totals
-    const totalRevenue = revenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
-    const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    // Filter to only include APPROVED revenue and expense entries
+    // This ensures revenue and net profit are only calculated from approved entries
+    const approvedRevenues = revenues.filter((r: any) => 
+      r.is_approved === true || r.is_approved === 'true' || r.approved === true
+    );
+    const approvedExpenses = expenses.filter((e: any) => 
+      e.is_approved === true || e.is_approved === 'true' || e.approved === true
+    );
+    
+    // Calculate totals - ONLY from approved entries
+    const totalRevenue = approvedRevenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
+    const totalExpenses = approvedExpenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
     const profit = totalRevenue - totalExpenses;
 
-    // Group by category - handle both enum and string categories
+    // Group by category - handle both enum and string categories - ONLY from approved entries
     const revenueByCategory: Record<string, number> = {};
-    revenues.forEach((r: any) => {
+    approvedRevenues.forEach((r: any) => {
       let cat = r.category;
       if (cat && typeof cat === 'object' && cat.value) {
         cat = cat.value;
@@ -520,7 +529,7 @@ class ApiClient {
     });
 
     const expenseByCategory: Record<string, number> = {};
-    expenses.forEach((e: any) => {
+    approvedExpenses.forEach((e: any) => {
       let cat = e.category;
       if (cat && typeof cat === 'object' && cat.value) {
         cat = cat.value;
@@ -599,10 +608,19 @@ class ApiClient {
       });
     }
 
-    // Calculate daily cash flow
+    // Filter to only include APPROVED revenue and expense entries
+    // This ensures cash flow is only calculated from approved entries
+    const approvedRevenues = revenues.filter((r: any) => 
+      r.is_approved === true || r.is_approved === 'true' || r.approved === true
+    );
+    const approvedExpenses = expenses.filter((e: any) => 
+      e.is_approved === true || e.is_approved === 'true' || e.approved === true
+    );
+    
+    // Calculate daily cash flow - ONLY from approved entries
     const cashFlowByDay: Record<string, { inflow: number; outflow: number; net: number }> = {};
     
-    revenues.forEach((r: any) => {
+    approvedRevenues.forEach((r: any) => {
       // Handle different date formats - try date, created_at, or use current date
       let dateStr = r.date || r.created_at;
       const day = dateStr ? new Date(dateStr).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
@@ -614,7 +632,7 @@ class ApiClient {
       cashFlowByDay[day].net += amount;
     });
 
-    expenses.forEach((e: any) => {
+    approvedExpenses.forEach((e: any) => {
       // Handle different date formats - try date, created_at, or use current date
       let dateStr = e.date || e.created_at;
       const day = dateStr ? new Date(dateStr).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
@@ -682,15 +700,26 @@ class ApiClient {
       });
     }
     
-    // Calculate totals from filtered data
-    const totalRevenue = revenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
-    const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    // Filter to only include APPROVED revenue entries for calculations
+    // This ensures revenue and net profit are only calculated from approved entries
+    const approvedRevenues = revenues.filter((r: any) => 
+      r.is_approved === true || r.is_approved === 'true' || r.approved === true
+    );
+    
+    // Filter to only include APPROVED expense entries for calculations
+    const approvedExpenses = expenses.filter((e: any) => 
+      e.is_approved === true || e.is_approved === 'true' || e.approved === true
+    );
+    
+    // Calculate totals from filtered data - ONLY approved revenue and expenses
+    const totalRevenue = approvedRevenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
+    const totalExpenses = approvedExpenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
     const profit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
-    // Process category summaries
+    // Process category summaries - ONLY from approved revenue
     const revenueByCategory: Record<string, number> = {};
-    revenues.forEach((r: any) => {
+    approvedRevenues.forEach((r: any) => {
       let cat = r.category;
       if (cat && typeof cat === 'object' && cat.value) {
         cat = cat.value;
@@ -701,8 +730,9 @@ class ApiClient {
       revenueByCategory[cat] = (revenueByCategory[cat] || 0) + Number(r.amount || 0);
     });
 
+    // Process category summaries - ONLY from approved expenses
     const expenseByCategory: Record<string, number> = {};
-    expenses.forEach((e: any) => {
+    approvedExpenses.forEach((e: any) => {
       let cat = e.category;
       if (cat && typeof cat === 'object' && cat.value) {
         cat = cat.value;
@@ -713,9 +743,9 @@ class ApiClient {
       expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(e.amount || 0);
     });
 
-    // Calculate actual transaction counts (not category counts)
-    const revenueCount = revenues.length;
-    const expenseCount = expenses.length;
+    // Calculate actual transaction counts - ONLY approved items
+    const revenueCount = approvedRevenues.length;
+    const expenseCount = approvedExpenses.length;
 
     const result = {
       data: {

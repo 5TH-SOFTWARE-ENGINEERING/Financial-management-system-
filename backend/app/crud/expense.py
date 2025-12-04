@@ -28,18 +28,28 @@ class CRUDExpense:
         return db.query(ExpenseEntry).filter(ExpenseEntry.vendor == vendor).offset(skip).limit(limit).all()
 
     def get_total_by_period(self, db: Session, start_date: datetime, end_date: datetime) -> float:
+        """Get total expenses for period - ONLY approved entries"""
         result = db.query(func.sum(ExpenseEntry.amount)).filter(
-            and_(ExpenseEntry.date >= start_date, ExpenseEntry.date <= end_date)
+            and_(
+                ExpenseEntry.date >= start_date,
+                ExpenseEntry.date <= end_date,
+                ExpenseEntry.is_approved == True  # Only include approved expenses
+            )
         ).scalar()
         return result or 0.0
 
     def get_summary_by_category(self, db: Session, start_date: datetime, end_date: datetime) -> List[dict]:
+        """Get expense summary by category - ONLY approved entries"""
         result = db.query(
             ExpenseEntry.category,
             func.sum(ExpenseEntry.amount).label('total'),
             func.count(ExpenseEntry.id).label('count')
         ).filter(
-            and_(ExpenseEntry.date >= start_date, ExpenseEntry.date <= end_date)
+            and_(
+                ExpenseEntry.date >= start_date,
+                ExpenseEntry.date <= end_date,
+                ExpenseEntry.is_approved == True  # Only include approved expenses
+            )
         ).group_by(ExpenseEntry.category).all()
         
         return [
