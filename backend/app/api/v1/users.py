@@ -624,12 +624,43 @@ def delete_user(
 # ------------------------------------------------------------------
 # POST /{user_id}/deactivate
 # ------------------------------------------------------------------
+class ActivateDeactivateUserRequest(BaseModel):
+    password: str
+
 @router.post("/{user_id}/deactivate")
 def deactivate_user(
     user_id: int,
+    deactivate_request: ActivateDeactivateUserRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deactivation
+    if not deactivate_request.password or not deactivate_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to deactivate a user."
+        )
+    
+    # Verify password
+    password_to_verify = deactivate_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to deactivate this user."
+        )
+
     db_user = user_crud.get(db, id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -665,9 +696,37 @@ def deactivate_user(
 @router.post("/{user_id}/activate")
 def activate_user(
     user_id: int,
+    activate_request: ActivateDeactivateUserRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before activation
+    if not activate_request.password or not activate_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to activate a user."
+        )
+    
+    # Verify password
+    password_to_verify = activate_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to activate this user."
+        )
+
     db_user = user_crud.get(db, id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")

@@ -269,12 +269,12 @@ class ApiClient {
     return this.post(`/users/${userId}/delete`, { password });
   }
 
-  async activateUser(userId: number): Promise<ApiResponse<{ message: string }>> {
-    return this.post(`/users/${userId}/activate`);
+  async activateUser(userId: number, password: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/users/${userId}/activate`, { password });
   }
 
-  async deactivateUser(userId: number): Promise<ApiResponse<{ message: string }>> {
-    return this.post(`/users/${userId}/deactivate`);
+  async deactivateUser(userId: number, password: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/users/${userId}/deactivate`, { password });
   }
 
   // Financial endpoints
