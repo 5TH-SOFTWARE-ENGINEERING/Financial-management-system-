@@ -173,7 +173,8 @@ class CRUDSale:
         self,
         db: Session,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        user_ids: Optional[List[int]] = None
     ) -> dict:
         """
         Get sales summary for Accountant dashboard
@@ -181,6 +182,9 @@ class CRUDSale:
         IMPORTANT: Only POSTED sales are included in revenue calculations.
         - Employee sales start as PENDING and must be approved by Finance Admin
         - Only after approval (POSTED status) are sales included in revenue and net profit
+        
+        Args:
+            user_ids: If provided, only include sales made by these users (for Finance Admin's team)
         """
         query = db.query(Sale)
 
@@ -188,18 +192,28 @@ class CRUDSale:
             query = query.filter(Sale.created_at >= start_date)
         if end_date:
             query = query.filter(Sale.created_at <= end_date)
+        
+        # Filter by user_ids if provided (for Finance Admin's team)
+        if user_ids is not None:
+            query = query.filter(Sale.sold_by_id.in_(user_ids))
 
         total_sales = query.count()
         
         # CRITICAL: Only POSTED (approved) sales are included in revenue calculations
         # PENDING sales (especially from employees) are NOT included until approved by Finance Admin
         revenue_query = query.filter(Sale.status == SaleStatus.POSTED)
+        
+        # Build revenue query with all filters
+        revenue_filters = [Sale.status == SaleStatus.POSTED]  # Only approved/posted sales
+        if start_date:
+            revenue_filters.append(Sale.created_at >= start_date)
+        if end_date:
+            revenue_filters.append(Sale.created_at <= end_date)
+        if user_ids is not None:
+            revenue_filters.append(Sale.sold_by_id.in_(user_ids))
+        
         total_revenue = db.query(func.sum(Sale.total_sale)).filter(
-            and_(
-                Sale.status == SaleStatus.POSTED,  # Only approved/posted sales
-                *(Sale.created_at >= start_date,) if start_date else (),
-                *(Sale.created_at <= end_date,) if end_date else ()
-            )
+            and_(*revenue_filters)
         ).scalar() or 0.0
 
         pending_sales = query.filter(Sale.status == SaleStatus.PENDING).count()

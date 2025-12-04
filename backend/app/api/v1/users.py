@@ -364,6 +364,34 @@ def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_min_role(UserRole.MANAGER))
 ):
+    """List users with role-based filtering:
+    - Admin/Super Admin: See all users
+    - Finance Admin/Manager: See only their subordinates (accountants and employees), NOT other finance admins/managers
+    """
+    # Admin and Super Admin can see all users
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        return user_crud.get_multi(db, skip=skip, limit=limit)
+    
+    # Finance Admin and Manager can only see their subordinates (accountants and employees)
+    # They CANNOT see other finance admins or managers
+    if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+        # Get all subordinates in the hierarchy
+        subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+        subordinate_ids.append(current_user.id)  # Include themselves
+        
+        # Get all users and filter by subordinate IDs
+        # Also filter to only include accountants and employees (exclude other finance admins/managers)
+        all_users = user_crud.get_multi(db, skip=0, limit=10000)  # Get all to filter
+        filtered_users = [
+            user for user in all_users 
+            if user.id in subordinate_ids 
+            and user.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+        ]
+        
+        # Apply pagination
+        return filtered_users[skip:skip + limit]
+    
+    # Fallback (should not reach here due to require_min_role)
     return user_crud.get_multi(db, skip=skip, limit=limit)
 
 

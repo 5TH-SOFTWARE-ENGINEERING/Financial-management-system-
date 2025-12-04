@@ -336,7 +336,11 @@ def get_inventory_summary(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get inventory summary (Finance Admin, Admin, Super Admin, and Manager)"""
+    """Get inventory summary (Finance Admin, Admin, Super Admin, and Manager)
+    
+    - Admin/Super Admin: See all inventory
+    - Finance Admin/Manager: See only inventory created by them or their subordinates
+    """
     # Allow Finance Admin, Admin, Super Admin, and Manager roles
     allowed_roles = [
         UserRole.FINANCE_ADMIN, 
@@ -352,9 +356,18 @@ def get_inventory_summary(
             detail=f"Access denied. Only Finance Admin, Admin, Super Admin, or Manager can view inventory summary. Your role: {role_value}"
         )
     
-    # For managers, we could filter by their team's inventory if needed in the future
-    # For now, all authorized roles see the full inventory summary
-    return inventory_crud.get_total_value(db)
+    # Admin and Super Admin see all inventory
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        return inventory_crud.get_total_value(db)
+    
+    # Finance Admin and Manager see only their team's inventory
+    # Get all subordinates in the hierarchy
+    from ...crud.user import user as user_crud
+    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+    subordinate_ids.append(current_user.id)  # Include themselves
+    
+    # Get inventory summary filtered by created_by_id
+    return inventory_crud.get_total_value_by_users(db, subordinate_ids)
 
 
 class DeleteInventoryItemRequest(BaseModel):

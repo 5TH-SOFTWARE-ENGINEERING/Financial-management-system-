@@ -271,7 +271,18 @@ def get_sales_summary(
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid end_date format. Use ISO format (e.g., YYYY-MM-DDTHH:MM:SS)")
         
-        summary = sale_crud.get_sales_summary(db, start_date_dt, end_date_dt)
+        # Filter by user role:
+        # - Admin/Super Admin/Accountant: See all sales
+        # - Finance Admin/Manager: See only their team's sales (subordinates)
+        user_ids = None
+        if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            # Get all subordinates in the hierarchy
+            from ...crud.user import user as user_crud
+            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+            subordinate_ids.append(current_user.id)  # Include themselves
+            user_ids = subordinate_ids
+        
+        summary = sale_crud.get_sales_summary(db, start_date_dt, end_date_dt, user_ids=user_ids)
         return summary
     except HTTPException:
         raise

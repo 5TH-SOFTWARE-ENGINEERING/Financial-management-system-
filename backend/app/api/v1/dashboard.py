@@ -24,113 +24,250 @@ def get_dashboard_overview(
     db: Session = Depends(get_db)
 ):
     """Get dashboard overview with key metrics"""
-    # Default to last 30 days
-    end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=30)
-    
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.ACCOUNTANT]:
-        # Full overview for admins, finance managers, and accountants
-        # Accountants need to see all financial data for their accounting duties
-        total_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
-        total_expenses = expense_crud.get_total_by_period(db, start_date, end_date)
-        profit = total_revenue - total_expenses
+    try:
+        # Default to last 30 days
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=30)
         
-        revenue_summary = revenue_crud.get_summary_by_category(db, start_date, end_date)
-        expense_summary = expense_crud.get_summary_by_category(db, start_date, end_date)
-        
-        pending_approvals = len(approval_crud.get_pending(db))
-        
-        return {
-            "period": {
-                "start_date": start_date,
-                "end_date": end_date,
-                "days": 30
-            },
-            "financials": {
-                "total_revenue": total_revenue,
-                "total_expenses": total_expenses,
-                "profit": profit,
-                "profit_margin": (profit / total_revenue * 100) if total_revenue > 0 else 0
-            },
-            "revenue_by_category": revenue_summary,
-            "expenses_by_category": expense_summary,
-            "pending_approvals": pending_approvals
-        }
-    
-    elif current_user.role == UserRole.MANAGER:
-        # Manager overview - includes their team's data
-        subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-        subordinate_ids.append(current_user.id)
-        
-        # Get all revenue and expenses for the period
-        all_revenue = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
-        all_expenses = expense_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
-        
-        # Filter for team members
-        team_revenue = [r for r in all_revenue if r.created_by_id in subordinate_ids]
-        team_expenses = [e for e in all_expenses if e.created_by_id in subordinate_ids]
-        
-        total_revenue = sum(float(r.amount) for r in team_revenue)
-        total_expenses = sum(float(e.amount) for e in team_expenses)
-        profit = total_revenue - total_expenses
-        
-        # Get pending approvals for their team
-        all_pending = approval_crud.get_pending(db)
-        team_pending = [p for p in all_pending if p.requester_id in subordinate_ids]
-        
-        return {
-            "period": {
-                "start_date": start_date,
-                "end_date": end_date,
-                "days": 30
-            },
-            "financials": {
-                "total_revenue": total_revenue,
-                "total_expenses": total_expenses,
-                "profit": profit,
-                "profit_margin": (profit / total_revenue * 100) if total_revenue > 0 else 0
-            },
-            "team_stats": {
-                "team_size": len(subordinate_ids),
-                "pending_approvals": len(team_pending)
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT]:
+            # Full overview for admins and accountants
+            # Accountants need to see all financial data for their accounting duties
+            try:
+                total_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
+            except Exception as e:
+                logger.error(f"Error fetching total revenue: {str(e)}")
+                total_revenue = 0.0
+            
+            try:
+                total_expenses = expense_crud.get_total_by_period(db, start_date, end_date)
+            except Exception as e:
+                logger.error(f"Error fetching total expenses: {str(e)}")
+                total_expenses = 0.0
+            
+            profit = total_revenue - total_expenses
+            
+            try:
+                revenue_summary_list = revenue_crud.get_summary_by_category(db, start_date, end_date)
+                # Convert list to dict format for consistency
+                revenue_summary = {item['category']: item['total'] for item in revenue_summary_list} if isinstance(revenue_summary_list, list) else revenue_summary_list
+            except Exception as e:
+                logger.error(f"Error fetching revenue summary by category: {str(e)}")
+                revenue_summary = {}
+            
+            try:
+                expense_summary_list = expense_crud.get_summary_by_category(db, start_date, end_date)
+                # Convert list to dict format for consistency
+                expense_summary = {item['category']: item['total'] for item in expense_summary_list} if isinstance(expense_summary_list, list) else expense_summary_list
+            except Exception as e:
+                logger.error(f"Error fetching expense summary by category: {str(e)}")
+                expense_summary = {}
+            
+            try:
+                pending_approvals = len(approval_crud.get_pending(db))
+            except Exception as e:
+                logger.error(f"Error fetching pending approvals: {str(e)}")
+                pending_approvals = 0
+            
+            return {
+                "period": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "days": 30
+                },
+                "financials": {
+                    "total_revenue": total_revenue,
+                    "total_expenses": total_expenses,
+                    "profit": profit,
+                    "profit_margin": (profit / total_revenue * 100) if total_revenue > 0 else 0
+                },
+                "revenue_by_category": revenue_summary,
+                "expenses_by_category": expense_summary,
+                "pending_approvals": pending_approvals
             }
-        }
     
-    else:
-        # Regular user overview - only their own data
-        user_revenue = revenue_crud.get_by_user(db, current_user.id, 0, 1000)
-        user_expenses = expense_crud.get_by_user(db, current_user.id, 0, 1000)
-        
-        # Filter by date range
-        user_revenue_period = [r for r in user_revenue if start_date <= r.date <= end_date]
-        user_expenses_period = [e for e in user_expenses if start_date <= e.date <= end_date]
-        
-        total_revenue = sum(float(r.amount) for r in user_revenue_period)
-        total_expenses = sum(float(e.amount) for e in user_expenses_period)
-        profit = total_revenue - total_expenses
-        
-        # Get their pending approvals
-        user_pending = approval_crud.get_by_requester(db, current_user.id)
-        pending_count = len([p for p in user_pending if p.status.value == "pending"])
-        
-        return {
-            "period": {
-                "start_date": start_date,
-                "end_date": end_date,
-                "days": 30
-            },
-            "financials": {
-                "total_revenue": total_revenue,
-                "total_expenses": total_expenses,
-                "profit": profit,
-                "profit_margin": (profit / total_revenue * 100) if total_revenue > 0 else 0
-            },
-            "personal_stats": {
-                "revenue_entries": len(user_revenue_period),
-                "expense_entries": len(user_expenses_period),
-                "pending_approvals": pending_count
+        elif current_user.role == UserRole.FINANCE_ADMIN:
+            # Finance Admin overview - includes ONLY their team's data (subordinates: accountants and employees)
+            # They CANNOT see other finance admins' data
+            try:
+                subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                subordinate_ids.append(current_user.id)
+            except Exception as e:
+                logger.error(f"Error fetching user hierarchy for Finance Admin {current_user.id}: {str(e)}")
+                subordinate_ids = [current_user.id]  # Fallback to just themselves
+            
+            # Get all revenue and expenses for the period
+            try:
+                all_revenue = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching revenue entries for Finance Admin: {str(e)}")
+                all_revenue = []
+            
+            try:
+                all_expenses = expense_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching expense entries for Finance Admin: {str(e)}")
+                all_expenses = []
+            
+            # Filter for team members only (subordinates)
+            team_revenue = [r for r in all_revenue if r.created_by_id in subordinate_ids]
+            team_expenses = [e for e in all_expenses if e.created_by_id in subordinate_ids]
+            
+            total_revenue = sum(float(r.amount) for r in team_revenue)
+            total_expenses = sum(float(e.amount) for e in team_expenses)
+            profit = total_revenue - total_expenses
+            
+            # Calculate revenue and expense summaries by category for team only
+            revenue_summary = {}
+            for rev in team_revenue:
+                category = rev.category or 'Uncategorized'
+                revenue_summary[category] = revenue_summary.get(category, 0) + float(rev.amount)
+            
+            expense_summary = {}
+            for exp in team_expenses:
+                category = exp.category or 'Uncategorized'
+                expense_summary[category] = expense_summary.get(category, 0) + float(exp.amount)
+            
+            # Get pending approvals for their team only
+            try:
+                all_pending = approval_crud.get_pending(db)
+                team_pending = [p for p in all_pending if p.requester_id in subordinate_ids]
+            except Exception as e:
+                logger.error(f"Error fetching pending approvals for Finance Admin: {str(e)}")
+                team_pending = []
+            
+            return {
+                "period": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "days": 30
+                },
+                "financials": {
+                    "total_revenue": total_revenue,
+                    "total_expenses": total_expenses,
+                    "profit": profit,
+                    "profit_margin": (profit / total_revenue * 100) if total_revenue > 0 else 0
+                },
+                "revenue_by_category": revenue_summary,
+                "expenses_by_category": expense_summary,
+                "team_stats": {
+                    "team_size": len(subordinate_ids),
+                    "pending_approvals": len(team_pending)
+                }
             }
-        }
+    
+        elif current_user.role == UserRole.MANAGER:
+            # Manager overview - includes their team's data
+            try:
+                subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                subordinate_ids.append(current_user.id)
+            except Exception as e:
+                logger.error(f"Error fetching user hierarchy for Manager {current_user.id}: {str(e)}")
+                subordinate_ids = [current_user.id]  # Fallback to just themselves
+            
+            # Get all revenue and expenses for the period
+            try:
+                all_revenue = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching revenue entries for Manager: {str(e)}")
+                all_revenue = []
+            
+            try:
+                all_expenses = expense_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching expense entries for Manager: {str(e)}")
+                all_expenses = []
+            
+            # Filter for team members
+            team_revenue = [r for r in all_revenue if r.created_by_id in subordinate_ids]
+            team_expenses = [e for e in all_expenses if e.created_by_id in subordinate_ids]
+            
+            total_revenue = sum(float(r.amount) for r in team_revenue)
+            total_expenses = sum(float(e.amount) for e in team_expenses)
+            profit = total_revenue - total_expenses
+            
+            # Get pending approvals for their team
+            try:
+                all_pending = approval_crud.get_pending(db)
+                team_pending = [p for p in all_pending if p.requester_id in subordinate_ids]
+            except Exception as e:
+                logger.error(f"Error fetching pending approvals for Manager: {str(e)}")
+                team_pending = []
+            
+            return {
+                "period": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "days": 30
+                },
+                "financials": {
+                    "total_revenue": total_revenue,
+                    "total_expenses": total_expenses,
+                    "profit": profit,
+                    "profit_margin": (profit / total_revenue * 100) if total_revenue > 0 else 0
+                },
+                "team_stats": {
+                    "team_size": len(subordinate_ids),
+                    "pending_approvals": len(team_pending)
+                }
+            }
+    
+        else:
+            # Regular user overview - only their own data
+            try:
+                user_revenue = revenue_crud.get_by_user(db, current_user.id, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching user revenue entries: {str(e)}")
+                user_revenue = []
+            
+            try:
+                user_expenses = expense_crud.get_by_user(db, current_user.id, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching user expense entries: {str(e)}")
+                user_expenses = []
+            
+            # Filter by date range
+            user_revenue_period = [r for r in user_revenue if start_date <= r.date <= end_date]
+            user_expenses_period = [e for e in user_expenses if start_date <= e.date <= end_date]
+            
+            total_revenue = sum(float(r.amount) for r in user_revenue_period)
+            total_expenses = sum(float(e.amount) for e in user_expenses_period)
+            profit = total_revenue - total_expenses
+            
+            # Get their pending approvals
+            try:
+                user_pending = approval_crud.get_by_requester(db, current_user.id)
+                pending_count = len([p for p in user_pending if p.status.value == "pending"])
+            except Exception as e:
+                logger.error(f"Error fetching user pending approvals: {str(e)}")
+                pending_count = 0
+            
+            return {
+                "period": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "days": 30
+                },
+                "financials": {
+                    "total_revenue": total_revenue,
+                    "total_expenses": total_expenses,
+                    "profit": profit,
+                    "profit_margin": (profit / total_revenue * 100) if total_revenue > 0 else 0
+                },
+                "personal_stats": {
+                    "revenue_entries": len(user_revenue_period),
+                    "expense_entries": len(user_expenses_period),
+                    "pending_approvals": pending_count
+                }
+            }
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in get_dashboard_overview for user {current_user.id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load dashboard overview: {str(e)}"
+        )
 
 
 @router.get("/kpi")
@@ -213,8 +350,8 @@ def get_recent_activity(
     try:
         activities = []
         
-        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.ACCOUNTANT]:
-            # Admins, Finance Managers, and Accountants can see all activities
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT]:
+            # Admins and Accountants can see all activities
             # Get recent revenue entries from all users (sorted by created_at desc)
             try:
                 all_revenue = revenue_crud.get_multi(db, 0, limit * 3)
@@ -314,7 +451,7 @@ def get_recent_activity(
             except Exception as e:
                 logger.error(f"Error adding approval entries to activities: {str(e)}")
         
-        elif current_user.role == UserRole.MANAGER:
+        elif current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
             # Managers can see their team's activities
             try:
                 subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
