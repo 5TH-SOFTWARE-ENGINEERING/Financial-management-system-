@@ -733,6 +733,13 @@ export default function ApprovalsPage() {
   useEffect(() => {
     if (user) {
       loadApprovals();
+      
+      // Auto-refresh every 30 seconds to catch new approvals
+      const intervalId = setInterval(() => {
+        loadApprovals();
+      }, 30000);
+      
+      return () => clearInterval(intervalId);
     }
   }, [user]);
 
@@ -746,6 +753,11 @@ export default function ApprovalsPage() {
     setError(null);
     
     try {
+      // Check if user has permission to view approvals
+      if (!canApprove() && user.role !== 'accountant' && user.role !== 'finance_manager') {
+        // Regular users can still see their own pending items
+        // But we'll still load data for them
+      }
       // Fetch approval workflows - get all workflows regardless of status
       const workflowsResponse = await apiClient.getApprovals();
       const workflows = (workflowsResponse.data || []).map((w: any) => ({
@@ -777,14 +789,15 @@ export default function ApprovalsPage() {
           .map((w: any) => w.expense_entry_id)
       );
 
-      // Fetch pending revenue entries - only show those WITHOUT workflows
-      const revenuesResponse = await apiClient.getRevenues({ is_approved: false });
+      // Fetch revenue entries - filter for pending ones WITHOUT workflows
+      const revenuesResponse = await apiClient.getRevenues();
       const pendingRevenues = (revenuesResponse.data || [])
         .filter((r: any) => {
           // Only include if:
-          // 1. Not approved yet
+          // 1. Not approved yet (is_approved is false or undefined)
           // 2. Doesn't have an existing workflow (to avoid duplication)
-          return !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
+          const isNotApproved = r.is_approved === false || r.is_approved === undefined || !r.is_approved;
+          return isNotApproved && !revenueIdsWithWorkflow.has(r.id);
         })
         .map((r: any) => ({
           id: r.id,
@@ -798,14 +811,15 @@ export default function ApprovalsPage() {
           revenue_entry_id: r.id,
         }));
 
-      // Fetch pending expense entries - only show those WITHOUT workflows
-      const expensesResponse = await apiClient.getExpenses({ is_approved: false });
+      // Fetch expense entries - filter for pending ones WITHOUT workflows
+      const expensesResponse = await apiClient.getExpenses();
       const pendingExpenses = (expensesResponse.data || [])
         .filter((e: any) => {
           // Only include if:
-          // 1. Not approved yet
+          // 1. Not approved yet (is_approved is false or undefined)
           // 2. Doesn't have an existing workflow (to avoid duplication)
-          return !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
+          const isNotApproved = e.is_approved === false || e.is_approved === undefined || !e.is_approved;
+          return isNotApproved && !expenseIdsWithWorkflow.has(e.id);
         })
         .map((e: any) => ({
           id: e.id,
@@ -821,7 +835,8 @@ export default function ApprovalsPage() {
 
       // Fetch pending sales - only for accountants and finance admins
       let pendingSales: any[] = [];
-      if (user?.role === 'accountant' || user?.role === 'finance_manager' || user?.role === 'admin') {
+      const userRole = user?.role?.toLowerCase();
+      if (userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'admin' || userRole === 'super_admin') {
         try {
           const salesResponse: any = await apiClient.getSales({ status: 'pending', limit: 1000 });
           const salesData = Array.isArray(salesResponse?.data) 
@@ -829,37 +844,50 @@ export default function ApprovalsPage() {
             : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
               ? (salesResponse.data as any).data || [] 
               : []);
-          pendingSales = (salesData || []).map((s: any) => ({
-            id: s.id,
-            type: 'sale' as const,
-            title: s.item_name || `Sale #${s.id}`,
-            description: s.customer_name ? `Customer: ${s.customer_name}` : `Receipt: ${s.receipt_number || `#${s.id}`}`,
-            amount: s.total_sale,
-            status: s.status || 'pending',
-            requester_id: s.sold_by_id,
-            created_at: s.created_at,
-            sale_id: s.id,
-            item_name: s.item_name,
-            quantity_sold: s.quantity_sold,
-            receipt_number: s.receipt_number,
-          }));
+          pendingSales = (salesData || []).map((s: any) => {
+            const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
+            return {
+              id: s.id,
+              type: 'sale' as const,
+              title: s.item_name || `Sale #${s.id}`,
+              description: s.customer_name ? `Customer: ${s.customer_name}` : `Receipt: ${s.receipt_number || `#${s.id}`}`,
+              amount: s.total_sale,
+              status: saleStatus,
+              requester_id: s.sold_by_id,
+              created_at: s.created_at,
+              sale_id: s.id,
+              item_name: s.item_name,
+              quantity_sold: s.quantity_sold,
+              receipt_number: s.receipt_number,
+            };
+          });
         } catch (err: any) {
           console.error('Error fetching sales:', err);
           // Don't fail the entire load if sales fetch fails
+          // Only show error if it's a permission issue
+          if (err.response?.status !== 403) {
+            console.warn('Failed to fetch sales for approvals:', err.message);
+          }
         }
       }
 
       // Combine all approvals (workflows + standalone entries without workflows + sales)
       const allApprovals = [...workflows, ...pendingRevenues, ...pendingExpenses, ...pendingSales];
       
+      // Normalize status values to lowercase for consistency
+      const normalizedApprovals = allApprovals.map(item => ({
+        ...item,
+        status: (item.status?.value || item.status || 'pending')?.toLowerCase(),
+      }));
+      
       // Sort by created date (newest first)
-      allApprovals.sort((a, b) => {
+      normalizedApprovals.sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
       });
 
-      setApprovals(allApprovals);
+      setApprovals(normalizedApprovals);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to load approvals';
       setError(errorMessage);
@@ -877,8 +905,9 @@ export default function ApprovalsPage() {
 
     // For sales, check if user is accountant or finance admin
     if (item.type === 'sale') {
-      if (user?.role !== 'accountant' && user?.role !== 'finance_manager' && user?.role !== 'admin') {
-        toast.error('Only accountants can post sales to ledger');
+      const userRole = user?.role?.toLowerCase();
+      if (userRole !== 'accountant' && userRole !== 'finance_manager' && userRole !== 'finance_admin' && userRole !== 'admin' && userRole !== 'super_admin') {
+        toast.error('Only accountants and finance admins can post sales to ledger');
         return;
       }
     }
@@ -907,7 +936,11 @@ export default function ApprovalsPage() {
         toast.success('Sale posted to ledger successfully');
       }
       
+      // Reload approvals after successful approval
       await loadApprovals();
+      
+      // Clear any previous errors
+      setError(null);
     } catch (err: any) {
       // Handle different error types
       let errorMessage = 'Failed to approve item';
@@ -922,6 +955,8 @@ export default function ApprovalsPage() {
           errorMessage = detail || 'Invalid request. The item may already be processed.';
         } else if (status === 404) {
           errorMessage = detail || 'Item not found. It may have been deleted.';
+        } else if (status === 500) {
+          errorMessage = detail || 'Server error. Please try again later.';
         } else {
           errorMessage = detail || `Error: ${status}`;
         }
@@ -944,7 +979,8 @@ export default function ApprovalsPage() {
 
     // For sales, only finance admins can cancel
     if (item.type === 'sale') {
-      if (user?.role !== 'finance_manager' && user?.role !== 'admin') {
+      const userRole = user?.role?.toLowerCase();
+      if (userRole !== 'finance_manager' && userRole !== 'finance_admin' && userRole !== 'admin' && userRole !== 'super_admin') {
         toast.error('Only finance admins can cancel sales');
         return;
       }
@@ -989,7 +1025,13 @@ export default function ApprovalsPage() {
       setShowRejectModal(null);
       setRejectionReason('');
       setRejectPassword('');
+      setRejectPasswordError(null);
+      
+      // Reload approvals after successful rejection
       await loadApprovals();
+      
+      // Clear any previous errors
+      setError(null);
     } catch (err: any) {
       // Handle different error types
       let errorMessage = 'Failed to reject item';
@@ -1100,8 +1142,8 @@ export default function ApprovalsPage() {
                 <p>Manage pending approvals and review history</p>
             </div>
               <RefreshButton onClick={loadApprovals} disabled={loading}>
-                <RefreshCw />
-              Refresh
+                {loading ? <SpinningIcon size={16} /> : <RefreshCw />}
+                {loading ? 'Loading...' : 'Refresh'}
               </RefreshButton>
             </HeaderContent>
           </HeaderContainer>
@@ -1154,7 +1196,18 @@ export default function ApprovalsPage() {
           {filteredApprovals.length === 0 ? (
               <EmptyState>
                 <Clock />
-                <p>No approvals found</p>
+                <p>
+                  {approvals.length === 0 
+                    ? 'No pending approvals at this time' 
+                    : searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
+                    ? 'No approvals match your filters'
+                    : 'No approvals found'}
+                </p>
+                {(searchTerm || statusFilter !== 'all' || typeFilter !== 'all') && approvals.length > 0 && (
+                  <p style={{ marginTop: theme.spacing.sm, fontSize: theme.typography.fontSizes.sm, opacity: 0.7 }}>
+                    Try adjusting your search or filters
+                  </p>
+                )}
               </EmptyState>
             ) : (
               filteredApprovals.map((item) => (
@@ -1242,7 +1295,10 @@ export default function ApprovalsPage() {
                               </>
                             )}
                           </ActionButton>
-                          {(item.type !== 'sale' || (user?.role === 'finance_manager' || user?.role === 'admin')) && (
+                          {(item.type !== 'sale' || (() => {
+                            const userRole = user?.role?.toLowerCase();
+                            return userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'admin' || userRole === 'super_admin';
+                          })()) && (
                             <ActionButton
                               $variant="danger"
                               onClick={() => {
