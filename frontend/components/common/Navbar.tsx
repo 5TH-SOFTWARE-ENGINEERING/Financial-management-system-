@@ -172,7 +172,7 @@ const AddButton = styled.button`
   }
 `;
 
-const IconButton = styled.button`
+const IconButton = styled.button<{ $iconType?: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -181,25 +181,24 @@ const IconButton = styled.button`
   border: none;
   border-radius: ${theme.borderRadius.md};
   background: transparent;
-  color: ${theme.colors.textSecondary};
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, false) : theme.colors.textSecondary};
   cursor: pointer;
   transition: all ${theme.transitions.default};
   position: relative;
 
   &:hover {
     background: ${theme.colors.backgroundSecondary};
-    color: ${PRIMARY_ACCENT};
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : PRIMARY_ACCENT};
     transform: translateY(-1px);
+    
+    ${NavIcon} {
+      opacity: 1;
+      transform: scale(1.15);
+    }
   }
 
   &:active {
     transform: translateY(0);
-  }
-
-  svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 2;
   }
 `;
 
@@ -288,7 +287,8 @@ const NotificationBadge = styled.div`
   justify-content: center;
 
   &:hover ${IconWrapper} {
-    color: ${PRIMARY_ACCENT};
+    opacity: 1;
+    transform: scale(1.1);
   }
 
   span {
@@ -481,22 +481,14 @@ const DropdownItem = styled.div`
     color: ${PRIMARY_ACCENT};
     padding-left: ${theme.spacing.xl};
     
-    svg {
-      color: ${PRIMARY_ACCENT};
-      transform: scale(1.1);
+    ${DropdownIcon} {
+      opacity: 1;
+      transform: scale(1.15);
     }
   }
 
   &:not(:last-child) {
     border-bottom: 1px solid ${theme.colors.border};
-  }
-  
-  svg {
-    width: 16px;
-    height: 16px;
-    color: ${theme.colors.textSecondary};
-    transition: all ${theme.transitions.default};
-    flex-shrink: 0;
   }
   
   span {
@@ -1223,7 +1215,7 @@ export default function Navbar() {
       </MenuButton>
       <SearchContainer>
         <form onSubmit={handleSearch} style={{ width: '100%' }}>
-          <SearchIcon>
+          <SearchIcon $active={search.length > 0}>
             <Search size={16} />
           </SearchIcon>
           <SearchInput
@@ -1242,7 +1234,9 @@ export default function Navbar() {
       <ActionsContainer>
         <ComponentGate componentId={ComponentId.EXPENSE_CREATE}>
           <AddButton onClick={handleAddClick} title="Add new item">
-            <Plus />
+            <ButtonIcon $iconType="plus">
+              <Plus />
+            </ButtonIcon>
           </AddButton>
         </ComponentGate>
         {user && (
@@ -1251,7 +1245,7 @@ export default function Navbar() {
               data-notification-badge="true"
               onClick={handleNotificationsClick}
             >
-              <IconWrapper>
+              <IconWrapper $iconType="bell" $active={unreadCount > 0}>
                 <Bell />
               </IconWrapper>
               {unreadCount > 0 && (
@@ -1309,12 +1303,14 @@ export default function Navbar() {
           </div>
         )}
         <ComponentGate componentId={ComponentId.REPORT_LIST}>
-          <IconButton onClick={handleReportsClick} title="View reports">
-            <FileSpreadsheet />
+          <IconButton onClick={handleReportsClick} title="View reports" $iconType="file-spreadsheet">
+            <NavIcon $iconType="file-spreadsheet">
+              <FileSpreadsheet />
+            </NavIcon>
           </IconButton>
         </ComponentGate>
         <LanguageSelector onClick={handleLanguageClick} title="Toggle language">
-          <IconWrapper>
+          <IconWrapper $iconType="globe">
             <Globe />
           </IconWrapper>
           <span>{language}</span>
@@ -1339,7 +1335,9 @@ export default function Navbar() {
           }}
         >
           <DropdownItem onClick={handleProfileClick}>
-            <User size={16} />
+            <DropdownIcon $iconType="user">
+              <User size={16} />
+            </DropdownIcon>
             <span>Profile</span>
           </DropdownItem>
           {currentUser && (
@@ -1349,7 +1347,9 @@ export default function Navbar() {
              currentUser.role?.toLowerCase() === 'finance_manager'
             ) && (
               <DropdownItem onClick={handleUsersClick}>
-                <Users size={16} />
+                <DropdownIcon $iconType="users">
+                  <Users size={16} />
+                </DropdownIcon>
                 <span>Users</span>
               </DropdownItem>
             )
@@ -1359,14 +1359,18 @@ export default function Navbar() {
              currentUser.role?.toLowerCase() !== 'employee'
             ) && (
               <DropdownItem onClick={handleSettingsClick}>
-                <Settings size={16} />
+                <DropdownIcon $iconType="settings">
+                  <Settings size={16} />
+                </DropdownIcon>
                 <span>Settings</span>
               </DropdownItem>
             )
           )}
           <ComponentGate componentId={ComponentId.PERMISSION_EDIT}>
             <DropdownItem onClick={handleRolesClick}>
-              <HelpCircle size={16} />
+              <DropdownIcon $iconType="help-circle">
+                <HelpCircle size={16} />
+              </DropdownIcon>
               <span>Role & Permission Management</span>
             </DropdownItem>
           </ComponentGate>
@@ -1380,7 +1384,9 @@ export default function Navbar() {
             }}
             style={{ cursor: 'pointer' }}
           >
-            <LogOut size={16} />
+            <DropdownIcon $iconType="log-out" $active={true}>
+              <LogOut size={16} />
+            </DropdownIcon>
             <span>Sign Out</span>
           </SignOutItem>
         </DropdownMenu>
