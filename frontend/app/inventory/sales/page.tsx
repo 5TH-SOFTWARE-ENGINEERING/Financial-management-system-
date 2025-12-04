@@ -237,7 +237,9 @@ const NotesTextarea = styled.textarea`
   }
 `;
 
-const CompleteSaleButton = styled(Button)`
+const CompleteSaleButton = styled(Button).withConfig({
+  shouldForwardProp: (prop) => !['variant', 'size'].includes(prop),
+})`
   width: 100%;
   display: flex;
   align-items: center;
@@ -615,7 +617,7 @@ export default function SalesPage() {
 
                 <CustomerInfoSection>
                   <FormField>
-                    <Label htmlFor="customer_name">Customer Name (Optional)</Label>
+                    <Label htmlFor="customer_name">Customer Name (Optional):</Label>
                     <Input
                       id="customer_name"
                       value={customerName}
@@ -623,7 +625,7 @@ export default function SalesPage() {
                     />
                   </FormField>
                   <FormField>
-                    <Label htmlFor="customer_email">Customer Email (Optional)</Label>
+                    <Label htmlFor="customer_email">Customer Email (Optional):</Label>
                     <Input
                       id="customer_email"
                       type="email"
@@ -632,7 +634,7 @@ export default function SalesPage() {
                     />
                   </FormField>
                   <FormField>
-                    <Label htmlFor="notes">Notes (Optional)</Label>
+                    <Label htmlFor="notes">Notes (Optional):</Label>
                     <NotesTextarea
                       id="notes"
                       value={notes}

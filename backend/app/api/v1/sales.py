@@ -183,7 +183,7 @@ def post_sale(
     """
     Post a sale to ledger (approve sale for revenue calculation)
     
-    - Sales made by employees MUST be approved by Finance Admin (or Admin/Super Admin)
+    - Sales made by employees MUST be approved by Finance Admin, Accountant, Admin, or Super Admin
     - Sales made by accountants or other roles can be approved by Accountants or Finance Admins
     - Only POSTED sales are included in revenue and net profit calculations
     """
@@ -197,12 +197,12 @@ def post_sale(
     seller = db.query(User).filter(User.id == sale.sold_by_id).first()
     is_employee_sale = seller and seller.role == UserRole.EMPLOYEE
     
-    # If sale was made by an employee, require Finance Admin (or Admin/Super Admin) approval
+    # If sale was made by an employee, require Finance Admin, Accountant, Admin, or Super Admin approval
     if is_employee_sale:
-        if current_user.role not in [UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        if current_user.role not in [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             raise HTTPException(
                 status_code=403,
-                detail="Sales made by employees must be approved by Finance Admin. Only Finance Admin, Admin, or Super Admin can approve employee sales."
+                detail="Sales made by employees must be approved by Finance Admin or Accountant. Only Finance Admin, Accountant, Admin, or Super Admin can approve employee sales."
             )
     else:
         # For non-employee sales, allow Accountants and Finance Admins to approve
