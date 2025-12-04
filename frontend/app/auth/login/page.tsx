@@ -43,6 +43,53 @@ const theme = {
     default: '0.3s ease-in-out',
   },
 };
+
+// Icon color function
+const getIconColor = (iconType: string, active: boolean = true): string => {
+  const activeColors: Record<string, string> = {
+    eye: '#3b82f6',      // Blue for show password
+    eyeOff: '#8b5cf6',   // Purple for hide password
+    default: '#ff7e5f',  // Primary color
+  };
+
+  const inactiveColors: Record<string, string> = {
+    eye: '#6b7280',
+    eyeOff: '#6b7280',
+    default: '#9ca3af',
+  };
+
+  if (active) {
+    return activeColors[iconType] || activeColors.default;
+  } else {
+    return inactiveColors[iconType] || inactiveColors.default;
+  }
+};
+
+// Icon styled components
+const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active !== false) : '#d1d1d1'};
+  opacity: ${props => props.$active !== false ? 1 : 0.7};
+  transition: all ${theme.transitions.default};
+  
+  svg {
+    width: ${props => props.$size ? `${props.$size}px` : '20px'};
+    height: ${props => props.$size ? `${props.$size}px` : '20px'};
+    stroke-width: 2;
+    transition: all ${theme.transitions.default};
+  }
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+`;
+
+const PasswordIcon = styled(IconWrapper)`
+  cursor: pointer;
+`;
 const LoginContainer = styled.div`
   display: flex;
   justify-content: center;
@@ -112,74 +159,117 @@ const Label = styled.label`
 `;
 const Input = styled.input`
   width: 100%;
-  padding: ${theme.spacing.sm};
+  padding: ${theme.spacing.md} ${theme.spacing.sm};
   border: 1px solid #4a4a4a;
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
   background-color: #333333;
   color: #ffffff;
-  transition: border-color ${theme.transitions.default};
+  transition: all ${theme.transitions.default};
 
   &:focus {
     outline: none;
     border-color: ${theme.colors.primary};
+    box-shadow: 0 0 0 3px rgba(255, 126, 95, 0.1);
   }
 
   &::placeholder {
     color: #b3b3b3;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 const PasswordContainer = styled.div`
   position: relative;
   width: 100%;
 `;
-const EyeIcon = styled.button`
+const EyeIconButton = styled.button`
   position: absolute;
   top: 50%;
-  right: 0px;
+  right: ${theme.spacing.sm};
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  color: #d1d1d1;
+  padding: ${theme.spacing.xs};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: ${theme.borderRadius.md};
+  transition: all ${theme.transitions.default};
 
   &:hover {
-    color: ${theme.colors.primary};
+    background: rgba(255, 126, 95, 0.1);
+  }
+
+  &:focus {
+    outline: none;
+    background: rgba(255, 126, 95, 0.15);
   }
 `;
 const CheckboxContainer = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: ${theme.spacing.sm};
   margin-bottom: ${theme.spacing.md};
 `;
+const CheckboxWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
 const Checkbox = styled.input`
   cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: ${theme.colors.primary};
+  
+  &:checked {
+    background-color: ${theme.colors.primary};
+  }
 `;
 const CheckboxLabel = styled.label`
   color: #ffffff;
   font-size: ${theme.typography.fontSizes.sm};
   cursor: pointer;
+  user-select: none;
+  
+  &:hover {
+    color: ${theme.colors.primary};
+  }
 `;
 const SignInButton = styled.button`
   width: 100%;
   padding: ${theme.spacing.md};
-  background-color: ${theme.colors.primary};
-  color:rgb(255, 255, 255);
+  background: linear-gradient(135deg, ${theme.colors.primary} 0%, #feb47b 100%);
+  color: rgb(255, 255, 255);
   border: none;
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.md};
   font-weight: ${theme.typography.fontWeights.medium};
   cursor: pointer;
-  transition: background-color ${theme.transitions.default};
+  transition: all ${theme.transitions.default};
+  box-shadow: 0 2px 8px rgba(255, 126, 95, 0.3);
 
-  &:hover {
-    background-color: #feb47b;
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #feb47b 0%, ${theme.colors.primary} 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 126, 95, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
   }
 
   &:disabled {
-    background-color: #4a4a4a;
+    background: #4a4a4a;
     cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.6;
   }
 `;
 const ForgotPassword = styled.a`
@@ -257,9 +347,11 @@ export default function Login() {
                 placeholder="Enter your password"
                 disabled={isLoading}
               />
-              <EyeIcon type="button" onClick={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff /> : <Eye />}
-              </EyeIcon>
+              <EyeIconButton type="button" onClick={() => setShowPassword(!showPassword)}>
+                <PasswordIcon $iconType={showPassword ? 'eyeOff' : 'eye'} $active={true} $size={20}>
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </PasswordIcon>
+              </EyeIconButton>
             </PasswordContainer>
             {errors.password && (
               <ErrorMessage>{errors.password.message}</ErrorMessage>
@@ -267,13 +359,15 @@ export default function Login() {
           </FormGroup>
 
           <CheckboxContainer>
-            <Checkbox
-              type="checkbox"
-              id="remember"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-            />
-            <CheckboxLabel htmlFor="remember">Remember me</CheckboxLabel>
+            <CheckboxWrapper>
+              <Checkbox
+                type="checkbox"
+                id="remember"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <CheckboxLabel htmlFor="remember">Remember me</CheckboxLabel>
+            </CheckboxWrapper>
             <ForgotPassword onClick={() => router.push('/auth/reset-password')}>
               Forgot password?
             </ForgotPassword>
