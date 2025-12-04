@@ -10,8 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+import logging
 
 from ...core.database import get_db
+
+logger = logging.getLogger(__name__)
 from ...api.deps import get_current_active_user
 from ...models.user import User, UserRole
 from ...models.sale import Sale, SaleStatus, JournalEntry
@@ -219,29 +222,41 @@ def get_sales_summary(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get sales summary (Accountant and Finance Admin)"""
-    if current_user.role not in [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+    """Get sales summary (Accountant, Finance Admin, Admin, Super Admin, and Manager)"""
+    # Allow Accountant, Finance Admin, Admin, Super Admin, and Manager roles
+    allowed_roles = [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]
+    
+    if current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=403,
-            detail="Only accountants and finance admins can view sales summary"
+            detail=f"Access denied. Your role '{current_user.role.value if hasattr(current_user.role, 'value') else current_user.role}' does not have permission to view sales summary. Required roles: accountant, finance_admin, admin, super_admin, or manager."
         )
     
-    # Parse dates
-    start_date_dt = None
-    end_date_dt = None
-    if start_date:
-        try:
-            start_date_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid start_date format")
-    if end_date:
-        try:
-            end_date_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid end_date format")
-    
-    summary = sale_crud.get_sales_summary(db, start_date_dt, end_date_dt)
-    return summary
+    try:
+        # Parse dates
+        start_date_dt = None
+        end_date_dt = None
+        if start_date:
+            try:
+                start_date_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use ISO format (e.g., YYYY-MM-DDTHH:MM:SS)")
+        if end_date:
+            try:
+                end_date_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use ISO format (e.g., YYYY-MM-DDTHH:MM:SS)")
+        
+        summary = sale_crud.get_sales_summary(db, start_date_dt, end_date_dt)
+        return summary
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching sales summary for user {current_user.id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching sales summary: {str(e)}"
+        )
 
 
 @router.get("/receipt/{sale_id}", response_model=ReceiptOut)
