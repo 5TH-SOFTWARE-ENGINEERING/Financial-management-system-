@@ -557,10 +557,13 @@ const AdminDashboard: React.FC = () => {
         const overviewData = overviewRes.data || {};
         setOverview(overviewData);
         
-        // Fetch all pending approvals in real-time (workflows, revenue, expenses)
+        // Fetch all pending approvals in real-time (workflows, revenue, expenses, sales)
         // Use deduplication logic to avoid counting items with workflows twice
         let totalPendingCount = 0;
         let debugInfo: any = {};
+        
+        // Store pending sales count for later use
+        let pendingSalesForActivity: any[] = [];
         
         try {
           // Fetch approval workflows to identify which entries have workflows
@@ -641,6 +644,9 @@ const AdminDashboard: React.FC = () => {
               
               totalPendingCount += pendingSales.length;
               debugInfo.pendingSalesCount = pendingSales.length;
+              
+              // Store for adding to recent activity
+              pendingSalesForActivity = pendingSales;
             } catch (salesErr: any) {
               // Silently handle 403 errors (expected for users without sales access)
               if (salesErr.response?.status !== 403) {
@@ -682,6 +688,7 @@ const AdminDashboard: React.FC = () => {
           });
         }
         
+        // Map regular activity
         const activity = (activityRes.data || []).map((entry: any, index: number): ActivityItem => ({
           id: entry.id?.toString() ?? `activity-${index}`,
           type: entry.type ?? 'activity',
@@ -690,7 +697,40 @@ const AdminDashboard: React.FC = () => {
           date: entry.date ?? entry.created_at,
           status: entry.status ?? (entry.is_approved ? 'approved' : 'pending'),
         }));
-        setRecentActivity(activity);
+        
+        // Add pending sales to recent activity for accountants and finance admins
+        const userRoleLower = user?.role?.toLowerCase();
+        const canViewSales = userRoleLower === 'accountant' || 
+                            userRoleLower === 'finance_manager' || 
+                            userRoleLower === 'finance_admin' || 
+                            userRoleLower === 'admin' || 
+                            userRoleLower === 'super_admin' ||
+                            userRoleLower === 'manager';
+        
+        // Add pending sales to recent activity if available
+        if (canViewSales && pendingSalesForActivity.length > 0) {
+          const salesActivity = pendingSalesForActivity.map((s: any): ActivityItem => ({
+            id: `sale-${s.id}`,
+            type: 'sale',
+            title: s.item_name || `Sale #${s.id}`,
+            amount: s.total_sale,
+            date: s.created_at,
+            status: 'pending',
+          }));
+          
+          // Combine and sort by date
+          const allActivity = [...activity, ...salesActivity];
+          allActivity.sort((a, b) => {
+            const dateA = a.date ? new Date(a.date).getTime() : 0;
+            const dateB = b.date ? new Date(b.date).getTime() : 0;
+            return dateB - dateA;
+          });
+          
+          // Take the most recent items (up to the limit)
+          setRecentActivity(allActivity.slice(0, 8));
+        } else {
+          setRecentActivity(activity);
+        }
         
         // Set analytics data if available
         if (analyticsRes?.data) {
@@ -980,27 +1020,51 @@ const AdminDashboard: React.FC = () => {
                   </tr>
                 )}
                 {recentActivity.map((item) => {
-                  const isPositive = item.type === 'revenue';
+                  // Sales and revenue are positive (income)
+                  const isPositive = item.type === 'revenue' || item.type === 'sale';
                   const amount = Number(item.amount || 0);
                   const statusType =
-                    item.status === 'approved'
+                    item.status === 'approved' || item.status === 'posted'
                       ? 'success'
                       : item.status === 'pending'
                       ? 'warning'
-                      : item.status === 'rejected'
+                      : item.status === 'rejected' || item.status === 'cancelled'
                       ? 'danger'
                       : 'info';
+                  
+                  // Format title for sales to make them more visible
+                  const displayTitle = item.type === 'sale' 
+                    ? `Sale: ${item.title?.replace('Sale: ', '') || 'Unknown Item'}`
+                    : item.title || item.type;
 
                   return (
                     <tr key={`${item.type}-${item.id}-${item.date}`}>
                       <td>{item.date ? new Date(item.date).toLocaleDateString() : '—'}</td>
-                      <td>{item.title || item.type}</td>
+                      <td>
+                        <span style={{ 
+                          textTransform: 'capitalize',
+                          fontWeight: item.type === 'sale' ? theme.typography.fontWeights.medium : 'normal'
+                        }}>
+                          {displayTitle}
+                        </span>
+                        {item.type === 'sale' && item.status === 'pending' && (
+                          <span style={{ 
+                            marginLeft: theme.spacing.xs,
+                            fontSize: theme.typography.fontSizes.xs,
+                            color: TEXT_COLOR_MUTED
+                          }}>
+                            (Pending Approval)
+                          </span>
+                        )}
+                      </td>
                       <AmountCell $isPositive={isPositive}>
-                        {isPositive ? '+' : '-'}${Math.abs(amount).toLocaleString()}
+                        {isPositive ? '+' : '-'}${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </AmountCell>
                       <td>
                         <Badge $type={statusType as 'success' | 'warning' | 'danger' | 'info'}>
-                          {(item.status || 'pending').toString().toUpperCase()}
+                          {item.type === 'sale' && item.status === 'pending' 
+                            ? 'PENDING SALE' 
+                            : (item.status || 'pending').toString().toUpperCase()}
                         </Badge>
                       </td>
                     </tr>
