@@ -366,6 +366,36 @@ const CloseButton = styled.button`
   }
 `;
 
+const PasswordInput = styled.input`
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  transition: border-color 0.2s;
+  
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  &:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+  }
+`;
+
+const PasswordError = styled.div`
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  background-color: #fee2e2;
+  border-radius: 0.25rem;
+`;
+
 interface Backup {
   name: string;
   file: string;
@@ -415,6 +445,8 @@ export default function BackupSettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Check if user has required role (ADMIN, FINANCE_ADMIN, or SUPER_ADMIN)
   // Note: Roles are normalized in the store (super_admin -> admin, finance_manager -> finance_manager)
@@ -552,30 +584,50 @@ export default function BackupSettingsPage() {
       return;
     }
 
+    // Validate password
+    if (!deletePassword || !deletePassword.trim()) {
+      setPasswordError('Password is required to delete a backup.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
-    setShowDeleteModal(false);
+    setPasswordError(null);
 
     try {
-      const response = await apiClient.deleteBackup(selectedBackup.name);
+      const response = await apiClient.deleteBackup(selectedBackup.name, deletePassword.trim());
       const message = response.data?.message || 'Backup deleted successfully.';
       setSuccess(message);
       toast.success(message);
       setSelectedBackup(null);
+      setDeletePassword('');
+      setShowDeleteModal(false);
       
       // Refresh backup list
       loadBackups();
     } catch (err: any) {
       if (err.response?.status === 403) {
-        const errorMessage = 'Access denied. Backup management requires ADMIN, FINANCE_ADMIN, or SUPER_ADMIN role.';
-        setError(errorMessage);
-        setHasPermission(false);
+        if (err.response?.data?.detail?.includes('password') || err.response?.data?.detail?.includes('Password')) {
+          const errorMessage = err.response?.data?.detail || 'Invalid password. Please verify your password to delete this backup.';
+          setPasswordError(errorMessage);
+          toast.error(errorMessage);
+        } else {
+          const errorMessage = 'Access denied. Backup management requires ADMIN, FINANCE_ADMIN, or SUPER_ADMIN role.';
+          setError(errorMessage);
+          setHasPermission(false);
+          toast.error(errorMessage);
+          setShowDeleteModal(false);
+        }
+      } else if (err.response?.status === 400) {
+        const errorMessage = err.response?.data?.detail || 'Password is required to delete a backup.';
+        setPasswordError(errorMessage);
         toast.error(errorMessage);
       } else {
         const errorMessage = err.response?.data?.detail || 'Failed to delete backup. Please try again.';
         setError(errorMessage);
         toast.error(errorMessage);
+        setShowDeleteModal(false);
       }
     } finally {
       setLoading(false);
@@ -589,6 +641,8 @@ export default function BackupSettingsPage() {
 
   const openDeleteModal = (backup: Backup) => {
     setSelectedBackup(backup);
+    setDeletePassword('');
+    setPasswordError(null);
     setShowDeleteModal(true);
   };
 
@@ -926,13 +980,47 @@ export default function BackupSettingsPage() {
                 </CloseButton>
               </ModalHeader>
               <div>
+                <Message type="warning">
+                  <MessageIcon $iconType="alert-triangle" $size={16} $active={true}>
+                    <AlertTriangle size={16} />
+                  </MessageIcon>
+                  <span>
+                    This action will permanently delete the backup. This cannot be undone.
+                  </span>
+                </Message>
                 <p style={{ marginBottom: '1rem', color: '#4b5563' }}>
-                  Are you sure you want to delete the backup <strong>{selectedBackup.name}</strong>? This action cannot be undone.
+                  Are you sure you want to delete the backup <strong>{selectedBackup.name}</strong>?
                 </p>
+                <div style={{ marginBottom: '1rem' }}>
+                  <Label htmlFor="deletePassword">Enter your password to confirm</Label>
+                  <PasswordInput
+                    type="password"
+                    id="deletePassword"
+                    placeholder="Enter your password"
+                    value={deletePassword}
+                    onChange={(e) => {
+                      setDeletePassword(e.target.value);
+                      setPasswordError(null);
+                    }}
+                    disabled={loading}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !loading && deletePassword.trim()) {
+                        handleDeleteBackup();
+                      }
+                    }}
+                  />
+                  {passwordError && (
+                    <PasswordError>{passwordError}</PasswordError>
+                  )}
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                   <Button
                     variant="secondary"
-                    onClick={() => setShowDeleteModal(false)}
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeletePassword('');
+                      setPasswordError(null);
+                    }}
                     disabled={loading}
                   >
                     Cancel
@@ -940,7 +1028,7 @@ export default function BackupSettingsPage() {
                   <Button
                     variant="destructive"
                     onClick={handleDeleteBackup}
-                    disabled={loading}
+                    disabled={loading || !deletePassword.trim()}
                     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                   >
                     {loading ? (

@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 import logging
 
 from ...core.database import get_db
+from ...core.security import verify_password
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 from ...crud.user import user as user_crud, role as role_crud
@@ -506,13 +508,44 @@ def restore_backup(
     return {"message": f"Backup restore completed: {result}"}
 
 
-@router.delete("/backup/{backup_name}")
+class DeleteBackupRequest(BaseModel):
+    password: str
+
+@router.post("/backup/{backup_name}/delete")
 def delete_backup(
     backup_name: str,
+    delete_request: DeleteBackupRequest,
     current_user: User = Depends(require_min_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    """Delete a backup (admin, finance_admin, or super_admin only)"""
+    """Delete a backup - requires password verification (admin, finance_admin, or super_admin only)"""
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deletion
+    if not delete_request.password or not delete_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to delete a backup."
+        )
+    
+    # Verify password
+    password_to_verify = delete_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to delete this backup."
+        )
+    
     result = BackupService.delete_backup(backup_name)
     if result:
         return {"message": f"Backup deleted successfully: {backup_name}"}

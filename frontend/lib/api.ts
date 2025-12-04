@@ -910,8 +910,8 @@ class ApiClient {
     return this.normalizeResponse<{ message: string }>(response.data);
   }
 
-  async deleteBackup(backupName: string): Promise<ApiResponse<{ message: string }>> {
-    return this.delete(`/admin/backup/${encodeURIComponent(backupName)}`);
+  async deleteBackup(backupName: string, password: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post(`/admin/backup/${encodeURIComponent(backupName)}/delete`, { password });
   }
 
   async getVerificationHistory(): Promise<ApiResponse<any[]>> {
