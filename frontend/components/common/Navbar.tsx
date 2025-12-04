@@ -594,6 +594,7 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   title?: string;
+  action_url?: string;
 }
 
 export default function Navbar() {
@@ -607,6 +608,8 @@ export default function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationPanelRef = useRef<HTMLDivElement>(null);
   const notificationBadgeRef = useRef<HTMLDivElement>(null);
+  const previousUnreadCountRef = useRef<number>(0);
+  const lastNotificationIdsRef = useRef<Set<number>>(new Set());
   const { user, logout } = useAuth();
   const { user: storeUser } = useUserStore();
   const router = useRouter();
@@ -639,7 +642,7 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handler);
   }, [isNotificationPanelOpen]);
 
-  // Load unread notification count
+  // Load unread notification count and detect new notifications
   useEffect(() => {
     let retryCount = 0;
     const MAX_RETRIES = 3;
@@ -648,7 +651,65 @@ export default function Navbar() {
     const loadUnreadCount = async () => {
       try {
         const response = await apiClient.getUnreadCount();
-        setUnreadCount(response.data?.unread_count || 0);
+        const newCount = response.data?.unread_count || 0;
+        const oldCount = previousUnreadCountRef.current;
+        
+        // If count increased, fetch latest notifications to show popup
+        if (newCount > oldCount) {
+          try {
+            // Fetch latest notifications to get the new one
+            const notifResponse = await apiClient.getNotifications(true); // Get latest unread
+            const latestNotifs = notifResponse.data || [];
+            
+            // Find new notifications (not in our last known set)
+            const newNotifs = latestNotifs.filter((n: Notification) => !lastNotificationIdsRef.current.has(n.id));
+            
+            // Show toast for each new notification
+            newNotifs.forEach((notification: Notification) => {
+              // Add to known notifications set
+              lastNotificationIdsRef.current.add(notification.id);
+              
+              // Show toast notification
+              const toastId = toast.info(notification.title || notification.message, {
+                description: notification.message,
+                duration: 5000,
+                action: {
+                  label: 'View',
+                  onClick: () => {
+                    setIsNotificationPanelOpen(true);
+                    if (notification.action_url) {
+                      router.push(notification.action_url);
+                    }
+                    toast.dismiss(toastId);
+                  }
+                }
+              });
+            });
+            
+            // Update last known notification IDs
+            if (latestNotifs.length > 0) {
+              lastNotificationIdsRef.current = new Set(latestNotifs.map((n: Notification) => n.id));
+            }
+          } catch (notifErr) {
+            // If fetching notifications fails, just show a generic toast
+            if (newCount > oldCount) {
+              const toastId = toast.info('You have new notifications', {
+                description: `${newCount - oldCount} new notification${newCount - oldCount > 1 ? 's' : ''}`,
+                duration: 4000,
+                action: {
+                  label: 'View',
+                  onClick: () => {
+                    setIsNotificationPanelOpen(true);
+                    toast.dismiss(toastId);
+                  }
+                }
+              });
+            }
+          }
+        }
+        
+        previousUnreadCountRef.current = newCount;
+        setUnreadCount(newCount);
         retryCount = 0; // Reset retry count on success
       } catch (err: any) {
         // Only log errors if it's not a network/connection error
@@ -677,6 +738,20 @@ export default function Navbar() {
     };
 
     if (user) {
+      // Initial load - fetch notifications to populate lastNotificationIds
+      const initializeNotifications = async () => {
+        try {
+          const notifResponse = await apiClient.getNotifications(true);
+          const initialNotifs = notifResponse.data || [];
+          if (initialNotifs.length > 0) {
+            lastNotificationIdsRef.current = new Set(initialNotifs.map((n: Notification) => n.id));
+          }
+        } catch (err) {
+          // Ignore errors on initialization
+        }
+      };
+      
+      initializeNotifications();
       loadUnreadCount();
       // Refresh every 30 seconds (or 60 seconds if backend is down)
       intervalId = setInterval(loadUnreadCount, 30000);
@@ -684,7 +759,7 @@ export default function Navbar() {
         if (intervalId) clearInterval(intervalId);
       };
     }
-  }, [user]);
+  }, [user, router]);
 
   // Load language preference from localStorage
   useEffect(() => {
