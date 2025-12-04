@@ -159,9 +159,17 @@ const HeaderText = styled.div`
 
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: ${theme.spacing.lg};
   margin-bottom: ${theme.spacing.xl};
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const ParallelStatsContainer = styled.div`
