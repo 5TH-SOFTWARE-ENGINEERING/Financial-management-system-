@@ -614,6 +614,57 @@ def read_users_me(current_user: User = Depends(get_current_active_user)):
 
 
 # ------------------------------------------------------------------
+# REFRESH TOKEN
+# ------------------------------------------------------------------
+class RefreshTokenRequest(BaseModel):
+    token: str
+
+@router.post("/refresh", response_model=dict)
+def refresh_token(
+    request_data: RefreshTokenRequest,
+    db: Session = Depends(get_db)
+):
+    """Refresh access token"""
+    try:
+        # Verify the current token
+        payload = jwt.decode(
+            request_data.token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+        
+        # Get user from database
+        user = user_crud.get(db, int(user_id))
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive"
+            )
+        
+        # Create new access token
+        access_token = create_access_token(
+            data={"sub": str(user.id)},
+            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+
+
+# ------------------------------------------------------------------
 # LOGOUT (client-side)
 # ------------------------------------------------------------------
 @router.post("/logout")
