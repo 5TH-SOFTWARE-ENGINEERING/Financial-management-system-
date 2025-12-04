@@ -704,15 +704,20 @@ export default function BackupSettingsPage() {
                 variant="default"
                 onClick={handleCreateBackup}
                 disabled={loading}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               >
                 {loading ? (
                   <>
-                    <Loader size={16} className="animate-spin mr-2" />
+                    <ButtonIcon $iconType="loader" $size={16} $active={true}>
+                      <Loader size={16} className="animate-spin" />
+                    </ButtonIcon>
                     Creating...
                   </>
                 ) : (
                   <>
-                    <Database size={16} />
+                    <ButtonIcon $iconType="database" $size={16} $active={true}>
+                      <Database size={16} />
+                    </ButtonIcon>
                     Create Backup
                   </>
                 )}
@@ -724,7 +729,9 @@ export default function BackupSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              <FileText size={18} />
+              <CardIcon $iconType="file-text" $size={18} $active={true}>
+                <FileText size={18} />
+              </CardIcon>
               Available Backups
             </CardTitle>
             <Button
@@ -732,19 +739,30 @@ export default function BackupSettingsPage() {
               size="sm"
               onClick={loadBackups}
               disabled={loadingBackups}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             >
-              <RefreshCw size={16} className={loadingBackups ? 'animate-spin' : ''} />
+              <ButtonIcon $iconType="refresh-cw" $size={16} $active={!loadingBackups}>
+                <RefreshCw size={16} className={loadingBackups ? 'animate-spin' : ''} />
+              </ButtonIcon>
             </Button>
           </CardHeader>
           <CardContent>
             {loadingBackups ? (
               <EmptyState>
-                <Loader size={24} className="animate-spin mx-auto mb-2" />
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                  <IconWrapper $iconType="loader" $size={24} $active={true}>
+                    <Loader size={24} className="animate-spin" />
+                  </IconWrapper>
+                </div>
                 <p>Loading backups...</p>
               </EmptyState>
             ) : backups.length === 0 ? (
               <EmptyState>
-                <FileText size={48} className="mx-auto mb-4 text-gray-400" />
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                  <IconWrapper $iconType="file-text" $size={48} $active={false}>
+                    <FileText size={48} />
+                  </IconWrapper>
+                </div>
                 <p>No backups available</p>
                 <HelperText>Create your first backup to get started</HelperText>
               </EmptyState>
