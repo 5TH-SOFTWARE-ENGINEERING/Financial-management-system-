@@ -6,7 +6,7 @@ import Layout from '@/components/layout';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, UserPlus, Edit, Trash2, Users, Loader2 } from 'lucide-react';
+import { AlertCircle, UserPlus, Edit, Trash2, Users, Loader2, UserCheck, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Input } from '@/components/ui/input';
@@ -307,6 +307,14 @@ export default function EmployeeListPage() {
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [showActivateModal, setShowActivateModal] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [employeeToActivate, setEmployeeToActivate] = useState<Employee | null>(null);
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null);
+  const [activatePassword, setActivatePassword] = useState('');
+  const [deactivatePassword, setDeactivatePassword] = useState('');
+  const [activatePasswordError, setActivatePasswordError] = useState<string | null>(null);
+  const [deactivatePasswordError, setDeactivatePasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     loadEmployees();
@@ -383,25 +391,84 @@ export default function EmployeeListPage() {
     }
   };
 
-  const handleToggleActive = async (employee: Employee) => {
+  const handleToggleActive = (employee: Employee) => {
     if (togglingId === employee.id) return;
 
-    setTogglingId(employee.id);
+    if (employee.is_active) {
+      // Show deactivate modal
+      setEmployeeToDeactivate(employee);
+      setShowDeactivateModal(true);
+      setDeactivatePassword('');
+      setDeactivatePasswordError(null);
+    } else {
+      // Show activate modal
+      setEmployeeToActivate(employee);
+      setShowActivateModal(true);
+      setActivatePassword('');
+      setActivatePasswordError(null);
+    }
+  };
+
+  const handleActivateCancel = () => {
+    setShowActivateModal(false);
+    setEmployeeToActivate(null);
+    setActivatePassword('');
+    setActivatePasswordError(null);
+  };
+
+  const handleDeactivateCancel = () => {
+    setShowDeactivateModal(false);
+    setEmployeeToDeactivate(null);
+    setDeactivatePassword('');
+    setDeactivatePasswordError(null);
+  };
+
+  const handleActivate = async () => {
+    if (!employeeToActivate || !activatePassword.trim()) {
+      setActivatePasswordError('Password is required');
+      return;
+    }
+
+    setTogglingId(employeeToActivate.id);
+    setActivatePasswordError(null);
     setError(null);
 
     try {
-      if (employee.is_active) {
-        await apiClient.deactivateUser(employee.id);
-        toast.success(`${employee.full_name} has been deactivated`);
-      } else {
-        await apiClient.activateUser(employee.id);
-        toast.success(`${employee.full_name} has been activated`);
-      }
-      // Reload employees to get the latest data from server
+      await apiClient.activateUser(employeeToActivate.id, activatePassword.trim());
+      toast.success(`${employeeToActivate.full_name} has been activated`);
+      setShowActivateModal(false);
+      setEmployeeToActivate(null);
+      setActivatePassword('');
       await loadEmployees();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || `Failed to ${employee.is_active ? 'deactivate' : 'activate'} employee`;
-      setError(errorMessage);
+      const errorMessage = err.response?.data?.detail || 'Failed to activate employee';
+      setActivatePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!employeeToDeactivate || !deactivatePassword.trim()) {
+      setDeactivatePasswordError('Password is required');
+      return;
+    }
+
+    setTogglingId(employeeToDeactivate.id);
+    setDeactivatePasswordError(null);
+    setError(null);
+
+    try {
+      await apiClient.deactivateUser(employeeToDeactivate.id, deactivatePassword.trim());
+      toast.success(`${employeeToDeactivate.full_name} has been deactivated`);
+      setShowDeactivateModal(false);
+      setEmployeeToDeactivate(null);
+      setDeactivatePassword('');
+      await loadEmployees();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to deactivate employee';
+      setDeactivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setTogglingId(null);
@@ -598,6 +665,146 @@ export default function EmployeeListPage() {
                   <>
                     <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
                     Delete Employee
+                  </>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Activate Confirmation Modal */}
+      {showActivateModal && employeeToActivate && (
+        <ModalOverlay onClick={handleActivateCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <UserCheck size={20} style={{ color: '#16a34a' }} />
+              Activate Employee
+            </ModalTitle>
+
+            <WarningBox style={{ background: 'rgba(22, 163, 74, 0.1)', borderColor: 'rgba(22, 163, 74, 0.3)' }}>
+              <p style={{ color: '#16a34a' }}>
+                <strong>Confirm Activation:</strong> This will restore access for <strong>{employeeToActivate.full_name}</strong>.
+              </p>
+            </WarningBox>
+
+            <FormGroup>
+              <Label htmlFor="activate-password">
+                Enter <strong>your own password</strong> to confirm activation of <strong>{employeeToActivate.full_name}</strong>:
+              </Label>
+              <PasswordInput
+                id="activate-password"
+                type="password"
+                value={activatePassword}
+                onChange={(e) => {
+                  setActivatePassword(e.target.value);
+                  setActivatePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && activatePassword.trim()) {
+                    handleActivate();
+                  }
+                }}
+              />
+              {activatePasswordError && (
+                <ErrorText>{activatePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleActivateCancel}
+                disabled={togglingId === employeeToActivate.id}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleActivate}
+                disabled={!activatePassword.trim() || togglingId === employeeToActivate.id}
+                style={{ backgroundColor: '#16a34a', color: 'white' }}
+              >
+                {togglingId === employeeToActivate.id ? (
+                  <>
+                    <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                    Activating...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Activate Employee
+                  </>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Deactivate Confirmation Modal */}
+      {showDeactivateModal && employeeToDeactivate && (
+        <ModalOverlay onClick={handleDeactivateCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <Shield size={20} style={{ color: '#dc2626' }} />
+              Deactivate Employee
+            </ModalTitle>
+
+            <WarningBox>
+              <p>
+                <strong>Warning:</strong> This will revoke access for <strong>{employeeToDeactivate.full_name}</strong>. They will not be able to log in until reactivated.
+              </p>
+            </WarningBox>
+
+            <FormGroup>
+              <Label htmlFor="deactivate-password">
+                Enter <strong>your own password</strong> to confirm deactivation of <strong>{employeeToDeactivate.full_name}</strong>:
+              </Label>
+              <PasswordInput
+                id="deactivate-password"
+                type="password"
+                value={deactivatePassword}
+                onChange={(e) => {
+                  setDeactivatePassword(e.target.value);
+                  setDeactivatePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && deactivatePassword.trim()) {
+                    handleDeactivate();
+                  }
+                }}
+              />
+              {deactivatePasswordError && (
+                <ErrorText>{deactivatePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleDeactivateCancel}
+                disabled={togglingId === employeeToDeactivate.id}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeactivate}
+                disabled={!deactivatePassword.trim() || togglingId === employeeToDeactivate.id}
+              >
+                {togglingId === employeeToDeactivate.id ? (
+                  <>
+                    <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                    Deactivating...
+                  </>
+                ) : (
+                  <>
+                    <Shield size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Deactivate Employee
                   </>
                 )}
               </Button>

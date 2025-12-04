@@ -20,7 +20,9 @@ import {
   Trash2,
   Briefcase,
   Search,
-  Loader2
+  Loader2,
+  UserCheck,
+  Shield
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -387,6 +389,14 @@ export default function FinanceListPage() {
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [showActivateModal, setShowActivateModal] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [managerToActivate, setManagerToActivate] = useState<FinanceManager | null>(null);
+  const [managerToDeactivate, setManagerToDeactivate] = useState<FinanceManager | null>(null);
+  const [activatePassword, setActivatePassword] = useState('');
+  const [deactivatePassword, setDeactivatePassword] = useState('');
+  const [activatePasswordError, setActivatePasswordError] = useState<string | null>(null);
+  const [deactivatePasswordError, setDeactivatePasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     loadFinanceManagers();
@@ -468,25 +478,84 @@ export default function FinanceListPage() {
     }
   };
 
-  const handleToggleActive = async (manager: FinanceManager) => {
+  const handleToggleActive = (manager: FinanceManager) => {
     if (togglingId === manager.id) return;
 
-    setTogglingId(manager.id);
+    if (manager.is_active) {
+      // Show deactivate modal
+      setManagerToDeactivate(manager);
+      setShowDeactivateModal(true);
+      setDeactivatePassword('');
+      setDeactivatePasswordError(null);
+    } else {
+      // Show activate modal
+      setManagerToActivate(manager);
+      setShowActivateModal(true);
+      setActivatePassword('');
+      setActivatePasswordError(null);
+    }
+  };
+
+  const handleActivateCancel = () => {
+    setShowActivateModal(false);
+    setManagerToActivate(null);
+    setActivatePassword('');
+    setActivatePasswordError(null);
+  };
+
+  const handleDeactivateCancel = () => {
+    setShowDeactivateModal(false);
+    setManagerToDeactivate(null);
+    setDeactivatePassword('');
+    setDeactivatePasswordError(null);
+  };
+
+  const handleActivate = async () => {
+    if (!managerToActivate || !activatePassword.trim()) {
+      setActivatePasswordError('Password is required');
+      return;
+    }
+
+    setTogglingId(managerToActivate.id);
+    setActivatePasswordError(null);
     setError(null);
 
     try {
-      if (manager.is_active) {
-        await apiClient.deactivateUser(manager.id);
-        toast.success(`${manager.full_name || manager.email} has been deactivated`);
-      } else {
-        await apiClient.activateUser(manager.id);
-        toast.success(`${manager.full_name || manager.email} has been activated`);
-      }
-      // Reload finance managers to get the latest data from server
+      await apiClient.activateUser(managerToActivate.id, activatePassword.trim());
+      toast.success(`${managerToActivate.full_name || managerToActivate.email} has been activated`);
+      setShowActivateModal(false);
+      setManagerToActivate(null);
+      setActivatePassword('');
       await loadFinanceManagers();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || `Failed to ${manager.is_active ? 'deactivate' : 'activate'} finance manager`;
-      setError(errorMessage);
+      const errorMessage = err.response?.data?.detail || 'Failed to activate finance manager';
+      setActivatePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!managerToDeactivate || !deactivatePassword.trim()) {
+      setDeactivatePasswordError('Password is required');
+      return;
+    }
+
+    setTogglingId(managerToDeactivate.id);
+    setDeactivatePasswordError(null);
+    setError(null);
+
+    try {
+      await apiClient.deactivateUser(managerToDeactivate.id, deactivatePassword.trim());
+      toast.success(`${managerToDeactivate.full_name || managerToDeactivate.email} has been deactivated`);
+      setShowDeactivateModal(false);
+      setManagerToDeactivate(null);
+      setDeactivatePassword('');
+      await loadFinanceManagers();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to deactivate finance manager';
+      setDeactivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setTogglingId(null);
@@ -687,6 +756,146 @@ export default function FinanceListPage() {
                   <>
                     <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
                     Delete Finance Manager
+                  </>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Activate Confirmation Modal */}
+      {showActivateModal && managerToActivate && (
+        <ModalOverlay onClick={handleActivateCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <UserCheck size={20} style={{ color: '#16a34a' }} />
+              Activate Finance Manager
+            </ModalTitle>
+
+            <WarningBox style={{ background: 'rgba(22, 163, 74, 0.1)', borderColor: 'rgba(22, 163, 74, 0.3)' }}>
+              <p style={{ color: '#16a34a' }}>
+                <strong>Confirm Activation:</strong> This will restore access for <strong>{managerToActivate.full_name || managerToActivate.email}</strong>.
+              </p>
+            </WarningBox>
+
+            <FormGroup>
+              <Label htmlFor="activate-password">
+                Enter <strong>your own password</strong> to confirm activation of <strong>{managerToActivate.full_name || managerToActivate.email}</strong>:
+              </Label>
+              <PasswordInput
+                id="activate-password"
+                type="password"
+                value={activatePassword}
+                onChange={(e) => {
+                  setActivatePassword(e.target.value);
+                  setActivatePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && activatePassword.trim()) {
+                    handleActivate();
+                  }
+                }}
+              />
+              {activatePasswordError && (
+                <ErrorText>{activatePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleActivateCancel}
+                disabled={togglingId === managerToActivate.id}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleActivate}
+                disabled={!activatePassword.trim() || togglingId === managerToActivate.id}
+                style={{ backgroundColor: '#16a34a', color: 'white' }}
+              >
+                {togglingId === managerToActivate.id ? (
+                  <>
+                    <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                    Activating...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Activate Finance Manager
+                  </>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Deactivate Confirmation Modal */}
+      {showDeactivateModal && managerToDeactivate && (
+        <ModalOverlay onClick={handleDeactivateCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <Shield size={20} style={{ color: '#dc2626' }} />
+              Deactivate Finance Manager
+            </ModalTitle>
+
+            <WarningBox>
+              <p>
+                <strong>Warning:</strong> This will revoke access for <strong>{managerToDeactivate.full_name || managerToDeactivate.email}</strong>. They will not be able to log in until reactivated.
+              </p>
+            </WarningBox>
+
+            <FormGroup>
+              <Label htmlFor="deactivate-password">
+                Enter <strong>your own password</strong> to confirm deactivation of <strong>{managerToDeactivate.full_name || managerToDeactivate.email}</strong>:
+              </Label>
+              <PasswordInput
+                id="deactivate-password"
+                type="password"
+                value={deactivatePassword}
+                onChange={(e) => {
+                  setDeactivatePassword(e.target.value);
+                  setDeactivatePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && deactivatePassword.trim()) {
+                    handleDeactivate();
+                  }
+                }}
+              />
+              {deactivatePasswordError && (
+                <ErrorText>{deactivatePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleDeactivateCancel}
+                disabled={togglingId === managerToDeactivate.id}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeactivate}
+                disabled={!deactivatePassword.trim() || togglingId === managerToDeactivate.id}
+              >
+                {togglingId === managerToDeactivate.id ? (
+                  <>
+                    <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                    Deactivating...
+                  </>
+                ) : (
+                  <>
+                    <Shield size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Deactivate Finance Manager
                   </>
                 )}
               </Button>

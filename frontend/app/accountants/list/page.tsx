@@ -6,7 +6,7 @@ import Layout from '@/components/layout';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Edit, Trash2, UserPlus, Loader2 } from 'lucide-react';
+import { AlertCircle, Edit, Trash2, UserPlus, Loader2, UserCheck, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Input } from '@/components/ui/input';
@@ -356,6 +356,14 @@ export default function AccountantListPage() {
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [showActivateModal, setShowActivateModal] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [accountantToActivate, setAccountantToActivate] = useState<Accountant | null>(null);
+  const [accountantToDeactivate, setAccountantToDeactivate] = useState<Accountant | null>(null);
+  const [activatePassword, setActivatePassword] = useState('');
+  const [deactivatePassword, setDeactivatePassword] = useState('');
+  const [activatePasswordError, setActivatePasswordError] = useState<string | null>(null);
+  const [deactivatePasswordError, setDeactivatePasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     loadAccountants();
@@ -432,25 +440,84 @@ export default function AccountantListPage() {
     }
   };
 
-  const handleToggleActive = async (accountant: Accountant) => {
+  const handleToggleActive = (accountant: Accountant) => {
     if (togglingId === accountant.id) return;
 
-    setTogglingId(accountant.id);
+    if (accountant.is_active) {
+      // Show deactivate modal
+      setAccountantToDeactivate(accountant);
+      setShowDeactivateModal(true);
+      setDeactivatePassword('');
+      setDeactivatePasswordError(null);
+    } else {
+      // Show activate modal
+      setAccountantToActivate(accountant);
+      setShowActivateModal(true);
+      setActivatePassword('');
+      setActivatePasswordError(null);
+    }
+  };
+
+  const handleActivateCancel = () => {
+    setShowActivateModal(false);
+    setAccountantToActivate(null);
+    setActivatePassword('');
+    setActivatePasswordError(null);
+  };
+
+  const handleDeactivateCancel = () => {
+    setShowDeactivateModal(false);
+    setAccountantToDeactivate(null);
+    setDeactivatePassword('');
+    setDeactivatePasswordError(null);
+  };
+
+  const handleActivate = async () => {
+    if (!accountantToActivate || !activatePassword.trim()) {
+      setActivatePasswordError('Password is required');
+      return;
+    }
+
+    setTogglingId(accountantToActivate.id);
+    setActivatePasswordError(null);
     setError(null);
 
     try {
-      if (accountant.is_active) {
-        await apiClient.deactivateUser(accountant.id);
-        toast.success(`${accountant.full_name} has been deactivated`);
-      } else {
-        await apiClient.activateUser(accountant.id);
-        toast.success(`${accountant.full_name} has been activated`);
-      }
-      // Reload accountants to get the latest data from server
+      await apiClient.activateUser(accountantToActivate.id, activatePassword.trim());
+      toast.success(`${accountantToActivate.full_name} has been activated`);
+      setShowActivateModal(false);
+      setAccountantToActivate(null);
+      setActivatePassword('');
       await loadAccountants();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || `Failed to ${accountant.is_active ? 'deactivate' : 'activate'} accountant`;
-      setError(errorMessage);
+      const errorMessage = err.response?.data?.detail || 'Failed to activate accountant';
+      setActivatePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!accountantToDeactivate || !deactivatePassword.trim()) {
+      setDeactivatePasswordError('Password is required');
+      return;
+    }
+
+    setTogglingId(accountantToDeactivate.id);
+    setDeactivatePasswordError(null);
+    setError(null);
+
+    try {
+      await apiClient.deactivateUser(accountantToDeactivate.id, deactivatePassword.trim());
+      toast.success(`${accountantToDeactivate.full_name} has been deactivated`);
+      setShowDeactivateModal(false);
+      setAccountantToDeactivate(null);
+      setDeactivatePassword('');
+      await loadAccountants();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to deactivate accountant';
+      setDeactivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setTogglingId(null);
@@ -631,6 +698,146 @@ export default function AccountantListPage() {
                   <>
                     <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
                     Delete Accountant
+                  </>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Activate Confirmation Modal */}
+      {showActivateModal && accountantToActivate && (
+        <ModalOverlay onClick={handleActivateCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <UserCheck size={20} style={{ color: '#16a34a' }} />
+              Activate Accountant
+            </ModalTitle>
+
+            <WarningBox style={{ background: 'rgba(22, 163, 74, 0.1)', borderColor: 'rgba(22, 163, 74, 0.3)' }}>
+              <p style={{ color: '#16a34a' }}>
+                <strong>Confirm Activation:</strong> This will restore access for <strong>{accountantToActivate.full_name}</strong>.
+              </p>
+            </WarningBox>
+
+            <FormGroup>
+              <Label htmlFor="activate-password">
+                Enter <strong>your own password</strong> to confirm activation of <strong>{accountantToActivate.full_name}</strong>:
+              </Label>
+              <PasswordInput
+                id="activate-password"
+                type="password"
+                value={activatePassword}
+                onChange={(e) => {
+                  setActivatePassword(e.target.value);
+                  setActivatePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && activatePassword.trim()) {
+                    handleActivate();
+                  }
+                }}
+              />
+              {activatePasswordError && (
+                <ErrorText>{activatePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleActivateCancel}
+                disabled={togglingId === accountantToActivate.id}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleActivate}
+                disabled={!activatePassword.trim() || togglingId === accountantToActivate.id}
+                style={{ backgroundColor: '#16a34a', color: 'white' }}
+              >
+                {togglingId === accountantToActivate.id ? (
+                  <>
+                    <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                    Activating...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Activate Accountant
+                  </>
+                )}
+              </Button>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Deactivate Confirmation Modal */}
+      {showDeactivateModal && accountantToDeactivate && (
+        <ModalOverlay onClick={handleDeactivateCancel}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <Shield size={20} style={{ color: '#dc2626' }} />
+              Deactivate Accountant
+            </ModalTitle>
+
+            <WarningBox>
+              <p>
+                <strong>Warning:</strong> This will revoke access for <strong>{accountantToDeactivate.full_name}</strong>. They will not be able to log in until reactivated.
+              </p>
+            </WarningBox>
+
+            <FormGroup>
+              <Label htmlFor="deactivate-password">
+                Enter <strong>your own password</strong> to confirm deactivation of <strong>{accountantToDeactivate.full_name}</strong>:
+              </Label>
+              <PasswordInput
+                id="deactivate-password"
+                type="password"
+                value={deactivatePassword}
+                onChange={(e) => {
+                  setDeactivatePassword(e.target.value);
+                  setDeactivatePasswordError(null);
+                }}
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && deactivatePassword.trim()) {
+                    handleDeactivate();
+                  }
+                }}
+              />
+              {deactivatePasswordError && (
+                <ErrorText>{deactivatePasswordError}</ErrorText>
+              )}
+            </FormGroup>
+
+            <ModalActions>
+              <Button
+                variant="outline"
+                onClick={handleDeactivateCancel}
+                disabled={togglingId === accountantToDeactivate.id}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeactivate}
+                disabled={!deactivatePassword.trim() || togglingId === accountantToDeactivate.id}
+              >
+                {togglingId === accountantToDeactivate.id ? (
+                  <>
+                    <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                    Deactivating...
+                  </>
+                ) : (
+                  <>
+                    <Shield size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Deactivate Accountant
                   </>
                 )}
               </Button>
