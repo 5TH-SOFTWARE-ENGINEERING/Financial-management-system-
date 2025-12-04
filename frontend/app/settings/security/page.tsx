@@ -1009,7 +1009,9 @@ export default function SecuritySettingsPage() {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <ToggleIcon $iconType={showConfirmPassword ? "eye-off" : "eye"} $size={16} $active={true}>
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </ToggleIcon>
                 </TogglePasswordButton>
               </PasswordInputContainer>
               {passwordErrors.confirmPassword && (
@@ -1022,15 +1024,20 @@ export default function SecuritySettingsPage() {
                 variant="default" 
                 onClick={handleSavePassword} 
                 disabled={loading || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               >
                 {loading ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
+                    <ButtonIcon $iconType="save" $size={16} $active={true}>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block"></div>
+                    </ButtonIcon>
                     Updating...
                   </>
                 ) : (
                   <>
-                    <Save size={16} />
+                    <ButtonIcon $iconType="save" $size={16} $active={true}>
+                      <Save size={16} />
+                    </ButtonIcon>
                     Update Password
                   </>
                 )}
@@ -1042,7 +1049,9 @@ export default function SecuritySettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              <Shield size={18} />
+              <CardIcon $iconType="shield" $size={18} $active={true}>
+                <Shield size={18} />
+              </CardIcon>
               Account Security
             </CardTitle>
           </CardHeader>
@@ -1057,12 +1066,16 @@ export default function SecuritySettingsPage() {
                   <StatusBadge $enabled={is2FAEnabled} style={{ marginTop: '0.5rem' }}>
                     {is2FAEnabled ? (
                       <>
-                        <CheckCircle size={12} />
+                        <StatusIcon $iconType="check-circle" $size={12} $active={true}>
+                          <CheckCircle size={12} />
+                        </StatusIcon>
                         Enabled
                       </>
                     ) : (
                       <>
-                        <AlertCircle size={12} />
+                        <StatusIcon $iconType="alert-circle" $size={12} $active={true}>
+                          <AlertCircle size={12} />
+                        </StatusIcon>
                         Disabled
                       </>
                     )}
@@ -1084,8 +1097,11 @@ export default function SecuritySettingsPage() {
                     variant="default"
                     onClick={handle2FASetup}
                     disabled={loading || loading2FAStatus}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                   >
-                    <QrCode size={16} style={{ marginRight: '0.5rem' }} />
+                    <ButtonIcon $iconType="qr-code" $size={16} $active={true}>
+                      <QrCode size={16} />
+                    </ButtonIcon>
                     Enable 2FA
                   </Button>
                 )}
@@ -1170,12 +1186,16 @@ export default function SecuritySettingsPage() {
                     <StatusBadge $enabled={ipRestrictionEnabled} style={{ marginTop: '0.5rem' }}>
                       {ipRestrictionEnabled ? (
                         <>
-                          <CheckCircle size={12} />
+                          <StatusIcon $iconType="check-circle" $size={12} $active={true}>
+                            <CheckCircle size={12} />
+                          </StatusIcon>
                           Enabled ({allowedIPs.length} IP{allowedIPs.length !== 1 ? 's' : ''})
                         </>
                       ) : (
                         <>
-                          <AlertCircle size={12} />
+                          <StatusIcon $iconType="alert-circle" $size={12} $active={true}>
+                            <AlertCircle size={12} />
+                          </StatusIcon>
                           Disabled
                         </>
                       )}
@@ -1275,8 +1295,11 @@ export default function SecuritySettingsPage() {
                 variant="default" 
                 onClick={handleSaveSecuritySettings} 
                 disabled={loading}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               >
-                <Save size={16} />
+                <ButtonIcon $iconType="save" $size={16} $active={true}>
+                  <Save size={16} />
+                </ButtonIcon>
                 Save Security Settings
               </Button>
             </ActionButtons>
@@ -1286,7 +1309,9 @@ export default function SecuritySettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              <AlertTriangle size={18} />
+              <CardIcon $iconType="alert-triangle" $size={18} $active={true}>
+                <AlertTriangle size={18} />
+              </CardIcon>
               Login Activity
             </CardTitle>
           </CardHeader>
@@ -1309,12 +1334,16 @@ export default function SecuritySettingsPage() {
                       <VerificationHistoryStatus $success={entry.success}>
                         {entry.success ? (
                           <>
-                            <CheckCircle size={12} />
+                            <StatusIcon $iconType="check-circle" $size={12} $active={true}>
+                              <CheckCircle size={12} />
+                            </StatusIcon>
                             Success
                           </>
                         ) : (
                           <>
-                            <AlertCircle size={12} />
+                            <StatusIcon $iconType="alert-circle" $size={12} $active={true}>
+                              <AlertCircle size={12} />
+                            </StatusIcon>
                             Failed
                           </>
                         )}
@@ -1344,7 +1373,9 @@ export default function SecuritySettingsPage() {
               <ModalHeader>
                 <ModalTitle>Setup Two-Factor Authentication</ModalTitle>
                 <CloseButton onClick={() => setShow2FASetup(false)} disabled={loading}>
-                  <X size={20} />
+                  <IconWrapper $iconType="x" $size={20} $active={false}>
+                    <X size={20} />
+                  </IconWrapper>
                 </CloseButton>
               </ModalHeader>
 
