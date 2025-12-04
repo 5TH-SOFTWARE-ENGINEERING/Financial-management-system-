@@ -12,8 +12,13 @@ from ...core.database import get_db
 from ...api.deps import get_current_active_user
 from ...models.user import User, UserRole
 from ...services.analytics import analytics
+from ...crud.inventory import inventory as inventory_crud
+from ...crud.sale import sale as sale_crud
+from ...crud.user import user as user_crud
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/kpis")
@@ -288,6 +293,42 @@ def get_analytics_overview(
         user_role=current_user.role
     )
 
+    # Get inventory summary (if user has permission)
+    inventory_summary = None
+    try:
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+                inventory_summary = inventory_crud.get_total_value(db)
+            else:
+                # Finance Admin and Manager see only their team's inventory
+                subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                subordinate_ids.append(current_user.id)
+                inventory_summary = inventory_crud.get_total_value_by_users(db, subordinate_ids)
+    except Exception as e:
+        logger.warning(f"Error fetching inventory summary: {str(e)}")
+        inventory_summary = None
+
+    # Get sales summary (if user has permission)
+    sales_summary = None
+    try:
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.MANAGER, UserRole.ACCOUNTANT]:
+            # Filter by user role for Finance Admin/Manager
+            user_ids = None
+            if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+                subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                subordinate_ids.append(current_user.id)
+                user_ids = subordinate_ids
+            
+            sales_summary = sale_crud.get_sales_summary(
+                db, 
+                start_date=start_date_dt, 
+                end_date=end_date_dt,
+                user_ids=user_ids
+            )
+    except Exception as e:
+        logger.warning(f"Error fetching sales summary: {str(e)}")
+        sales_summary = None
+
     return {
         "period": {
             "start_date": start_date_dt.isoformat(),
@@ -299,6 +340,8 @@ def get_analytics_overview(
         "category_breakdown": category_breakdown,
         "trends": {
             "profit": profit_trend
-        }
+        },
+        "inventory": inventory_summary,
+        "sales": sales_summary
     }
 

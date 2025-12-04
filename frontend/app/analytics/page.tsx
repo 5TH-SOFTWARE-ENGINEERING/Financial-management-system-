@@ -7,7 +7,7 @@ import {
   BarChart3, TrendingUp, TrendingDown, DollarSign, 
   CreditCard, Activity, Calendar, Download, RefreshCw,
   AlertCircle, ArrowUpRight, ArrowDownRight, PieChart,
-  LineChart, Target
+  LineChart, Target, Package, ShoppingCart
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -596,6 +596,19 @@ interface AnalyticsData {
   time_series: any;
   category_breakdown: any;
   trends: any;
+  inventory?: {
+    total_items?: number;
+    total_cost_value?: number;
+    total_selling_value?: number;
+    potential_profit?: number;
+    total_quantity_in_stock?: number;
+  } | null;
+  sales?: {
+    total_sales?: number;
+    total_revenue?: number;
+    pending_sales?: number;
+    posted_sales?: number;
+  } | null;
 }
 
 const AnalyticsPage: React.FC = () => {
@@ -1082,6 +1095,94 @@ const AnalyticsPage: React.FC = () => {
                   </KPIValue>
                 </KPICard>
               </KPIPairGrid>
+
+              {/* Inventory & Sales Section */}
+              {(analyticsData.inventory || analyticsData.sales) && (
+                <>
+                  <SectionTitle>
+                    <Package size={24} style={{ marginRight: theme.spacing.sm }} />
+                    Inventory & Sales Overview
+                  </SectionTitle>
+                  
+                  {analyticsData.inventory && (
+                    <KPIPairGrid>
+                      <KPICard>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
+                          <Package size={16} />
+                          <KPILabel>Total Inventory Items</KPILabel>
+                        </div>
+                        <KPIValue>
+                          {analyticsData.inventory.total_items || 0}
+                        </KPIValue>
+                        <KPILabel style={{ marginTop: theme.spacing.sm }}>
+                          Total Stock: {analyticsData.inventory.total_quantity_in_stock || 0} units
+                        </KPILabel>
+                      </KPICard>
+
+                      <KPICard>
+                        <KPILabel>Inventory Selling Value</KPILabel>
+                        <KPIValue>
+                          {formatCurrency(analyticsData.inventory.total_selling_value || 0)}
+                        </KPIValue>
+                        <KPILabel style={{ marginTop: theme.spacing.sm }}>
+                          Cost Value: {formatCurrency(analyticsData.inventory.total_cost_value || 0)}
+                        </KPILabel>
+                      </KPICard>
+                    </KPIPairGrid>
+                  )}
+
+                  {analyticsData.inventory && (
+                    <KPIPairGrid>
+                      <KPICard>
+                        <KPILabel>Potential Profit (Inventory)</KPILabel>
+                        <KPIValue>
+                          {formatCurrency(analyticsData.inventory.potential_profit || 0)}
+                        </KPIValue>
+                        <KPILabel style={{ marginTop: theme.spacing.sm }}>
+                          Based on current inventory valuation
+                        </KPILabel>
+                      </KPICard>
+
+                      <KPICard>
+                        <KPILabel>Inventory Cost Value</KPILabel>
+                        <KPIValue>
+                          {formatCurrency(analyticsData.inventory.total_cost_value || 0)}
+                        </KPIValue>
+                        <KPILabel style={{ marginTop: theme.spacing.sm }}>
+                          Total investment in inventory
+                        </KPILabel>
+                      </KPICard>
+                    </KPIPairGrid>
+                  )}
+
+                  {analyticsData.sales && (
+                    <KPIPairGrid>
+                      <KPICard>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs, marginBottom: theme.spacing.sm }}>
+                          <ShoppingCart size={16} />
+                          <KPILabel>Total Sales (Period)</KPILabel>
+                        </div>
+                        <KPIValue>
+                          {analyticsData.sales.total_sales || 0}
+                        </KPIValue>
+                        <KPILabel style={{ marginTop: theme.spacing.sm }}>
+                          Posted: {analyticsData.sales.posted_sales || 0} | Pending: {analyticsData.sales.pending_sales || 0}
+                        </KPILabel>
+                      </KPICard>
+
+                      <KPICard>
+                        <KPILabel>Sales Revenue (Period)</KPILabel>
+                        <KPIValue>
+                          {formatCurrency(analyticsData.sales.total_revenue || 0)}
+                        </KPIValue>
+                        <KPILabel style={{ marginTop: theme.spacing.sm }}>
+                          From posted sales only
+                        </KPILabel>
+                      </KPICard>
+                    </KPIPairGrid>
+                  )}
+                </>
+              )}
 
               <SectionTitle>Financial Trends</SectionTitle>
               <ChartCard>
