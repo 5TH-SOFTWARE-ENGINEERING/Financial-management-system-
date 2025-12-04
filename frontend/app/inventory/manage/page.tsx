@@ -187,8 +187,12 @@ const StatCard = styled.div`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
   border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.lg};
+  padding: ${theme.spacing.xl};
   box-shadow: ${CardShadow};
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 `;
 
 const StatContent = styled.div`
@@ -204,7 +208,7 @@ const StatInfo = styled.div`
     margin: 0 0 ${theme.spacing.xs};
   }
   p:last-child {
-    font-size: clamp(20px, 2.5vw, 28px);
+    font-size: clamp(24px, 3vw, 32px);
     font-weight: ${theme.typography.fontWeights.bold};
     color: ${TEXT_COLOR_DARK};
     margin: 0;
