@@ -113,19 +113,26 @@ const SearchInput = styled.input`
   }
 `;
 
-const SearchIcon = styled.div`
+const SearchIcon = styled.div<{ $active?: boolean }>`
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: ${theme.colors.textSecondary};
-  opacity: 0.6;
+  color: ${props => props.$active ? getIconColor('search', true) : getIconColor('search', false)};
+  opacity: ${props => props.$active ? 1 : 0.6};
   pointer-events: none;
-  transition: opacity ${theme.transitions.default};
+  transition: all ${theme.transitions.default};
+  
+  svg {
+    width: 16px;
+    height: 16px;
+    transition: all ${theme.transitions.default};
+  }
   
   ${SearchInput}:focus ~ & {
-    opacity: 0.8;
-    color: ${PRIMARY_ACCENT};
+    opacity: 1;
+    color: ${getIconColor('search', true)};
+    transform: translateY(-50%) scale(1.1);
   }
 `;
 
@@ -143,26 +150,25 @@ const AddButton = styled.button`
   height: 36px;
   border: none;
   border-radius: ${theme.borderRadius.md};
-  background: ${PRIMARY_ACCENT};
+  background: ${getIconColor('plus', true)};
   color: white;
   cursor: pointer;
   transition: all ${theme.transitions.default};
-  box-shadow: 0 2px 4px rgba(6, 182, 212, 0.2);
+  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.2);
 
   &:hover {
-    background: ${PRIMARY_HOVER};
+    background: ${getIconColor('plus', true)};
+    filter: brightness(1.1);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(6, 182, 212, 0.3);
+    box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
+    
+    ${ButtonIcon} {
+      transform: scale(1.1);
+    }
   }
 
   &:active {
     transform: translateY(0);
-  }
-
-  svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 2.5;
   }
 `;
 
@@ -197,16 +203,80 @@ const IconButton = styled.button`
   }
 `;
 
-const IconWrapper = styled.div`
+const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : theme.colors.textSecondary};
+  opacity: ${props => props.$active ? 1 : 0.8};
+  transition: all ${theme.transitions.default};
   
   svg {
     width: 20px;
     height: 20px;
     stroke-width: 1.5px;
-    transition: color ${theme.transitions.default};
+    transition: all ${theme.transitions.default};
+  }
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+`;
+
+const NavIcon = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : theme.colors.textSecondary};
+  opacity: ${props => props.$active ? 1 : 0.8};
+  transition: all ${theme.transitions.default};
+  
+  svg {
+    width: ${props => props.$size ? `${props.$size}px` : '18px'};
+    height: ${props => props.$size ? `${props.$size}px` : '18px'};
+    transition: all ${theme.transitions.default};
+  }
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+`;
+
+const ButtonIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : 'white'};
+  transition: all ${theme.transitions.default};
+  
+  svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
+    transition: all ${theme.transitions.default};
+  }
+`;
+
+const DropdownIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : theme.colors.textSecondary};
+  opacity: ${props => props.$active ? 1 : 0.8};
+  transition: all ${theme.transitions.default};
+  
+  svg {
+    width: 16px;
+    height: 16px;
+    transition: all ${theme.transitions.default};
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
   }
 `;
 
