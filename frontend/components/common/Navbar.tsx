@@ -28,7 +28,42 @@ import { debounce } from '@/lib/utils';
 
 const PRIMARY_ACCENT = '#06b6d4'; 
 const PRIMARY_HOVER = '#0891b2';
-const DANGER_COLOR = '#ef4444'; 
+const DANGER_COLOR = '#ef4444';
+
+// Icon color mapping for different icon types
+const getIconColor = (iconType: string, active: boolean = false): string => {
+    if (active) {
+        // Active state colors (brighter)
+        const activeColors: Record<string, string> = {
+            'search': '#3b82f6',           // Blue
+            'plus': '#22c55e',              // Green
+            'bell': '#f59e0b',              // Amber
+            'file-spreadsheet': '#8b5cf6',  // Purple
+            'globe': '#06b6d4',             // Cyan
+            'user': '#6366f1',              // Indigo
+            'users': '#ec4899',             // Pink
+            'settings': '#64748b',           // Slate
+            'help-circle': '#14b8a6',       // Teal
+            'log-out': '#ef4444',           // Red
+        };
+        return activeColors[iconType] || PRIMARY_ACCENT;
+    } else {
+        // Inactive state colors (muted but colorful)
+        const inactiveColors: Record<string, string> = {
+            'search': '#60a5fa',            // Light Blue
+            'plus': '#4ade80',               // Light Green
+            'bell': '#fbbf24',               // Light Amber
+            'file-spreadsheet': '#a78bfa',  // Light Purple
+            'globe': '#22d3ee',             // Light Cyan
+            'user': '#818cf8',               // Light Indigo
+            'users': '#f472b6',             // Light Pink
+            'settings': '#94a3b8',          // Light Slate
+            'help-circle': '#2dd4bf',       // Light Teal
+            'log-out': '#f87171',           // Light Red
+        };
+        return inactiveColors[iconType] || theme.colors.textSecondary;
+    }
+}; 
 
 const HeaderContainer = styled.header`
   position: fixed;
