@@ -728,25 +728,25 @@ const Sidebar: React.FC = () => {
                     {isOpen('budget') && (
                         <SubMenu $collapsed={collapsed}>
                             <NavItem href="/budgets/create" $active={pathname === '/budgets/create'} $collapsed={collapsed}>
-                                <NavIcon $active={pathname === '/budgets/create'} $collapsed={collapsed} $size={16}>
+                                <NavIcon $active={pathname === '/budgets/create'} $collapsed={collapsed} $size={16} $iconType="plus">
                                     <Plus />
                                 </NavIcon>
                                 {!collapsed && 'new budget'}
                             </NavItem>
                             <NavItem href="/budgets" $active={pathname === '/budgets'} $collapsed={collapsed}>
-                                <NavIcon $active={pathname === '/budgets'} $collapsed={collapsed} $size={16}>
+                                <NavIcon $active={pathname === '/budgets'} $collapsed={collapsed} $size={16} $iconType="list">
                                     <List />
                                 </NavIcon>
                                 {!collapsed && 'budgets'}
                             </NavItem>
                             <NavItem href="/budgets/additems" $active={pathname.includes('/budgets/additems')} $collapsed={collapsed}>
-                                <NavIcon $active={pathname.includes('/budgets/additems')} $collapsed={collapsed} $size={16}>
+                                <NavIcon $active={pathname.includes('/budgets/additems')} $collapsed={collapsed} $size={16} $iconType="calculator">
                                     <Calculator />
                                 </NavIcon>
                                 {!collapsed && 'Add Items'}
                             </NavItem>
                             <NavItem href="/budgets/listitems" $active={pathname.includes('/budgets/listitems')} $collapsed={collapsed}>
-                                <NavIcon $active={pathname.includes('/budgets/listitems')} $collapsed={collapsed} $size={16}>
+                                <NavIcon $active={pathname.includes('/budgets/listitems')} $collapsed={collapsed} $size={16} $iconType="file-text">
                                     <FileText />
                                 </NavIcon>
                                 {!collapsed && 'List Items'}
@@ -776,8 +776,8 @@ const Sidebar: React.FC = () => {
                             $collapsed={collapsed}
                         >
                             <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <DropdownIcon $active={pathname.includes('/finance-admin')} $collapsed={collapsed}>
-                                    <Shield style={{ color: '#e74c3c' }} />
+                                <DropdownIcon $active={pathname.includes('/finance-admin')} $collapsed={collapsed} $iconType="shield">
+                                    <Shield />
                                 </DropdownIcon>
                                 {!collapsed && <span style={{ marginLeft: '12px' }}>Finance</span>}
                             </div>
