@@ -544,7 +544,9 @@ export default function NotificationsSettingsPage() {
           <CardContent>
             <NotificationGroup>
               <NotificationTitle>
-                <BellRing size={16} />
+                <NotificationIcon $iconType="bell-ring" $size={16} $active={true}>
+                  <BellRing size={16} />
+                </NotificationIcon>
                 Claims Notifications
               </NotificationTitle>
               <HelperText>Receive updates about claim submissions, processing, and status changes</HelperText>
@@ -557,7 +559,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="claims-email">
-                    <Mail size={16} />
+                    <ChannelIcon $iconType="mail" $size={16} $active={notificationPreferences[NotificationType.CLAIMS][ChannelType.EMAIL]}>
+                      <Mail size={16} />
+                    </ChannelIcon>
                     Email
                   </ChannelLabel>
                 </ChannelOption>
@@ -569,7 +573,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="claims-sms">
-                    <MessageSquare size={16} />
+                    <ChannelIcon $iconType="message-square" $size={16} $active={notificationPreferences[NotificationType.CLAIMS][ChannelType.SMS]}>
+                      <MessageSquare size={16} />
+                    </ChannelIcon>
                     SMS
                   </ChannelLabel>
                 </ChannelOption>
@@ -581,7 +587,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="claims-app">
-                    <Bell size={16} />
+                    <ChannelIcon $iconType="bell" $size={16} $active={notificationPreferences[NotificationType.CLAIMS][ChannelType.APP]}>
+                      <Bell size={16} />
+                    </ChannelIcon>
                     App Notifications
                   </ChannelLabel>
                 </ChannelOption>
@@ -593,7 +601,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="claims-push">
-                    <PhoneCall size={16} />
+                    <ChannelIcon $iconType="phone-call" $size={16} $active={notificationPreferences[NotificationType.CLAIMS][ChannelType.PUSH]}>
+                      <PhoneCall size={16} />
+                    </ChannelIcon>
                     Push Notifications
                   </ChannelLabel>
                 </ChannelOption>
@@ -604,7 +614,9 @@ export default function NotificationsSettingsPage() {
 
             <NotificationGroup>
               <NotificationTitle>
-                <BellRing size={16} />
+                <NotificationIcon $iconType="bell-ring" $size={16} $active={true}>
+                  <BellRing size={16} />
+                </NotificationIcon>
                 Appointment Notifications
               </NotificationTitle>
               <HelperText>Receive reminders for upcoming appointments and schedule changes</HelperText>
@@ -617,7 +629,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="appointments-email">
-                    <Mail size={16} />
+                    <ChannelIcon $iconType="mail" $size={16} $active={notificationPreferences[NotificationType.APPOINTMENTS][ChannelType.EMAIL]}>
+                      <Mail size={16} />
+                    </ChannelIcon>
                     Email
                   </ChannelLabel>
                 </ChannelOption>
@@ -629,7 +643,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="appointments-sms">
-                    <MessageSquare size={16} />
+                    <ChannelIcon $iconType="message-square" $size={16} $active={notificationPreferences[NotificationType.APPOINTMENTS][ChannelType.SMS]}>
+                      <MessageSquare size={16} />
+                    </ChannelIcon>
                     SMS
                   </ChannelLabel>
                 </ChannelOption>
@@ -641,7 +657,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="appointments-app">
-                    <Bell size={16} />
+                    <ChannelIcon $iconType="bell" $size={16} $active={notificationPreferences[NotificationType.APPOINTMENTS][ChannelType.APP]}>
+                      <Bell size={16} />
+                    </ChannelIcon>
                     App Notifications
                   </ChannelLabel>
                 </ChannelOption>
@@ -653,7 +671,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="appointments-push">
-                    <PhoneCall size={16} />
+                    <ChannelIcon $iconType="phone-call" $size={16} $active={notificationPreferences[NotificationType.APPOINTMENTS][ChannelType.PUSH]}>
+                      <PhoneCall size={16} />
+                    </ChannelIcon>
                     Push Notifications
                   </ChannelLabel>
                 </ChannelOption>
@@ -664,7 +684,9 @@ export default function NotificationsSettingsPage() {
 
             <NotificationGroup>
               <NotificationTitle>
-                <BellRing size={16} />
+                <NotificationIcon $iconType="bell-ring" $size={16} $active={true}>
+                  <BellRing size={16} />
+                </NotificationIcon>
                 Billing & Payment Notifications
               </NotificationTitle>
               <HelperText>Receive alerts about billing statements, payment confirmations, and due dates</HelperText>
@@ -677,7 +699,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="billing-email">
-                    <Mail size={16} />
+                    <ChannelIcon $iconType="mail" $size={16} $active={notificationPreferences[NotificationType.BILLING][ChannelType.EMAIL]}>
+                      <Mail size={16} />
+                    </ChannelIcon>
                     Email
                   </ChannelLabel>
                 </ChannelOption>
@@ -689,7 +713,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="billing-sms">
-                    <MessageSquare size={16} />
+                    <ChannelIcon $iconType="message-square" $size={16} $active={notificationPreferences[NotificationType.BILLING][ChannelType.SMS]}>
+                      <MessageSquare size={16} />
+                    </ChannelIcon>
                     SMS
                   </ChannelLabel>
                 </ChannelOption>
@@ -701,7 +727,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="billing-app">
-                    <Bell size={16} />
+                    <ChannelIcon $iconType="bell" $size={16} $active={notificationPreferences[NotificationType.BILLING][ChannelType.APP]}>
+                      <Bell size={16} />
+                    </ChannelIcon>
                     App Notifications
                   </ChannelLabel>
                 </ChannelOption>
@@ -713,7 +741,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="billing-push">
-                    <PhoneCall size={16} />
+                    <ChannelIcon $iconType="phone-call" $size={16} $active={notificationPreferences[NotificationType.BILLING][ChannelType.PUSH]}>
+                      <PhoneCall size={16} />
+                    </ChannelIcon>
                     Push Notifications
                   </ChannelLabel>
                 </ChannelOption>
@@ -724,7 +754,9 @@ export default function NotificationsSettingsPage() {
 
             <NotificationGroup>
               <NotificationTitle>
-                <BellOff size={16} />
+                <NotificationIcon $iconType="bell-off" $size={16} $active={true}>
+                  <BellOff size={16} />
+                </NotificationIcon>
                 Marketing Communications
               </NotificationTitle>
               <HelperText>Receive updates about new services, promotions, and educational content</HelperText>
@@ -737,7 +769,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="marketing-email">
-                    <Mail size={16} />
+                    <ChannelIcon $iconType="mail" $size={16} $active={notificationPreferences[NotificationType.MARKETING][ChannelType.EMAIL]}>
+                      <Mail size={16} />
+                    </ChannelIcon>
                     Email
                   </ChannelLabel>
                 </ChannelOption>
@@ -749,7 +783,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="marketing-sms">
-                    <MessageSquare size={16} />
+                    <ChannelIcon $iconType="message-square" $size={16} $active={notificationPreferences[NotificationType.MARKETING][ChannelType.SMS]}>
+                      <MessageSquare size={16} />
+                    </ChannelIcon>
                     SMS
                   </ChannelLabel>
                 </ChannelOption>
@@ -761,7 +797,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="marketing-app">
-                    <Bell size={16} />
+                    <ChannelIcon $iconType="bell" $size={16} $active={notificationPreferences[NotificationType.MARKETING][ChannelType.APP]}>
+                      <Bell size={16} />
+                    </ChannelIcon>
                     App Notifications
                   </ChannelLabel>
                 </ChannelOption>
@@ -773,7 +811,9 @@ export default function NotificationsSettingsPage() {
                     readOnly
                   />
                   <ChannelLabel htmlFor="marketing-push">
-                    <PhoneCall size={16} />
+                    <ChannelIcon $iconType="phone-call" $size={16} $active={notificationPreferences[NotificationType.MARKETING][ChannelType.PUSH]}>
+                      <PhoneCall size={16} />
+                    </ChannelIcon>
                     Push Notifications
                   </ChannelLabel>
                 </ChannelOption>
@@ -787,9 +827,12 @@ export default function NotificationsSettingsPage() {
             variant="default" 
             onClick={handleSave} 
             disabled={loading}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <Save size={16} />
-            Save Notification Settings
+            <ButtonIcon $iconType="save" $size={16} $active={!loading}>
+              <Save size={16} />
+            </ButtonIcon>
+            {loading ? 'Saving...' : 'Save Notification Settings'}
           </Button>
         </ActionButtons>
       </Container>
