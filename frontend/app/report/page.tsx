@@ -22,7 +22,8 @@ import {
   FileText,
   BarChart3,
   AlertCircle,
-  ShoppingCart
+  ShoppingCart,
+  Package
 } from 'lucide-react';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -452,6 +453,14 @@ interface FinancialSummary {
   generated_at: string;
 }
 
+interface InventorySummary {
+  total_items: number;
+  total_cost_value: number;
+  total_selling_value: number;
+  potential_profit: number;
+  total_quantity_in_stock?: number;
+}
+
 export default function ReportPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -472,6 +481,7 @@ export default function ReportPage() {
   const [financialSummary, setFinancialSummary] = useState<FinancialSummary | null>(null);
   const [incomeStatement, setIncomeStatement] = useState<IncomeStatement | null>(null);
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
+  const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -518,10 +528,24 @@ export default function ReportPage() {
         // Continue without sales data
       }
       
-      const [summaryResult, incomeResult, cashFlowResult] = await Promise.allSettled([
+      // Check if user can view inventory summary (Finance Admin, Admin, Manager)
+      const canViewInventory = user?.role === 'finance_manager' || 
+                               user?.role === 'finance_admin' || 
+                               user?.role === 'admin' || 
+                               user?.role === 'super_admin' ||
+                               user?.role === 'manager';
+      
+      const [summaryResult, incomeResult, cashFlowResult, inventoryResult] = await Promise.allSettled([
         apiClient.getFinancialSummary(dateParams.startDate, dateParams.endDate),
         apiClient.getIncomeStatement(dateParams.startDate, dateParams.endDate),
         apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
+        canViewInventory ? apiClient.getInventorySummary().catch((err: any) => {
+          // Silently handle 403 errors (expected for non-finance admins)
+          if (err.response?.status === 403) {
+            return { data: null };
+          }
+          throw err;
+        }) : Promise.resolve({ data: null }),
       ]);
       
       // Filter to only include POSTED sales for revenue/profit calculations
@@ -684,6 +708,23 @@ export default function ReportPage() {
       } else {
         console.error('Failed to load cash flow:', cashFlowResult.reason);
         setCashFlow(null);
+      }
+      
+      // Handle inventory summary
+      if (inventoryResult.status === 'fulfilled') {
+        const inventoryData = inventoryResult.value.data || inventoryResult.value;
+        if (inventoryData && typeof inventoryData === 'object' && 
+            ('total_items' in inventoryData || 'total_selling_value' in inventoryData)) {
+          setInventorySummary(inventoryData as InventorySummary);
+        } else {
+          setInventorySummary(null);
+        }
+      } else {
+        // Only log error if it's not a 403 (permission denied)
+        if (inventoryResult.reason?.response?.status !== 403) {
+          console.warn('Failed to load inventory summary:', inventoryResult.reason);
+        }
+        setInventorySummary(null);
       }
       
       if (summaryResult.status === 'rejected' && incomeResult.status === 'rejected' && cashFlowResult.status === 'rejected') {
@@ -1293,6 +1334,98 @@ export default function ReportPage() {
                 )}
               </ReportCard>
             </ReportSection>
+
+            {/* Inventory Summary Section - For Finance Admin, Admin, and Manager */}
+            {(user?.role === 'finance_manager' || user?.role === 'finance_admin' || user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'manager') && (
+              <ReportSection>
+                <ReportCard>
+                  <ReportHeader>
+                    <div>
+                      <h2>
+                        <Package />
+                        Inventory Summary
+                      </h2>
+                      <p>Current inventory valuation and stock levels</p>
+                    </div>
+                  </ReportHeader>
+
+                  {inventorySummary ? (
+                    <>
+                      <SummaryGrid>
+                        <SummaryCard $type="revenue">
+                          <div className="label">
+                            <Package size={16} />
+                            Total Items
+                          </div>
+                          <div className="value">
+                            {inventorySummary.total_items || 0}
+                          </div>
+                          <div className="sub-value">
+                            Active inventory items
+                          </div>
+                        </SummaryCard>
+                        <SummaryCard $type="expense">
+                          <div className="label">
+                            <DollarSign size={16} />
+                            Total Cost Value
+                          </div>
+                          <div className="value">
+                            {formatCurrency(inventorySummary.total_cost_value || 0)}
+                          </div>
+                          <div className="sub-value">
+                            Investment in inventory
+                          </div>
+                        </SummaryCard>
+                        <SummaryCard $type="revenue">
+                          <div className="label">
+                            <TrendingUp size={16} />
+                            Total Selling Value
+                          </div>
+                          <div className="value">
+                            {formatCurrency(inventorySummary.total_selling_value || 0)}
+                          </div>
+                          <div className="sub-value">
+                            Potential revenue if all sold
+                          </div>
+                        </SummaryCard>
+                        <SummaryCard $type="profit">
+                          <div className="label">
+                            <TrendingUp size={16} />
+                            Potential Profit
+                          </div>
+                          <div className="value">
+                            {formatCurrency(inventorySummary.potential_profit || 0)}
+                          </div>
+                          <div className="sub-value">
+                            Profit if all inventory sold
+                          </div>
+                        </SummaryCard>
+                        {inventorySummary.total_quantity_in_stock !== undefined && (
+                          <SummaryCard>
+                            <div className="label">
+                              <Package size={16} />
+                              Total Stock Quantity
+                            </div>
+                            <div className="value">
+                              {inventorySummary.total_quantity_in_stock.toLocaleString()}
+                            </div>
+                            <div className="sub-value">
+                              Total units in stock
+                            </div>
+                          </SummaryCard>
+                        )}
+                      </SummaryGrid>
+                    </>
+                  ) : (
+                    <EmptyState>
+                      <Package size={48} />
+                      <h3>No inventory data available</h3>
+                      <p>Inventory summary is only available to Finance Admin, Admin, and Manager roles.</p>
+                    </EmptyState>
+                  )}
+                </ReportCard>
+              </ReportSection>
+            )}
           </>
         )}
       </PageContainer>

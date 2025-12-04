@@ -307,12 +307,14 @@ class CRUDInventory:
         result = db.query(
             func.sum(InventoryItem.total_cost * InventoryItem.quantity).label('total_cost_value'),
             func.sum(InventoryItem.selling_price * InventoryItem.quantity).label('total_selling_value'),
+            func.sum(InventoryItem.quantity).label('total_quantity_in_stock'),
             func.count(InventoryItem.id).label('total_items')
         ).filter(InventoryItem.is_active == True).first()
 
         return {
             'total_cost_value': float(result.total_cost_value or 0),
             'total_selling_value': float(result.total_selling_value or 0),
+            'total_quantity_in_stock': int(result.total_quantity_in_stock or 0),
             'total_items': result.total_items or 0,
             'potential_profit': float(result.total_selling_value or 0) - float(result.total_cost_value or 0)
         }
