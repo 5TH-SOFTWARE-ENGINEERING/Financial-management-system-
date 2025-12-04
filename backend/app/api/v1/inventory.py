@@ -336,14 +336,24 @@ def get_inventory_summary(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get inventory summary (Finance Admin only)"""
-    if not _is_finance_admin(current_user.role):
+    """Get inventory summary (Finance Admin, Admin, Super Admin, and Manager)"""
+    # Allow Finance Admin, Admin, Super Admin, and Manager roles
+    allowed_roles = [
+        UserRole.FINANCE_ADMIN, 
+        UserRole.ADMIN, 
+        UserRole.SUPER_ADMIN, 
+        UserRole.MANAGER
+    ]
+    
+    if current_user.role not in allowed_roles:
         role_value = str(current_user.role.value if hasattr(current_user.role, 'value') else current_user.role)
         raise HTTPException(
             status_code=403,
-            detail=f"Only Finance Admin can view inventory summary. Your role: {role_value}"
+            detail=f"Access denied. Only Finance Admin, Admin, Super Admin, or Manager can view inventory summary. Your role: {role_value}"
         )
     
+    # For managers, we could filter by their team's inventory if needed in the future
+    # For now, all authorized roles see the full inventory summary
     return inventory_crud.get_total_value(db)
 
 

@@ -507,8 +507,12 @@ const AdminDashboard: React.FC = () => {
       setError(null);
       try {
         // Load role-specific data
+        // Backend already filters data by role:
+        // - Admin/Super Admin/Finance Admin/Accountant: See all data
+        // - Manager: See their team's data (subordinates + themselves)
+        // - Employee/Regular users: See only their own data
         const userRole = user?.role?.toLowerCase();
-        const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'admin';
+        const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'admin' || userRole === 'super_admin';
         const isAccountant = userRole === 'accountant';
         const isManager = userRole === 'manager';
         const isEmployee = userRole === 'employee';
@@ -519,12 +523,14 @@ const AdminDashboard: React.FC = () => {
           apiClient.getAdvancedKPIs({ period: 'month' }).catch(() => null), // Optional analytics
         ];
         
-        // Load inventory summary for Finance Admin and Managers
+        // Load inventory summary for Finance Admin, Admin, Super Admin, and Managers
+        // Backend restricts access to these roles only
         if (isFinanceAdmin || isManager) {
           promises.push(
             apiClient.getInventorySummary().catch((err: any) => {
-              // Silently handle 403 errors (expected for non-finance admins/managers)
+              // Silently handle 403 errors (expected for unauthorized roles)
               if (err.response?.status === 403) {
+                console.warn('Access denied to inventory summary for role:', userRole);
                 return null;
               }
               console.warn('Failed to load inventory summary:', err);
@@ -594,9 +600,24 @@ const AdminDashboard: React.FC = () => {
           debugInfo.expenseIdsWithWorkflow = expenseIdsWithWorkflow.size;
 
           // Fetch pending revenue entries - only count those WITHOUT workflows
-          const revenuesRes = await apiClient.getRevenues();
+          // Backend already filters by role, so we get appropriate data
+          const revenuesRes = await apiClient.getRevenues({ limit: 1000 });
           if (revenuesRes?.data && Array.isArray(revenuesRes.data)) {
-            const pendingRevenues = revenuesRes.data.filter((r: any) => {
+            // Filter based on user role - backend already filters, but we ensure we only count relevant entries
+            const userRoleLower = user?.role?.toLowerCase();
+            const isAdmin = userRoleLower === 'admin' || userRoleLower === 'super_admin' || userRoleLower === 'finance_admin' || userRoleLower === 'accountant';
+            const isManager = userRoleLower === 'manager';
+            
+            let relevantRevenues = revenuesRes.data;
+            if (!isAdmin && !isManager) {
+              // For regular users (including employees), only count their own entries
+              relevantRevenues = revenuesRes.data.filter((r: any) => r.created_by_id === user?.id);
+            } else if (isManager) {
+              // For managers, backend already filters to their team, but we can double-check
+              // (Backend handles this, so this is just a safety check)
+            }
+            
+            const pendingRevenues = relevantRevenues.filter((r: any) => {
               // Only count if not approved (is_approved is false or undefined) AND doesn't have an existing workflow
               const isNotApproved = r.is_approved === false || r.is_approved === undefined || !r.is_approved;
               return isNotApproved && !revenueIdsWithWorkflow.has(r.id);
@@ -606,9 +627,24 @@ const AdminDashboard: React.FC = () => {
           }
 
           // Fetch pending expense entries - only count those WITHOUT workflows
-          const expensesRes = await apiClient.getExpenses();
+          // Backend already filters by role, so we get appropriate data
+          const expensesRes = await apiClient.getExpenses({ limit: 1000 });
           if (expensesRes?.data && Array.isArray(expensesRes.data)) {
-            const pendingExpenses = expensesRes.data.filter((e: any) => {
+            // Filter based on user role - backend already filters, but we ensure we only count relevant entries
+            const userRoleLower = user?.role?.toLowerCase();
+            const isAdmin = userRoleLower === 'admin' || userRoleLower === 'super_admin' || userRoleLower === 'finance_admin' || userRoleLower === 'accountant';
+            const isManager = userRoleLower === 'manager';
+            
+            let relevantExpenses = expensesRes.data;
+            if (!isAdmin && !isManager) {
+              // For regular users (including employees), only count their own entries
+              relevantExpenses = expensesRes.data.filter((e: any) => e.created_by_id === user?.id);
+            } else if (isManager) {
+              // For managers, backend already filters to their team, but we can double-check
+              // (Backend handles this, so this is just a safety check)
+            }
+            
+            const pendingExpenses = relevantExpenses.filter((e: any) => {
               // Only count if not approved (is_approved is false or undefined) AND doesn't have an existing workflow
               const isNotApproved = e.is_approved === false || e.is_approved === undefined || !e.is_approved;
               return isNotApproved && !expenseIdsWithWorkflow.has(e.id);
@@ -903,7 +939,12 @@ const AdminDashboard: React.FC = () => {
               </DashboardGrid>
               
               {/* Inventory & Sales Section - Role-based */}
-              {(user?.role === 'finance_manager' || user?.role === 'admin' || user?.role === 'manager') && inventorySummary && (
+              {/* Only show inventory summary if user has access and data is available */}
+              {(user?.role === 'finance_manager' || 
+                user?.role === 'finance_admin' || 
+                user?.role === 'admin' || 
+                user?.role === 'super_admin' || 
+                user?.role === 'manager') && inventorySummary && (
                 <>
                   <SectionTitle>Inventory Overview</SectionTitle>
                   <DashboardGrid>
@@ -936,8 +977,8 @@ const AdminDashboard: React.FC = () => {
                 </>
               )}
               
-              {/* Sales Summary - For Accountants and Finance Admins */}
-              {(user?.role === 'accountant' || user?.role === 'finance_manager' || user?.role === 'admin') && salesSummary && (
+              {/* Sales Summary - For Accountants, Finance Admins, and Admins */}
+              {(user?.role === 'accountant' || user?.role === 'finance_manager' || user?.role === 'finance_admin' || user?.role === 'admin' || user?.role === 'super_admin') && salesSummary && (
                 <>
                   <SectionTitle>Sales Overview</SectionTitle>
                   <DashboardGrid>
@@ -996,10 +1037,36 @@ const AdminDashboard: React.FC = () => {
             </>
           ) : (
             <EmptyState>
-              <p>No overview data available. Please ensure you have revenue and expense entries.</p>
+              <p>
+                {user?.role === 'employee' 
+                  ? 'No overview data available. Your dashboard will show your own revenue and expense entries once you create them.'
+                  : 'No overview data available. Please ensure you have revenue and expense entries.'}
+              </p>
             </EmptyState>
           )}
-          <SectionTitle>Recent Transactions</SectionTitle>
+          <SectionTitle>
+            Recent Transactions
+            {user?.role === 'employee' && (
+              <span style={{ 
+                fontSize: theme.typography.fontSizes.sm, 
+                fontWeight: 'normal', 
+                color: TEXT_COLOR_MUTED,
+                marginLeft: theme.spacing.sm
+              }}>
+                (Your activities only)
+              </span>
+            )}
+            {(user?.role === 'manager') && (
+              <span style={{ 
+                fontSize: theme.typography.fontSizes.sm, 
+                fontWeight: 'normal', 
+                color: TEXT_COLOR_MUTED,
+                marginLeft: theme.spacing.sm
+              }}>
+                (Your team's activities)
+              </span>
+            )}
+          </SectionTitle>
           <TableContainer>
             <TableTitle>Latest Activity</TableTitle>
             <Table>

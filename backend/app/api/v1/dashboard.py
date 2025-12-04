@@ -28,8 +28,9 @@ def get_dashboard_overview(
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=30)
     
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        # Full overview for admins and finance managers
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.ACCOUNTANT]:
+        # Full overview for admins, finance managers, and accountants
+        # Accountants need to see all financial data for their accounting duties
         total_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
         total_expenses = expense_crud.get_total_by_period(db, start_date, end_date)
         profit = total_revenue - total_expenses
@@ -212,8 +213,8 @@ def get_recent_activity(
     try:
         activities = []
         
-        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-            # Admins and Finance Managers can see all activities
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.ACCOUNTANT]:
+            # Admins, Finance Managers, and Accountants can see all activities
             # Get recent revenue entries from all users (sorted by created_at desc)
             try:
                 all_revenue = revenue_crud.get_multi(db, 0, limit * 3)
