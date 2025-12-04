@@ -746,15 +746,22 @@ export default function Navbar() {
           if (initialNotifs.length > 0) {
             lastNotificationIdsRef.current = new Set(initialNotifs.map((n: Notification) => n.id));
           }
+          // Also set the initial unread count to prevent false positives on first load
+          previousUnreadCountRef.current = initialNotifs.length;
         } catch (err) {
           // Ignore errors on initialization
         }
       };
       
-      initializeNotifications();
-      loadUnreadCount();
-      // Refresh every 30 seconds (or 60 seconds if backend is down)
-      intervalId = setInterval(loadUnreadCount, 30000);
+      // Initialize notifications first, then start loading unread count
+      // This prevents race condition where existing notifications are treated as new
+      (async () => {
+        await initializeNotifications();
+        loadUnreadCount();
+        // Refresh every 30 seconds (or 60 seconds if backend is down)
+        intervalId = setInterval(loadUnreadCount, 30000);
+      })();
+      
       return () => {
         if (intervalId) clearInterval(intervalId);
       };
