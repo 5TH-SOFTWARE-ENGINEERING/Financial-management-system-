@@ -16,11 +16,14 @@ from ...core.database import get_db
 from ...api.deps import get_current_active_user
 from ...models.user import User, UserRole
 from ...crud.inventory import inventory as inventory_crud
+from ...crud.user import user as user_crud
 from ...schemas.inventory import (
     InventoryItemCreate, InventoryItemUpdate, InventoryItemOut, 
     InventoryItemPublicOut, InventoryAuditLogOut
 )
 from ...utils.encryption import encrypt_value, decrypt_value
+from ...core.security import verify_password
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -342,4 +345,182 @@ def get_inventory_summary(
         )
     
     return inventory_crud.get_total_value(db)
+
+
+class DeleteInventoryItemRequest(BaseModel):
+    password: str
+
+
+class ActivateDeactivateInventoryItemRequest(BaseModel):
+    password: str
+
+
+@router.post("/items/{item_id}/activate")
+def activate_inventory_item(
+    item_id: int,
+    activate_request: ActivateDeactivateInventoryItemRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Activate inventory item - requires password verification (Finance Admin only)"""
+    # Check permissions
+    if not _is_finance_admin(current_user.role):
+        raise HTTPException(
+            status_code=403,
+            detail="Only Finance Admin can activate inventory items"
+        )
+    
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before activation
+    if not activate_request.password or not activate_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to activate an inventory item."
+        )
+    
+    # Verify password
+    password_to_verify = activate_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to activate this inventory item."
+        )
+    
+    # Check if item exists
+    item = inventory_crud.get(db, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    
+    # Activate the item
+    updated_item = inventory_crud.update(db, item, InventoryItemUpdate(is_active=True), current_user.id)
+    
+    return {"message": "Inventory item activated successfully"}
+
+
+@router.post("/items/{item_id}/deactivate")
+def deactivate_inventory_item(
+    item_id: int,
+    deactivate_request: ActivateDeactivateInventoryItemRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Deactivate inventory item - requires password verification (Finance Admin only)"""
+    # Check permissions
+    if not _is_finance_admin(current_user.role):
+        raise HTTPException(
+            status_code=403,
+            detail="Only Finance Admin can deactivate inventory items"
+        )
+    
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deactivation
+    if not deactivate_request.password or not deactivate_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to deactivate an inventory item."
+        )
+    
+    # Verify password
+    password_to_verify = deactivate_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to deactivate this inventory item."
+        )
+    
+    # Check if item exists
+    item = inventory_crud.get(db, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    
+    # Deactivate the item
+    updated_item = inventory_crud.update(db, item, InventoryItemUpdate(is_active=False), current_user.id)
+    
+    return {"message": "Inventory item deactivated successfully"}
+
+
+@router.post("/items/{item_id}/delete")
+def delete_inventory_item(
+    item_id: int,
+    delete_request: DeleteInventoryItemRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete inventory item - requires password verification (Finance Admin only)"""
+    # Check permissions
+    if not _is_finance_admin(current_user.role):
+        raise HTTPException(
+            status_code=403,
+            detail="Only Finance Admin can delete inventory items"
+        )
+    
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deletion
+    if not delete_request.password or not delete_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to delete an inventory item."
+        )
+    
+    # Verify password
+    password_to_verify = delete_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to delete this inventory item."
+        )
+    
+    # Check if item exists
+    item = inventory_crud.get(db, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    
+    # Check if item has associated sales
+    from ...models.sale import Sale
+    sales_count = db.query(Sale).filter(Sale.item_id == item_id).count()
+    if sales_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete item with {sales_count} associated sale(s). Please deactivate the item instead."
+        )
+    
+    # Delete the item
+    deleted = inventory_crud.delete(db, item_id, current_user.id)
+    if not deleted:
+        raise HTTPException(status_code=500, detail="Failed to delete inventory item")
+    
+    return {"message": "Inventory item deleted successfully"}
 

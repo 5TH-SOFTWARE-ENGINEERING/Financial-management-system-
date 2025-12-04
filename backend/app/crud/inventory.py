@@ -281,6 +281,27 @@ class CRUDInventory:
             )
         ).all()
 
+    def delete(self, db: Session, id: int, deleted_by_id: int) -> bool:
+        """Delete inventory item"""
+        item = self.get(db, id)
+        if not item:
+            return False
+        
+        # Create audit log before deletion
+        self._create_audit_log(
+            db=db,
+            item_id=item.id,
+            change_type=InventoryChangeType.DELETED,
+            field_changed='item',
+            changed_by_id=deleted_by_id,
+            old_value=item.item_name,
+            new_value=None
+        )
+        
+        db.delete(item)
+        db.commit()
+        return True
+
     def get_total_value(self, db: Session) -> dict:
         """Get total inventory value (Finance Admin only)"""
         result = db.query(

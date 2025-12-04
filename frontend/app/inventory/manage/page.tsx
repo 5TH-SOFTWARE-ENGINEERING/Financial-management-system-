@@ -295,6 +295,17 @@ export default function InventoryManagePage() {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [summary, setSummary] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [showActivateDeactivateModal, setShowActivateDeactivateModal] = useState(false);
+  const [itemToActivateDeactivate, setItemToActivateDeactivate] = useState<InventoryItem | null>(null);
+  const [activateDeactivatePassword, setActivateDeactivatePassword] = useState('');
+  const [activateDeactivatePasswordError, setActivateDeactivatePasswordError] = useState<string | null>(null);
+  const [activatingDeactivating, setActivatingDeactivating] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -415,6 +426,63 @@ export default function InventoryManagePage() {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to save item';
       toast.error(errorMessage);
       console.error('Error saving item:', err);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!itemToDelete || !deletePassword.trim()) {
+      setDeletePasswordError('Password is required');
+      return;
+    }
+
+    setDeleting(true);
+    setDeletePasswordError(null);
+
+    try {
+      await apiClient.deleteInventoryItem(itemToDelete.id, deletePassword.trim());
+      toast.success('Item deleted successfully');
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+      setDeletePassword('');
+      await loadItems();
+      await loadSummary();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to delete item';
+      setDeletePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleActivateDeactivate = async () => {
+    if (!itemToActivateDeactivate || !activateDeactivatePassword.trim()) {
+      setActivateDeactivatePasswordError('Password is required');
+      return;
+    }
+
+    setActivatingDeactivating(true);
+    setActivateDeactivatePasswordError(null);
+
+    try {
+      if (isActivating) {
+        await apiClient.activateInventoryItem(itemToActivateDeactivate.id, activateDeactivatePassword.trim());
+        toast.success('Item activated successfully');
+      } else {
+        await apiClient.deactivateInventoryItem(itemToActivateDeactivate.id, activateDeactivatePassword.trim());
+        toast.success('Item deactivated successfully');
+      }
+      setShowActivateDeactivateModal(false);
+      setItemToActivateDeactivate(null);
+      setActivateDeactivatePassword('');
+      await loadItems();
+      await loadSummary();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || err.message || `Failed to ${isActivating ? 'activate' : 'deactivate'} item`;
+      setActivateDeactivatePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setActivatingDeactivating(false);
     }
   };
 
@@ -613,42 +681,43 @@ export default function InventoryManagePage() {
                       <ActionButton onClick={() => handleEdit(item)} title="Edit">
                         <Edit size={16} />
                       </ActionButton>
+                      <ActionButton 
+                        onClick={() => {
+                          setItemToDelete(item);
+                          setShowDeleteModal(true);
+                          setDeletePassword('');
+                          setDeletePasswordError(null);
+                        }}
+                        title="Delete"
+                        data-destructive="true"
+                      >
+                        <Trash2 size={16} />
+                      </ActionButton>
                       {item.is_active ? (
                         <ActionButton 
-                          onClick={async () => {
-                            if (confirm(`Are you sure you want to deactivate "${item.item_name}"?`)) {
-                              try {
-                                await apiClient.updateInventoryItem(item.id, { is_active: false });
-                                toast.success('Item deactivated successfully');
-                                await loadItems();
-                                await loadSummary();
-                              } catch (err: any) {
-                                const errorMessage = err.response?.data?.detail || err.message || 'Failed to deactivate item';
-                                toast.error(errorMessage);
-                              }
-                            }
+                          onClick={() => {
+                            setItemToActivateDeactivate(item);
+                            setIsActivating(false);
+                            setShowActivateDeactivateModal(true);
+                            setActivateDeactivatePassword('');
+                            setActivateDeactivatePasswordError(null);
                           }}
                           title="Deactivate"
-                          data-destructive="true"
                         >
-                          <Trash2 size={16} />
+                          <EyeOff size={16} />
                         </ActionButton>
                       ) : (
                         <ActionButton 
-                          onClick={async () => {
-                            try {
-                              await apiClient.updateInventoryItem(item.id, { is_active: true });
-                              toast.success('Item reactivated successfully');
-                              await loadItems();
-                              await loadSummary();
-                            } catch (err: any) {
-                              const errorMessage = err.response?.data?.detail || err.message || 'Failed to reactivate item';
-                              toast.error(errorMessage);
-                            }
+                          onClick={() => {
+                            setItemToActivateDeactivate(item);
+                            setIsActivating(true);
+                            setShowActivateDeactivateModal(true);
+                            setActivateDeactivatePassword('');
+                            setActivateDeactivatePasswordError(null);
                           }}
-                          title="Reactivate"
+                          title="Activate"
                         >
-                          <CheckCircle size={16} />
+                          <Eye size={16} />
                         </ActionButton>
                       )}
                     </div>
@@ -776,6 +845,197 @@ export default function InventoryManagePage() {
                 <Button onClick={handleSave}>
                   <Save size={16} style={{ marginRight: theme.spacing.sm }} />
                   {editingItem ? 'Update' : 'Create'} Item
+                </Button>
+              </ModalActions>
+            </ModalContent>
+          </ModalOverlay>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && itemToDelete && (
+          <ModalOverlay onClick={() => {
+            setShowDeleteModal(false);
+            setItemToDelete(null);
+            setDeletePassword('');
+            setDeletePasswordError(null);
+          }}>
+            <ModalContent onClick={(e) => e.stopPropagation()}>
+              <ModalHeader>
+                <h2>Delete Inventory Item</h2>
+                <ActionButton onClick={() => {
+                  setShowDeleteModal(false);
+                  setItemToDelete(null);
+                  setDeletePassword('');
+                  setDeletePasswordError(null);
+                }}>
+                  <X size={20} />
+                </ActionButton>
+              </ModalHeader>
+
+              <div style={{ 
+                padding: theme.spacing.md, 
+                background: 'rgba(239, 68, 68, 0.1)', 
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: theme.borderRadius.md,
+                marginBottom: theme.spacing.lg
+              }}>
+                <p style={{ margin: 0, color: '#dc2626', fontSize: theme.typography.fontSizes.sm }}>
+                  <AlertCircle size={16} style={{ marginRight: theme.spacing.xs, verticalAlign: 'middle' }} />
+                  You are about to permanently delete <strong>"{itemToDelete.item_name}"</strong>. This action cannot be undone.
+                </p>
+              </div>
+
+              <FormGroup>
+                <Label htmlFor="delete-password">
+                  Enter your password to confirm deletion:
+                </Label>
+                <Input
+                  id="delete-password"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => {
+                    setDeletePassword(e.target.value);
+                    setDeletePasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && deletePassword.trim() && !deleting) {
+                      handleDelete();
+                    }
+                  }}
+                />
+                {deletePasswordError && (
+                  <p style={{ color: '#dc2626', fontSize: theme.typography.fontSizes.sm, marginTop: theme.spacing.xs, margin: 0 }}>
+                    {deletePasswordError}
+                  </p>
+                )}
+              </FormGroup>
+
+              <ModalActions>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setItemToDelete(null);
+                    setDeletePassword('');
+                    setDeletePasswordError(null);
+                  }}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={!deletePassword.trim() || deleting}
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" style={{ marginRight: theme.spacing.sm }} />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                      Delete Item
+                    </>
+                  )}
+                </Button>
+              </ModalActions>
+            </ModalContent>
+          </ModalOverlay>
+        )}
+
+        {/* Activate/Deactivate Confirmation Modal */}
+        {showActivateDeactivateModal && itemToActivateDeactivate && (
+          <ModalOverlay onClick={() => {
+            setShowActivateDeactivateModal(false);
+            setItemToActivateDeactivate(null);
+            setActivateDeactivatePassword('');
+            setActivateDeactivatePasswordError(null);
+          }}>
+            <ModalContent onClick={(e) => e.stopPropagation()}>
+              <ModalHeader>
+                <h2>{isActivating ? 'Activate Inventory Item' : 'Deactivate Inventory Item'}</h2>
+                <ActionButton onClick={() => {
+                  setShowActivateDeactivateModal(false);
+                  setItemToActivateDeactivate(null);
+                  setActivateDeactivatePassword('');
+                  setActivateDeactivatePasswordError(null);
+                }}>
+                  <X size={20} />
+                </ActionButton>
+              </ModalHeader>
+
+              <div style={{ 
+                padding: theme.spacing.md, 
+                background: isActivating ? 'rgba(16, 185, 129, 0.1)' : 'rgba(251, 191, 36, 0.1)', 
+                border: isActivating ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(251, 191, 36, 0.3)',
+                borderRadius: theme.borderRadius.md,
+                marginBottom: theme.spacing.lg
+              }}>
+                <p style={{ margin: 0, color: isActivating ? '#059669' : '#d97706', fontSize: theme.typography.fontSizes.sm }}>
+                  <AlertCircle size={16} style={{ marginRight: theme.spacing.xs, verticalAlign: 'middle' }} />
+                  You are about to {isActivating ? 'activate' : 'deactivate'} <strong>"{itemToActivateDeactivate.item_name}"</strong>.
+                  {!isActivating && ' Deactivated items will not be available for sale.'}
+                </p>
+              </div>
+
+              <FormGroup>
+                <Label htmlFor="activate-deactivate-password">
+                  Enter your password to confirm:
+                </Label>
+                <Input
+                  id="activate-deactivate-password"
+                  type="password"
+                  value={activateDeactivatePassword}
+                  onChange={(e) => {
+                    setActivateDeactivatePassword(e.target.value);
+                    setActivateDeactivatePasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && activateDeactivatePassword.trim() && !activatingDeactivating) {
+                      handleActivateDeactivate();
+                    }
+                  }}
+                />
+                {activateDeactivatePasswordError && (
+                  <p style={{ color: '#dc2626', fontSize: theme.typography.fontSizes.sm, marginTop: theme.spacing.xs, margin: 0 }}>
+                    {activateDeactivatePasswordError}
+                  </p>
+                )}
+              </FormGroup>
+
+              <ModalActions>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowActivateDeactivateModal(false);
+                    setItemToActivateDeactivate(null);
+                    setActivateDeactivatePassword('');
+                    setActivateDeactivatePasswordError(null);
+                  }}
+                  disabled={activatingDeactivating}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant={isActivating ? 'default' : 'destructive'}
+                  onClick={handleActivateDeactivate}
+                  disabled={!activateDeactivatePassword.trim() || activatingDeactivating}
+                >
+                  {activatingDeactivating ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" style={{ marginRight: theme.spacing.sm }} />
+                      {isActivating ? 'Activating...' : 'Deactivating...'}
+                    </>
+                  ) : (
+                    <>
+                      {isActivating ? <CheckCircle size={16} style={{ marginRight: theme.spacing.sm }} /> : <EyeOff size={16} style={{ marginRight: theme.spacing.sm }} />}
+                      {isActivating ? 'Activate' : 'Deactivate'} Item
+                    </>
+                  )}
                 </Button>
               </ModalActions>
             </ModalContent>

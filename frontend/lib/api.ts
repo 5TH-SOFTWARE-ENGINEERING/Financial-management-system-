@@ -1170,6 +1170,18 @@ class ApiClient {
     return this.put(`/inventory/items/${itemId}`, itemData);
   }
 
+  async deleteInventoryItem(itemId: number, password: string) {
+    return this.post(`/inventory/items/${itemId}/delete`, { password });
+  }
+
+  async activateInventoryItem(itemId: number, password: string) {
+    return this.post(`/inventory/items/${itemId}/activate`, { password });
+  }
+
+  async deactivateInventoryItem(itemId: number, password: string) {
+    return this.post(`/inventory/items/${itemId}/deactivate`, { password });
+  }
+
   async getInventoryAuditLogs(itemId: number, params?: { skip?: number; limit?: number }) {
     return this.get(`/inventory/items/${itemId}/audit`, { params });
   }
