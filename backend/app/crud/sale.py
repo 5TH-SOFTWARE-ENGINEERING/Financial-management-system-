@@ -175,7 +175,13 @@ class CRUDSale:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
     ) -> dict:
-        """Get sales summary for Accountant dashboard"""
+        """
+        Get sales summary for Accountant dashboard
+        
+        IMPORTANT: Only POSTED sales are included in revenue calculations.
+        - Employee sales start as PENDING and must be approved by Finance Admin
+        - Only after approval (POSTED status) are sales included in revenue and net profit
+        """
         query = db.query(Sale)
 
         if start_date:
@@ -185,10 +191,12 @@ class CRUDSale:
 
         total_sales = query.count()
         
+        # CRITICAL: Only POSTED (approved) sales are included in revenue calculations
+        # PENDING sales (especially from employees) are NOT included until approved by Finance Admin
         revenue_query = query.filter(Sale.status == SaleStatus.POSTED)
         total_revenue = db.query(func.sum(Sale.total_sale)).filter(
             and_(
-                Sale.status == SaleStatus.POSTED,
+                Sale.status == SaleStatus.POSTED,  # Only approved/posted sales
                 *(Sale.created_at >= start_date,) if start_date else (),
                 *(Sale.created_at <= end_date,) if end_date else ()
             )

@@ -180,13 +180,37 @@ def post_sale(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Post a sale to ledger (Accountant only)"""
-    # Check permissions
-    if current_user.role not in [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-        raise HTTPException(
-            status_code=403,
-            detail="Only accountants can post sales to ledger"
-        )
+    """
+    Post a sale to ledger (approve sale for revenue calculation)
+    
+    - Sales made by employees MUST be approved by Finance Admin (or Admin/Super Admin)
+    - Sales made by accountants or other roles can be approved by Accountants or Finance Admins
+    - Only POSTED sales are included in revenue and net profit calculations
+    """
+    # First, get the sale to check who made it
+    sale = sale_crud.get(db, sale_id)
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    
+    # Check if sale was made by an employee
+    # Get the user who made the sale
+    seller = db.query(User).filter(User.id == sale.sold_by_id).first()
+    is_employee_sale = seller and seller.role == UserRole.EMPLOYEE
+    
+    # If sale was made by an employee, require Finance Admin (or Admin/Super Admin) approval
+    if is_employee_sale:
+        if current_user.role not in [UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            raise HTTPException(
+                status_code=403,
+                detail="Sales made by employees must be approved by Finance Admin. Only Finance Admin, Admin, or Super Admin can approve employee sales."
+            )
+    else:
+        # For non-employee sales, allow Accountants and Finance Admins to approve
+        if current_user.role not in [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            raise HTTPException(
+                status_code=403,
+                detail="Only accountants, finance admins, or admins can post sales to ledger"
+            )
     
     try:
         sale = sale_crud.post_sale(db, sale_id, post_data, current_user.id)
