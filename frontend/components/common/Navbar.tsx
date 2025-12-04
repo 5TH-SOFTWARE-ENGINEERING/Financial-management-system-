@@ -1159,10 +1159,16 @@ export default function Navbar() {
               </DropdownItem>
             )
           )}
-          <DropdownItem onClick={handleSettingsClick}>
-            <Settings size={16} />
-            <span>Settings</span>
-          </DropdownItem>
+          {currentUser && (
+            (currentUser.role?.toLowerCase() !== 'accountant' && 
+             currentUser.role?.toLowerCase() !== 'employee'
+            ) && (
+              <DropdownItem onClick={handleSettingsClick}>
+                <Settings size={16} />
+                <span>Settings</span>
+              </DropdownItem>
+            )
+          )}
           <ComponentGate componentId={ComponentId.PERMISSION_EDIT}>
             <DropdownItem onClick={handleRolesClick}>
               <HelpCircle size={16} />
