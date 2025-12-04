@@ -18,6 +18,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
+import { useAuth } from '@/lib/rbac/auth-context';
 import { formatDate } from '@/lib/utils';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
@@ -489,18 +490,42 @@ interface Notification {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useUserStore();
+  const { user: storeUser, isAuthenticated, isLoading } = useUserStore();
+  const { user: authUser } = useAuth();
+  const user = storeUser || authUser;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filterType, setFilterType] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
 
+  // Role-based access control - all authenticated users can access notifications
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/auth/login');
+    if (!isLoading) {
+      if (!isAuthenticated || !user) {
+        router.push('/auth/login');
+        return;
+      }
+      
+      // Check if user has a valid role
+      const userRole = user.role?.toLowerCase();
+      const allowedRoles = [
+        'admin',
+        'super_admin',
+        'finance_admin',
+        'finance_manager',
+        'manager',
+        'accountant',
+        'employee'
+      ];
+      
+      if (!userRole || !allowedRoles.includes(userRole)) {
+        toast.error('Access denied: Insufficient permissions');
+        router.push('/dashboard');
+        return;
+      }
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, user, router]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -774,13 +799,18 @@ export default function NotificationsPage() {
                     Mark All as Read
                   </ActionButton>
                 )}
-                <ActionButton
-                  $variant="secondary"
-                  onClick={() => router.push('/settings/notifications')}
-                >
-                  <Settings />
-                  Settings
-                </ActionButton>
+                {user && (
+                  user.role?.toLowerCase() !== 'accountant' && 
+                  user.role?.toLowerCase() !== 'employee'
+                ) && (
+                  <ActionButton
+                    $variant="secondary"
+                    onClick={() => router.push('/settings/notifications')}
+                  >
+                    <Settings />
+                    Settings
+                  </ActionButton>
+                )}
               </HeaderActions>
             </HeaderContent>
           </HeaderContainer>
