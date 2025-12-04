@@ -142,66 +142,7 @@ const ActionsContainer = styled.div`
   gap: ${theme.spacing.sm};
 `;
 
-const AddButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: ${theme.borderRadius.md};
-  background: ${getIconColor('plus', true)};
-  color: white;
-  cursor: pointer;
-  transition: all ${theme.transitions.default};
-  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.2);
-
-  &:hover {
-    background: ${getIconColor('plus', true)};
-    filter: brightness(1.1);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
-    
-    ${ButtonIcon} {
-      transform: scale(1.1);
-    }
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const IconButton = styled.button<{ $iconType?: string }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: ${theme.borderRadius.md};
-  background: transparent;
-  color: ${props => props.$iconType ? getIconColor(props.$iconType, false) : theme.colors.textSecondary};
-  cursor: pointer;
-  transition: all ${theme.transitions.default};
-  position: relative;
-
-  &:hover {
-    background: ${theme.colors.backgroundSecondary};
-    color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : PRIMARY_ACCENT};
-    transform: translateY(-1px);
-    
-    ${NavIcon} {
-      opacity: 1;
-      transform: scale(1.15);
-    }
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
+// Icon styled components - declared before use
 const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
@@ -276,6 +217,66 @@ const DropdownIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
   &:hover {
     opacity: 1;
     transform: scale(1.1);
+  }
+`;
+
+const AddButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: ${theme.borderRadius.md};
+  background: ${getIconColor('plus', true)};
+  color: white;
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.2);
+
+  &:hover {
+    background: ${getIconColor('plus', true)};
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const IconButton = styled.button<{ $iconType?: string }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: ${theme.borderRadius.md};
+  background: transparent;
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, false) : theme.colors.textSecondary};
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+  position: relative;
+
+  &:hover {
+    background: ${theme.colors.backgroundSecondary};
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : PRIMARY_ACCENT};
+    transform: translateY(-1px);
+    
+    svg {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 
@@ -506,18 +507,14 @@ const SignOutItem = styled(DropdownItem)`
     color: #dc2626;
     padding-left: ${theme.spacing.xl};
     
-    svg {
-      color: #dc2626;
-      transform: scale(1.1);
+    ${DropdownIcon} {
+      opacity: 1;
+      transform: scale(1.15);
     }
   }
   
   &:active {
     background: ${DANGER_COLOR}20;
-  }
-  
-  svg {
-    color: ${DANGER_COLOR};
   }
 `;
 
