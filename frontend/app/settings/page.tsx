@@ -13,6 +13,96 @@ import apiClient from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
+// Icon color mapping for different icon types
+const getIconColor = (iconType: string, active: boolean = false): string => {
+    if (active) {
+        // Active state colors (brighter)
+        const activeColors: Record<string, string> = {
+            'settings': '#3b82f6',           // Blue
+            'users': '#8b5cf6',             // Purple
+            'globe': '#06b6d4',             // Cyan
+            'lock': '#3b82f6',              // Blue
+            'bell': '#f59e0b',              // Amber
+            'database': '#3b82f6',           // Blue
+            'list': '#6366f1',              // Indigo
+            'history': '#8b5cf6',           // Purple
+            'refresh-cw': '#06b6d4',        // Cyan
+            'loader2': '#3b82f6',           // Blue
+            'activity': '#22c55e',          // Green
+            'shield-check': '#22c55e',      // Green
+            'alert-triangle': '#f59e0b',     // Amber
+        };
+        return activeColors[iconType] || '#6b7280';
+    } else {
+        // Inactive state colors (muted but colorful)
+        const inactiveColors: Record<string, string> = {
+            'settings': '#60a5fa',           // Light Blue
+            'users': '#a78bfa',             // Light Purple
+            'globe': '#22d3ee',             // Light Cyan
+            'lock': '#60a5fa',              // Light Blue
+            'bell': '#fbbf24',              // Light Amber
+            'database': '#60a5fa',           // Light Blue
+            'list': '#818cf8',              // Light Indigo
+            'history': '#a78bfa',           // Light Purple
+            'refresh-cw': '#22d3ee',         // Light Cyan
+            'loader2': '#60a5fa',           // Light Blue
+            'activity': '#4ade80',          // Light Green
+            'shield-check': '#4ade80',       // Light Green
+            'alert-triangle': '#fbbf24',     // Light Amber
+        };
+        return inactiveColors[iconType] || '#9ca3af';
+    }
+};
+
+// Icon styled components
+const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : '#6b7280'};
+    opacity: ${props => props.$active ? 1 : 0.8};
+    transition: all 0.2s ease;
+    
+    svg {
+        width: ${props => props.$size ? `${props.$size}px` : '20px'};
+        height: ${props => props.$size ? `${props.$size}px` : '20px'};
+        transition: all 0.2s ease;
+    }
+
+    &:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+`;
+
+const HeaderIcon = styled(IconWrapper)`
+    margin-right: ${theme.spacing.md};
+`;
+
+const NavIcon = styled(IconWrapper)`
+    margin-right: ${theme.spacing.sm};
+`;
+
+const ButtonIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const QuickActionIconWrapper = styled(IconWrapper)`
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 170, 0, 0.1);
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : PRIMARY_COLOR};
+`;
+
+const StatusIcon = styled(IconWrapper)`
+    margin-right: 0.25rem;
+`;
+
+const MessageIcon = styled(IconWrapper)`
+    margin-right: ${theme.spacing.sm};
+`;
+
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
@@ -541,7 +631,9 @@ const SettingsPage: React.FC = () => {
           <ContentContainer>
             <HeaderContainer>
               <h1>
-                <Settings />
+                <HeaderIcon $iconType="settings" $size={32} $active={true}>
+                  <Settings size={32} />
+                </HeaderIcon>
                 Settings
               </h1>
             </HeaderContainer>
