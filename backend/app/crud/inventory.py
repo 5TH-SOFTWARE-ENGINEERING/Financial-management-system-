@@ -1,6 +1,6 @@
 # app/crud/inventory.py
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import and_, or_, func # type: ignore[import-untyped]
 from typing import Optional, List
 from datetime import datetime, timezone
 from decimal import Decimal

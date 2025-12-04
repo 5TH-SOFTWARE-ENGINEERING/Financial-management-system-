@@ -6,8 +6,8 @@ Role-based access control:
 - Accountant: Can view sales and post them to ledger
 - Finance Admin: Can view all sales and profit information
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
 import logging

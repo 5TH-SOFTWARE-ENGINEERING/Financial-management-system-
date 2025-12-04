@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
 import logging
@@ -15,7 +15,7 @@ from ...models.user import User, UserRole
 from ...models.approval import ApprovalStatus
 from ...api.deps import get_current_active_user, require_min_role
 from ...core.security import verify_password
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore[import-untyped]
 
 router = APIRouter()
 

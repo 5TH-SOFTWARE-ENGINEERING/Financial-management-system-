@@ -1,8 +1,8 @@
 # app/api/v1/users.py
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from pydantic import BaseModel # type: ignore[import-untyped]
 
 from ...core.database import get_db
 from ...crud.user import user as user_crud
@@ -44,7 +44,7 @@ def setup_2fa(
     db: Session = Depends(get_db)
 ):
     """Generate 2FA secret and QR code for setup"""
-    import pyotp
+    import pyotp # type: ignore[import-untyped]
     from urllib.parse import quote
     
     from ...core.config import settings
@@ -86,7 +86,7 @@ def verify_2fa(
     db: Session = Depends(get_db)
 ):
     """Verify 2FA code and enable 2FA"""
-    import pyotp
+    import pyotp # type: ignore[import-untyped]
     
     if not current_user.otp_secret:
         raise HTTPException(status_code=400, detail="2FA setup not initiated. Please setup 2FA first.")

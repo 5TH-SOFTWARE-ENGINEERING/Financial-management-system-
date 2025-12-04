@@ -1,6 +1,6 @@
 # app/crud/sale.py
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, func, desc
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import and_, func, desc # type: ignore[import-untyped]
 from typing import Optional, List
 from datetime import datetime, timezone
 from decimal import Decimal
