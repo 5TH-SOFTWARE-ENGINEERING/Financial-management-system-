@@ -51,6 +51,66 @@ const theme = {
   },
 };
 
+// Icon color function
+const getIconColor = (iconType: string, active: boolean = true): string => {
+  const activeColors: Record<string, string> = {
+    arrowLeft: '#3b82f6',      // Blue for back navigation
+    mail: '#10b981',           // Green for email
+    lock: '#8b5cf6',          // Purple for password/lock
+    checkCircle: '#22c55e',    // Green for success
+    default: '#ff7e5f',        // Primary color
+  };
+
+  const inactiveColors: Record<string, string> = {
+    arrowLeft: '#6b7280',
+    mail: '#6b7280',
+    lock: '#6b7280',
+    checkCircle: '#6b7280',
+    default: '#9ca3af',
+  };
+
+  if (active) {
+    return activeColors[iconType] || activeColors.default;
+  } else {
+    return inactiveColors[iconType] || inactiveColors.default;
+  }
+};
+
+// Icon styled components
+const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active !== false) : '#ffffff'};
+  opacity: ${props => props.$active !== false ? 1 : 0.7};
+  transition: all ${theme.transitions.default};
+  
+  svg {
+    width: ${props => props.$size ? `${props.$size}px` : '20px'};
+    height: ${props => props.$size ? `${props.$size}px` : '20px'};
+    stroke-width: 2;
+    transition: all ${theme.transitions.default};
+  }
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+`;
+
+const LinkIcon = styled(IconWrapper)`
+  margin-right: ${theme.spacing.xs};
+`;
+
+const FormIcon = styled(IconWrapper)`
+  margin-right: ${theme.spacing.sm};
+`;
+
+const SuccessIcon = styled(IconWrapper)`
+  margin-right: ${theme.spacing.sm};
+  vertical-align: middle;
+`;
+
 const ResetContainer = styled.div`
   display: flex;
   justify-content: center;
@@ -76,6 +136,13 @@ const ResetCard = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.lg};
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
 `;
 
 const Title = styled.h1`
@@ -127,43 +194,58 @@ const Label = styled.label`
 
 const Input = styled.input`
   width: 100%;
-  padding: ${theme.spacing.sm};
+  padding: ${theme.spacing.md} ${theme.spacing.sm};
   border: 1px solid #4a4a4a;
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
   background-color: #333333;
   color: #ffffff;
-  transition: border-color ${theme.transitions.default};
+  transition: all ${theme.transitions.default};
 
   &:focus {
     outline: none;
     border-color: ${theme.colors.primary};
+    box-shadow: 0 0 0 3px rgba(255, 126, 95, 0.1);
   }
 
   &::placeholder {
     color: #b3b3b3;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
 const ResetButton = styled.button`
   width: 100%;
   padding: ${theme.spacing.md};
-  background-color: ${theme.colors.primary};
+  background: linear-gradient(135deg, ${theme.colors.primary} 0%, #feb47b 100%);
   color: #ffffff;
   border: none;
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.md};
   font-weight: ${theme.typography.fontWeights.medium};
   cursor: pointer;
-  transition: background-color ${theme.transitions.default};
+  transition: all ${theme.transitions.default};
+  box-shadow: 0 2px 8px rgba(255, 126, 95, 0.3);
 
-  &:hover {
-    background-color: #feb47b;
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #feb47b 0%, ${theme.colors.primary} 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 126, 95, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
   }
 
   &:disabled {
-    background-color: #4a4a4a;
+    background: #4a4a4a;
     cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.6;
   }
 `;
 
@@ -175,32 +257,83 @@ const BackLink = styled(Link)`
   font-size: ${theme.typography.fontSizes.sm};
   text-decoration: none;
   margin-bottom: ${theme.spacing.md};
-  transition: color ${theme.transitions.default};
+  transition: all ${theme.transitions.default};
+  padding: ${theme.spacing.xs};
+  border-radius: ${theme.borderRadius.md};
 
   &:hover {
     color: ${theme.colors.primary};
+    background: rgba(255, 126, 95, 0.1);
+    transform: translateX(-4px);
+  }
+
+  &:active {
+    transform: translateX(-2px);
   }
 `;
 
 const SuccessMessage = styled.div`
-  background: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.15);
   border: 1px solid rgba(34, 197, 94, 0.5);
+  border-left: 3px solid #22c55e;
   border-radius: ${theme.borderRadius.md};
   padding: ${theme.spacing.md};
   color: #22c55e;
-  text-align: center;
+  text-align: left;
   font-size: ${theme.typography.fontSizes.sm};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
 `;
 
 const ErrorMessage = styled.div`
   color: #ff4d4f;
   font-size: ${theme.typography.fontSizes.sm};
   margin-top: ${theme.spacing.xs};
-  text-align: center;
-  background: rgba(239, 68, 68, 0.2);
+  text-align: left;
+  background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.5);
+  border-left: 3px solid #ff4d4f;
   border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.sm};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+`;
+
+const ResendContainer = styled.div`
+  text-align: center;
+  margin-top: ${theme.spacing.md};
+  
+  p {
+    color: #b3b3b3;
+    font-size: ${theme.typography.fontSizes.sm};
+    margin-bottom: ${theme.spacing.sm};
+  }
+`;
+
+const ResendButton = styled.button`
+  background: none;
+  border: none;
+  color: ${theme.colors.primary};
+  cursor: pointer;
+  font-size: ${theme.typography.fontSizes.sm};
+  text-decoration: underline;
+  transition: all ${theme.transitions.default};
+  padding: ${theme.spacing.xs};
+
+  &:hover:not(:disabled) {
+    color: #feb47b;
+    transform: scale(1.05);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+`;
+
+const TimerText = styled.p`
+  color: #b3b3b3;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: 0;
 `;
 
 export default function ResetPassword() {
@@ -401,7 +534,9 @@ export default function ResetPassword() {
       <Toaster position="top-right" />
       <ResetCard>
         <BackLink href="#" onClick={goBack}>
-          <ArrowLeft size={16} />
+          <LinkIcon $iconType="arrowLeft" $active={true} $size={16}>
+            <ArrowLeft />
+          </LinkIcon>
           Back to Login
         </BackLink>
         
@@ -430,8 +565,10 @@ export default function ResetPassword() {
             </form>
             {isSuccess && (
               <SuccessMessage>
-                <CheckCircle size={16} className="inline mr-2" />
-                OTP sent! Please check your email.
+                <SuccessIcon $iconType="checkCircle" $active={true} $size={18}>
+                  <CheckCircle />
+                </SuccessIcon>
+                <span>OTP sent! Please check your email.</span>
               </SuccessMessage>
             )}
           </>
@@ -461,36 +598,28 @@ export default function ResetPassword() {
                 {isLoading ? 'Verifying...' : 'Verify OTP'}
               </ResetButton>
             </form>
-            <div style={{ textAlign: 'center', marginTop: theme.spacing.md }}>
-              <p style={{ color: '#b3b3b3', fontSize: theme.typography.fontSizes.sm, marginBottom: theme.spacing.sm }}>
-                Didn't receive the OTP?
-              </p>
+            <ResendContainer>
+              <p>Didn't receive the OTP?</p>
               {canResendOTP ? (
-                <button
+                <ResendButton
                   type="button"
                   onClick={handleResendOTP}
                   disabled={isLoading}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: theme.colors.primary,
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    fontSize: theme.typography.fontSizes.sm,
-                    textDecoration: 'underline',
-                  }}
                 >
                   Resend OTP
-                </button>
+                </ResendButton>
               ) : (
-                <p style={{ color: '#b3b3b3', fontSize: theme.typography.fontSizes.sm }}>
+                <TimerText>
                   Resend OTP in {resendTimer}s
-                </p>
+                </TimerText>
               )}
-            </div>
+            </ResendContainer>
             {isSuccess && (
               <SuccessMessage>
-                <CheckCircle size={16} className="inline mr-2" />
-                Please enter your new password.
+                <SuccessIcon $iconType="checkCircle" $active={true} $size={18}>
+                  <CheckCircle />
+                </SuccessIcon>
+                <span>Please enter your new password.</span>
               </SuccessMessage>
             )}
           </>
