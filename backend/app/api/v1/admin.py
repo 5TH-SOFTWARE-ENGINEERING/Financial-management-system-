@@ -4,8 +4,11 @@ from sqlalchemy import text, and_, desc
 from sqlalchemy.exc import IntegrityError
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+import logging
 
 from ...core.database import get_db
+
+logger = logging.getLogger(__name__)
 from ...crud.user import user as user_crud, role as role_crud
 from ...crud.audit import audit_log as audit_crud
 from ...crud.notification import notification as notification_crud
@@ -253,86 +256,135 @@ def get_system_stats(
     db: Session = Depends(get_db)
 ):
     """Get system statistics"""
-    # User statistics
-    total_users = db.query(User).count()
-    active_users = db.query(User).filter(User.is_active == True).count()
-    
-    # Role distribution
-    role_stats = {}
-    for role in UserRole:
-        count = db.query(User).filter(User.role == role).count()
-        role_stats[role.value] = count
-
-    # Financial snapshot (last 30 days)
-    end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=30)
-    total_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
-    total_expenses = expense_crud.get_total_by_period(db, start_date, end_date)
-    pending_approvals = len(approval_crud.get_pending(db))
-    net_profit = total_revenue - total_expenses
-    
-    # Database statistics
     try:
-        # Get table sizes (PostgreSQL specific)
-        if "postgresql" in str(db.bind.url):
-            table_stats = db.execute(text("""
-                SELECT 
-                    schemaname,
-                    tablename,
-                    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size,
-                    pg_total_relation_size(schemaname||'.'||tablename) as size_bytes
-                FROM pg_tables 
-                WHERE schemaname = 'public'
-                ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
-            """)).fetchall()
-            
-            db_stats = {
-                "tables": [
-                    {
-                        "name": row.tablename,
-                        "size": row.size,
-                        "size_bytes": row.size_bytes
+        # User statistics
+        try:
+            total_users = db.query(User).count()
+            active_users = db.query(User).filter(User.is_active == True).count()
+        except Exception as e:
+            logger.error(f"Error fetching user statistics: {str(e)}")
+            total_users = 0
+            active_users = 0
+        
+        # Role distribution
+        role_stats = {}
+        try:
+            for role in UserRole:
+                try:
+                    count = db.query(User).filter(User.role == role).count()
+                    role_stats[role.value] = count
+                except Exception as e:
+                    logger.warning(f"Error counting users for role {role.value}: {str(e)}")
+                    role_stats[role.value] = 0
+        except Exception as e:
+            logger.error(f"Error fetching role distribution: {str(e)}")
+
+        # Financial snapshot (last 30 days)
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=30)
+        try:
+            total_revenue = revenue_crud.get_total_by_period(db, start_date, end_date) or 0
+        except Exception as e:
+            logger.error(f"Error fetching revenue total: {str(e)}")
+            total_revenue = 0
+        
+        try:
+            total_expenses = expense_crud.get_total_by_period(db, start_date, end_date) or 0
+        except Exception as e:
+            logger.error(f"Error fetching expense total: {str(e)}")
+            total_expenses = 0
+        
+        try:
+            pending_approvals = len(approval_crud.get_pending(db))
+        except Exception as e:
+            logger.error(f"Error fetching pending approvals: {str(e)}")
+            pending_approvals = 0
+        
+        net_profit = total_revenue - total_expenses
+        
+        # Database statistics
+        try:
+            # Get table sizes (PostgreSQL specific)
+            if "postgresql" in str(db.bind.url):
+                try:
+                    table_stats = db.execute(text("""
+                        SELECT 
+                            schemaname,
+                            tablename,
+                            pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size,
+                            pg_total_relation_size(schemaname||'.'||tablename) as size_bytes
+                        FROM pg_tables 
+                        WHERE schemaname = 'public'
+                        ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+                    """)).fetchall()
+                    
+                    db_stats = {
+                        "tables": [
+                            {
+                                "name": row.tablename,
+                                "size": row.size,
+                                "size_bytes": row.size_bytes
+                            }
+                            for row in table_stats
+                        ]
                     }
-                    for row in table_stats
-                ]
-            }
-        else:
-            # For other databases, provide basic info
-            db_stats = {"message": "Detailed table stats only available for PostgreSQL"}
-    except Exception as e:
-        db_stats = {"error": str(e)}
-    
-    # Recent activity
-    recent_audits = audit_crud.get_multi(db, skip=0, limit=10)
-    recent_reports = report_crud.get_recent(db, days=7, skip=0, limit=10)
-    
-    # Basic DB health check
-    try:
-        db.execute(text("SELECT 1"))
-        system_health = "healthy"
-    except Exception:
-        system_health = "unhealthy"
+                except Exception as e:
+                    logger.warning(f"Error fetching PostgreSQL table stats: {str(e)}")
+                    db_stats = {"message": "Detailed table stats only available for PostgreSQL", "error": str(e)}
+            else:
+                # For other databases, provide basic info
+                db_stats = {"message": "Detailed table stats only available for PostgreSQL"}
+        except Exception as e:
+            logger.error(f"Error in database statistics: {str(e)}")
+            db_stats = {"error": str(e)}
+        
+        # Recent activity
+        try:
+            recent_audits = audit_crud.get_multi(db, skip=0, limit=10)
+        except Exception as e:
+            logger.warning(f"Error fetching recent audits: {str(e)}")
+            recent_audits = []
+        
+        try:
+            recent_reports = report_crud.get_recent(db, days=7, skip=0, limit=10)
+        except Exception as e:
+            logger.warning(f"Error fetching recent reports: {str(e)}")
+            recent_reports = []
+        
+        # Basic DB health check
+        try:
+            db.execute(text("SELECT 1"))
+            system_health = "healthy"
+        except Exception as e:
+            logger.error(f"Database health check failed: {str(e)}")
+            system_health = "unhealthy"
 
-    return {
-        "users": {
-            "total": total_users,
-            "active": active_users,
-            "by_role": role_stats
-        },
-        "financials": {
-            "total_revenue": total_revenue,
-            "total_expenses": total_expenses,
-            "net_profit": net_profit
-        },
-        "pending_approvals": pending_approvals,
-        "system_health": system_health,
-        "database": db_stats,
-        "activity": {
-            "recent_audits": len(recent_audits),
-            "recent_reports": len(recent_reports)
-        },
-        "timestamp": datetime.utcnow()
-    }
+        return {
+            "users": {
+                "total": total_users,
+                "active": active_users,
+                "by_role": role_stats
+            },
+            "financials": {
+                "total_revenue": total_revenue,
+                "total_expenses": total_expenses,
+                "net_profit": net_profit
+            },
+            "pending_approvals": pending_approvals,
+            "system_health": system_health,
+            "database": db_stats,
+            "activity": {
+                "recent_audits": len(recent_audits),
+                "recent_reports": len(recent_reports)
+            },
+            "timestamp": datetime.utcnow()
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error in get_system_stats: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve system statistics: {str(e)}"
+        )
 
 
 @router.get("/audit/logs")
