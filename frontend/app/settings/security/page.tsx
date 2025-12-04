@@ -9,10 +9,97 @@ import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
 
+// Icon color mapping for different icon types
+const getIconColor = (iconType: string, active: boolean = false): string => {
+    if (active) {
+        // Active state colors (brighter)
+        const activeColors: Record<string, string> = {
+            'save': '#22c55e',              // Green
+            'lock': '#3b82f6',              // Blue
+            'shield': '#8b5cf6',            // Purple
+            'key': '#f59e0b',               // Amber
+            'alert-triangle': '#f59e0b',     // Amber
+            'eye': '#6366f1',               // Indigo
+            'eye-off': '#6b7280',           // Gray
+            'check-circle': '#22c55e',       // Green
+            'alert-circle': '#ef4444',       // Red
+            'x': '#6b7280',                 // Gray
+            'qr-code': '#06b6d4',           // Cyan
+        };
+        return activeColors[iconType] || '#6b7280';
+    } else {
+        // Inactive state colors (muted but colorful)
+        const inactiveColors: Record<string, string> = {
+            'save': '#4ade80',              // Light Green
+            'lock': '#60a5fa',              // Light Blue
+            'shield': '#a78bfa',            // Light Purple
+            'key': '#fbbf24',               // Light Amber
+            'alert-triangle': '#fbbf24',     // Light Amber
+            'eye': '#818cf8',               // Light Indigo
+            'eye-off': '#9ca3af',           // Light Gray
+            'check-circle': '#4ade80',       // Light Green
+            'alert-circle': '#f87171',       // Light Red
+            'x': '#9ca3af',                 // Light Gray
+            'qr-code': '#22d3ee',           // Light Cyan
+        };
+        return inactiveColors[iconType] || '#9ca3af';
+    }
+};
+
+// Icon styled components
+const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : '#6b7280'};
+    opacity: ${props => props.$active ? 1 : 0.8};
+    transition: all 0.2s ease;
+    
+    svg {
+        width: ${props => props.$size ? `${props.$size}px` : '18px'};
+        height: ${props => props.$size ? `${props.$size}px` : '18px'};
+        transition: all 0.2s ease;
+    }
+
+    &:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+`;
+
+const TitleIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const CardIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const ButtonIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const ToggleIcon = styled(IconWrapper)`
+    cursor: pointer;
+`;
+
+const StatusIcon = styled(IconWrapper)`
+    margin-right: 0.25rem;
+`;
+
+const MessageIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const ModalIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
 // Styled components
 const Container = styled.div`
   max-width: 1000px;
   margin: 0 auto;
+  padding: 2rem;
 `;
 
 const Header = styled.div`
@@ -808,19 +895,28 @@ export default function SecuritySettingsPage() {
     <ComponentGate componentId={ComponentId.SETTINGS_VIEW}>
       <Container>
         <Header>
-          <Title>Security Settings</Title>
+          <Title>
+            <TitleIcon $iconType="shield" $size={24} $active={true}>
+              <Shield size={24} />
+            </TitleIcon>
+            Security Settings
+          </Title>
         </Header>
 
         {error && (
           <Message type="error">
-            <AlertCircle size={16} />
+            <MessageIcon $iconType="alert-circle" $size={16} $active={true}>
+              <AlertCircle size={16} />
+            </MessageIcon>
             <span>{error}</span>
           </Message>
         )}
         
         {success && (
           <Message type="success">
-            <CheckCircle size={16} />
+            <MessageIcon $iconType="check-circle" $size={16} $active={true}>
+              <CheckCircle size={16} />
+            </MessageIcon>
             <span>{success}</span>
           </Message>
         )}
@@ -828,7 +924,9 @@ export default function SecuritySettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              <Key size={18} />
+              <CardIcon $iconType="key" $size={18} $active={true}>
+                <Key size={18} />
+              </CardIcon>
               Change Password
             </CardTitle>
           </CardHeader>
@@ -847,7 +945,9 @@ export default function SecuritySettingsPage() {
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 >
-                  {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <ToggleIcon $iconType={showCurrentPassword ? "eye-off" : "eye"} $size={16} $active={true}>
+                    {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </ToggleIcon>
                 </TogglePasswordButton>
               </PasswordInputContainer>
               {passwordErrors.currentPassword && (
@@ -869,7 +969,9 @@ export default function SecuritySettingsPage() {
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
                 >
-                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <ToggleIcon $iconType={showNewPassword ? "eye-off" : "eye"} $size={16} $active={true}>
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </ToggleIcon>
                 </TogglePasswordButton>
               </PasswordInputContainer>
               {passwordErrors.newPassword && (
