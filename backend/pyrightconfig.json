@@ -5,8 +5,6 @@
   "exclude": [
     "**/__pycache__",
     "**/node_modules",
-    "**/.venv",
-    "**/venv",
     "**/.env"
   ],
   "reportMissingImports": "warning",
@@ -14,6 +12,17 @@
   "pythonVersion": "3.11",
   "typeCheckingMode": "basic",
   "venvPath": ".",
-  "venv": ".venv"
+  "venv": "venv",
+  "stubPath": "venv/Lib/site-packages",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "pythonVersion": "3.11",
+      "pythonPlatform": "Windows",
+      "extraPaths": [
+        "venv/Lib/site-packages"
+      ]
+    }
+  ]
 }
 
