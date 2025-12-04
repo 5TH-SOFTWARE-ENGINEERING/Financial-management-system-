@@ -10,7 +10,8 @@ import {
   ArrowDownRight,
   Search,
   TrendingUp,
-  ShoppingCart
+  ShoppingCart,
+  Package
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -100,7 +101,7 @@ const SummaryGrid = styled.div`
   margin-bottom: ${theme.spacing.lg};
 `;
 
-const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'net' | 'total' }>`
+const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'net' | 'total' | 'inventory' }>`
   background: ${theme.colors.background};
   border: 1px solid ${theme.colors.border};
   padding: ${theme.spacing.lg};
@@ -288,7 +289,7 @@ const TableBody = styled.tbody`
   }
 `;
 
-const TypeBadge = styled.span<{ $type: 'revenue' | 'expense' | 'sale' }>`
+const TypeBadge = styled.span<{ $type: 'revenue' | 'expense' | 'sale' | 'inventory' }>`
   display: inline-flex;
   align-items: center;
   gap: ${theme.spacing.xs};
@@ -300,12 +301,14 @@ const TypeBadge = styled.span<{ $type: 'revenue' | 'expense' | 'sale' }>`
     if (props.$type === 'revenue') return 'rgba(16, 185, 129, 0.12)';
     if (props.$type === 'expense') return 'rgba(239, 68, 68, 0.12)';
     if (props.$type === 'sale') return 'rgba(59, 130, 246, 0.12)';
+    if (props.$type === 'inventory') return 'rgba(168, 85, 247, 0.12)';
     return 'rgba(107, 114, 128, 0.12)';
   }};
   color: ${props => {
     if (props.$type === 'revenue') return '#065f46';
     if (props.$type === 'expense') return '#991b1b';
     if (props.$type === 'sale') return '#1e40af';
+    if (props.$type === 'inventory') return '#6b21a8';
     return '#374151';
   }};
 `;
@@ -400,7 +403,7 @@ const TransactionDescription = styled.div`
 
 interface Transaction {
   id: string;
-  transaction_type: 'revenue' | 'expense' | 'sale';
+  transaction_type: 'revenue' | 'expense' | 'sale' | 'inventory';
   title: string;
   description?: string | null;
   category: string;
@@ -412,11 +415,15 @@ interface Transaction {
   source?: string | null;
   vendor?: string | null;
   created_at: string;
-  status?: 'pending' | 'posted' | 'cancelled';
+  status?: 'pending' | 'posted' | 'cancelled' | 'active' | 'inactive';
   item_name?: string;
   quantity_sold?: number;
+  quantity?: number;
   receipt_number?: string;
   customer_name?: string;
+  sku?: string;
+  buying_price?: number;
+  total_cost?: number;
 }
 
 export default function TransactionListPage() {
@@ -437,10 +444,11 @@ export default function TransactionListPage() {
     setError(null);
     
     try {
-      // Fetch revenues, expenses, and sales
-      const [transactionsResponse, salesResponse] = await Promise.all([
+      // Fetch revenues, expenses, sales, and inventory items
+      const [transactionsResponse, salesResponse, inventoryResponse] = await Promise.all([
         apiClient.getTransactions().catch(() => ({ data: [] })),
         apiClient.getSales({ limit: 1000 }).catch(() => ({ data: [] })),
+        apiClient.getInventoryItems({ limit: 1000 }).catch(() => ({ data: [] })),
       ]);
 
       const transactions = transactionsResponse.data || [];
@@ -452,7 +460,7 @@ export default function TransactionListPage() {
         transaction_type: 'sale' as const,
         title: sale.item_name || `Sale #${sale.id}`,
         description: sale.customer_name ? `Customer: ${sale.customer_name}` : sale.notes || `Receipt: ${sale.receipt_number || `#${sale.id}`}`,
-        category: 'Sales',
+        category: sale.item?.category || 'Sales',
         amount: sale.total_sale || 0,
         date: sale.created_at || sale.date,
         is_approved: sale.status === 'posted',
@@ -464,8 +472,32 @@ export default function TransactionListPage() {
         customer_name: sale.customer_name,
       }));
 
+      // Transform inventory items to transaction format (treating creation as expense)
+      const inventoryData: any = inventoryResponse?.data || [];
+      const inventoryTransactions = (Array.isArray(inventoryData) ? inventoryData : (inventoryData?.data || [])).map((item: any) => {
+        // Calculate total cost for the initial quantity
+        const totalCost = (item.total_cost || item.buying_price || 0) * (item.quantity || 0);
+        return {
+          id: `inventory-${item.id}`,
+          transaction_type: 'inventory' as const,
+          title: item.item_name || `Inventory Item #${item.id}`,
+          description: item.description || `SKU: ${item.sku || 'N/A'}`,
+          category: item.category || 'Inventory',
+          amount: totalCost, // Total cost of inventory purchase
+          date: item.created_at || item.date,
+          is_approved: item.is_active !== false, // Active items are considered "approved"
+          created_at: item.created_at,
+          status: item.is_active ? 'active' : 'inactive',
+          item_name: item.item_name,
+          quantity: item.quantity || 0,
+          sku: item.sku,
+          buying_price: item.buying_price,
+          total_cost: item.total_cost,
+        };
+      });
+
       // Combine all transactions and sort by date
-      const allTransactions = [...transactions, ...salesTransactions].sort((a, b) => {
+      const allTransactions = [...transactions, ...salesTransactions, ...inventoryTransactions].sort((a, b) => {
         const dateA = new Date(a.date || a.created_at || 0).getTime();
         const dateB = new Date(b.date || b.created_at || 0).getTime();
         return dateB - dateA; // Most recent first
@@ -503,20 +535,25 @@ export default function TransactionListPage() {
       transaction.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.receipt_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      transaction.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.sku?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesType = typeFilter === 'all' || transaction.transaction_type === typeFilter;
     
-    // Handle status filter - include sales status
+    // Handle status filter - include sales and inventory status
     let matchesStatus = false;
     if (statusFilter === 'all') {
       matchesStatus = true;
     } else if (statusFilter === 'approved') {
-      matchesStatus = transaction.is_approved || transaction.status === 'posted';
+      matchesStatus = transaction.is_approved || transaction.status === 'posted' || transaction.status === 'active';
     } else if (statusFilter === 'pending') {
-      matchesStatus = !transaction.is_approved && transaction.status !== 'posted' && transaction.status !== 'cancelled';
+      matchesStatus = !transaction.is_approved && transaction.status !== 'posted' && transaction.status !== 'cancelled' && transaction.status !== 'active';
     } else if (statusFilter === 'posted') {
       matchesStatus = transaction.status === 'posted';
+    } else if (statusFilter === 'active') {
+      matchesStatus = transaction.status === 'active';
+    } else if (statusFilter === 'inactive') {
+      matchesStatus = transaction.status === 'inactive';
     } else {
       matchesStatus = transaction.status === statusFilter;
     }
@@ -536,7 +573,11 @@ export default function TransactionListPage() {
     .filter(t => t.transaction_type === 'expense')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
-  const netAmount = totalRevenue + totalSales - totalExpenses;
+  const totalInventory = filteredTransactions
+    .filter(t => t.transaction_type === 'inventory')
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  
+  const netAmount = totalRevenue + totalSales - totalExpenses - totalInventory;
 
   if (loading) {
     return (
@@ -582,6 +623,10 @@ export default function TransactionListPage() {
               <div className="label">Total Expenses</div>
               <div className="value">{formatCurrency(totalExpenses)}</div>
             </SummaryCard>
+            <SummaryCard $type="expense">
+              <div className="label">Total Inventory Cost</div>
+              <div className="value">{formatCurrency(totalInventory)}</div>
+            </SummaryCard>
             <SummaryCard $type="net">
               <div className="label">Net Amount</div>
               <div className="value" style={{ color: netAmount >= 0 ? '#16a34a' : '#dc2626' }}>
@@ -611,13 +656,16 @@ export default function TransactionListPage() {
                 <option value="revenue">Revenue</option>
                 <option value="expense">Expense</option>
                 <option value="sale">Sales</option>
+                <option value="inventory">Inventory</option>
               </Select>
               
               <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="all">All Status</option>
                 <option value="approved">Approved</option>
                 <option value="posted">Posted</option>
+                <option value="active">Active</option>
                 <option value="pending">Pending</option>
+                <option value="inactive">Inactive</option>
                 <option value="cancelled">Cancelled</option>
               </Select>
             </FiltersGrid>
@@ -649,6 +697,7 @@ export default function TransactionListPage() {
                       const originalId = transaction.id.split('-')[1];
                       const isExpense = transaction.transaction_type === 'expense';
                       const isSale = transaction.transaction_type === 'sale';
+                      const isInventory = transaction.transaction_type === 'inventory';
                       
                       return (
                         <tr key={transaction.id}>
@@ -658,6 +707,8 @@ export default function TransactionListPage() {
                                 <ArrowDownRight size={12} />
                               ) : isSale ? (
                                 <ShoppingCart size={12} />
+                              ) : transaction.transaction_type === 'inventory' ? (
+                                <Package size={12} />
                               ) : (
                                 <ArrowUpRight size={12} />
                               )}
@@ -665,7 +716,9 @@ export default function TransactionListPage() {
                                 ? 'Revenue' 
                                 : transaction.transaction_type === 'expense' 
                                 ? 'Expense' 
-                                : 'Sale'}
+                                : transaction.transaction_type === 'sale'
+                                ? 'Sale'
+                                : 'Inventory'}
                             </TypeBadge>
                           </td>
                           <td>
@@ -677,15 +730,22 @@ export default function TransactionListPage() {
                                 {transaction.receipt_number && ` • ${transaction.receipt_number}`}
                               </TransactionDescription>
                             )}
-                            {transaction.description && !isSale && (
+                            {transaction.transaction_type === 'inventory' && transaction.item_name && (
+                              <TransactionDescription>
+                                {transaction.quantity && `Qty: ${transaction.quantity} • `}
+                                {transaction.sku && `SKU: ${transaction.sku}`}
+                                {!transaction.sku && transaction.description}
+                              </TransactionDescription>
+                            )}
+                            {transaction.description && !isSale && transaction.transaction_type !== 'inventory' && (
                               <TransactionDescription>{transaction.description}</TransactionDescription>
                             )}
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <CategoryBadge>{transaction.category || 'N/A'}</CategoryBadge>
                           </td>
-                          <AmountCell $isExpense={isExpense} style={{ whiteSpace: 'nowrap' }}>
-                            {isExpense ? '-' : '+'}{formatCurrency(Math.abs(transaction.amount))}
+                          <AmountCell $isExpense={isExpense || transaction.transaction_type === 'inventory'} style={{ whiteSpace: 'nowrap' }}>
+                            {isExpense || transaction.transaction_type === 'inventory' ? '-' : '+'}{formatCurrency(Math.abs(transaction.amount))}
                           </AmountCell>
                           <td style={{ whiteSpace: 'nowrap' }}>{formatDate(transaction.date)}</td>
                           <td style={{ whiteSpace: 'nowrap' }}>
@@ -697,6 +757,10 @@ export default function TransactionListPage() {
                                 ? 'Posted' 
                                 : transaction.status === 'cancelled'
                                 ? 'Cancelled'
+                                : transaction.status === 'active'
+                                ? 'Active'
+                                : transaction.status === 'inactive'
+                                ? 'Inactive'
                                 : transaction.is_approved 
                                 ? 'Approved' 
                                 : 'Pending'}
@@ -709,6 +773,12 @@ export default function TransactionListPage() {
                             <ActionButtons>
                               {isSale ? (
                                 <Link href={`/sales/accounting?sale_id=${originalId}`}>
+                                  <Button size="sm" variant="secondary">
+                                    View
+                                  </Button>
+                                </Link>
+                              ) : transaction.transaction_type === 'inventory' ? (
+                                <Link href={`/inventory/manage?item_id=${originalId}`}>
                                   <Button size="sm" variant="secondary">
                                     View
                                   </Button>
