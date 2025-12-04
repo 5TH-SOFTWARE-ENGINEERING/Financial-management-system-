@@ -125,6 +125,114 @@ const SectionTitle = styled.h3<{$collapsed: boolean}>`
     font-weight: ${theme.typography.fontWeights.medium};
 `;
 
+// Icon color mapping for different icon types
+const getIconColor = (iconType: string, active: boolean): string => {
+    if (active) {
+        // Active state colors (brighter)
+        const activeColors: Record<string, string> = {
+            'home': '#3b82f6',           // Blue
+            'arrow-down-circle': '#10b981', // Green
+            'arrow-up-circle': '#ef4444',   // Red
+            'receipt': '#8b5cf6',         // Purple
+            'package': '#f59e0b',         // Amber
+            'shopping-cart': '#06b6d4',   // Cyan
+            'book-open': '#6366f1',       // Indigo
+            'pie-chart': '#ec4899',       // Pink
+            'trending-up': '#14b8a6',     // Teal
+            'git-compare': '#a855f7',      // Purple
+            'bar-chart-3': '#f97316',      // Orange
+            'dollar-sign': '#22c55e',      // Green
+            'shield': '#e74c3c',          // Red
+            'wallet': '#3b82f6',          // Blue
+            'users': '#8b5cf6',           // Purple
+            'building': '#06b6d4',        // Cyan
+            'briefcase': '#f59e0b',       // Amber
+            'user-cog': '#6366f1',        // Indigo
+            'settings': '#64748b',         // Slate
+            'list': '#6b7280',            // Gray
+            'calculator': '#10b981',      // Green
+            'plus': '#22c55e',            // Green
+            'file-text': '#3b82f6',       // Blue
+        };
+        return activeColors[iconType] || theme.colors.primary;
+    } else {
+        // Inactive state colors (muted)
+        const inactiveColors: Record<string, string> = {
+            'home': '#60a5fa',            // Light Blue
+            'arrow-down-circle': '#34d399', // Light Green
+            'arrow-up-circle': '#f87171',  // Light Red
+            'receipt': '#a78bfa',         // Light Purple
+            'package': '#fbbf24',         // Light Amber
+            'shopping-cart': '#22d3ee',   // Light Cyan
+            'book-open': '#818cf8',       // Light Indigo
+            'pie-chart': '#f472b6',       // Light Pink
+            'trending-up': '#2dd4bf',     // Light Teal
+            'git-compare': '#c084fc',      // Light Purple
+            'bar-chart-3': '#fb923c',      // Light Orange
+            'dollar-sign': '#4ade80',      // Light Green
+            'shield': '#f87171',          // Light Red
+            'wallet': '#60a5fa',          // Light Blue
+            'users': '#a78bfa',           // Light Purple
+            'building': '#22d3ee',        // Light Cyan
+            'briefcase': '#fbbf24',       // Light Amber
+            'user-cog': '#818cf8',        // Light Indigo
+            'settings': '#94a3b8',        // Light Slate
+            'list': '#9ca3af',            // Light Gray
+            'calculator': '#34d399',      // Light Green
+            'plus': '#4ade80',            // Light Green
+            'file-text': '#60a5fa',       // Light Blue
+        };
+        return inactiveColors[iconType] || theme.colors.textSecondary;
+    }
+};
+
+const IconWrapper = styled.div<{ $active?: boolean; $collapsed?: boolean; $size?: number; $iconType?: string }>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: ${props => props.$size ? `${props.$size}px` : '20px'};
+    height: ${props => props.$size ? `${props.$size}px` : '20px'};
+    flex-shrink: 0;
+    margin-right: ${props => (props.$collapsed ? 0 : theme.spacing.md)};
+    transition: all ${theme.transitions.default};
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : (props.$active ? theme.colors.primary : theme.colors.textSecondary)};
+
+    svg {
+        width: 100%;
+        height: 100%;
+        transition: all ${theme.transitions.default};
+    }
+`;
+
+const NavIcon = styled(IconWrapper)`
+    ${props => !props.$collapsed && `
+        margin-right: ${theme.spacing.md};
+    `}
+`;
+
+const DropdownIcon = styled(IconWrapper)`
+    ${props => !props.$collapsed && `
+        margin-right: ${theme.spacing.md};
+    `}
+`;
+
+const ChevronIcon = styled.div<{ $open?: boolean }>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    transition: transform ${theme.transitions.default};
+    transform: ${props => (props.$open ? 'rotate(180deg)' : 'rotate(0)')};
+    color: ${theme.colors.textSecondary};
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+`;
+
 const NavItem = styled(Link)<{ $active?: boolean; $collapsed?: boolean }>`
     display: flex;
     align-items: center;
@@ -143,20 +251,16 @@ const NavItem = styled(Link)<{ $active?: boolean; $collapsed?: boolean }>`
         background: ${theme.colors.backgroundSecondary};
         color: ${theme.colors.primary};
         transform: translateX(${props => (props.$collapsed ? '0' : '4px')});
+        
+        ${NavIcon} {
+            color: ${theme.colors.primary};
+        }
     }
 
     ${props => props.$active && `
         background: ${theme.colors.backgroundSecondary};
         font-weight: ${theme.typography.fontWeights.medium};
     `}
-
-    svg {
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-        margin-right: ${props => (props.$collapsed ? 0 : theme.spacing.md)};
-        transition: all ${theme.transitions.default};
-    }
 `;
 
 const DropdownHeader = styled.div<{ $open?: boolean; $collapsed?: boolean; $active?: boolean }>`
@@ -178,27 +282,19 @@ const DropdownHeader = styled.div<{ $open?: boolean; $collapsed?: boolean; $acti
         background: ${theme.colors.backgroundSecondary};
         color: ${theme.colors.primary};
         transform: translateX(${props => (props.$collapsed ? '0' : '4px')});
+        
+        ${DropdownIcon} {
+            color: ${theme.colors.primary};
+        }
+        
+        ${ChevronIcon} {
+            color: ${theme.colors.primary};
+        }
     }
 
     ${props => props.$active && `
         background: ${theme.colors.backgroundSecondary};
     `}
-
-    svg:first-child {
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-        margin-right: ${props => (props.$collapsed ? theme.spacing.xs : theme.spacing.md)};
-    }
-
-    svg:last-child {
-        transition: transform ${theme.transitions.default};
-        transform: ${props => (props.$open ? 'rotate(180deg)' : 'rotate(0)')};
-        display: block;
-        width: 16px;
-        height: 16px;
-        flex-shrink: 0;
-    }
 `;
 
 const SubMenu = styled.div<{$collapsed: boolean}>`
@@ -292,7 +388,9 @@ const Sidebar: React.FC = () => {
 
         <ComponentGate componentId={ComponentId.SIDEBAR_DASHBOARD}>
            <NavItem href="/dashboard" $active={pathname === '/dashboard'} $collapsed={collapsed}> 
-            <Home />
+            <NavIcon $active={pathname === '/dashboard'} $collapsed={collapsed} $iconType="home">
+                <Home />
+            </NavIcon>
             {!collapsed && 'Dashboard'}
            </NavItem>
         </ComponentGate>
@@ -308,16 +406,22 @@ const Sidebar: React.FC = () => {
                     $collapsed={collapsed} 
                 >
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <ArrowDownCircle />
+                        <DropdownIcon $active={pathname.includes('/revenue')} $collapsed={collapsed} $iconType="arrow-down-circle">
+                            <ArrowDownCircle />
+                        </DropdownIcon>
                         {!collapsed && <span style={{ marginLeft: '12px' }}>Revenue</span>}
                     </div>
-                    <ChevronDown size={16} />
+                    <ChevronIcon $open={isOpen('revenue')}>
+                        <ChevronDown />
+                    </ChevronIcon>
                 </DropdownHeader>
                 {isOpen('revenue') && (
                     <SubMenu $collapsed={collapsed}> 
                         <ComponentGate componentId={ComponentId.REVENUE_LIST}>
                             <NavItem href="/revenue/list" $active={pathname === '/revenue/list'} $collapsed={collapsed}> 
-                                <List size={16} /> {/* Added icon for List */}
+                                <NavIcon $active={pathname === '/revenue/list'} $collapsed={collapsed} $size={16} $iconType="list">
+                                    <List />
+                                </NavIcon>
                                 {!collapsed && 'Revenues'}
                             </NavItem>
                         </ComponentGate>
@@ -337,22 +441,30 @@ const Sidebar: React.FC = () => {
                     $collapsed={collapsed}
                 >
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <ArrowUpCircle />
+                        <DropdownIcon $active={pathname.includes('/expense')} $collapsed={collapsed} $iconType="arrow-up-circle">
+                            <ArrowUpCircle />
+                        </DropdownIcon>
                         {!collapsed && <span style={{ marginLeft: '12px' }}>Expenses</span>}
                     </div>
-                    <ChevronDown size={16} />
+                    <ChevronIcon $open={isOpen('expense')}>
+                        <ChevronDown />
+                    </ChevronIcon>
                 </DropdownHeader>
                 {isOpen('expense') && (
                     <SubMenu $collapsed={collapsed}>
                         <ComponentGate componentId={ComponentId.EXPENSE_LIST}>
                             <NavItem href="/expenses/list" $active={pathname === '/expense/list'} $collapsed={collapsed}>
-                                <List size={16} /> {/* Added icon for List */}
+                                <NavIcon $active={pathname === '/expense/list'} $collapsed={collapsed} $size={16} $iconType="list">
+                                    <List />
+                                </NavIcon>
                                 {!collapsed && 'Expenses'}
                             </NavItem>
                         </ComponentGate>
                         <ComponentGate componentId={ComponentId.EXPENSE_CREATE}>
                             <NavItem href="/expenses/items" $active={pathname === '/expenses/items'} $collapsed={collapsed}>
-                                <Calculator size={16} />
+                                <NavIcon $active={pathname === '/expenses/items'} $collapsed={collapsed} $size={16} $iconType="calculator">
+                                    <Calculator />
+                                </NavIcon>
                                 {!collapsed && 'Expense-Calcu'}
                             </NavItem>
                         </ComponentGate>
@@ -364,7 +476,9 @@ const Sidebar: React.FC = () => {
         {/* Transactions */}
         <ComponentGate componentId={ComponentId.SIDEBAR_TRANSACTION}>
             <NavItem href="/transaction/list" $active={pathname.includes('/transaction')} $collapsed={collapsed}>
-                <Receipt />
+                <NavIcon $active={pathname.includes('/transaction')} $collapsed={collapsed} $iconType="receipt">
+                    <Receipt />
+                </NavIcon>
                 {!collapsed && 'Transactions'}
             </NavItem>
         </ComponentGate>
@@ -379,38 +493,50 @@ const Sidebar: React.FC = () => {
                     $collapsed={collapsed}
                 >
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <Package />
+                        <DropdownIcon $active={pathname.includes('/inventory') || pathname.includes('/sales')} $collapsed={collapsed} $iconType="package">
+                            <Package />
+                        </DropdownIcon>
                         {!collapsed && <span style={{ marginLeft: '12px' }}>Inventory</span>}
                     </div>
-                    <ChevronDown size={16} />
+                    <ChevronIcon $open={isOpen('inventory')}>
+                        <ChevronDown />
+                    </ChevronIcon>
                 </DropdownHeader>
                 {isOpen('inventory') && (
                     <SubMenu $collapsed={collapsed}>
                         {/* Inventory Management - Finance Admin and Manager */}
                         {(isAdmin || isFinanceAdmin || isManager) && (
                             <NavItem href="/inventory/manage" $active={pathname === '/inventory/manage'} $collapsed={collapsed}>
-                                <Package size={16} />
+                                <NavIcon $active={pathname === '/inventory/manage'} $collapsed={collapsed} $size={16} $iconType="package">
+                                    <Package />
+                                </NavIcon>
                                 {!collapsed && 'Manage Inventory'}
                             </NavItem>
                         )}
                         {/* Sales - Employee only */}
                         {isEmployee && (
                             <NavItem href="/inventory/sales" $active={pathname === '/inventory/sales'} $collapsed={collapsed}>
-                                <ShoppingCart size={16} />
+                                <NavIcon $active={pathname === '/inventory/sales'} $collapsed={collapsed} $size={16} $iconType="shopping-cart">
+                                    <ShoppingCart />
+                                </NavIcon>
                                 {!collapsed && 'Sales'}
                             </NavItem>
                         )}
                         {/* Accounting Dashboard - Accountant only */}
                         {isAccountant && (
                             <NavItem href="/sales/accounting" $active={pathname === '/sales/accounting'} $collapsed={collapsed}>
-                                <BookOpen size={16} />
+                                <NavIcon $active={pathname === '/sales/accounting'} $collapsed={collapsed} $size={16} $iconType="book-open">
+                                    <BookOpen />
+                                </NavIcon>
                                 {!collapsed && 'Accounting'}
                             </NavItem>
                         )}
                         {/* Finance Admin can also access Accounting Dashboard */}
                         {(isAdmin || isFinanceAdmin) && (
                             <NavItem href="/sales/accounting" $active={pathname === '/sales/accounting'} $collapsed={collapsed}>
-                                <BookOpen size={16} />
+                                <NavIcon $active={pathname === '/sales/accounting'} $collapsed={collapsed} $size={16} $iconType="book-open">
+                                    <BookOpen />
+                                </NavIcon>
                                 {!collapsed && 'Accounting'}
                             </NavItem>
                         )}
@@ -422,7 +548,9 @@ const Sidebar: React.FC = () => {
         {/* Reports */}
         <ComponentGate componentId={ComponentId.SIDEBAR_REPORT}>
             <NavItem href="/report" $active={pathname.includes('/report')} $collapsed={collapsed}>
-                <PieChart />
+                <NavIcon $active={pathname.includes('/report')} $collapsed={collapsed} $iconType="pie-chart">
+                    <PieChart />
+                </NavIcon>
                 {!collapsed && 'Reports'}
             </NavItem>
         </ComponentGate>
@@ -437,10 +565,14 @@ const Sidebar: React.FC = () => {
                     $collapsed={collapsed}
                 >
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <TrendingUp />
+                        <DropdownIcon $active={pathname.includes('/forecast')} $collapsed={collapsed} $iconType="trending-up">
+                            <TrendingUp />
+                        </DropdownIcon>
                         {!collapsed && <span style={{ marginLeft: '12px' }}>Forecasts</span>}
                     </div>
-                    <ChevronDown size={16} />
+                    <ChevronIcon $open={isOpen('forecast')}>
+                        <ChevronDown />
+                    </ChevronIcon>
                 </DropdownHeader>
                 {isOpen('forecast') && (
                     <SubMenu $collapsed={collapsed}>
@@ -448,7 +580,9 @@ const Sidebar: React.FC = () => {
                         {isAdmin && (
                             <ComponentGate componentId={ComponentId.FORECAST_CREATE}>
                                 <NavItem href="/forecast/create" $active={pathname === '/forecast/create'} $collapsed={collapsed}>
-                                    <Plus size={16} />
+                                    <NavIcon $active={pathname === '/forecast/create'} $collapsed={collapsed} $size={16}>
+                                        <Plus />
+                                    </NavIcon>
                                     {!collapsed && 'new forecast'}
                                 </NavItem>
                             </ComponentGate>
@@ -456,7 +590,9 @@ const Sidebar: React.FC = () => {
                         {/* List - Available for all authorized users */}
                         <ComponentGate componentId={ComponentId.FORECAST_LIST}>
                             <NavItem href="/forecast/list" $active={pathname === '/forecast/list'} $collapsed={collapsed}>
-                                <List size={16} />
+                                <NavIcon $active={pathname === '/forecast/list'} $collapsed={collapsed} $size={16}>
+                                    <List />
+                                </NavIcon>
                                 {!collapsed && 'forecasts'}
                             </NavItem>
                         </ComponentGate>
@@ -476,28 +612,38 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <GitCompare />
+                            <DropdownIcon $active={pathname.includes('/scenario')} $collapsed={collapsed}>
+                                <GitCompare />
+                            </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Scenarios</span>}
                         </div>
-                        <ChevronDown size={16} />
+                        <ChevronIcon $open={isOpen('scenario')}>
+                            <ChevronDown />
+                        </ChevronIcon>
                     </DropdownHeader>
                     {isOpen('scenario') && (
                         <SubMenu $collapsed={collapsed}>
                             <ComponentGate componentId={ComponentId.SCENARIO_CREATE}>
                                 <NavItem href="/scenarios/create" $active={pathname === '/scenarios/create'} $collapsed={collapsed}>
-                                    <Plus size={16} />
+                                    <NavIcon $active={pathname === '/scenarios/create'} $collapsed={collapsed} $size={16}>
+                                        <Plus />
+                                    </NavIcon>
                                     {!collapsed && 'new scenario'}
                                 </NavItem>
                             </ComponentGate>
                             <ComponentGate componentId={ComponentId.SCENARIO_LIST}>
                                 <NavItem href="/scenarios/list" $active={pathname === '/scenarios/list'} $collapsed={collapsed}>
-                                    <List size={16} />
+                                    <NavIcon $active={pathname === '/scenarios/list'} $collapsed={collapsed} $size={16}>
+                                        <List />
+                                    </NavIcon>
                                     {!collapsed && 'scenarios'}
                                 </NavItem>
                             </ComponentGate>
                             <ComponentGate componentId={ComponentId.SCENARIO_COMPARE}>
                                 <NavItem href="/scenarios/campare" $active={pathname.includes('/scenarios/campare')} $collapsed={collapsed}>
-                                    <GitCompare size={16} />
+                                    <NavIcon $active={pathname.includes('/scenarios/campare')} $collapsed={collapsed} $size={16}>
+                                        <GitCompare />
+                                    </NavIcon>
                                     {!collapsed && 'compare scenarios'}
                                 </NavItem>
                             </ComponentGate>
@@ -518,28 +664,38 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <BarChart3 />
+                            <DropdownIcon $active={pathname.includes('/variance')} $collapsed={collapsed}>
+                                <BarChart3 />
+                            </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Variance</span>}
                         </div>
-                        <ChevronDown size={16} />
+                        <ChevronIcon $open={isOpen('variance')}>
+                            <ChevronDown />
+                        </ChevronIcon>
                     </DropdownHeader>
                     {isOpen('variance') && (
                         <SubMenu $collapsed={collapsed}>
                             <ComponentGate componentId={ComponentId.VARIANCE_CALCULATE}>
                                 <NavItem href="/variance/calculatevariance" $active={pathname.includes('/variance/calculatevariance')} $collapsed={collapsed}>
-                                    <Calculator size={16} />
+                                    <NavIcon $active={pathname.includes('/variance/calculatevariance')} $collapsed={collapsed} $size={16}>
+                                        <Calculator />
+                                    </NavIcon>
                                     {!collapsed && 'calculate variance'}
                                 </NavItem>
                             </ComponentGate>
                             <ComponentGate componentId={ComponentId.VARIANCE_HISTORY}>
                                 <NavItem href="/variance/variancehistory" $active={pathname.includes('/variance/variancehistory')} $collapsed={collapsed}>
-                                    <FileText size={16} />
+                                    <NavIcon $active={pathname.includes('/variance/variancehistory')} $collapsed={collapsed} $size={16}>
+                                        <FileText />
+                                    </NavIcon>
                                     {!collapsed && 'variance history'}
                                 </NavItem>
                             </ComponentGate>
                             <ComponentGate componentId={ComponentId.VARIANCE_SUMMARY}>
                                 <NavItem href="/variance/variancesummery" $active={pathname.includes('/variance/variancesummery')} $collapsed={collapsed}>
-                                    <BarChart3 size={16} />
+                                    <NavIcon $active={pathname.includes('/variance/variancesummery')} $collapsed={collapsed} $size={16}>
+                                        <BarChart3 />
+                                    </NavIcon>
                                     {!collapsed && 'variance summary'}
                                 </NavItem>
                             </ComponentGate>
@@ -560,27 +716,39 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <DollarSign />
+                            <DropdownIcon $active={pathname.includes('/budget')} $collapsed={collapsed}>
+                                <DollarSign />
+                            </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Budgets</span>}
                         </div>
-                        <ChevronDown size={16} />
+                        <ChevronIcon $open={isOpen('budget')}>
+                            <ChevronDown />
+                        </ChevronIcon>
                     </DropdownHeader>
                     {isOpen('budget') && (
                         <SubMenu $collapsed={collapsed}>
                             <NavItem href="/budgets/create" $active={pathname === '/budgets/create'} $collapsed={collapsed}>
-                                <Plus size={16} />
+                                <NavIcon $active={pathname === '/budgets/create'} $collapsed={collapsed} $size={16}>
+                                    <Plus />
+                                </NavIcon>
                                 {!collapsed && 'new budget'}
                             </NavItem>
                             <NavItem href="/budgets" $active={pathname === '/budgets'} $collapsed={collapsed}>
-                                <List size={16} />
+                                <NavIcon $active={pathname === '/budgets'} $collapsed={collapsed} $size={16}>
+                                    <List />
+                                </NavIcon>
                                 {!collapsed && 'budgets'}
                             </NavItem>
                             <NavItem href="/budgets/additems" $active={pathname.includes('/budgets/additems')} $collapsed={collapsed}>
-                                <Calculator size={16} />
+                                <NavIcon $active={pathname.includes('/budgets/additems')} $collapsed={collapsed} $size={16}>
+                                    <Calculator />
+                                </NavIcon>
                                 {!collapsed && 'Add Items'}
                             </NavItem>
                             <NavItem href="/budgets/listitems" $active={pathname.includes('/budgets/listitems')} $collapsed={collapsed}>
-                                <FileText size={16} />
+                                <NavIcon $active={pathname.includes('/budgets/listitems')} $collapsed={collapsed} $size={16}>
+                                    <FileText />
+                                </NavIcon>
                                 {!collapsed && 'List Items'}
                             </NavItem>
                         </SubMenu>
@@ -608,24 +776,32 @@ const Sidebar: React.FC = () => {
                             $collapsed={collapsed}
                         >
                             <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <Shield style={{ color: '#e74c3c' }} />
+                                <DropdownIcon $active={pathname.includes('/finance-admin')} $collapsed={collapsed}>
+                                    <Shield style={{ color: '#e74c3c' }} />
+                                </DropdownIcon>
                                 {!collapsed && <span style={{ marginLeft: '12px' }}>Finance</span>}
                             </div>
-                            <ChevronDown size={16} />
+                            <ChevronIcon $open={isOpen('finance-admin')}>
+                                <ChevronDown />
+                            </ChevronIcon>
                         </DropdownHeader>
                         {isOpen('finance-admin') && (
                             <SubMenu $collapsed={collapsed}>
                                 {/* Finance Create Link */}
                                 <ComponentGate componentId={ComponentId.FINANCE_MANAGER_CREATE}>
                                     <NavItem href="/finance/create" $active={pathname === '/finance-admin/create'} $collapsed={collapsed}>
-                                        <UserPlus size={16} />
+                                        <NavIcon $active={pathname === '/finance-admin/create'} $collapsed={collapsed} $size={16}>
+                                            <UserPlus />
+                                        </NavIcon>
                                         {!collapsed && 'Add Manager'}
                                     </NavItem>
                                 </ComponentGate>
                                 {/* Finance List Link */}
                                 <ComponentGate componentId={ComponentId.FINANCE_MANAGER_LIST}>
                                     <NavItem href="/finance/list" $active={pathname === '/finance-admin/list'} $collapsed={collapsed}>
-                                        <List size={16} />
+                                        <NavIcon $active={pathname === '/finance-admin/list'} $collapsed={collapsed} $size={16}>
+                                            <List />
+                                        </NavIcon>
                                         {!collapsed && 'All Managers'}
                                     </NavItem>
                                 </ComponentGate>
@@ -645,24 +821,32 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <Wallet />
+                            <DropdownIcon $active={pathname.includes('/accountant')} $collapsed={collapsed}>
+                                <Wallet />
+                            </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Accountants</span>}
                         </div>
-                        <ChevronDown size={16} />
+                        <ChevronIcon $open={isOpen('accountant')}>
+                            <ChevronDown />
+                        </ChevronIcon>
                     </DropdownHeader>
                     {isOpen('accountant') && (
                         <SubMenu $collapsed={collapsed}>
                             {/* Accountant Create Link */}
                             <ComponentGate componentId={ComponentId.ACCOUNTANT_CREATE}>
                                 <NavItem href="/accountants/create" $active={pathname === '/accountant/create'} $collapsed={collapsed}>
-                                    <UserPlus size={16} />
+                                    <NavIcon $active={pathname === '/accountant/create'} $collapsed={collapsed} $size={16}>
+                                        <UserPlus />
+                                    </NavIcon>
                                     {!collapsed && 'Add Accountant'}
                                 </NavItem>
                             </ComponentGate>
                             {/* Accountant List Link */}
                             <ComponentGate componentId={ComponentId.ACCOUNTANT_LIST}>
                                 <NavItem href="/accountants/list" $active={pathname === '/accountant/list'} $collapsed={collapsed}>
-                                    <List size={16} />
+                                    <NavIcon $active={pathname === '/accountant/list'} $collapsed={collapsed} $size={16}>
+                                        <List />
+                                    </NavIcon>
                                     {!collapsed && 'All Accountants'}
                                 </NavItem>
                             </ComponentGate>
@@ -681,24 +865,32 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <Users />
+                            <DropdownIcon $active={pathname.includes('/employee')} $collapsed={collapsed}>
+                                <Users />
+                            </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Employees</span>}
                         </div>
-                        <ChevronDown size={16} />
+                        <ChevronIcon $open={isOpen('employee')}>
+                            <ChevronDown />
+                        </ChevronIcon>
                     </DropdownHeader>
                     {isOpen('employee') && (
                         <SubMenu $collapsed={collapsed}>
                             {/* Employee Create Link */}
                             <ComponentGate componentId={ComponentId.EMPLOYEE_CREATE}>
                                 <NavItem href="/employees/create" $active={pathname === '/employee/create'} $collapsed={collapsed}>
-                                    <UserPlus size={16} />
+                                    <NavIcon $active={pathname === '/employee/create'} $collapsed={collapsed} $size={16}>
+                                        <UserPlus />
+                                    </NavIcon>
                                     {!collapsed && 'Add Employee'}
                                 </NavItem>
                             </ComponentGate>
                             {/* Employee List Link */}
                             <ComponentGate componentId={ComponentId.EMPLOYEE_LIST}>
                                 <NavItem href="/employees/list" $active={pathname === '/employee/list'} $collapsed={collapsed}>
-                                    <List size={16} />
+                                    <NavIcon $active={pathname === '/employee/list'} $collapsed={collapsed} $size={16}>
+                                        <List />
+                                    </NavIcon>
                                     {!collapsed && 'All Employees'}
                                 </NavItem>
                             </ComponentGate>
@@ -710,7 +902,9 @@ const Sidebar: React.FC = () => {
                 {/* Departments */}
                 <ComponentGate componentId={ComponentId.SIDEBAR_DEPARTMENT}>
                     <NavItem href="/department/list" $active={pathname.includes('/department')} $collapsed={collapsed}>
-                        <Building />
+                        <NavIcon $active={pathname.includes('/department')} $collapsed={collapsed}>
+                            <Building />
+                        </NavIcon>
                         {!collapsed && 'Departments'}
                     </NavItem>
                 </ComponentGate>
@@ -718,7 +912,9 @@ const Sidebar: React.FC = () => {
                 {/* Projects */}
                 <ComponentGate componentId={ComponentId.SIDEBAR_PROJECT}>
                     <NavItem href="/project/list" $active={pathname.includes('/project')} $collapsed={collapsed}>
-                        <Briefcase />
+                        <NavIcon $active={pathname.includes('/project')} $collapsed={collapsed}>
+                            <Briefcase />
+                        </NavIcon>
                         {!collapsed && 'Projects'}
                     </NavItem>
                 </ComponentGate>
@@ -731,14 +927,18 @@ const Sidebar: React.FC = () => {
 
             <ComponentGate componentId={ComponentId.SIDEBAR_PROFILE}>
                 <NavItem href="/profile" $active={pathname === '/profile'} $collapsed={collapsed}>
-                    <UserCog />
+                    <NavIcon $active={pathname === '/profile'} $collapsed={collapsed}>
+                        <UserCog />
+                    </NavIcon>
                     {!collapsed && 'Profile'}
                 </NavItem>
             </ComponentGate>
 
             <ComponentGate componentId={ComponentId.SIDEBAR_SETTINGS}>
                 <NavItem href="/settings" $active={pathname.startsWith('/settings')} $collapsed={collapsed}>
-                    <Settings />
+                    <NavIcon $active={pathname.startsWith('/settings')} $collapsed={collapsed}>
+                        <Settings />
+                    </NavIcon>
                     {!collapsed && 'Settings'}
                 </NavItem>
             </ComponentGate>
