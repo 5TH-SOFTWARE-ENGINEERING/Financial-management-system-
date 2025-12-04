@@ -881,15 +881,20 @@ export default function BackupSettingsPage() {
                     variant="default"
                     onClick={handleRestoreBackup}
                     disabled={loading}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                   >
                     {loading ? (
                       <>
-                        <Loader size={16} className="animate-spin mr-2" />
+                        <ButtonIcon $iconType="loader" $size={16} $active={true}>
+                          <Loader size={16} className="animate-spin" />
+                        </ButtonIcon>
                         Restoring...
                       </>
                     ) : (
                       <>
-                        <Download size={16} />
+                        <ButtonIcon $iconType="download" $size={16} $active={true}>
+                          <Download size={16} />
+                        </ButtonIcon>
                         Confirm Restore
                       </>
                     )}
@@ -906,14 +911,18 @@ export default function BackupSettingsPage() {
             <ModalContent onClick={(e) => e.stopPropagation()}>
               <ModalHeader>
                 <ModalTitle>
-                  <AlertTriangle size={20} />
+                  <ModalIcon $iconType="alert-triangle" $size={20} $active={true}>
+                    <AlertTriangle size={20} />
+                  </ModalIcon>
                   Confirm Delete
                 </ModalTitle>
                 <CloseButton
                   onClick={() => setShowDeleteModal(false)}
                   disabled={loading}
                 >
-                  <X size={20} />
+                  <IconWrapper $iconType="x" $size={20} $active={false}>
+                    <X size={20} />
+                  </IconWrapper>
                 </CloseButton>
               </ModalHeader>
               <div>
@@ -932,15 +941,20 @@ export default function BackupSettingsPage() {
                     variant="destructive"
                     onClick={handleDeleteBackup}
                     disabled={loading}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                   >
                     {loading ? (
                       <>
-                        <Loader size={16} className="animate-spin mr-2" />
+                        <ButtonIcon $iconType="loader" $size={16} $active={true}>
+                          <Loader size={16} className="animate-spin" />
+                        </ButtonIcon>
                         Deleting...
                       </>
                     ) : (
                       <>
-                        <Trash2 size={16} />
+                        <ButtonIcon $iconType="trash2" $size={16} $active={true}>
+                          <Trash2 size={16} />
+                        </ButtonIcon>
                         Delete
                       </>
                     )}
