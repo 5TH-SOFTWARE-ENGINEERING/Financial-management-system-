@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
-from sqlalchemy.orm import Session
-from sqlalchemy import text, and_, desc
-from sqlalchemy.exc import IntegrityError
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import text, and_, desc # type: ignore[import-untyped]
+from sqlalchemy.exc import IntegrityError # type: ignore[import-untyped]
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
 
 from ...core.database import get_db
 from ...core.security import verify_password
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 from ...crud.user import user as user_crud, role as role_crud

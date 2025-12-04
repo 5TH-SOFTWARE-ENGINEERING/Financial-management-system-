@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List
 import logging
 

@@ -3,8 +3,8 @@ Advanced Analytics API
 Provides real-time insights, KPIs, trends, and customizable reporting
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import Optional
 from datetime import datetime, timedelta
 

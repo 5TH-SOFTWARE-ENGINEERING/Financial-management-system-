@@ -6,9 +6,9 @@ Role-based access control:
 - Accountant: Can view items (name, selling_price, stock) and sales
 - Employee: Can view items (name, selling_price, stock) and make sales
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi import Request
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from fastapi import Request # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
 
@@ -23,7 +23,7 @@ from ...schemas.inventory import (
 )
 from ...utils.encryption import encrypt_value, decrypt_value
 from ...core.security import verify_password
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore[import-untyped]
 
 router = APIRouter()
 
