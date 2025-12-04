@@ -719,7 +719,26 @@ export default function ApprovalsPage() {
     const role = user.role?.toLowerCase();
     // Include accountants and finance admins for sales approval
     return role === 'admin' || role === 'super_admin' || role === 'manager' || 
-           role === 'finance_manager' || role === 'finance_admin' || role === 'accountant';
+           role === 'finance_manager' || role === 'accountant';
+  };
+
+  // Check if user can approve/post sales (accountant, finance_manager, admin, super_admin)
+  const canApproveSales = () => {
+    if (!user) return false;
+    const role = user.role?.toLowerCase();
+    return role === 'accountant' || 
+           role === 'finance_manager' || 
+           role === 'admin' || 
+           role === 'super_admin';
+  };
+
+  // Check if user can cancel sales (finance_manager, admin, super_admin only)
+  const canCancelSales = () => {
+    if (!user) return false;
+    const role = user.role?.toLowerCase();
+    return role === 'finance_manager' || 
+           role === 'admin' || 
+           role === 'super_admin';
   };
 
   const [loading, setLoading] = useState(true);
@@ -837,12 +856,11 @@ export default function ApprovalsPage() {
           expense_entry_id: e.id,
         }));
 
-      // Fetch pending sales - for accountants, finance admins, managers, and admins
+      // Fetch pending sales - for accountants, finance managers, managers, and admins
       let pendingSales: any[] = [];
       const userRole = user?.role?.toLowerCase();
       const canViewSales = userRole === 'accountant' || 
                           userRole === 'finance_manager' || 
-                          userRole === 'finance_admin' || 
                           userRole === 'admin' || 
                           userRole === 'super_admin' ||
                           userRole === 'manager';
@@ -939,11 +957,10 @@ export default function ApprovalsPage() {
       return;
     }
 
-    // For sales, check if user is accountant or finance admin
+    // For sales, check if user can approve sales
     if (item.type === 'sale') {
-      const userRole = user?.role?.toLowerCase();
-      if (userRole !== 'accountant' && userRole !== 'finance_manager' && userRole !== 'finance_admin' && userRole !== 'admin' && userRole !== 'super_admin') {
-        toast.error('Only accountants and finance admins can post sales to ledger');
+      if (!canApproveSales()) {
+        toast.error('Only accountants and finance managers can post sales to ledger');
         return;
       }
     }
@@ -1013,28 +1030,37 @@ export default function ApprovalsPage() {
       return;
     }
 
-    // For sales, only finance admins can cancel
+    // For sales, only finance managers, admins, and super admins can cancel
     if (item.type === 'sale') {
-      const userRole = user?.role?.toLowerCase();
-      if (userRole !== 'finance_manager' && userRole !== 'finance_admin' && userRole !== 'admin' && userRole !== 'super_admin') {
-        toast.error('Only finance admins can cancel sales');
+      if (!canCancelSales()) {
+        toast.error('Only finance managers, admins, and super admins can cancel sales');
         return;
       }
-    }
+      // For sales, only require reason (no password needed)
+      if (!reason.trim()) {
+        setRejectPasswordError('Please provide a cancellation reason');
+        return;
+      }
+      if (reason.trim().length < 10) {
+        setRejectPasswordError('Cancellation reason must be at least 10 characters long');
+        return;
+      }
+    } else {
+      // For other items, require both reason and password
+      if (!reason.trim()) {
+        setRejectPasswordError('Please provide a rejection reason');
+        return;
+      }
 
-    if (!reason.trim()) {
-      setRejectPasswordError('Please provide a rejection reason');
-      return;
-    }
+      if (reason.trim().length < 10) {
+        setRejectPasswordError('Rejection reason must be at least 10 characters long');
+        return;
+      }
 
-    if (reason.trim().length < 10) {
-      setRejectPasswordError('Rejection reason must be at least 10 characters long');
-      return;
-    }
-
-    if (!password.trim()) {
-      setRejectPasswordError('Password is required');
-      return;
+      if (!password.trim()) {
+        setRejectPasswordError('Password is required');
+        return;
+      }
     }
 
     const itemKey = `${item.type}-${item.id}`;
@@ -1314,15 +1340,9 @@ export default function ApprovalsPage() {
                     <ApprovalActions>
                       {/* Show approve/reject buttons for pending items if user can approve */}
                       {item.status === 'pending' && (() => {
-                        // For sales, check if user is accountant or finance admin
+                        // For sales, check if user can approve sales
                         if (item.type === 'sale') {
-                          const userRole = user?.role?.toLowerCase();
-                          const canApproveSales = userRole === 'accountant' || 
-                                                 userRole === 'finance_manager' || 
-                                                 userRole === 'finance_admin' || 
-                                                 userRole === 'admin' || 
-                                                 userRole === 'super_admin';
-                          return canApproveSales;
+                          return canApproveSales();
                         }
                         // For other types, use canApprove()
                         return canApprove();
@@ -1345,14 +1365,8 @@ export default function ApprovalsPage() {
                               </>
                             )}
                           </ActionButton>
-                          {/* Show reject/cancel button - for sales, only finance admins can cancel */}
-                          {(item.type !== 'sale' || (() => {
-                            const userRole = user?.role?.toLowerCase();
-                            return userRole === 'finance_manager' || 
-                                   userRole === 'finance_admin' || 
-                                   userRole === 'admin' || 
-                                   userRole === 'super_admin';
-                          })()) && (
+                          {/* Show reject/cancel button - for sales, only finance managers/admins can cancel */}
+                          {(item.type !== 'sale' || canCancelSales()) && (
                             <ActionButton
                               $variant="danger"
                               onClick={() => {
@@ -1409,18 +1423,21 @@ export default function ApprovalsPage() {
               <ModalContent onClick={(e) => e.stopPropagation()}>
                 <ModalTitle>
                   <ModalAlertIcon size={20} />
-                  Reject Approval
+                  {itemToReject.type === 'sale' ? 'Cancel Sale' : 'Reject Approval'}
                 </ModalTitle>
                 
                 <WarningBox>
                   <p>
-                    You are about to reject this approval request. This action cannot be undone.
-                    Please enter your own password to verify this action.
+                    {itemToReject.type === 'sale' 
+                      ? 'You are about to cancel this sale. This action cannot be undone. Please provide a reason for cancellation.'
+                      : 'You are about to reject this approval request. This action cannot be undone. Please enter your own password to verify this action.'}
                   </p>
                 </WarningBox>
 
                 <FormGroup>
-                  <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                  <Label htmlFor="rejection-reason">
+                    {itemToReject.type === 'sale' ? 'Cancellation Reason' : 'Rejection Reason'}
+                  </Label>
                   <TextArea
                     id="rejection-reason"
                     value={rejectionReason}
@@ -1428,37 +1445,49 @@ export default function ApprovalsPage() {
                       setRejectionReason(e.target.value);
                       setRejectPasswordError(null);
                     }}
-                    placeholder="Please provide a reason for rejection (minimum 10 characters)..."
+                    placeholder={itemToReject.type === 'sale' 
+                      ? 'Please provide a reason for cancellation (minimum 10 characters)...'
+                      : 'Please provide a reason for rejection (minimum 10 characters)...'}
                     rows={4}
                   />
                   {rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10 && (
-                    <ErrorText>Rejection reason must be at least 10 characters long</ErrorText>
+                    <ErrorText>
+                      {itemToReject.type === 'sale' 
+                        ? 'Cancellation reason must be at least 10 characters long'
+                        : 'Rejection reason must be at least 10 characters long'}
+                    </ErrorText>
                   )}
                 </FormGroup>
 
-                <FormGroup>
-                  <Label htmlFor="reject-password">
-                    Enter your own password to confirm rejection:
-                  </Label>
-                  <PasswordInput
-                    id="reject-password"
-                    type="password"
-                    value={rejectPassword}
-                    onChange={(e) => {
-                      setRejectPassword(e.target.value);
-                      setRejectPasswordError(null);
-                    }}
-                    placeholder="Enter your password"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && rejectionReason.trim().length >= 10 && rejectPassword.trim()) {
-                        handleReject(itemToReject, rejectionReason, rejectPassword);
-                      }
-                    }}
-                  />
-                  {rejectPasswordError && (
-                    <ErrorText>{rejectPasswordError}</ErrorText>
-                  )}
-                </FormGroup>
+                {itemToReject.type !== 'sale' && (
+                  <FormGroup>
+                    <Label htmlFor="reject-password">
+                      Enter your own password to confirm rejection:
+                    </Label>
+                    <PasswordInput
+                      id="reject-password"
+                      type="password"
+                      value={rejectPassword}
+                      onChange={(e) => {
+                        setRejectPassword(e.target.value);
+                        setRejectPasswordError(null);
+                      }}
+                      placeholder="Enter your password"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && rejectionReason.trim().length >= 10 && rejectPassword.trim()) {
+                          handleReject(itemToReject, rejectionReason, rejectPassword);
+                        }
+                      }}
+                    />
+                    {rejectPasswordError && (
+                      <ErrorText>{rejectPasswordError}</ErrorText>
+                    )}
+                  </FormGroup>
+                )}
+
+                {itemToReject.type === 'sale' && rejectPasswordError && (
+                  <ErrorText>{rejectPasswordError}</ErrorText>
+                )}
 
                 <ModalActions>
                   <ActionButton
@@ -1478,17 +1507,22 @@ export default function ApprovalsPage() {
                     onClick={() => {
                       handleReject(itemToReject, rejectionReason, rejectPassword);
                     }}
-                    disabled={!rejectionReason.trim() || rejectionReason.trim().length < 10 || !rejectPassword.trim() || processingId === showRejectModal}
+                    disabled={
+                      !rejectionReason.trim() || 
+                      rejectionReason.trim().length < 10 || 
+                      (itemToReject.type !== 'sale' && !rejectPassword.trim()) || 
+                      processingId === showRejectModal
+                    }
                   >
                     {processingId === showRejectModal ? (
                       <>
                         <SpinningIcon size={16} />
-                        Rejecting...
+                        {itemToReject.type === 'sale' ? 'Cancelling...' : 'Rejecting...'}
                       </>
                     ) : (
                       <>
                         <XCircle />
-                        Reject
+                        {itemToReject.type === 'sale' ? 'Cancel Sale' : 'Reject'}
                       </>
                     )}
                   </ActionButton>
