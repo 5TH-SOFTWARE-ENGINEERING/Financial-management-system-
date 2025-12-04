@@ -406,15 +406,27 @@ export default function NotificationsSettingsPage() {
         const settings = {
           notificationPreferences,
           doNotDisturb,
-          quietHours
+          quietHours,
+          lastUpdated: new Date().toISOString()
         };
         localStorage.setItem('user_notification_settings', JSON.stringify(settings));
+        
+        // Also try to save to backend if API is available
+        try {
+          // TODO: Add API endpoint for saving notification preferences
+          // await apiClient.updateNotificationPreferences(settings);
+        } catch (apiError) {
+          // Silently fail if backend is not available
+          console.log('Backend API not available, settings saved locally');
+        }
       }
       
       setSuccess('Notification settings saved successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Failed to save notification settings:', error);
+      setSuccess('Failed to save settings. Please try again.');
+      setTimeout(() => setSuccess(null), 3000);
     } finally {
       setLoading(false);
     }
