@@ -380,7 +380,7 @@ const Sidebar: React.FC = () => {
                 >
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <Package />
-                        {!collapsed && <span style={{ marginLeft: '12px' }}>Inventory & Sales</span>}
+                        {!collapsed && <span style={{ marginLeft: '12px' }}>Inventory</span>}
                     </div>
                     <ChevronDown size={16} />
                 </DropdownHeader>
