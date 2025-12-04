@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import Navbar from '@/components/common/Navbar';
 import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
@@ -185,6 +186,7 @@ export default function DeleteEmployeePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [employee, setEmployee] = useState<any>(null);
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     loadUser();
@@ -220,14 +222,19 @@ export default function DeleteEmployeePage() {
     if (!confirm(`Are you sure you want to delete "${employee?.full_name || 'this employee'}"? This action cannot be undone.`)) {
       return;
     }
+
+    if (!password) {
+      setError('Password is required');
+      return;
+    }
     
     setLoading(true);
     setError(null);
     setSuccess(null);
     
     try {
-      await apiClient.deleteUser(parseInt(id, 10));
-      await deleteUser(id); // Update store
+      await apiClient.deleteUser(parseInt(id, 10), password);
+      await deleteUser(id, password); // Update store
       await fetchAllUsers(); // Refresh user list
       
       setSuccess('Employee deleted successfully!');
@@ -357,6 +364,19 @@ export default function DeleteEmployeePage() {
                 </StatusBadge>
               </div>
             </InfoBox>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--foreground)', fontWeight: 500 }}>
+                Enter your password to confirm
+              </label>
+              <Input
+                type="password"
+                placeholder="Your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
 
             <ButtonRow>
               <Button 

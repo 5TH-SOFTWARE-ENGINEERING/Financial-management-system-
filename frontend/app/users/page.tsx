@@ -642,6 +642,11 @@ export default function UsersPage() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
+  const isAdminRole = (role: string) => {
+    const normalized = (role || '').toLowerCase();
+    return normalized === 'admin' || normalized === 'super_admin';
+  };
+
   const getRoleBadgeVariant = (role: string): 'admin' | 'finance_manager' | 'accountant' | 'employee' | 'default' => {
     switch (role) {
       case 'admin':
@@ -682,14 +687,17 @@ export default function UsersPage() {
     return roleNames[role] || role;
   };
 
-  const renderUserHierarchy = (users: any[], level = 0) => {
-    return users.map((userItem: any) => {
+  const renderUserHierarchy = (users: any[], level = 0): any[] => {
+    return users.flatMap((userItem: any) => {
       const userRole = (userItem.role || '').toLowerCase();
       const userId = userItem.id?.toString() || userItem.id;
       // Get all subordinates from accessible users to maintain hierarchy structure
       // The filteredUsers are already applied at the root level, so we show all subordinates
       const subordinates = getSubordinates(userId, accessibleUsers);
       const isExpanded = expandedUsers.has(userId);
+      if (isAdminRole(userRole)) {
+        return renderUserHierarchy(subordinates, level);
+      }
       
       return (
         <UserItem key={userId} level={level}>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { theme } from '@/components/common/theme';
 import { Resource, Action } from '@/lib/rbac/models';
@@ -15,14 +15,20 @@ import {
   TableCell 
 } from '@/components/common/Table';
 import { useRouter } from 'next/navigation';
-import apiClient from '@/lib/api';
+import apiClient, { type ApiRole } from '@/lib/api';
 import { 
   Search, 
   Plus, 
   Edit, 
   Trash2, 
-  Copy
+  Copy,
+  Loader2
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 // Styled components
 const Container = styled.div`
@@ -73,13 +79,26 @@ const Message = styled.div`
   color: ${theme.colors.textSecondary};
 `;
 
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin-top: 8px;
+`;
+
+const HelperText = styled.p`
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${theme.colors.textSecondary};
+  margin-top: 6px;
+`;
+
 interface Role {
-  id: string;
+  id: number;
   name: string;
   description: string;
+  permissions: string[];
   userCount: number;
   permissionCount: number;
-  createdAt: string;
+  createdAt?: string;
 }
 
 const RolesPage: React.FC = () => {
@@ -89,6 +108,17 @@ const RolesPage: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'duplicate'>('create');
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [formValues, setFormValues] = useState({
+    name: '',
+    description: '',
+    permissionsText: '',
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
 
   // Load roles from API
   useEffect(() => {
@@ -100,15 +130,18 @@ const RolesPage: React.FC = () => {
     setError(null);
     try {
       const response = await apiClient.getRoles();
-      // Transform API response to match Role interface
-      const transformedRoles: Role[] = (response.data || []).map((role: any) => ({
-        id: role.id || role.name,
-        name: role.name,
-        description: role.description || `Users with ${role.name} role`,
-        userCount: role.userCount || 0,
-        permissionCount: role.permissionCount || 0,
-        createdAt: role.createdAt || '2023-01-01'
-      }));
+      const transformedRoles: Role[] = (response.data || []).map((role: ApiRole) => {
+        const permissions = role.permissions || [];
+        return {
+          id: Number(role.id ?? Date.now()),
+          name: role.name,
+          description: role.description || `Users with ${role.name} role`,
+          permissions,
+          userCount: role.user_count ?? (role as any).userCount ?? 0,
+          permissionCount: role.permission_count ?? (role as any).permissionCount ?? permissions.length,
+          createdAt: role.created_at ?? (role as any).createdAt,
+        };
+      });
       setRoles(transformedRoles);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load roles');
@@ -118,6 +151,122 @@ const RolesPage: React.FC = () => {
     }
   };
   
+  const formatRoleName = (value: string) =>
+    value
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const resetForm = () => {
+    setFormValues({
+      name: '',
+      description: '',
+      permissionsText: '',
+    });
+    setFormError(null);
+    setEditingRole(null);
+  };
+
+  const handleModalStateChange = (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      resetForm();
+      setIsSubmitting(false);
+    }
+  };
+
+  const parsePermissionsFromInput = () => {
+    return Array.from(
+      new Set(
+        formValues.permissionsText
+          .split(/[\n,]+/)
+          .map((perm) => perm.trim())
+          .filter(Boolean)
+      )
+    );
+  };
+
+  const openCreateModal = () => {
+    setModalMode('create');
+    resetForm();
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (role: Role) => {
+    setModalMode('edit');
+    setEditingRole(role);
+    setFormValues({
+      name: role.name,
+      description: role.description || '',
+      permissionsText: role.permissions.join('\n'),
+    });
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  const openDuplicateModal = (role: Role) => {
+    setModalMode('duplicate');
+    setEditingRole(null);
+    setFormValues({
+      name: `${role.name}_copy`,
+      description: role.description || '',
+      permissionsText: role.permissions.join('\n'),
+    });
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError(null);
+
+    const trimmedName = formValues.name.trim();
+    if (!trimmedName) {
+      setFormError('Role name is required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const payload = {
+      name: trimmedName,
+      description: formValues.description.trim() || undefined,
+      permissions: parsePermissionsFromInput(),
+    };
+
+    try {
+      if (modalMode === 'edit' && editingRole) {
+        await apiClient.updateRole(editingRole.id, payload);
+        toast.success('Role updated successfully');
+      } else {
+        await apiClient.createRole(payload);
+        toast.success(modalMode === 'duplicate' ? 'Role duplicated successfully' : 'Role created successfully');
+      }
+      handleModalStateChange(false);
+      await loadRoles();
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || err.message || 'Unable to save role';
+      setFormError(detail);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteRole = async (role: Role) => {
+    if (!confirm(`Delete role "${formatRoleName(role.name)}"? This action cannot be undone.`)) {
+      return;
+    }
+    setDeleteLoadingId(role.id);
+    try {
+      await apiClient.deleteRole(role.id);
+      setRoles((prev) => prev.filter((item) => item.id !== role.id));
+      toast.success('Role deleted successfully');
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || err.message || 'Failed to delete role';
+      toast.error(detail);
+    } finally {
+      setDeleteLoadingId(null);
+    }
+  };
+
   // Filter roles by search term
   const filteredRoles = roles.filter(role => 
     role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -141,26 +290,6 @@ const RolesPage: React.FC = () => {
     );
   }
 
-  const handleCreateRole = () => {
-    router.push('/settings/users-roles/roles/create');
-  };
-  
-  const handleEditRole = (roleId: string) => {
-    router.push(`/settings/users-roles/roles/edit/${roleId}`);
-  };
-  
-  const handleDuplicateRole = (roleId: string) => {
-    router.push(`/settings/users-roles/roles/duplicate/${roleId}`);
-  };
-  
-  const handleDeleteRole = (roleId: string) => {
-    // In a real application, you would show a confirmation dialog
-    if (confirm('Are you sure you want to delete this role?')) {
-      // In a real application, you would make an API call to delete the role
-      setRoles(prev => prev.filter(role => role.id !== roleId));
-    }
-  };
-  
   const navigateToUserRoles = () => {
     router.push('/settings/users-roles/user-roles');
   };
@@ -181,7 +310,7 @@ const RolesPage: React.FC = () => {
         <Card>
           <ButtonGroup>
             <Button 
-              onClick={handleCreateRole}
+              onClick={openCreateModal}
             >
               <Plus size={16} className="mr-2" />
               Create New Role
@@ -211,7 +340,7 @@ const RolesPage: React.FC = () => {
             <TableBody>
               {filteredRoles.map(role => (
                 <TableRow key={role.id}>
-                  <TableCell>{role.name}</TableCell>
+                  <TableCell>{formatRoleName(role.name)}</TableCell>
                   <TableCell>{role.description}</TableCell>
                   <TableCell>{role.userCount}</TableCell>
                   <TableCell>{role.permissionCount}</TableCell>
@@ -221,7 +350,7 @@ const RolesPage: React.FC = () => {
                       <Button 
                         size="sm" 
                         variant="secondary"
-                        onClick={() => handleEditRole(role.id)}
+                        onClick={() => openEditModal(role)}
                       >
                         <Edit size={14} className="mr-1" />
                         Edit
@@ -229,7 +358,7 @@ const RolesPage: React.FC = () => {
                       <Button 
                         size="sm" 
                         variant="secondary"
-                        onClick={() => handleDuplicateRole(role.id)}
+                        onClick={() => openDuplicateModal(role)}
                       >
                         <Copy size={14} className="mr-1" />
                         Duplicate
@@ -237,10 +366,20 @@ const RolesPage: React.FC = () => {
                       <Button 
                         size="sm" 
                         variant="destructive"
-                        onClick={() => handleDeleteRole(role.id)}
+                        onClick={() => handleDeleteRole(role)}
+                        disabled={deleteLoadingId === role.id}
                       >
-                        <Trash2 size={14} className="mr-1" />
-                        Delete
+                        {deleteLoadingId === role.id ? (
+                          <>
+                            <Loader2 size={14} className="mr-1 animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 size={14} className="mr-1" />
+                            Delete
+                          </>
+                        )}
                       </Button>
                     </ActionButtons>
                   </TableCell>

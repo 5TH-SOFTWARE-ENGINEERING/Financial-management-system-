@@ -508,15 +508,31 @@ def request_password_reset_otp(
     cleanup_expired_otps()
     
     # Send OTP via email
-    try:
-        EmailService.send_otp_email(email, otp_code)
-    except Exception as e:
-        logger.error(f"Failed to send OTP email to {email}: {str(e)}")
-        # Still return success to prevent email enumeration
+    email_sent = False
+    email_error_detail = None
     
-    return {
+    try:
+        email_sent, email_error_detail = EmailService.send_otp_email(email, otp_code)
+        if not email_sent:
+            logger.error(f"Failed to send OTP email to {email}: {email_error_detail}")
+    except Exception as e:
+        logger.error(f"Exception while sending OTP email to {email}: {str(e)}", exc_info=True)
+        email_error_detail = f"Exception: {str(e)}"
+    
+    # Build response
+    response = {
         "message": "If an account with that email exists, an OTP has been sent."
     }
+    
+    # Include detailed status in DEBUG mode
+    if settings.DEBUG:
+        response["email_sent"] = email_sent
+        if not email_sent:
+            response["otp"] = otp_code  # Include OTP for testing
+            if email_error_detail:
+                response["email_error_detail"] = email_error_detail
+    
+    return response
 
 
 @router.post("/reset-password", response_model=dict)

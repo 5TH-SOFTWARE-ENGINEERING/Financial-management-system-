@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import text, and_, desc
-from typing import List, Dict, Any
+from sqlalchemy.exc import IntegrityError
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
 from ...core.database import get_db
-from ...crud.user import user as user_crud
+from ...crud.user import user as user_crud, role as role_crud
 from ...crud.audit import audit_log as audit_crud
 from ...crud.notification import notification as notification_crud
 from ...crud.report import report as report_crud
@@ -16,8 +17,62 @@ from ...models.user import User, UserRole
 from ...api.deps import get_current_active_user, require_min_role
 from ...services.backup import BackupService
 from ...services.email import EmailService
+from ...schemas.user import RoleCreate, RoleUpdate, RoleOut, RoleWithStats
 
 router = APIRouter()
+
+
+DEFAULT_ROLE_DESCRIPTIONS = {
+    UserRole.SUPER_ADMIN: "Super administrators with unrestricted access.",
+    UserRole.ADMIN: "Administrators who can manage users and finances.",
+    UserRole.FINANCE_ADMIN: "Finance managers overseeing accounting teams.",
+    UserRole.MANAGER: "Department managers responsible for approvals.",
+    UserRole.ACCOUNTANT: "Accountants who prepare financial entries.",
+    UserRole.EMPLOYEE: "Employees who can submit their own transactions.",
+}
+
+DEFAULT_ROLE_PERMISSIONS = {
+    UserRole.SUPER_ADMIN: ["*"],
+    UserRole.ADMIN: [
+        "users:create", "users:update", "users:delete",
+        "finance:approve", "settings:update"
+    ],
+    UserRole.FINANCE_ADMIN: ["finance:create", "finance:approve", "users:view"],
+    UserRole.MANAGER: ["finance:review", "approvals:review"],
+    UserRole.ACCOUNTANT: ["finance:create", "finance:update"],
+    UserRole.EMPLOYEE: ["finance:create"],
+}
+
+
+def _normalize_role_name(raw_name: str) -> str:
+    normalized = "_".join(raw_name.strip().lower().split())
+    return normalized
+
+
+def _normalize_permissions(permissions: Optional[List[str]]) -> List[str]:
+    if not permissions:
+        return []
+    cleaned: List[str] = []
+    for perm in permissions:
+        if not perm:
+            continue
+        value = perm.strip()
+        if value and value not in cleaned:
+            cleaned.append(value)
+    return cleaned
+
+
+def _ensure_default_roles(db: Session) -> None:
+    """Seed the roles table with baseline records if empty."""
+    existing = {role.name for role in role_crud.get_multi(db, skip=0, limit=100)}
+    for role_enum in UserRole:
+        if role_enum.value not in existing:
+            payload = RoleCreate(
+                name=role_enum.value,
+                description=DEFAULT_ROLE_DESCRIPTIONS.get(role_enum),
+                permissions=DEFAULT_ROLE_PERMISSIONS.get(role_enum, []),
+            )
+            role_crud.create(db, payload)
 
 
 # GET /hierarchy
@@ -67,26 +122,129 @@ def get_hierarchy(
 
 
 # GET /roles
-@router.get("/roles", response_model=List[dict])
+@router.get("/roles", response_model=List[RoleWithStats])
 def get_roles(
     current_user: User = Depends(require_min_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
     """Get all available roles with user counts"""
-    roles = []
-    for role in UserRole:
-        user_count = db.query(User).filter(User.role == role, User.is_active == True).count()
-        # Get permission count (this would need a permissions table in real implementation)
-        # For now, return a basic structure
-        roles.append({
-            "id": role.value,
-            "name": role.value.replace("_", " ").title(),
-            "description": f"Users with {role.value.replace('_', ' ')} role",
-            "userCount": user_count,
-            "permissionCount": 0,  # Would need permissions table
-            "createdAt": "2023-01-01"  # Would need role creation tracking
+    _ensure_default_roles(db)
+    db_roles = role_crud.get_multi(db, skip=0, limit=500)
+    response: List[RoleWithStats] = []
+    for db_role in db_roles:
+        try:
+            enum_role = UserRole(db_role.name)
+            user_count = db.query(User).filter(User.role == enum_role, User.is_active == True).count()
+        except ValueError:
+            user_count = 0
+
+        response.append(RoleWithStats(
+            id=db_role.id,
+            name=db_role.name,
+            description=db_role.description,
+            permissions=db_role.permissions or [],
+            created_at=db_role.created_at,
+            updated_at=db_role.updated_at,
+            user_count=user_count,
+            permission_count=len(db_role.permissions or []),
+        ))
+    return response
+
+
+@router.post("/roles", response_model=RoleOut, status_code=status.HTTP_201_CREATED)
+def create_role(
+    role_in: RoleCreate,
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """Create a new role definition"""
+    normalized_name = _normalize_role_name(role_in.name)
+    if not normalized_name:
+        raise HTTPException(status_code=400, detail="Role name is required")
+
+    if role_crud.get_by_name(db, normalized_name):
+        raise HTTPException(status_code=400, detail="Role with this name already exists")
+
+    payload = role_in.model_copy(update={
+        "name": normalized_name,
+        "permissions": _normalize_permissions(role_in.permissions),
+    })
+
+    try:
+        new_role = role_crud.create(db, payload)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Role name must be unique")
+    return new_role
+
+
+@router.put("/roles/{role_id}", response_model=RoleOut)
+def update_role(
+    role_id: int,
+    role_update: RoleUpdate,
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """Update an existing role definition"""
+    db_role = role_crud.get(db, role_id)
+    if not db_role:
+        raise HTTPException(status_code=404, detail="Role not found")
+
+    update_payload = role_update.model_copy(update={})
+    if role_update.name:
+        normalized_name = _normalize_role_name(role_update.name)
+        if normalized_name != db_role.name and role_crud.get_by_name(db, normalized_name):
+            raise HTTPException(status_code=400, detail="Role with this name already exists")
+        update_payload = update_payload.model_copy(update={"name": normalized_name})
+
+    if role_update.permissions is not None:
+        update_payload = update_payload.model_copy(update={
+            "permissions": _normalize_permissions(role_update.permissions)
         })
-    return roles
+
+    updated_role = role_crud.update(db, db_role, update_payload)
+    return updated_role
+
+
+@router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_role(
+    role_id: int,
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """Delete a role definition if it is not in use"""
+    db_role = role_crud.get(db, role_id)
+    if not db_role:
+        raise HTTPException(status_code=404, detail="Role not found")
+
+    try:
+        enum_role = UserRole(db_role.name)
+        assigned_count = db.query(User).filter(User.role == enum_role).count()
+    except ValueError:
+        assigned_count = 0
+
+    if assigned_count:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a role that is assigned to users"
+        )
+
+    role_crud.delete(db, role_id)
+    return None
+
+
+# GET /permissions
+@router.get("/permissions", response_model=List[str])
+def get_permissions(
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
+):
+    """Get all available system permissions"""
+    all_perms = set()
+    for perms in DEFAULT_ROLE_PERMISSIONS.values():
+        for p in perms:
+            if p != "*":
+                all_perms.add(p)
+    return sorted(list(all_perms))
 
 
 @router.get("/system/stats")
@@ -487,10 +645,10 @@ def export_users(
 
 @router.get("/settings")
 def get_system_settings(
-    current_user: User = Depends(require_min_role(UserRole.SUPER_ADMIN)),
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    """Get system settings (super admin only)"""
+    """Get system settings (admin or higher)"""
     from ...core.config import settings
     
     return {

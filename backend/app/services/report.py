@@ -11,7 +11,7 @@ from ..crud.expense import expense as expense_crud
 from ..crud.user import user as user_crud
 from ..models.report import Report, ReportType, ReportStatus
 from ..models.user import User, UserRole
-from ..core.database import get_db
+from ..core.database import SessionLocal
 
 
 class ReportService:
@@ -20,7 +20,7 @@ class ReportService:
     @staticmethod
     def generate_report(report_id: int) -> bool:
         """Generate a report in the background"""
-        db = next(get_db())
+        db = SessionLocal()
         
         try:
             report = report_crud.get(db, report_id)

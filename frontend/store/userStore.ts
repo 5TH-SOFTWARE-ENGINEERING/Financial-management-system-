@@ -93,7 +93,7 @@ interface UserState {
   fetchAllUsers: () => Promise<void>;
   createUser: (userData: any) => Promise<void>;
   updateUser: (userId: string, userData: any) => Promise<void>;
-  deleteUser: (userId: string) => Promise<void>;
+  deleteUser: (userId: string, password: string) => Promise<void>;
   clearError: () => void;
   
   // Permission checks
@@ -253,10 +253,10 @@ export const useUserStore = create<UserState>()(
         }
       },
 
-      deleteUser: async (userId: string) => {
+      deleteUser: async (userId: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          await apiClient.deleteUser(parseInt(userId, 10));
+          await apiClient.deleteUser(parseInt(userId, 10), password);
           set(state => ({
             allUsers: state.allUsers.filter(u => u.id !== userId),
             subordinates: state.subordinates.filter(u => u.id !== userId)

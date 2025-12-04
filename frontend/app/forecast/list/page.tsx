@@ -252,7 +252,8 @@ const ForecastListPage: React.FC = () => {
       const response = await apiClient.getForecasts();
       setForecasts(Array.isArray(response.data) ? response.data : []);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to load forecasts');
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to load forecasts';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -262,12 +263,12 @@ const ForecastListPage: React.FC = () => {
     if (!confirm('Are you sure you want to delete this forecast?')) return;
     
     try {
-      // Note: Delete endpoint may need to be added to API
       await apiClient.deleteForecast(id);
       toast.success('Forecast deleted successfully');
       loadForecasts();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete forecast');
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete forecast';
+      toast.error(errorMessage);
     }
   };
 

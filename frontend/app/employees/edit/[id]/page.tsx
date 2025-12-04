@@ -170,8 +170,8 @@ export default function EditEmployeePage() {
     setError(null);
     
     try {
-      const response = await apiClient.getUsers();
-      const user = (response.data || []).find((u: any) => u.id.toString() === id);
+      const response = await apiClient.getUser(parseInt(id, 10));
+      const user = response.data;
       
       if (!user) {
         setError('Employee not found');
@@ -188,8 +188,9 @@ export default function EditEmployeePage() {
         managerId: user.manager_id?.toString() || '',
       });
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load employee');
-      toast.error('Failed to load employee');
+      const errorMessage = err.response?.data?.detail || 'Failed to load employee';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoadingUser(false);
     }

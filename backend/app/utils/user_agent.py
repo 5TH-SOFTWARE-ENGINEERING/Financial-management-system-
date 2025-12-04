@@ -1,6 +1,10 @@
 # app/utils/user_agent.py
 """Utility functions for parsing user agent strings"""
 import re
+import logging
+from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 def get_device_info(user_agent: str) -> str:
@@ -55,16 +59,65 @@ def get_device_info(user_agent: str) -> str:
 
 
 def get_location_from_ip(ip_address: str) -> str:
-    """Get location from IP address. Returns a placeholder for now."""
-    # In a real implementation, you would use a geolocation service
-    # like MaxMind GeoIP2, ipapi.co, or ip-api.com
+    """
+    Get location from IP address using ip-api.com (free tier).
+    Falls back to 'Unknown' if service is unavailable or IP is invalid.
+    """
     if not ip_address:
         return "Unknown"
     
     # For localhost/127.0.0.1, return local
-    if ip_address in ["127.0.0.1", "localhost", "::1"]:
+    if ip_address in ["127.0.0.1", "localhost", "::1", "0.0.0.0"]:
         return "Local"
     
-    # Placeholder - in production, implement actual geolocation
-    return "Unknown"
+    # Try to get location from ip-api.com (free, no API key required)
+    try:
+        import requests  # type: ignore
+        from requests.adapters import HTTPAdapter  # type: ignore
+        from urllib3.util.retry import Retry  # type: ignore
+        
+        # Create session with retry strategy
+        session = requests.Session()
+        retry_strategy = Retry(
+            total=1,
+            backoff_factor=0.1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        
+        # ip-api.com free endpoint (no API key needed, 45 requests/minute limit)
+        # Using JSON endpoint for better error handling
+        response = session.get(
+            f"http://ip-api.com/json/{ip_address}",
+            timeout=2,  # Short timeout to avoid blocking
+            params={"fields": "status,country,regionName,city"}
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "success":
+                parts = []
+                if data.get("city"):
+                    parts.append(data["city"])
+                if data.get("regionName"):
+                    parts.append(data["regionName"])
+                if data.get("country"):
+                    parts.append(data["country"])
+                
+                if parts:
+                    return ", ".join(parts)
+        
+        # If we get here, the service returned an error or invalid response
+        return "Unknown"
+        
+    except ImportError:
+        # requests library not available - return Unknown
+        logger.debug("requests library not available for IP geolocation")
+        return "Unknown"
+    except Exception as e:
+        # Any other error (network, timeout, etc.) - return Unknown
+        logger.debug(f"Failed to get location from IP {ip_address}: {str(e)}")
+        return "Unknown"
 

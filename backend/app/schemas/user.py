@@ -85,6 +85,11 @@ class RoleOut(RoleBase):
         from_attributes = True
 
 
+class RoleWithStats(RoleOut):
+    user_count: int = 0
+    permission_count: int = 0
+
+
 # ------------------------------------------------------------------
 # Auth
 # ------------------------------------------------------------------

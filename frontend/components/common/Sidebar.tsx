@@ -393,8 +393,8 @@ const Sidebar: React.FC = () => {
                 </DropdownHeader>
                 {isOpen('forecast') && (
                     <SubMenu $collapsed={collapsed}>
-                        {/* Create - Only for Admin and Finance Admin */}
-                        {(isAdmin || isFinanceAdmin) && (
+                        {/* Create - Only for Admin */}
+                        {isAdmin && (
                             <ComponentGate componentId={ComponentId.FORECAST_CREATE}>
                                 <NavItem href="/forecast/create" $active={pathname === '/forecast/create'} $collapsed={collapsed}>
                                     <Plus size={16} />
@@ -414,8 +414,8 @@ const Sidebar: React.FC = () => {
             </>
         </ComponentGate>
 
-        {/* Scenarios - Only for Admin and Finance Admin */}
-        {(isAdmin || isFinanceAdmin) && (
+        {/* Scenarios - Only for Admin */}
+        {isAdmin && (
             <ComponentGate componentId={ComponentId.SIDEBAR_SCENARIO}>
                 <>
                     <DropdownHeader
@@ -456,8 +456,8 @@ const Sidebar: React.FC = () => {
             </ComponentGate>
         )}
 
-        {/* Variance - Only for Admin and Finance Admin */}
-        {(isAdmin || isFinanceAdmin) && (
+        {/* Variance - Only for Admin */}
+        {isAdmin && (
             <ComponentGate componentId={ComponentId.SIDEBAR_VARIANCE}>
                 <>
                     <DropdownHeader

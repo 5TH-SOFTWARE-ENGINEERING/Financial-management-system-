@@ -33,6 +33,16 @@ interface User {
 
 type LoginResponse = AuthTokens & { user: User };
 export type ApiUser = User;
+export interface ApiRole {
+  id: number;
+  name: string;
+  description?: string;
+  permissions?: string[];
+  user_count?: number;
+  permission_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
 
 class ApiClient {
   private client: AxiosInstance;
@@ -225,6 +235,10 @@ class ApiClient {
 
   async getUsers(): Promise<ApiResponse<User[]>> {
     return this.get('/users/');
+  }
+
+  async getUser(userId: number): Promise<ApiResponse<User>> {
+    return this.get(`/users/${userId}`);
   }
 
   async getSubordinates(userId: number): Promise<ApiResponse<User[]>> {
@@ -794,12 +808,44 @@ class ApiClient {
     return this.get('/admin/system/stats');
   }
 
+  async getSystemSettings(): Promise<ApiResponse<any>> {
+    return this.get('/admin/settings');
+  }
+
+  async getSystemHealth(): Promise<ApiResponse<any>> {
+    return this.get('/admin/health');
+  }
+
   async getHierarchy(): Promise<ApiResponse<any>> {
     return this.get('/admin/hierarchy');
   }
 
   async getRoles(): Promise<ApiResponse<any[]>> {
     return this.get('/admin/roles');
+  }
+
+  async getPermissions(): Promise<ApiResponse<string[]>> {
+    return this.get('/admin/permissions');
+  }
+
+  async createRole(roleData: { name: string; description?: string; permissions?: string[] }): Promise<ApiResponse<ApiRole>> {
+    const payload = {
+      ...roleData,
+      permissions: roleData.permissions?.map((perm) => perm.trim()).filter(Boolean),
+    };
+    return this.post('/admin/roles', payload);
+  }
+
+  async updateRole(roleId: number, roleData: { name?: string; description?: string; permissions?: string[] }): Promise<ApiResponse<ApiRole>> {
+    const payload = {
+      ...roleData,
+      permissions: roleData.permissions?.map((perm) => perm.trim()).filter(Boolean),
+    };
+    return this.put(`/admin/roles/${roleId}`, payload);
+  }
+
+  async deleteRole(roleId: number): Promise<ApiResponse<null>> {
+    return this.delete(`/admin/roles/${roleId}`);
   }
 
   // Backup endpoints

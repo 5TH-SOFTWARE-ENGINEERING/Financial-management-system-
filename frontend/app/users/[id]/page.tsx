@@ -440,9 +440,9 @@ export default function UserDetailPage() {
     setError(null);
 
     try {
-      const response = await apiClient.getUsers();
-      const users = response.data || [];
-      const foundUser = users.find((u: any) => u.id === userId);
+      const userIdNum = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+      const response = await apiClient.getUser(userIdNum);
+      const foundUser = response.data;
       
       if (!foundUser) {
         setError('User not found');

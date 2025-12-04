@@ -277,9 +277,8 @@ export default function EditUserPage() {
     setError(null);
 
     try {
-      const response = await apiClient.getUsers();
-      const users = response.data || [];
-      const foundUser = users.find((u: any) => u.id === userId);
+      const response = await apiClient.getUser(userId);
+      const foundUser = response.data;
       
       if (!foundUser) {
         setError('User not found');

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
@@ -271,6 +272,7 @@ export default function DeleteAccountantPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [accountant, setAccountant] = useState<any>(null);
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -313,14 +315,18 @@ export default function DeleteAccountantPage() {
 
   const handleDelete = async () => {
     if (!id) return;
+    if (!password) {
+      setError('Password is required');
+      return;
+    }
     
     setLoading(true);
     setError(null);
     setSuccess(null);
     
     try {
-      await apiClient.deleteUser(parseInt(id, 10));
-      await deleteUser(id); // Update store
+      await apiClient.deleteUser(parseInt(id, 10), password);
+      await deleteUser(id, password); // Update store
       
       setSuccess('Accountant deleted successfully!');
       toast.success('Accountant deleted successfully!');
@@ -447,6 +453,19 @@ export default function DeleteAccountantPage() {
                   </StatusBadge>
                 </div>
               </InfoBox>
+
+              <div style={{ marginBottom: theme.spacing.lg }}>
+                <label style={{ display: 'block', marginBottom: theme.spacing.sm, color: TEXT_COLOR_DARK, fontWeight: 500 }}>
+                  Enter your password to confirm
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
 
               <ButtonRow>
                 <Button 

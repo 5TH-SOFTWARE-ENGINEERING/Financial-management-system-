@@ -161,6 +161,9 @@ const AddBudgetItemPage: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [availableBudgets, setAvailableBudgets] = useState<Budget[]>([]);
+  const [selectingBudget, setSelectingBudget] = useState(false);
+  const [selectedBudgetForNav, setSelectedBudgetForNav] = useState<string>('');
   const [budget, setBudget] = useState<Budget | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -172,23 +175,47 @@ const AddBudgetItemPage: React.FC = () => {
 
   useEffect(() => {
     if (budgetIdParam) {
-      loadBudget();
+      loadBudget(budgetIdParam);
     } else {
-      toast.error('Budget ID is required');
-      router.push('/budgets');
+      fetchBudgetsForSelection();
     }
   }, [budgetIdParam]);
 
-  const loadBudget = async () => {
-    if (!budgetIdParam) return;
+  const fetchBudgetsForSelection = async () => {
+    try {
+      setSelectingBudget(true);
+      const response = await apiClient.getBudgets({ limit: 1000 });
+      const data = Array.isArray(response.data) ? response.data : [];
+      setAvailableBudgets(data);
+      if (data.length > 0) {
+        setSelectedBudgetForNav(data[0].id.toString());
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load budgets');
+    } finally {
+      setSelectingBudget(false);
+      setLoading(false);
+    }
+  };
+
+  const handleNavigateToBudget = () => {
+    if (!selectedBudgetForNav) {
+      toast.error('Please select a budget');
+      return;
+    }
+    router.push(`/budgets/additems?budget_id=${selectedBudgetForNav}`);
+  };
+
+  const loadBudget = async (idValue?: string | null) => {
+    const targetBudgetId = idValue ?? budgetIdParam;
+    if (!targetBudgetId) return;
     
     try {
       setLoading(true);
-      const response = await apiClient.getBudget(parseInt(budgetIdParam));
+      const response = await apiClient.getBudget(parseInt(targetBudgetId));
       setBudget(response.data as Budget);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load budget');
-      router.push('/budgets');
     } finally {
       setLoading(false);
     }
@@ -229,6 +256,62 @@ const AddBudgetItemPage: React.FC = () => {
       setSaving(false);
     }
   };
+
+  if (!budgetIdParam) {
+    return (
+      <Layout>
+        <PageContainer>
+          <ContentContainer>
+            <HeaderContainer>
+              <h1>
+                <Plus size={36} />
+                Select a Budget
+              </h1>
+              <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
+                Choose which budget you want to add items to.
+              </p>
+            </HeaderContainer>
+
+            <FormCard>
+              {selectingBudget ? (
+                <LoadingContainer>
+                  <Spinner />
+                  <p>Loading budgets...</p>
+                </LoadingContainer>
+              ) : availableBudgets.length === 0 ? (
+                <div style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+                  <p>No budgets available yet. Create a budget first.</p>
+                  <Button onClick={() => router.push('/budgets/create')} style={{ marginTop: theme.spacing.md }}>
+                    Create Budget
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <FormGroup>
+                    <label>Select Budget</label>
+                    <select
+                      value={selectedBudgetForNav}
+                      onChange={(e) => setSelectedBudgetForNav(e.target.value)}
+                      style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}
+                    >
+                      {availableBudgets.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FormGroup>
+                  <Button onClick={handleNavigateToBudget} style={{ marginTop: theme.spacing.md }}>
+                    Continue
+                  </Button>
+                </>
+              )}
+            </FormCard>
+          </ContentContainer>
+        </PageContainer>
+      </Layout>
+    );
+  }
 
   if (loading) {
     return (

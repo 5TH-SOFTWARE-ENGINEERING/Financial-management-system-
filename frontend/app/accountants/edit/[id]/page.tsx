@@ -240,9 +240,8 @@ export default function EditAccountantPage() {
     setError(null);
     
     try {
-      // NOTE: Better to use a dedicated getUserById endpoint if available
-      const response = await apiClient.getUsers(); 
-      const user = (response.data || []).find((u: any) => u.id.toString() === id);
+      const response = await apiClient.getUser(parseInt(id, 10));
+      const user = response.data;
       
       if (!user) {
         setError('Accountant not found');

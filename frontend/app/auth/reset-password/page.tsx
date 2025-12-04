@@ -242,28 +242,35 @@ export default function ResetPassword() {
     try {
       // Request OTP for password reset
       const response = await apiClient.requestOTP(data.email);
-      setEmail(data.email);
-      setIsSuccess(true);
-      setStep('otp');
-      setCanResendOTP(false);
-      setResendTimer(60); // 60 seconds cooldown
       
-      // Start countdown timer
-      const timer = setInterval(() => {
-        setResendTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setCanResendOTP(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      toast.success('OTP sent to your email! Please check your inbox.');
-      requestForm.reset();
+      // Check if we got a valid response
+      if (response && (response.data || response.message)) {
+        setEmail(data.email);
+        setIsSuccess(true);
+        setStep('otp');
+        setCanResendOTP(false);
+        setResendTimer(60); // 60 seconds cooldown
+        
+        // Start countdown timer
+        const timer = setInterval(() => {
+          setResendTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              setCanResendOTP(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        const message = response.data?.message || response.message || 'OTP sent to your email!';
+        toast.success(message);
+        requestForm.reset();
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to send OTP. Please try again.';
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to send OTP. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -349,7 +356,8 @@ export default function ResetPassword() {
       // The backend will verify the OTP during this step
       const response = await apiClient.resetPassword(email, otpCode, data.newPassword);
       
-      const successMessage = response.data?.message || 'Password reset successful! You can now login.';
+      // Handle different response structures
+      const successMessage = response?.data?.message || response?.message || 'Password reset successful! You can now login.';
       toast.success(successMessage);
       
       // Clear state
@@ -362,7 +370,7 @@ export default function ResetPassword() {
         router.push('/auth/login');
       }, 2000);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to reset password. Please try again.';
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to reset password. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
       

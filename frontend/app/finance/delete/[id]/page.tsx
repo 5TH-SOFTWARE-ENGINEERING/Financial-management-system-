@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /* -------------------------------------------------------------------------- */
 /*                             GLOBAL PAGE LAYOUT                             */
@@ -213,6 +214,7 @@ export default function DeleteFinancePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [financeManager, setFinanceManager] = useState<any>(null);
+  const [password, setPassword] = useState('');
 
   /* ---------------------------- Load user details ---------------------------- */
   useEffect(() => {
@@ -255,6 +257,11 @@ export default function DeleteFinancePage() {
       return;
     }
 
+    if (!password) {
+      setError('Password is required');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -263,8 +270,8 @@ export default function DeleteFinancePage() {
       if (!id) {
         throw new Error('Finance manager ID is required');
       }
-      await apiClient.deleteUser(Number(id));
-      await deleteUser(id);
+      await apiClient.deleteUser(Number(id), password);
+      await deleteUser(id, password);
       await fetchAllUsers();
 
       setSuccess('Finance manager deleted successfully!');
@@ -397,6 +404,19 @@ export default function DeleteFinancePage() {
                 </StatusBadge>
               </div>
             </InfoBox>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--foreground)', fontWeight: 500 }}>
+                Enter your password to confirm
+              </label>
+              <Input
+                type="password"
+                placeholder="Your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
 
             <ButtonRow>
               <Button

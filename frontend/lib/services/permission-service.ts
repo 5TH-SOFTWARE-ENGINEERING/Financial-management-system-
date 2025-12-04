@@ -1,6 +1,7 @@
 // lib/services/permission-service.ts
 
 import { Permission, DEFAULT_PERMISSIONS, Resource, Action } from '../rbac/models';
+import apiClient from '../api';
 
 interface PermissionServiceInterface {
   getAllPermissions(): Promise<Permission[]>;
@@ -14,19 +15,54 @@ interface PermissionServiceInterface {
   hasPermission(resource: Resource, action: Action): Promise<boolean>;
 }
 
-// In-memory cache for permissions (since backend doesn't have permission endpoints)
+// Helper to parse permission string (duplicated logic to avoid circular deps if moved to RoleService)
+const parsePermission = (permString: string): Permission => {
+  const [resource, action] = permString.split(':');
+  const found = DEFAULT_PERMISSIONS.find(p => p.resource === resource && p.action === action);
+  if (found) return found;
+  return {
+    id: permString,
+    name: `${action} ${resource}`.replace(/^\w/, c => c.toUpperCase()),
+    description: `Can ${action} ${resource}`,
+    resource: resource as Resource,
+    action: action as Action
+  };
+};
+
+// In-memory cache for permissions
 let permissionsCache: Permission[] | null = null;
 
 export class PermissionService implements PermissionServiceInterface {
   /**
-   * Get all available permissions
-   * Uses DEFAULT_PERMISSIONS since backend doesn't have permission endpoints
+   * Get all available permissions from backend
    */
   async getAllPermissions(): Promise<Permission[]> {
     if (permissionsCache) {
       return [...permissionsCache];
     }
-    permissionsCache = [...DEFAULT_PERMISSIONS];
+
+    try {
+      const response = await apiClient.getPermissions();
+      // Backend returns string[], map to Permission objects
+      // Merge with DEFAULT_PERMISSIONS to ensure we have all static definitions
+      // (Backend might return a subset or superset)
+      const backendPerms = (response.data || []).map(parsePermission);
+      
+      // Combine and deduplicate by ID (which is the perm string for parsed ones, or '1' etc for defaults)
+      // Actually, parsed IDs are 'resource:action'. Default IDs are numbers.
+      // This is a bit messy. Let's rely on backend permissions as truth if available.
+      // If backend returns nothing (e.g. error), use defaults.
+      
+      if (backendPerms.length > 0) {
+        permissionsCache = backendPerms;
+      } else {
+        permissionsCache = [...DEFAULT_PERMISSIONS];
+      }
+    } catch (err) {
+      console.warn('Failed to fetch permissions from backend, using defaults:', err);
+      permissionsCache = [...DEFAULT_PERMISSIONS];
+    }
+    
     return [...permissionsCache];
   }
 
@@ -40,49 +76,33 @@ export class PermissionService implements PermissionServiceInterface {
   }
 
   /**
-   * Create a new permission (in-memory only, since backend doesn't support this)
+   * Create a new permission
+   * Not supported by backend as permissions are static code definitions.
    */
   async createPermission(permission: Omit<Permission, 'id'>): Promise<Permission> {
-    const permissions = await this.getAllPermissions();
-    const newPermission: Permission = {
-      ...permission,
-      id: `permission-${Date.now()}`
-    };
-    permissions.push(newPermission);
-    permissionsCache = permissions;
-    return { ...newPermission };
+    console.warn("createPermission: Backend does not support dynamic permission creation.");
+    // Return a dummy to satisfy interface/UI but don't persist
+    return { ...permission, id: `temp-${Date.now()}` };
   }
 
   /**
-   * Update an existing permission (in-memory only)
+   * Update an existing permission
+   * Not supported by backend.
    */
   async updatePermission(id: string, permissionUpdate: Partial<Permission>): Promise<Permission | null> {
+    console.warn("updatePermission: Backend does not support dynamic permission updates.");
     const permissions = await this.getAllPermissions();
-    const index = permissions.findIndex(p => p.id === id);
-    if (index === -1) return null;
-
-    const updatedPermission = {
-      ...permissions[index],
-      ...permissionUpdate,
-      id // Ensure ID doesn't change
-    };
-    
-    permissions[index] = updatedPermission;
-    permissionsCache = permissions;
-    return { ...updatedPermission };
+    const existing = permissions.find(p => p.id === id);
+    if (!existing) return null;
+    return { ...existing, ...permissionUpdate };
   }
 
   /**
-   * Delete a permission by id (in-memory only)
+   * Delete a permission
+   * Not supported by backend.
    */
   async deletePermission(id: string): Promise<boolean> {
-    const permissions = await this.getAllPermissions();
-    const initialLength = permissions.length;
-    const filtered = permissions.filter(p => p.id !== id);
-    if (filtered.length < initialLength) {
-      permissionsCache = filtered;
-      return true;
-    }
+    console.warn("deletePermission: Backend does not support permission deletion.");
     return false;
   }
 
@@ -121,4 +141,4 @@ export class PermissionService implements PermissionServiceInterface {
 }
 
 // Export a singleton instance
-export const permissionService = new PermissionService(); 
+export const permissionService = new PermissionService();

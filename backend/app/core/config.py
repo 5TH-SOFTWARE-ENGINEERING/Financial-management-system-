@@ -1,34 +1,50 @@
-
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict  # type: ignore
 from typing import Optional
+from pathlib import Path
+
+# Get the backend directory (parent of app/)
+BASE_DIR = Path(__file__).parent.parent.parent
+ENV_FILE = BASE_DIR / ".env"
+
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=str(ENV_FILE) if ENV_FILE.exists() else None,
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+        env_ignore_empty=True,
+        env_nested_delimiter="__"
+    )
+    
     # Database
     DATABASE_URL: str = "postgresql://postgres:amare@localhost/finance_db"
-    #  DATABASE_URL: str = "postgresql://postgres:amare@localhost/finance_db"
+    
     # Security
     SECRET_KEY: str = "your-secret-key-here"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    # Email
-    SMTP_HOST: Optional[str] = None
-    SMTP_PORT: Optional[int] = None
-    SMTP_USER: Optional[str] = None
-    SMTP_PASSWORD: Optional[str] = None
-    
+    # Email Configuration
+    # Note: Port 465 uses SSL automatically, port 587 uses STARTTLS
+    # The email service auto-detects based on port number
+    SMTP_HOST: str = "smtp-relay.brevo.com" 
+    SMTP_PORT: int = 587  # Changed to 465 (SSL) to avoid firewall blocking on port 587
+    SMTP_USER: str = "9d2610001@smtp-brevo.com"
+    SMTP_PASSWORD: str = "xsmtpsib-617f403b1a19eea33ca9a5aaa11c74151aaf28069bff165c4d8bf6bf95ef9659-rhHDr4QIkfIgMaqE"
+    SMTP_FROM_EMAIL: str = "honeycursor@gmail.com"
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
     
     # S3 (for backups)
-    AWS_ACCESS_KEY_ID: Optional[str] = None
-    AWS_SECRET_ACCESS_KEY: Optional[str] = None
-    AWS_BUCKET_NAME: Optional[str] = None
+    AWS_ACCESS_KEY_ID: str = "AKIAYJ67W4DKWU74AK6X"
+    AWS_SECRET_ACCESS_KEY: str = "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"
+    AWS_BUCKET_NAME: str = "my-finance-app-backups"
     AWS_REGION: str = "eu-north-1"
     
     # Application
     APP_NAME: str = "Finance Management System"
-    DEBUG: bool = False
+    DEBUG: bool = True  # Set to False in production
     VERSION: str = "1.0.0"
     
     # CORS and Hosts
@@ -55,8 +71,5 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     REPORTS_DIR: str = "reports"
     BACKUP_DIR: str = "backups"
-    
-    class Config:
-        env_file = ".env"
 
 settings = Settings()
