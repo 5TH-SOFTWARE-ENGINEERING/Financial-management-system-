@@ -461,6 +461,15 @@ interface InventorySummary {
   total_quantity_in_stock?: number;
 }
 
+interface SalesSummary {
+  total_sales: number;
+  total_revenue: number;
+  pending_sales: number;
+  posted_sales: number;
+  period_start?: string;
+  period_end?: string;
+}
+
 export default function ReportPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -482,6 +491,7 @@ export default function ReportPage() {
   const [incomeStatement, setIncomeStatement] = useState<IncomeStatement | null>(null);
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
   const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
+  const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -508,7 +518,7 @@ export default function ReportPage() {
     try {
       const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
       
-      // Fetch sales data for the period
+      // Fetch sales data for the period (for detailed breakdowns)
       let salesData: any[] = [];
       try {
         const salesResponse = await apiClient.getSales({
@@ -524,8 +534,8 @@ export default function ReportPage() {
             : []);
         salesData = salesArray || [];
       } catch (err) {
-        console.warn('Failed to fetch sales data for reports:', err);
-        // Continue without sales data
+        console.warn('Failed to fetch detailed sales data for reports:', err);
+        // Continue without sales data - we'll use sales summary API instead
       }
       
       // Check if user can view inventory summary (Finance Admin, Admin, Manager)
@@ -535,12 +545,30 @@ export default function ReportPage() {
                                user?.role === 'super_admin' ||
                                user?.role === 'manager';
       
-      const [summaryResult, incomeResult, cashFlowResult, inventoryResult] = await Promise.allSettled([
+      // Check if user can view sales summary (Accountant, Finance Admin, Admin, Manager)
+      const canViewSalesSummary = user?.role === 'accountant' ||
+                                  user?.role === 'finance_manager' || 
+                                  user?.role === 'finance_admin' || 
+                                  user?.role === 'admin' || 
+                                  user?.role === 'super_admin' ||
+                                  user?.role === 'manager';
+      
+      const [summaryResult, incomeResult, cashFlowResult, inventoryResult, salesSummaryResult] = await Promise.allSettled([
         apiClient.getFinancialSummary(dateParams.startDate, dateParams.endDate),
         apiClient.getIncomeStatement(dateParams.startDate, dateParams.endDate),
         apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
         canViewInventory ? apiClient.getInventorySummary().catch((err: any) => {
           // Silently handle 403 errors (expected for non-finance admins)
+          if (err.response?.status === 403) {
+            return { data: null };
+          }
+          throw err;
+        }) : Promise.resolve({ data: null }),
+        canViewSalesSummary ? apiClient.getSalesSummary({
+          start_date: dateParams.startDate ? new Date(dateParams.startDate + 'T00:00:00').toISOString() : undefined,
+          end_date: dateParams.endDate ? new Date(dateParams.endDate + 'T23:59:59').toISOString() : undefined,
+        }).catch((err: any) => {
+          // Silently handle 403 errors (expected for non-authorized users)
           if (err.response?.status === 403) {
             return { data: null };
           }
@@ -725,6 +753,55 @@ export default function ReportPage() {
           console.warn('Failed to load inventory summary:', inventoryResult.reason);
         }
         setInventorySummary(null);
+      }
+      
+      // Handle sales summary and integrate with financial data
+      if (salesSummaryResult.status === 'fulfilled') {
+        const salesData = salesSummaryResult.value.data || salesSummaryResult.value;
+        if (salesData && typeof salesData === 'object' && 
+            ('total_sales' in salesData || 'total_revenue' in salesData)) {
+          const salesSummaryData = salesData as SalesSummary;
+          setSalesSummary(salesSummaryData);
+          
+          // Use sales summary revenue if available (more accurate than calculating from individual sales)
+          // This ensures we use the backend's aggregated data which only includes POSTED sales
+          if (salesSummaryData.total_revenue && salesSummaryData.total_revenue > 0) {
+            // Update financial summary with accurate sales data from summary API
+            if (summaryResult.status === 'fulfilled') {
+              const summaryData = summaryResult.value.data || summaryResult.value;
+              if (summaryData && (summaryData.financials || summaryData.revenue_by_category || summaryData.expenses_by_category)) {
+                // Use sales summary revenue instead of calculated totalSales
+                const enhancedSummary = {
+                  ...summaryData,
+                  financials: {
+                    ...summaryData.financials,
+                    total_sales: salesSummaryData.total_revenue,
+                    total_revenue: (summaryData.financials?.total_revenue || 0) + salesSummaryData.total_revenue,
+                    profit: (summaryData.financials?.total_revenue || 0) + salesSummaryData.total_revenue - (summaryData.financials?.total_expenses || 0),
+                    profit_margin: ((summaryData.financials?.total_revenue || 0) + salesSummaryData.total_revenue) > 0 
+                      ? (((summaryData.financials?.total_revenue || 0) + salesSummaryData.total_revenue - (summaryData.financials?.total_expenses || 0)) / ((summaryData.financials?.total_revenue || 0) + salesSummaryData.total_revenue)) * 100
+                      : 0,
+                  },
+                  sales_by_category: salesByCategory,
+                  transaction_counts: {
+                    ...summaryData.transaction_counts,
+                    sales: salesSummaryData.posted_sales || postedSalesData.length,
+                    total: (summaryData.transaction_counts?.total || 0) + (salesSummaryData.posted_sales || postedSalesData.length),
+                  },
+                };
+                setFinancialSummary(enhancedSummary);
+              }
+            }
+          }
+        } else {
+          setSalesSummary(null);
+        }
+      } else {
+        // Only log error if it's not a 403 (permission denied)
+        if (salesSummaryResult.reason?.response?.status !== 403) {
+          console.warn('Failed to load sales summary:', salesSummaryResult.reason);
+        }
+        setSalesSummary(null);
       }
       
       if (summaryResult.status === 'rejected' && incomeResult.status === 'rejected' && cashFlowResult.status === 'rejected') {
@@ -1335,6 +1412,127 @@ export default function ReportPage() {
               </ReportCard>
             </ReportSection>
 
+            {/* Sales Summary Section - For Accountant, Finance Admin, Admin, and Manager */}
+            {(user?.role === 'accountant' || user?.role === 'finance_manager' || user?.role === 'finance_admin' || user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'manager') && (
+              <ReportSection>
+                <ReportCard>
+                  <ReportHeader>
+                    <div>
+                      <h2>
+                        <ShoppingCart />
+                        Sales Summary Report
+                      </h2>
+                      <p>
+                        Period: {formatDate(startDate)} - {formatDate(endDate)}
+                        {salesSummary?.period_start && salesSummary?.period_end && (
+                          <> • Sales Period: {formatDate(salesSummary.period_start)} - {formatDate(salesSummary.period_end)}</>
+                        )}
+                      </p>
+                    </div>
+                  </ReportHeader>
+
+                  {salesSummary ? (
+                    <>
+                      <SummaryGrid>
+                        <SummaryCard $type="revenue">
+                          <div className="label">
+                            <ShoppingCart size={16} />
+                            Total Sales
+                          </div>
+                          <div className="value">
+                            {salesSummary.total_sales || 0}
+                          </div>
+                          <div className="sub-value">
+                            All sales transactions
+                          </div>
+                        </SummaryCard>
+                        <SummaryCard $type="revenue">
+                          <div className="label">
+                            <DollarSign size={16} />
+                            Total Sales Revenue
+                          </div>
+                          <div className="value">
+                            {formatCurrency(salesSummary.total_revenue || 0)}
+                          </div>
+                          <div className="sub-value">
+                            From posted sales only
+                          </div>
+                        </SummaryCard>
+                        <SummaryCard $type="profit">
+                          <div className="label">
+                            <TrendingUp size={16} />
+                            Posted Sales
+                          </div>
+                          <div className="value">
+                            {salesSummary.posted_sales || 0}
+                          </div>
+                          <div className="sub-value">
+                            Approved and posted
+                          </div>
+                        </SummaryCard>
+                        <SummaryCard $type="expense">
+                          <div className="label">
+                            <AlertCircle size={16} />
+                            Pending Sales
+                          </div>
+                          <div className="value">
+                            {salesSummary.pending_sales || 0}
+                          </div>
+                          <div className="sub-value">
+                            Awaiting approval
+                          </div>
+                        </SummaryCard>
+                      </SummaryGrid>
+                      
+                      <div style={{ marginTop: theme.spacing.xl }}>
+                        <SectionTitle>Sales Status Breakdown</SectionTitle>
+                        <CategoryTable>
+                          <thead>
+                            <tr>
+                              <th>Status</th>
+                              <th style={{ textAlign: 'right' }}>Count</th>
+                              <th style={{ textAlign: 'right' }}>Percentage</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>Posted (Approved)</td>
+                              <td style={{ textAlign: 'right' }}>{salesSummary.posted_sales || 0}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                {salesSummary.total_sales > 0 
+                                  ? ((salesSummary.posted_sales || 0) / salesSummary.total_sales * 100).toFixed(1)
+                                  : 0}%
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>Pending (Awaiting Approval)</td>
+                              <td style={{ textAlign: 'right' }}>{salesSummary.pending_sales || 0}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                {salesSummary.total_sales > 0 
+                                  ? ((salesSummary.pending_sales || 0) / salesSummary.total_sales * 100).toFixed(1)
+                                  : 0}%
+                              </td>
+                            </tr>
+                            <tr style={{ fontWeight: theme.typography.fontWeights.bold, borderTop: `2px solid ${theme.colors.border}` }}>
+                              <td>Total</td>
+                              <td style={{ textAlign: 'right' }}>{salesSummary.total_sales || 0}</td>
+                              <td style={{ textAlign: 'right' }}>100%</td>
+                            </tr>
+                          </tbody>
+                        </CategoryTable>
+                      </div>
+                    </>
+                  ) : (
+                    <EmptyState>
+                      <ShoppingCart size={48} />
+                      <h3>No sales data available</h3>
+                      <p>Sales summary is only available to Accountant, Finance Admin, Admin, and Manager roles.</p>
+                    </EmptyState>
+                  )}
+                </ReportCard>
+              </ReportSection>
+            )}
+
             {/* Inventory Summary Section - For Finance Admin, Admin, and Manager */}
             {(user?.role === 'finance_manager' || user?.role === 'finance_admin' || user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'manager') && (
               <ReportSection>
@@ -1415,6 +1613,52 @@ export default function ReportPage() {
                           </SummaryCard>
                         )}
                       </SummaryGrid>
+                      
+                      <div style={{ marginTop: theme.spacing.xl }}>
+                        <SectionTitle>Inventory Valuation Analysis</SectionTitle>
+                        <CategoryTable>
+                          <thead>
+                            <tr>
+                              <th>Metric</th>
+                              <th style={{ textAlign: 'right' }}>Value</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>Total Inventory Items</td>
+                              <td style={{ textAlign: 'right' }}>{inventorySummary.total_items || 0}</td>
+                            </tr>
+                            {inventorySummary.total_quantity_in_stock !== undefined && (
+                              <tr>
+                                <td>Total Stock Quantity</td>
+                                <td style={{ textAlign: 'right' }}>{inventorySummary.total_quantity_in_stock.toLocaleString()} units</td>
+                              </tr>
+                            )}
+                            <tr>
+                              <td>Total Cost Value (Investment)</td>
+                              <td style={{ textAlign: 'right' }}>{formatCurrency(inventorySummary.total_cost_value || 0)}</td>
+                            </tr>
+                            <tr>
+                              <td>Total Selling Value (Potential Revenue)</td>
+                              <td style={{ textAlign: 'right' }}>{formatCurrency(inventorySummary.total_selling_value || 0)}</td>
+                            </tr>
+                            <tr style={{ fontWeight: theme.typography.fontWeights.bold, borderTop: `2px solid ${theme.colors.border}` }}>
+                              <td>Potential Profit</td>
+                              <td style={{ textAlign: 'right', color: PRIMARY_COLOR }}>
+                                {formatCurrency(inventorySummary.potential_profit || 0)}
+                              </td>
+                            </tr>
+                            {inventorySummary.total_cost_value > 0 && (
+                              <tr>
+                                <td>Profit Margin (Potential)</td>
+                                <td style={{ textAlign: 'right' }}>
+                                  {((inventorySummary.potential_profit || 0) / inventorySummary.total_cost_value * 100).toFixed(2)}%
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </CategoryTable>
+                      </div>
                     </>
                   ) : (
                     <EmptyState>
