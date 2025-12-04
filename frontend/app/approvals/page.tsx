@@ -323,6 +323,7 @@ const TypeIcon = styled.div<{ $type: string }>`
     switch(props.$type) {
       case 'revenue': return 'rgba(34, 197, 94, 0.12)';
       case 'expense': return 'rgba(239, 68, 68, 0.12)';
+      case 'sale': return 'rgba(245, 158, 11, 0.12)'; // Amber for sales
       default: return 'rgba(59, 130, 246, 0.12)';
     }
   }};
@@ -330,6 +331,7 @@ const TypeIcon = styled.div<{ $type: string }>`
     switch(props.$type) {
       case 'revenue': return '#15803d';
       case 'expense': return '#dc2626';
+      case 'sale': return '#b45309'; // Amber for sales
       default: return '#1d4ed8';
     }
   }};
@@ -715,7 +717,9 @@ export default function ApprovalsPage() {
     if (canApproveTransactions()) return true;
     if (!user) return false;
     const role = user.role?.toLowerCase();
-    return role === 'admin' || role === 'super_admin' || role === 'manager' || role === 'finance_manager';
+    // Include accountants and finance admins for sales approval
+    return role === 'admin' || role === 'super_admin' || role === 'manager' || 
+           role === 'finance_manager' || role === 'finance_admin' || role === 'accountant';
   };
 
   const [loading, setLoading] = useState(true);
@@ -833,10 +837,17 @@ export default function ApprovalsPage() {
           expense_entry_id: e.id,
         }));
 
-      // Fetch pending sales - only for accountants and finance admins
+      // Fetch pending sales - for accountants, finance admins, managers, and admins
       let pendingSales: any[] = [];
       const userRole = user?.role?.toLowerCase();
-      if (userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'admin' || userRole === 'super_admin') {
+      const canViewSales = userRole === 'accountant' || 
+                          userRole === 'finance_manager' || 
+                          userRole === 'finance_admin' || 
+                          userRole === 'admin' || 
+                          userRole === 'super_admin' ||
+                          userRole === 'manager';
+      
+      if (canViewSales) {
         try {
           const salesResponse: any = await apiClient.getSales({ status: 'pending', limit: 1000 });
           const salesData = Array.isArray(salesResponse?.data) 
@@ -844,23 +855,38 @@ export default function ApprovalsPage() {
             : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
               ? (salesResponse.data as any).data || [] 
               : []);
-          pendingSales = (salesData || []).map((s: any) => {
-            const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
-            return {
-              id: s.id,
-              type: 'sale' as const,
-              title: s.item_name || `Sale #${s.id}`,
-              description: s.customer_name ? `Customer: ${s.customer_name}` : `Receipt: ${s.receipt_number || `#${s.id}`}`,
-              amount: s.total_sale,
-              status: saleStatus,
-              requester_id: s.sold_by_id,
-              created_at: s.created_at,
-              sale_id: s.id,
-              item_name: s.item_name,
-              quantity_sold: s.quantity_sold,
-              receipt_number: s.receipt_number,
-            };
-          });
+          
+          // Filter and map pending sales - ensure we only include truly pending sales
+          pendingSales = (salesData || [])
+            .filter((s: any) => {
+              // Double-check status is pending
+              const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
+              return saleStatus === 'pending';
+            })
+            .map((s: any) => {
+              const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
+              return {
+                id: s.id,
+                type: 'sale' as const,
+                title: s.item_name || `Sale #${s.id}`,
+                description: s.customer_name ? `Customer: ${s.customer_name}` : `Receipt: ${s.receipt_number || `#${s.id}`}`,
+                amount: s.total_sale,
+                status: 'pending' as const, // Force to 'pending' to ensure buttons show
+                requester_id: s.sold_by_id,
+                created_at: s.created_at,
+                sale_id: s.id,
+                item_name: s.item_name,
+                quantity_sold: s.quantity_sold,
+                receipt_number: s.receipt_number,
+              };
+            });
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Pending sales fetched:', {
+              count: pendingSales.length,
+              sales: pendingSales.map(s => ({ id: s.id, title: s.title, status: s.status }))
+            });
+          }
         } catch (err: any) {
           console.error('Error fetching sales:', err);
           // Don't fail the entire load if sales fetch fails
@@ -875,10 +901,20 @@ export default function ApprovalsPage() {
       const allApprovals = [...workflows, ...pendingRevenues, ...pendingExpenses, ...pendingSales];
       
       // Normalize status values to lowercase for consistency
-      const normalizedApprovals = allApprovals.map(item => ({
-        ...item,
-        status: (item.status?.value || item.status || 'pending')?.toLowerCase(),
-      }));
+      // For sales, ensure status is 'pending' if it was pending
+      const normalizedApprovals = allApprovals.map(item => {
+        let normalizedStatus = (item.status?.value || item.status || 'pending')?.toLowerCase();
+        
+        // For sales, if status is 'pending', keep it as 'pending' (don't let it become something else)
+        if (item.type === 'sale' && (item.status === 'pending' || item.status?.toLowerCase() === 'pending')) {
+          normalizedStatus = 'pending';
+        }
+        
+        return {
+          ...item,
+          status: normalizedStatus,
+        };
+      });
       
       // Sort by created date (newest first)
       normalizedApprovals.sort((a, b) => {
@@ -1276,14 +1312,28 @@ export default function ApprovalsPage() {
                     </ApprovalItemLeft>
                     
                     <ApprovalActions>
-                      {item.status === 'pending' && canApprove() && (
+                      {/* Show approve/reject buttons for pending items if user can approve */}
+                      {item.status === 'pending' && (() => {
+                        // For sales, check if user is accountant or finance admin
+                        if (item.type === 'sale') {
+                          const userRole = user?.role?.toLowerCase();
+                          const canApproveSales = userRole === 'accountant' || 
+                                                 userRole === 'finance_manager' || 
+                                                 userRole === 'finance_admin' || 
+                                                 userRole === 'admin' || 
+                                                 userRole === 'super_admin';
+                          return canApproveSales;
+                        }
+                        // For other types, use canApprove()
+                        return canApprove();
+                      })() && (
                         <>
-                      <ActionButton
-                        $variant="primary"
-                        onClick={() => handleApprove(item)}
-                        disabled={processingId === `${item.type}-${item.id}`}
-                      >
-                        {processingId === `${item.type}-${item.id}` ? (
+                          <ActionButton
+                            $variant="primary"
+                            onClick={() => handleApprove(item)}
+                            disabled={processingId === `${item.type}-${item.id}`}
+                          >
+                            {processingId === `${item.type}-${item.id}` ? (
                               <>
                                 <SpinningIcon size={16} />
                                 {item.type === 'sale' ? 'Posting...' : 'Approving...'}
@@ -1295,9 +1345,13 @@ export default function ApprovalsPage() {
                               </>
                             )}
                           </ActionButton>
+                          {/* Show reject/cancel button - for sales, only finance admins can cancel */}
                           {(item.type !== 'sale' || (() => {
                             const userRole = user?.role?.toLowerCase();
-                            return userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'admin' || userRole === 'super_admin';
+                            return userRole === 'finance_manager' || 
+                                   userRole === 'finance_admin' || 
+                                   userRole === 'admin' || 
+                                   userRole === 'super_admin';
                           })()) && (
                             <ActionButton
                               $variant="danger"
@@ -1315,6 +1369,7 @@ export default function ApprovalsPage() {
                           )}
                         </>
                       )}
+                      {/* View button - always show for all items */}
                       <ActionButton
                         $variant="secondary"
                         onClick={() => {
