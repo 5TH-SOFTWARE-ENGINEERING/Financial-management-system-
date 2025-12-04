@@ -580,7 +580,7 @@ const Sidebar: React.FC = () => {
                         {isAdmin && (
                             <ComponentGate componentId={ComponentId.FORECAST_CREATE}>
                                 <NavItem href="/forecast/create" $active={pathname === '/forecast/create'} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname === '/forecast/create'} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname === '/forecast/create'} $collapsed={collapsed} $size={16} $iconType="plus">
                                         <Plus />
                                     </NavIcon>
                                     {!collapsed && 'new forecast'}
@@ -590,7 +590,7 @@ const Sidebar: React.FC = () => {
                         {/* List - Available for all authorized users */}
                         <ComponentGate componentId={ComponentId.FORECAST_LIST}>
                             <NavItem href="/forecast/list" $active={pathname === '/forecast/list'} $collapsed={collapsed}>
-                                <NavIcon $active={pathname === '/forecast/list'} $collapsed={collapsed} $size={16}>
+                                <NavIcon $active={pathname === '/forecast/list'} $collapsed={collapsed} $size={16} $iconType="list">
                                     <List />
                                 </NavIcon>
                                 {!collapsed && 'forecasts'}
@@ -612,7 +612,7 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <DropdownIcon $active={pathname.includes('/scenario')} $collapsed={collapsed}>
+                            <DropdownIcon $active={pathname.includes('/scenario')} $collapsed={collapsed} $iconType="git-compare">
                                 <GitCompare />
                             </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Scenarios</span>}
@@ -625,7 +625,7 @@ const Sidebar: React.FC = () => {
                         <SubMenu $collapsed={collapsed}>
                             <ComponentGate componentId={ComponentId.SCENARIO_CREATE}>
                                 <NavItem href="/scenarios/create" $active={pathname === '/scenarios/create'} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname === '/scenarios/create'} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname === '/scenarios/create'} $collapsed={collapsed} $size={16} $iconType="plus">
                                         <Plus />
                                     </NavIcon>
                                     {!collapsed && 'new scenario'}
@@ -633,7 +633,7 @@ const Sidebar: React.FC = () => {
                             </ComponentGate>
                             <ComponentGate componentId={ComponentId.SCENARIO_LIST}>
                                 <NavItem href="/scenarios/list" $active={pathname === '/scenarios/list'} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname === '/scenarios/list'} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname === '/scenarios/list'} $collapsed={collapsed} $size={16} $iconType="list">
                                         <List />
                                     </NavIcon>
                                     {!collapsed && 'scenarios'}
@@ -641,7 +641,7 @@ const Sidebar: React.FC = () => {
                             </ComponentGate>
                             <ComponentGate componentId={ComponentId.SCENARIO_COMPARE}>
                                 <NavItem href="/scenarios/campare" $active={pathname.includes('/scenarios/campare')} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname.includes('/scenarios/campare')} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname.includes('/scenarios/campare')} $collapsed={collapsed} $size={16} $iconType="git-compare">
                                         <GitCompare />
                                     </NavIcon>
                                     {!collapsed && 'compare scenarios'}
@@ -664,7 +664,7 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <DropdownIcon $active={pathname.includes('/variance')} $collapsed={collapsed}>
+                            <DropdownIcon $active={pathname.includes('/variance')} $collapsed={collapsed} $iconType="bar-chart-3">
                                 <BarChart3 />
                             </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Variance</span>}
@@ -677,7 +677,7 @@ const Sidebar: React.FC = () => {
                         <SubMenu $collapsed={collapsed}>
                             <ComponentGate componentId={ComponentId.VARIANCE_CALCULATE}>
                                 <NavItem href="/variance/calculatevariance" $active={pathname.includes('/variance/calculatevariance')} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname.includes('/variance/calculatevariance')} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname.includes('/variance/calculatevariance')} $collapsed={collapsed} $size={16} $iconType="calculator">
                                         <Calculator />
                                     </NavIcon>
                                     {!collapsed && 'calculate variance'}
@@ -685,7 +685,7 @@ const Sidebar: React.FC = () => {
                             </ComponentGate>
                             <ComponentGate componentId={ComponentId.VARIANCE_HISTORY}>
                                 <NavItem href="/variance/variancehistory" $active={pathname.includes('/variance/variancehistory')} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname.includes('/variance/variancehistory')} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname.includes('/variance/variancehistory')} $collapsed={collapsed} $size={16} $iconType="file-text">
                                         <FileText />
                                     </NavIcon>
                                     {!collapsed && 'variance history'}
@@ -693,7 +693,7 @@ const Sidebar: React.FC = () => {
                             </ComponentGate>
                             <ComponentGate componentId={ComponentId.VARIANCE_SUMMARY}>
                                 <NavItem href="/variance/variancesummery" $active={pathname.includes('/variance/variancesummery')} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname.includes('/variance/variancesummery')} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname.includes('/variance/variancesummery')} $collapsed={collapsed} $size={16} $iconType="bar-chart-3">
                                         <BarChart3 />
                                     </NavIcon>
                                     {!collapsed && 'variance summary'}
