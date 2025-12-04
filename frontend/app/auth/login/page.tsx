@@ -114,6 +114,13 @@ const LoginCard = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.lg};
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all ${theme.transitions.default};
+
+  &:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
 `;
 const Title = styled.h1`
   text-align: center;
@@ -274,18 +281,30 @@ const SignInButton = styled.button`
 `;
 const ForgotPassword = styled.a`
   text-align: right;
-  color:rgb(46, 63, 212);
+  color: rgb(155, 186, 32);
   font-size: ${theme.typography.fontSizes.sm};
   cursor: pointer;
+  text-decoration: none;
+  transition: all ${theme.transitions.default};
+  
   &:hover {
     color: ${theme.colors.primary};
+    text-decoration: underline;
+  }
+  
+  &:active {
+    transform: scale(0.98);
   }
 `;
 const ErrorMessage = styled.div`
   color: #ff4d4f;
   font-size: ${theme.typography.fontSizes.sm};
   margin-top: ${theme.spacing.xs};
-  text-align: center;
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  background: rgba(255, 77, 79, 0.1);
+  border-radius: ${theme.borderRadius.md};
+  border-left: 3px solid #ff4d4f;
+  text-align: left;
 `;
 export default function Login() {
   const { login, error: authError, isLoading: authLoading, isAuthenticated } = useAuth();
