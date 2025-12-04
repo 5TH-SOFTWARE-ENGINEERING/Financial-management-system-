@@ -591,25 +591,63 @@ const AdminDashboard: React.FC = () => {
           debugInfo.expenseIdsWithWorkflow = expenseIdsWithWorkflow.size;
 
           // Fetch pending revenue entries - only count those WITHOUT workflows
-          const revenuesRes = await apiClient.getRevenues({ is_approved: false });
+          const revenuesRes = await apiClient.getRevenues();
           if (revenuesRes?.data && Array.isArray(revenuesRes.data)) {
             const pendingRevenues = revenuesRes.data.filter((r: any) => {
-              // Only count if not approved AND doesn't have an existing workflow
-              return !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
+              // Only count if not approved (is_approved is false or undefined) AND doesn't have an existing workflow
+              const isNotApproved = r.is_approved === false || r.is_approved === undefined || !r.is_approved;
+              return isNotApproved && !revenueIdsWithWorkflow.has(r.id);
             });
             totalPendingCount += pendingRevenues.length;
             debugInfo.pendingRevenuesCount = pendingRevenues.length;
           }
 
           // Fetch pending expense entries - only count those WITHOUT workflows
-          const expensesRes = await apiClient.getExpenses({ is_approved: false });
+          const expensesRes = await apiClient.getExpenses();
           if (expensesRes?.data && Array.isArray(expensesRes.data)) {
             const pendingExpenses = expensesRes.data.filter((e: any) => {
-              // Only count if not approved AND doesn't have an existing workflow
-              return !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
+              // Only count if not approved (is_approved is false or undefined) AND doesn't have an existing workflow
+              const isNotApproved = e.is_approved === false || e.is_approved === undefined || !e.is_approved;
+              return isNotApproved && !expenseIdsWithWorkflow.has(e.id);
             });
             totalPendingCount += pendingExpenses.length;
             debugInfo.pendingExpensesCount = pendingExpenses.length;
+          }
+
+          // Fetch pending sales - for accountants, finance admins, managers, and admins
+          // Sales need to be approved/posted by accountants or finance admins
+          const userRoleLower = user?.role?.toLowerCase();
+          const canViewSales = userRoleLower === 'accountant' || 
+                              userRoleLower === 'finance_manager' || 
+                              userRoleLower === 'finance_admin' || 
+                              userRoleLower === 'admin' || 
+                              userRoleLower === 'super_admin' ||
+                              userRoleLower === 'manager';
+          
+          if (canViewSales) {
+            try {
+              const salesResponse: any = await apiClient.getSales({ status: 'pending', limit: 1000 });
+              const salesData = Array.isArray(salesResponse?.data) 
+                ? salesResponse.data 
+                : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
+                  ? (salesResponse.data as any).data || [] 
+                  : []);
+              
+              // Filter for pending sales (status is 'pending' or 'PENDING')
+              const pendingSales = (salesData || []).filter((s: any) => {
+                const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
+                return saleStatus === 'pending';
+              });
+              
+              totalPendingCount += pendingSales.length;
+              debugInfo.pendingSalesCount = pendingSales.length;
+            } catch (salesErr: any) {
+              // Silently handle 403 errors (expected for users without sales access)
+              if (salesErr.response?.status !== 403) {
+                console.warn('Failed to fetch pending sales for approvals count:', salesErr);
+              }
+              debugInfo.salesError = salesErr.response?.status === 403 ? 'No access' : 'Error';
+            }
           }
         } catch (err) {
           console.error('Error fetching pending approvals:', err);
@@ -634,6 +672,12 @@ const AdminDashboard: React.FC = () => {
             total_expenses: overviewData.financials?.total_expenses,
             profit: overviewData.financials?.profit,
             pending_approvals_count: totalPendingCount,
+            breakdown: {
+              workflows: debugInfo.pendingWorkflowsCount || 0,
+              revenues: debugInfo.pendingRevenuesCount || 0,
+              expenses: debugInfo.pendingExpensesCount || 0,
+              sales: debugInfo.pendingSalesCount || 0,
+            },
             ...debugInfo,
           });
         }
