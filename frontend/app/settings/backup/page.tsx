@@ -616,7 +616,11 @@ export default function BackupSettingsPage() {
           <Card>
             <CardContent>
               <EmptyState>
-                <AlertTriangle size={48} className="mx-auto mb-4 text-yellow-500" />
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                  <IconWrapper $iconType="alert-triangle" $size={48} $active={true}>
+                    <AlertTriangle size={48} />
+                  </IconWrapper>
+                </div>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#111827', marginBottom: '0.5rem' }}>
                   Access Denied
                 </h3>
@@ -639,21 +643,27 @@ export default function BackupSettingsPage() {
       <Container>
         <Header>
           <Title>
-            <Database size={24} />
+            <TitleIcon $iconType="database" $size={24} $active={true}>
+              <Database size={24} />
+            </TitleIcon>
             Backup Management
           </Title>
         </Header>
 
         {error && !error.includes('Access denied') && (
           <Message type="error">
-            <AlertTriangle size={16} />
+            <MessageIcon $iconType="alert-triangle" $size={16} $active={true}>
+              <AlertTriangle size={16} />
+            </MessageIcon>
             <span>{error}</span>
           </Message>
         )}
 
         {success && (
           <Message type="success">
-            <CheckCircle size={16} />
+            <MessageIcon $iconType="check-circle" $size={16} $active={true}>
+              <CheckCircle size={16} />
+            </MessageIcon>
             <span>{success}</span>
           </Message>
         )}
@@ -661,7 +671,9 @@ export default function BackupSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              <HardDrive size={18} />
+              <CardIcon $iconType="hard-drive" $size={18} $active={true}>
+                <HardDrive size={18} />
+              </CardIcon>
               Create Backup
             </CardTitle>
           </CardHeader>
