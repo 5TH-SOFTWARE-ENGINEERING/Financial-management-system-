@@ -332,6 +332,7 @@ export default function AccountingDashboard() {
       const summaryData = summaryRes.data || (summaryRes.data as any)?.data || null;
       
       // Handle journal entries - backend returns array directly or wrapped
+      // Finance admins and admins can see ALL journal entries, including those posted by accountants
       let journalData: JournalEntry[] = [];
       if (Array.isArray(journalRes.data)) {
         journalData = journalRes.data;
@@ -348,9 +349,22 @@ export default function AccountingDashboard() {
         }
       }
       
+      // Sort by entry date (newest first) to show most recent entries at the top
+      // Finance admins and admins can see ALL journal entries, including those posted by accountants
+      journalData.sort((a, b) => {
+        const dateA = new Date(a.entry_date).getTime();
+        const dateB = new Date(b.entry_date).getTime();
+        return dateB - dateA;
+      });
+      
       setSales(salesData as Sale[]);
       setSummary(summaryData);
       setJournalEntries(journalData);
+      
+      // Log for debugging - finance admins and admins should see all entries
+      if (user && (user.role === 'finance_admin' || user.role === 'finance_manager' || user.role === 'admin')) {
+        console.log(`Finance Admin/Admin: Loaded ${journalData.length} journal entries (all entries visible)`);
+      }
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to load data';
       toast.error(errorMessage);
@@ -543,7 +557,14 @@ export default function AccountingDashboard() {
 
         {activeTab === 'journal' && (
           <Card>
-            <h2 style={{ margin: 0, marginBottom: theme.spacing.lg }}>Journal Entries</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+              <h2 style={{ margin: 0 }}>Journal Entries</h2>
+              {(user?.role === 'finance_admin' || user?.role === 'finance_manager' || user?.role === 'admin') && (
+                <Badge variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
+                  Viewing all entries
+                </Badge>
+              )}
+            </div>
             {loading ? (
               <div style={{ textAlign: 'center', padding: theme.spacing.xxl }}>
                 <Loader2 size={32} className="animate-spin" style={{ color: PRIMARY_COLOR, margin: '0 auto' }} />
