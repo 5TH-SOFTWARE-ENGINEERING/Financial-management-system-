@@ -28,19 +28,21 @@ class Settings(BaseSettings):
     # Email Configuration
     # Note: Port 465 uses SSL automatically, port 587 uses STARTTLS
     # The email service auto-detects based on port number
-    SMTP_HOST: str = "smtp-relay.brevo.com" 
+    # SECURITY: All SMTP credentials must be set via environment variables
+    SMTP_HOST: str = ""  # Set via SMTP_HOST environment variable 
     SMTP_PORT: int = 587  # Changed to 465 (SSL) to avoid firewall blocking on port 587
-    SMTP_USER: str = "9d2610001@smtp-brevo.com"
-    SMTP_PASSWORD: str = "xsmtpsib-617f403b1a19eea33ca9a5aaa11c74151aaf28069bff165c4d8bf6bf95ef9659-rhHDr4QIkfIgMaqE"
-    SMTP_FROM_EMAIL: str = "honeycursor@gmail.com"
+    SMTP_USER: str = ""  # Set via SMTP_USER environment variable
+    SMTP_PASSWORD: str = ""  # Set via SMTP_PASSWORD environment variable
+    SMTP_FROM_EMAIL: str = ""  # Set via SMTP_FROM_EMAIL environment variable
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
     
     # S3 (for backups)
-    AWS_ACCESS_KEY_ID: str = "AKIAYJ67W4DKWU74AK6X"
-    AWS_SECRET_ACCESS_KEY: str = "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"
-    AWS_BUCKET_NAME: str = "my-finance-app-backups"
-    AWS_REGION: str = "eu-north-1"
+    # SECURITY: All AWS credentials must be set via environment variables
+    AWS_ACCESS_KEY_ID: str = ""  # Set via AWS_ACCESS_KEY_ID environment variable
+    AWS_SECRET_ACCESS_KEY: str = ""  # Set via AWS_SECRET_ACCESS_KEY environment variable
+    AWS_BUCKET_NAME: str = ""  # Set via AWS_BUCKET_NAME environment variable
+    AWS_REGION: str = "us-east-1"  # Set via AWS_REGION environment variable (default: us-east-1)
     
     # Application
     APP_NAME: str = "Finance Management System"

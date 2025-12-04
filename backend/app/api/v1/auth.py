@@ -528,7 +528,9 @@ def request_password_reset_otp(
     if settings.DEBUG:
         response["email_sent"] = email_sent
         if not email_sent:
-            response["otp"] = otp_code  # Include OTP for testing
+            # SECURITY: OTP is logged to server logs for debugging, but never returned in API response
+            # This prevents OTP exposure even in DEBUG mode
+            logger.warning(f"DEBUG MODE: OTP for {email} is {otp_code} (NOT returned in response for security)")
             if email_error_detail:
                 response["email_error_detail"] = email_error_detail
     

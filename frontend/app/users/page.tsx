@@ -695,9 +695,9 @@ export default function UsersPage() {
       // The filteredUsers are already applied at the root level, so we show all subordinates
       const subordinates = getSubordinates(userId, accessibleUsers);
       const isExpanded = expandedUsers.has(userId);
-      if (isAdminRole(userRole)) {
-        return renderUserHierarchy(subordinates, level);
-      }
+      // FIXED: Admin users are now rendered in the hierarchy instead of being skipped
+      // Previously, admin users were skipped and only their subordinates were shown
+      // Now all users, including admins, are displayed in the hierarchy
       
       return (
         <UserItem key={userId} level={level}>
