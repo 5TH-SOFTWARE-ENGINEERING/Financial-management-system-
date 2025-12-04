@@ -835,7 +835,7 @@ const Sidebar: React.FC = () => {
                             {/* Accountant Create Link */}
                             <ComponentGate componentId={ComponentId.ACCOUNTANT_CREATE}>
                                 <NavItem href="/accountants/create" $active={pathname === '/accountant/create'} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname === '/accountant/create'} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname === '/accountant/create'} $collapsed={collapsed} $size={16} $iconType="plus">
                                         <UserPlus />
                                     </NavIcon>
                                     {!collapsed && 'Add Accountant'}
@@ -844,7 +844,7 @@ const Sidebar: React.FC = () => {
                             {/* Accountant List Link */}
                             <ComponentGate componentId={ComponentId.ACCOUNTANT_LIST}>
                                 <NavItem href="/accountants/list" $active={pathname === '/accountant/list'} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname === '/accountant/list'} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname === '/accountant/list'} $collapsed={collapsed} $size={16} $iconType="list">
                                         <List />
                                     </NavIcon>
                                     {!collapsed && 'All Accountants'}
@@ -865,7 +865,7 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <DropdownIcon $active={pathname.includes('/employee')} $collapsed={collapsed}>
+                            <DropdownIcon $active={pathname.includes('/employee')} $collapsed={collapsed} $iconType="users">
                                 <Users />
                             </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Employees</span>}
@@ -879,7 +879,7 @@ const Sidebar: React.FC = () => {
                             {/* Employee Create Link */}
                             <ComponentGate componentId={ComponentId.EMPLOYEE_CREATE}>
                                 <NavItem href="/employees/create" $active={pathname === '/employee/create'} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname === '/employee/create'} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname === '/employee/create'} $collapsed={collapsed} $size={16} $iconType="plus">
                                         <UserPlus />
                                     </NavIcon>
                                     {!collapsed && 'Add Employee'}
@@ -888,7 +888,7 @@ const Sidebar: React.FC = () => {
                             {/* Employee List Link */}
                             <ComponentGate componentId={ComponentId.EMPLOYEE_LIST}>
                                 <NavItem href="/employees/list" $active={pathname === '/employee/list'} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname === '/employee/list'} $collapsed={collapsed} $size={16}>
+                                    <NavIcon $active={pathname === '/employee/list'} $collapsed={collapsed} $size={16} $iconType="list">
                                         <List />
                                     </NavIcon>
                                     {!collapsed && 'All Employees'}
@@ -902,7 +902,7 @@ const Sidebar: React.FC = () => {
                 {/* Departments */}
                 <ComponentGate componentId={ComponentId.SIDEBAR_DEPARTMENT}>
                     <NavItem href="/department/list" $active={pathname.includes('/department')} $collapsed={collapsed}>
-                        <NavIcon $active={pathname.includes('/department')} $collapsed={collapsed}>
+                        <NavIcon $active={pathname.includes('/department')} $collapsed={collapsed} $iconType="building">
                             <Building />
                         </NavIcon>
                         {!collapsed && 'Departments'}
@@ -912,7 +912,7 @@ const Sidebar: React.FC = () => {
                 {/* Projects */}
                 <ComponentGate componentId={ComponentId.SIDEBAR_PROJECT}>
                     <NavItem href="/project/list" $active={pathname.includes('/project')} $collapsed={collapsed}>
-                        <NavIcon $active={pathname.includes('/project')} $collapsed={collapsed}>
+                        <NavIcon $active={pathname.includes('/project')} $collapsed={collapsed} $iconType="briefcase">
                             <Briefcase />
                         </NavIcon>
                         {!collapsed && 'Projects'}
