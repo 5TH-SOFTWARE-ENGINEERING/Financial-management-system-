@@ -17,6 +17,97 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+// Icon color mapping for different icon types
+const getIconColor = (iconType: string, active: boolean = false): string => {
+    if (active) {
+        // Active state colors (brighter)
+        const activeColors: Record<string, string> = {
+            'package': '#3b82f6',           // Blue
+            'plus': '#22c55e',              // Green
+            'edit': '#3b82f6',              // Blue
+            'trash2': '#ef4444',            // Red
+            'search': '#6366f1',            // Indigo
+            'filter': '#8b5cf6',            // Purple
+            'dollar-sign': '#16a34a',        // Green
+            'trending-up': '#22c55e',       // Green
+            'alert-circle': '#f59e0b',       // Amber
+            'check-circle': '#22c55e',      // Green
+            'loader2': '#3b82f6',           // Blue
+            'eye': '#6366f1',               // Indigo
+            'eye-off': '#6b7280',           // Gray
+            'save': '#22c55e',              // Green
+            'x': '#6b7280',                 // Gray
+        };
+        return activeColors[iconType] || '#6b7280';
+    } else {
+        // Inactive state colors (muted but colorful)
+        const inactiveColors: Record<string, string> = {
+            'package': '#60a5fa',           // Light Blue
+            'plus': '#4ade80',              // Light Green
+            'edit': '#60a5fa',              // Light Blue
+            'trash2': '#f87171',            // Light Red
+            'search': '#818cf8',            // Light Indigo
+            'filter': '#a78bfa',            // Light Purple
+            'dollar-sign': '#4ade80',        // Light Green
+            'trending-up': '#4ade80',       // Light Green
+            'alert-circle': '#fbbf24',       // Light Amber
+            'check-circle': '#4ade80',      // Light Green
+            'loader2': '#60a5fa',           // Light Blue
+            'eye': '#818cf8',               // Light Indigo
+            'eye-off': '#9ca3af',           // Light Gray
+            'save': '#4ade80',              // Light Green
+            'x': '#9ca3af',                 // Light Gray
+        };
+        return inactiveColors[iconType] || '#9ca3af';
+    }
+};
+
+// Icon styled components
+const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : '#6b7280'};
+    opacity: ${props => props.$active ? 1 : 0.8};
+    transition: all 0.2s ease;
+    
+    svg {
+        width: ${props => props.$size ? `${props.$size}px` : '20px'};
+        height: ${props => props.$size ? `${props.$size}px` : '20px'};
+        transition: all 0.2s ease;
+    }
+
+    &:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+`;
+
+const HeaderIcon = styled(IconWrapper)`
+    margin-right: ${theme.spacing.md};
+`;
+
+const ButtonIcon = styled(IconWrapper)`
+    margin-right: ${theme.spacing.sm};
+`;
+
+const StatIcon = styled(IconWrapper)`
+    flex-shrink: 0;
+`;
+
+const ActionIcon = styled(IconWrapper)`
+    cursor: pointer;
+`;
+
+const MessageIcon = styled(IconWrapper)`
+    margin-right: ${theme.spacing.xs};
+    vertical-align: middle;
+`;
+
+const ModalIcon = styled(IconWrapper)`
+    margin-right: ${theme.spacing.sm};
+`;
+
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
@@ -506,13 +597,17 @@ export default function InventoryManagePage() {
           <HeaderContent>
             <HeaderText>
               <h1>
-                <Package size={32} style={{ marginRight: theme.spacing.md, display: 'inline' }} />
+                <HeaderIcon $iconType="package" $size={32} $active={true}>
+                  <Package size={32} />
+                </HeaderIcon>
                 Inventory Management
               </h1>
               <p>Manage inventory items, costs, and pricing (Finance Admin Only)</p>
             </HeaderText>
-            <Button onClick={handleCreate}>
-              <Plus size={16} style={{ marginRight: theme.spacing.sm }} />
+            <Button onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+              <ButtonIcon $iconType="plus" $size={16} $active={true}>
+                <Plus size={16} />
+              </ButtonIcon>
               Add Item
             </Button>
           </HeaderContent>
@@ -526,7 +621,9 @@ export default function InventoryManagePage() {
                   <p>Total Items</p>
                   <p>{summary.total_unique_items || summary.total_items || 0}</p>
                 </StatInfo>
-                <Package size={24} color={PRIMARY_COLOR} />
+                <StatIcon $iconType="package" $size={24} $active={true}>
+                  <Package size={24} />
+                </StatIcon>
               </StatContent>
             </StatCard>
             <StatCard>
@@ -535,7 +632,9 @@ export default function InventoryManagePage() {
                   <p>Total Stock</p>
                   <p>{summary.total_quantity_in_stock || 0}</p>
                 </StatInfo>
-                <Package size={24} color={PRIMARY_COLOR} />
+                <StatIcon $iconType="package" $size={24} $active={true}>
+                  <Package size={24} />
+                </StatIcon>
               </StatContent>
             </StatCard>
             {summary.total_cost_value !== undefined && (
@@ -545,7 +644,9 @@ export default function InventoryManagePage() {
                     <p>Total Cost Value</p>
                     <p>${Number(summary.total_cost_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </StatInfo>
-                  <DollarSign size={24} color="#dc2626" />
+                  <StatIcon $iconType="dollar-sign" $size={24} $active={true}>
+                    <DollarSign size={24} />
+                  </StatIcon>
                 </StatContent>
               </StatCard>
             )}
@@ -556,7 +657,9 @@ export default function InventoryManagePage() {
                     <p>Total Selling Value</p>
                     <p>${Number(summary.total_selling_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </StatInfo>
-                  <TrendingUp size={24} color="#16a34a" />
+                  <StatIcon $iconType="trending-up" $size={24} $active={true}>
+                    <TrendingUp size={24} />
+                  </StatIcon>
                 </StatContent>
               </StatCard>
             )}
@@ -569,7 +672,9 @@ export default function InventoryManagePage() {
                       ${Number(summary.potential_profit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </StatInfo>
-                  <TrendingUp size={24} color="#16a34a" />
+                  <StatIcon $iconType="trending-up" $size={24} $active={true}>
+                    <TrendingUp size={24} />
+                  </StatIcon>
                 </StatContent>
               </StatCard>
             )}
@@ -594,12 +699,16 @@ export default function InventoryManagePage() {
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: theme.spacing.xxl }}>
-            <Loader2 size={32} className="animate-spin" style={{ color: PRIMARY_COLOR, margin: '0 auto' }} />
+            <IconWrapper $iconType="loader2" $size={32} $active={true}>
+              <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto' }} />
+            </IconWrapper>
             <p style={{ marginTop: theme.spacing.md, color: TEXT_COLOR_MUTED }}>Loading inventory...</p>
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: theme.spacing.xxl }}>
-            <AlertCircle size={32} color="#dc2626" style={{ margin: '0 auto' }} />
+            <MessageIcon $iconType="alert-circle" $size={32} $active={true}>
+              <AlertCircle size={32} style={{ margin: '0 auto' }} />
+            </MessageIcon>
             <p style={{ marginTop: theme.spacing.md, color: '#dc2626' }}>{error}</p>
           </div>
         ) : (
@@ -620,13 +729,17 @@ export default function InventoryManagePage() {
               <div style={{ padding: theme.spacing.xxl, textAlign: 'center', color: TEXT_COLOR_MUTED }}>
                 {items.length === 0 ? (
                   <>
-                    <Package size={48} style={{ margin: '0 auto', opacity: 0.5, marginBottom: theme.spacing.md }} />
+                    <IconWrapper $iconType="package" $size={48} $active={false} style={{ margin: '0 auto', opacity: 0.5, marginBottom: theme.spacing.md }}>
+                      <Package size={48} />
+                    </IconWrapper>
                     <p style={{ margin: 0, marginBottom: theme.spacing.sm }}>No inventory items yet</p>
                     <p style={{ margin: 0, fontSize: theme.typography.fontSizes.sm }}>Click "Add Item" to create your first inventory item</p>
                   </>
                 ) : (
                   <>
-                    <Search size={48} style={{ margin: '0 auto', opacity: 0.5, marginBottom: theme.spacing.md }} />
+                    <IconWrapper $iconType="search" $size={48} $active={false} style={{ margin: '0 auto', opacity: 0.5, marginBottom: theme.spacing.md }}>
+                      <Search size={48} />
+                    </IconWrapper>
                     <p style={{ margin: 0 }}>No items match your search criteria</p>
                   </>
                 )}
@@ -679,7 +792,9 @@ export default function InventoryManagePage() {
                   <TableCell>
                     <div style={{ display: 'flex', gap: theme.spacing.xs }}>
                       <ActionButton onClick={() => handleEdit(item)} title="Edit">
-                        <Edit size={16} />
+                        <ActionIcon $iconType="edit" $size={16} $active={true}>
+                          <Edit size={16} />
+                        </ActionIcon>
                       </ActionButton>
                       <ActionButton 
                         onClick={() => {
@@ -691,7 +806,9 @@ export default function InventoryManagePage() {
                         title="Delete"
                         data-destructive="true"
                       >
-                        <Trash2 size={16} />
+                        <ActionIcon $iconType="trash2" $size={16} $active={true}>
+                          <Trash2 size={16} />
+                        </ActionIcon>
                       </ActionButton>
                       {item.is_active ? (
                         <ActionButton 
@@ -704,7 +821,9 @@ export default function InventoryManagePage() {
                           }}
                           title="Deactivate"
                         >
-                          <EyeOff size={16} />
+                          <ActionIcon $iconType="eye-off" $size={16} $active={true}>
+                            <EyeOff size={16} />
+                          </ActionIcon>
                         </ActionButton>
                       ) : (
                         <ActionButton 
@@ -717,7 +836,9 @@ export default function InventoryManagePage() {
                           }}
                           title="Activate"
                         >
-                          <Eye size={16} />
+                          <ActionIcon $iconType="eye" $size={16} $active={true}>
+                            <Eye size={16} />
+                          </ActionIcon>
                         </ActionButton>
                       )}
                     </div>
@@ -735,7 +856,9 @@ export default function InventoryManagePage() {
               <ModalHeader>
                 <h2>{editingItem ? 'Edit Item' : 'Add New Item'}</h2>
                 <ActionButton onClick={() => setShowModal(false)}>
-                  <X size={20} />
+                  <IconWrapper $iconType="x" $size={20} $active={false}>
+                    <X size={20} />
+                  </IconWrapper>
                 </ActionButton>
               </ModalHeader>
 
@@ -842,8 +965,10 @@ export default function InventoryManagePage() {
                 <Button variant="outline" onClick={() => setShowModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave}>
-                  <Save size={16} style={{ marginRight: theme.spacing.sm }} />
+                <Button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <ButtonIcon $iconType="save" $size={16} $active={true}>
+                    <Save size={16} />
+                  </ButtonIcon>
                   {editingItem ? 'Update' : 'Create'} Item
                 </Button>
               </ModalActions>
@@ -868,7 +993,9 @@ export default function InventoryManagePage() {
                   setDeletePassword('');
                   setDeletePasswordError(null);
                 }}>
-                  <X size={20} />
+                  <IconWrapper $iconType="x" $size={20} $active={false}>
+                    <X size={20} />
+                  </IconWrapper>
                 </ActionButton>
               </ModalHeader>
 
@@ -879,8 +1006,10 @@ export default function InventoryManagePage() {
                 borderRadius: theme.borderRadius.md,
                 marginBottom: theme.spacing.lg
               }}>
-                <p style={{ margin: 0, color: '#dc2626', fontSize: theme.typography.fontSizes.sm }}>
-                  <AlertCircle size={16} style={{ marginRight: theme.spacing.xs, verticalAlign: 'middle' }} />
+                <p style={{ margin: 0, color: '#dc2626', fontSize: theme.typography.fontSizes.sm, display: 'flex', alignItems: 'center' }}>
+                  <MessageIcon $iconType="alert-circle" $size={16} $active={true}>
+                    <AlertCircle size={16} />
+                  </MessageIcon>
                   You are about to permanently delete <strong>"{itemToDelete.item_name}"</strong>. This action cannot be undone.
                 </p>
               </div>
@@ -931,12 +1060,16 @@ export default function InventoryManagePage() {
                 >
                   {deleting ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" style={{ marginRight: theme.spacing.sm }} />
+                      <ButtonIcon $iconType="loader2" $size={16} $active={true}>
+                        <Loader2 size={16} className="animate-spin" />
+                      </ButtonIcon>
                       Deleting...
                     </>
                   ) : (
                     <>
-                      <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                      <ButtonIcon $iconType="trash2" $size={16} $active={true}>
+                        <Trash2 size={16} />
+                      </ButtonIcon>
                       Delete Item
                     </>
                   )}
@@ -963,7 +1096,9 @@ export default function InventoryManagePage() {
                   setActivateDeactivatePassword('');
                   setActivateDeactivatePasswordError(null);
                 }}>
-                  <X size={20} />
+                  <IconWrapper $iconType="x" $size={20} $active={false}>
+                    <X size={20} />
+                  </IconWrapper>
                 </ActionButton>
               </ModalHeader>
 
@@ -974,8 +1109,10 @@ export default function InventoryManagePage() {
                 borderRadius: theme.borderRadius.md,
                 marginBottom: theme.spacing.lg
               }}>
-                <p style={{ margin: 0, color: isActivating ? '#059669' : '#d97706', fontSize: theme.typography.fontSizes.sm }}>
-                  <AlertCircle size={16} style={{ marginRight: theme.spacing.xs, verticalAlign: 'middle' }} />
+                <p style={{ margin: 0, color: isActivating ? '#059669' : '#d97706', fontSize: theme.typography.fontSizes.sm, display: 'flex', alignItems: 'center' }}>
+                  <MessageIcon $iconType="alert-circle" $size={16} $active={true}>
+                    <AlertCircle size={16} />
+                  </MessageIcon>
                   You are about to {isActivating ? 'activate' : 'deactivate'} <strong>"{itemToActivateDeactivate.item_name}"</strong>.
                   {!isActivating && ' Deactivated items will not be available for sale.'}
                 </p>
@@ -1027,12 +1164,22 @@ export default function InventoryManagePage() {
                 >
                   {activatingDeactivating ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" style={{ marginRight: theme.spacing.sm }} />
+                      <ButtonIcon $iconType="loader2" $size={16} $active={true}>
+                        <Loader2 size={16} className="animate-spin" />
+                      </ButtonIcon>
                       {isActivating ? 'Activating...' : 'Deactivating...'}
                     </>
                   ) : (
                     <>
-                      {isActivating ? <CheckCircle size={16} style={{ marginRight: theme.spacing.sm }} /> : <EyeOff size={16} style={{ marginRight: theme.spacing.sm }} />}
+                      {isActivating ? (
+                        <ButtonIcon $iconType="check-circle" $size={16} $active={true}>
+                          <CheckCircle size={16} />
+                        </ButtonIcon>
+                      ) : (
+                        <ButtonIcon $iconType="eye-off" $size={16} $active={true}>
+                          <EyeOff size={16} />
+                        </ButtonIcon>
+                      )}
                       {isActivating ? 'Activate' : 'Deactivate'} Item
                     </>
                   )}
