@@ -590,37 +590,37 @@ const SettingsPage: React.FC = () => {
       title: 'General Settings',
       description: 'Update language, theme, and timezone.',
       href: '/settings/general',
-      icon: <Globe size={16} />,
+      iconType: 'globe' as const,
     },
     {
       title: 'Notification Preferences',
       description: 'Choose how and when you get notified.',
       href: '/settings/notifications',
-      icon: <Bell size={16} />,
+      iconType: 'bell' as const,
     },
     {
       title: 'Security Controls',
       description: 'Manage 2FA, passwords, and IP restrictions.',
       href: '/settings/security',
-      icon: <Lock size={16} />,
+      iconType: 'lock' as const,
     },
     {
       title: 'Backup Center',
       description: 'Create and restore system backups.',
       href: '/settings/backup',
-      icon: <Database size={16} />,
+      iconType: 'database' as const,
     },
     {
       title: 'Audit Logs',
       description: 'Review recent activity and changes.',
       href: '/settings/logs',
-      icon: <List size={16} />,
+      iconType: 'list' as const,
     },
     {
       title: 'User & Role Management',
       description: 'Assign roles and permissions.',
       href: '/settings/users-roles/user-roles',
-      icon: <Users size={16} />,
+      iconType: 'users' as const,
     },
   ];
 
@@ -767,7 +767,15 @@ const SettingsPage: React.FC = () => {
                             <ServiceRow key={service.label}>
                               <span>{service.label}</span>
                               <StatusPill $healthy={service.healthy}>
-                                {service.healthy ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />}
+                                {service.healthy ? (
+                                  <StatusIcon $iconType="shield-check" $size={14} $active={true}>
+                                    <ShieldCheck size={14} />
+                                  </StatusIcon>
+                                ) : (
+                                  <StatusIcon $iconType="alert-triangle" $size={14} $active={true}>
+                                    <AlertTriangle size={14} />
+                                  </StatusIcon>
+                                )}
                                 {service.status}
                               </StatusPill>
                             </ServiceRow>
@@ -793,7 +801,9 @@ const SettingsPage: React.FC = () => {
                       </>
                     ) : (
                       <ErrorBanner>
-                        <AlertTriangle size={18} />
+                        <MessageIcon $iconType="alert-triangle" $size={18} $active={true}>
+                          <AlertTriangle size={18} />
+                        </MessageIcon>
                         System-level metrics are visible only to administrators. Use the quick links below to manage your settings directly.
                       </ErrorBanner>
                     )}
