@@ -359,16 +359,6 @@ const QuickActionCard = styled(Link)`
   }
 `;
 
-const QuickActionIcon = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(0, 170, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${PRIMARY_COLOR};
-`;
 
 const QuickActionContent = styled.div`
   display: flex;
@@ -812,7 +802,14 @@ const SettingsPage: React.FC = () => {
                     <QuickActionsGrid>
                       {quickLinks.map((link) => (
                         <QuickActionCard key={link.href} href={link.href}>
-                          <QuickActionIcon>{link.icon}</QuickActionIcon>
+                          <QuickActionIconWrapper $iconType={link.iconType} $size={16} $active={true}>
+                            {link.iconType === 'globe' && <Globe size={16} />}
+                            {link.iconType === 'bell' && <Bell size={16} />}
+                            {link.iconType === 'lock' && <Lock size={16} />}
+                            {link.iconType === 'database' && <Database size={16} />}
+                            {link.iconType === 'list' && <List size={16} />}
+                            {link.iconType === 'users' && <Users size={16} />}
+                          </QuickActionIconWrapper>
                           <QuickActionContent>
                             <h4>{link.title}</h4>
                             <p>{link.description}</p>
