@@ -1125,7 +1125,7 @@ export default function Navbar() {
             <Plus />
           </AddButton>
         </ComponentGate>
-        <ComponentGate componentId={ComponentId.DASHBOARD}>
+        {user && (
           <div ref={notificationBadgeRef} style={{ position: 'relative' }}>
             <NotificationBadge 
               data-notification-badge="true"
@@ -1187,7 +1187,7 @@ export default function Navbar() {
               </NotificationPanel>
             </div>
           </div>
-        </ComponentGate>
+        )}
         <ComponentGate componentId={ComponentId.REPORT_LIST}>
           <IconButton onClick={handleReportsClick} title="View reports">
             <FileSpreadsheet />
