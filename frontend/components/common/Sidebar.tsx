@@ -196,11 +196,17 @@ const IconWrapper = styled.div<{ $active?: boolean; $collapsed?: boolean; $size?
     margin-right: ${props => (props.$collapsed ? 0 : theme.spacing.md)};
     transition: all ${theme.transitions.default};
     color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : (props.$active ? theme.colors.primary : theme.colors.textSecondary)};
+    opacity: ${props => props.$active ? 1 : 0.8};
 
     svg {
         width: 100%;
         height: 100%;
         transition: all ${theme.transitions.default};
+    }
+
+    &:hover {
+        opacity: 1;
+        transform: scale(1.15);
     }
 `;
 
@@ -253,7 +259,8 @@ const NavItem = styled(Link)<{ $active?: boolean; $collapsed?: boolean }>`
         transform: translateX(${props => (props.$collapsed ? '0' : '4px')});
         
         ${NavIcon} {
-            color: ${theme.colors.primary};
+            opacity: 1;
+            transform: scale(1.1);
         }
     }
 
@@ -284,11 +291,13 @@ const DropdownHeader = styled.div<{ $open?: boolean; $collapsed?: boolean; $acti
         transform: translateX(${props => (props.$collapsed ? '0' : '4px')});
         
         ${DropdownIcon} {
-            color: ${theme.colors.primary};
+            opacity: 1;
+            transform: scale(1.1);
         }
         
         ${ChevronIcon} {
             color: ${theme.colors.primary};
+            transform: ${props => (props.$open ? 'rotate(180deg) scale(1.1)' : 'rotate(0) scale(1.1)')};
         }
     }
 
@@ -927,7 +936,7 @@ const Sidebar: React.FC = () => {
 
             <ComponentGate componentId={ComponentId.SIDEBAR_PROFILE}>
                 <NavItem href="/profile" $active={pathname === '/profile'} $collapsed={collapsed}>
-                    <NavIcon $active={pathname === '/profile'} $collapsed={collapsed}>
+                    <NavIcon $active={pathname === '/profile'} $collapsed={collapsed} $iconType="user-cog">
                         <UserCog />
                     </NavIcon>
                     {!collapsed && 'Profile'}
@@ -936,7 +945,7 @@ const Sidebar: React.FC = () => {
 
             <ComponentGate componentId={ComponentId.SIDEBAR_SETTINGS}>
                 <NavItem href="/settings" $active={pathname.startsWith('/settings')} $collapsed={collapsed}>
-                    <NavIcon $active={pathname.startsWith('/settings')} $collapsed={collapsed}>
+                    <NavIcon $active={pathname.startsWith('/settings')} $collapsed={collapsed} $iconType="settings">
                         <Settings />
                     </NavIcon>
                     {!collapsed && 'Settings'}
