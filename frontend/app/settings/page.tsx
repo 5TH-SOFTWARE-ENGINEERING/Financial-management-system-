@@ -640,31 +640,45 @@ const SettingsPage: React.FC = () => {
             <SettingsGrid>
               <Nav>
                 <NavItem href="/settings/general" $active={activeTab === 'general'}>
-                  <Globe />
+                  <NavIcon $iconType="globe" $size={20} $active={activeTab === 'general'}>
+                    <Globe size={20} />
+                  </NavIcon>
                   General
                 </NavItem>
                 <NavItem href="/settings/notifications" $active={activeTab === 'notifications'}>
-                  <Bell />
+                  <NavIcon $iconType="bell" $size={20} $active={activeTab === 'notifications'}>
+                    <Bell size={20} />
+                  </NavIcon>
                   Notifications
                 </NavItem>
                 <NavItem href="/settings/security" $active={activeTab === 'security'}>
-                  <Lock />
+                  <NavIcon $iconType="lock" $size={20} $active={activeTab === 'security'}>
+                    <Lock size={20} />
+                  </NavIcon>
                   Security
                 </NavItem>
                 <NavItem href="/settings/users-roles/user-roles" $active={activeTab === 'users-roles'}>
-                  <Users />
+                  <NavIcon $iconType="users" $size={20} $active={activeTab === 'users-roles'}>
+                    <Users size={20} />
+                  </NavIcon>
                   Users & Roles
                 </NavItem>
                 <NavItem href="/settings/backup" $active={activeTab === 'backup'}>
-                  <Database />
+                  <NavIcon $iconType="database" $size={20} $active={activeTab === 'backup'}>
+                    <Database size={20} />
+                  </NavIcon>
                   Backup
                 </NavItem>
                 <NavItem href="/settings/logs" $active={activeTab === 'logs'}>
-                  <List />
+                  <NavIcon $iconType="list" $size={20} $active={activeTab === 'logs'}>
+                    <List size={20} />
+                  </NavIcon>
                   Logs
                 </NavItem>
                 <NavItem href="/settings/history" $active={activeTab === 'history'}>
-                  <History />
+                  <NavIcon $iconType="history" $size={20} $active={activeTab === 'history'}>
+                    <History size={20} />
+                  </NavIcon>
                   History
                 </NavItem>
               </Nav>
@@ -677,15 +691,20 @@ const SettingsPage: React.FC = () => {
                     size="sm"
                     onClick={fetchSystemData}
                     disabled={loading}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                   >
-                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                    <ButtonIcon $iconType="refresh-cw" $size={16} $active={!loading}>
+                      <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                    </ButtonIcon>
                     {loading ? 'Refreshing' : 'Refresh'}
                   </Button>
                 </ContentHeader>
 
                 {error && (
                   <ErrorBanner>
-                    <AlertTriangle size={18} />
+                    <MessageIcon $iconType="alert-triangle" $size={18} $active={true}>
+                      <AlertTriangle size={18} />
+                    </MessageIcon>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>{error}</div>
                       {error.includes('Unable to connect to backend server') && (
@@ -710,7 +729,9 @@ const SettingsPage: React.FC = () => {
 
                 {loading && isAdmin && !systemStats ? (
                   <LoadingState>
-                    <Loader2 size={28} className="animate-spin" />
+                    <IconWrapper $iconType="loader2" $size={28} $active={true}>
+                      <Loader2 size={28} className="animate-spin" />
+                    </IconWrapper>
                     <p>Loading settings data...</p>
                   </LoadingState>
                 ) : (
