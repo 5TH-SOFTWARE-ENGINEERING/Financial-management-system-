@@ -11,8 +11,7 @@ Usage:
 
 import sys
 import os
-from sqlalchemy import create_engine, text, inspect
-from sqlalchemy.exc import OperationalError
+from sqlalchemy import text, inspect  # type: ignore[import-untyped]
 
 # Add the parent directory to the path so we can import app modules
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
