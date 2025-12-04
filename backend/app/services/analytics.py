@@ -42,23 +42,28 @@ class AnalyticsService:
         current = start_date
         date_map = defaultdict(lambda: {"revenue": 0, "expense": 0})
 
-        # Get all revenue entries in range
+        # Get all revenue entries in range - ONLY APPROVED entries
         if user_role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
             all_revenue = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
             all_expenses = expense_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
+            # Filter to only include approved entries
+            all_revenue = [r for r in all_revenue if r.is_approved == True]
+            all_expenses = [e for e in all_expenses if e.is_approved == True]
         elif user_role == UserRole.MANAGER:
             subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, user_id)] + [user_id]
             all_revenue_all = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
             all_expenses_all = expense_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
-            all_revenue = [r for r in all_revenue_all if r.created_by_id in subordinate_ids]
-            all_expenses = [e for e in all_expenses_all if e.created_by_id in subordinate_ids]
+            # Filter by subordinate AND approved status
+            all_revenue = [r for r in all_revenue_all if r.created_by_id in subordinate_ids and r.is_approved == True]
+            all_expenses = [e for e in all_expenses_all if e.created_by_id in subordinate_ids and e.is_approved == True]
         else:
             all_revenue = revenue_crud.get_by_user(db, user_id, 0, 10000)
             all_expenses = expense_crud.get_by_user(db, user_id, 0, 10000)
-            all_revenue = [r for r in all_revenue if start_date <= r.date <= end_date]
-            all_expenses = [e for e in all_expenses if start_date <= e.date <= end_date]
+            # Filter by date range AND approved status
+            all_revenue = [r for r in all_revenue if start_date <= r.date <= end_date and r.is_approved == True]
+            all_expenses = [e for e in all_expenses if start_date <= e.date <= end_date and e.is_approved == True]
 
-        # Group by interval
+        # Group by interval - ONLY from approved entries
         for entry in all_revenue:
             date_key = AnalyticsService._get_interval_key(entry.date, interval)
             date_map[date_key]["revenue"] += float(entry.amount)
@@ -170,20 +175,22 @@ class AnalyticsService:
             all_revenue_prev = revenue_crud.get_by_date_range(db, prev_start_date, prev_end_date, 0, 10000)
             all_expenses_prev = expense_crud.get_by_date_range(db, prev_start_date, prev_end_date, 0, 10000)
             
-            current_revenue = sum(float(r.amount) for r in all_revenue_curr if r.created_by_id in subordinate_ids)
-            current_expenses = sum(float(e.amount) for e in all_expenses_curr if e.created_by_id in subordinate_ids)
-            prev_revenue = sum(float(r.amount) for r in all_revenue_prev if r.created_by_id in subordinate_ids)
-            prev_expenses = sum(float(e.amount) for e in all_expenses_prev if e.created_by_id in subordinate_ids)
+            # Filter by subordinate AND approved status
+            current_revenue = sum(float(r.amount) for r in all_revenue_curr if r.created_by_id in subordinate_ids and r.is_approved == True)
+            current_expenses = sum(float(e.amount) for e in all_expenses_curr if e.created_by_id in subordinate_ids and e.is_approved == True)
+            prev_revenue = sum(float(r.amount) for r in all_revenue_prev if r.created_by_id in subordinate_ids and r.is_approved == True)
+            prev_expenses = sum(float(e.amount) for e in all_expenses_prev if e.created_by_id in subordinate_ids and e.is_approved == True)
         else:
             all_revenue_curr = revenue_crud.get_by_user(db, user_id, 0, 10000)
             all_expenses_curr = expense_crud.get_by_user(db, user_id, 0, 10000)
             all_revenue_prev = revenue_crud.get_by_user(db, user_id, 0, 10000)
             all_expenses_prev = expense_crud.get_by_user(db, user_id, 0, 10000)
             
-            current_revenue = sum(float(r.amount) for r in all_revenue_curr if start_date <= r.date <= end_date)
-            current_expenses = sum(float(e.amount) for e in all_expenses_curr if start_date <= e.date <= end_date)
-            prev_revenue = sum(float(r.amount) for r in all_revenue_prev if prev_start_date <= r.date <= prev_end_date)
-            prev_expenses = sum(float(e.amount) for e in all_expenses_prev if prev_start_date <= e.date <= prev_end_date)
+            # Filter by date range AND approved status
+            current_revenue = sum(float(r.amount) for r in all_revenue_curr if start_date <= r.date <= end_date and r.is_approved == True)
+            current_expenses = sum(float(e.amount) for e in all_expenses_curr if start_date <= e.date <= end_date and e.is_approved == True)
+            prev_revenue = sum(float(r.amount) for r in all_revenue_prev if prev_start_date <= r.date <= prev_end_date and r.is_approved == True)
+            prev_expenses = sum(float(e.amount) for e in all_expenses_prev if prev_start_date <= e.date <= prev_end_date and e.is_approved == True)
 
         current_profit = current_revenue - current_expenses
         prev_profit = prev_revenue - prev_expenses
@@ -261,13 +268,15 @@ class AnalyticsService:
                 subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, user_id)] + [user_id]
                 all_rev = revenue_crud.get_by_date_range(db, point_start, point_end, 0, 10000)
                 all_exp = expense_crud.get_by_date_range(db, point_start, point_end, 0, 10000)
-                revenue = sum(float(r.amount) for r in all_rev if r.created_by_id in subordinate_ids)
-                expenses = sum(float(e.amount) for e in all_exp if e.created_by_id in subordinate_ids)
+                # Filter by subordinate AND approved status
+                revenue = sum(float(r.amount) for r in all_rev if r.created_by_id in subordinate_ids and r.is_approved == True)
+                expenses = sum(float(e.amount) for e in all_exp if e.created_by_id in subordinate_ids and e.is_approved == True)
             else:
                 all_rev = revenue_crud.get_by_user(db, user_id, 0, 10000)
                 all_exp = expense_crud.get_by_user(db, user_id, 0, 10000)
-                revenue = sum(float(r.amount) for r in all_rev if point_start <= r.date <= point_end)
-                expenses = sum(float(e.amount) for e in all_exp if point_start <= e.date <= point_end)
+                # Filter by date range AND approved status
+                revenue = sum(float(r.amount) for r in all_rev if point_start <= r.date <= point_end and r.is_approved == True)
+                expenses = sum(float(e.amount) for e in all_exp if point_start <= e.date <= point_end and e.is_approved == True)
 
             if metric == "revenue":
                 value = float(revenue)
@@ -341,8 +350,9 @@ class AnalyticsService:
             subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, user_id)] + [user_id]
             all_revenue = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
             all_expenses = expense_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
-            team_revenue = [r for r in all_revenue if r.created_by_id in subordinate_ids]
-            team_expenses = [e for e in all_expenses if e.created_by_id in subordinate_ids]
+            # Filter by subordinate AND approved status
+            team_revenue = [r for r in all_revenue if r.created_by_id in subordinate_ids and r.is_approved == True]
+            team_expenses = [e for e in all_expenses if e.created_by_id in subordinate_ids and e.is_approved == True]
             
             # Manual category grouping
             revenue_by_cat = defaultdict(lambda: {"total": 0, "count": 0})
@@ -365,8 +375,9 @@ class AnalyticsService:
         else:
             all_revenue = revenue_crud.get_by_user(db, user_id, 0, 10000)
             all_expenses = expense_crud.get_by_user(db, user_id, 0, 10000)
-            user_revenue = [r for r in all_revenue if start_date <= r.date <= end_date]
-            user_expenses = [e for e in all_expenses if start_date <= e.date <= end_date]
+            # Filter by date range AND approved status
+            user_revenue = [r for r in all_revenue if start_date <= r.date <= end_date and r.is_approved == True]
+            user_expenses = [e for e in all_expenses if start_date <= e.date <= end_date and e.is_approved == True]
             
             revenue_by_cat = defaultdict(lambda: {"total": 0, "count": 0})
             expense_by_cat = defaultdict(lambda: {"total": 0, "count": 0})

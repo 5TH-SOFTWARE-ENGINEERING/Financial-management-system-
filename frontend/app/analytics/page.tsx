@@ -651,9 +651,32 @@ const AnalyticsPage: React.FC = () => {
       }
 
       const response = await apiClient.getAnalyticsOverview(params);
-      setAnalyticsData(response.data);
+      if (response && response.data) {
+        setAnalyticsData(response.data);
+        setError(null);
+      } else {
+        throw new Error('Invalid response from analytics API');
+      }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to load analytics data';
+      let errorMessage = 'Failed to load analytics data';
+      
+      if (err.response) {
+        const status = err.response.status;
+        const detail = err.response.data?.detail || err.response.data?.message;
+        
+        if (status === 403) {
+          errorMessage = detail || 'You do not have permission to view analytics';
+        } else if (status === 400) {
+          errorMessage = detail || 'Invalid date range or parameters';
+        } else if (status === 500) {
+          errorMessage = detail || 'Server error. Please try again later.';
+        } else {
+          errorMessage = detail || `Error: ${status}`;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       // Clear data on error
       setAnalyticsData(null);
@@ -851,6 +874,18 @@ const AnalyticsPage: React.FC = () => {
     );
   };
 
+  // Check if user has permission to view analytics
+  useEffect(() => {
+    if (user) {
+      const userRole = user.role?.toLowerCase();
+      const allowedRoles = ['admin', 'super_admin', 'finance_admin', 'finance_manager', 'manager'];
+      if (!allowedRoles.includes(userRole || '')) {
+        setError('You do not have permission to view analytics');
+        setLoading(false);
+      }
+    }
+  }, [user]);
+
   if (loading) {
     return (
       <Layout>
@@ -925,16 +960,29 @@ const AnalyticsPage: React.FC = () => {
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setError(null);
+                  }}
+                  max={endDate || undefined}
                   style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
                 />
                 <span>to</span>
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setError(null);
+                  }}
+                  min={startDate || undefined}
                   style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
                 />
+                {startDate && endDate && new Date(startDate) > new Date(endDate) && (
+                  <span style={{ color: '#ef4444', fontSize: theme.typography.fontSizes.xs }}>
+                    Start date must be before end date
+                  </span>
+                )}
               </>
             )}
             <Button
@@ -946,7 +994,7 @@ const AnalyticsPage: React.FC = () => {
             </Button>
           </FilterBar>
 
-          {analyticsData && (
+          {analyticsData ? (
             <>
               <SectionTitle>Key Performance Indicators</SectionTitle>
               
@@ -1007,10 +1055,14 @@ const AnalyticsPage: React.FC = () => {
                 <KPICard>
                   <KPILabel>Profit Margin</KPILabel>
                   <KPIValue>
-                    {analyticsData.kpis?.current_period?.profit_margin?.toFixed(2) || 0}%
+                    {analyticsData.kpis?.current_period?.profit_margin !== undefined 
+                      ? `${Number(analyticsData.kpis.current_period.profit_margin).toFixed(2)}%`
+                      : '0%'}
                   </KPIValue>
                   <KPILabel style={{ marginTop: '8px' }}>
-                    Expense Ratio: {analyticsData.kpis?.current_period?.expense_ratio?.toFixed(2) || 0}%
+                    Expense Ratio: {analyticsData.kpis?.current_period?.expense_ratio !== undefined
+                      ? `${Number(analyticsData.kpis.current_period.expense_ratio).toFixed(2)}%`
+                      : '0%'}
                   </KPILabel>
                 </KPICard>
               </KPIPairGrid>
@@ -1139,7 +1191,15 @@ const AnalyticsPage: React.FC = () => {
                 </ChartCard>
               </TwoColumnGrid>
             </>
-          )}
+          ) : !loading && !error ? (
+            <LoadingContainer>
+              <AlertCircle size={48} style={{ opacity: 0.5, marginBottom: theme.spacing.md }} />
+              <p>No analytics data available for the selected period</p>
+              <p style={{ fontSize: theme.typography.fontSizes.sm, marginTop: theme.spacing.sm }}>
+                Try selecting a different time period or check back later
+              </p>
+            </LoadingContainer>
+          ) : null}
         </ContentContainer>
       </PageContainer>
     </Layout>
