@@ -95,8 +95,81 @@ const LoginContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: rgb(35, 161, 148);
   font-family: ${theme.typography.fontFamily};
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #239f94 0%, #2c7a8c 50%, #1e5f6f 100%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      from 0deg,
+      #239f94 0deg,
+      #2c7a8c 60deg,
+      #1e5f6f 120deg,
+      #239f94 180deg,
+      #2c7a8c 240deg,
+      #1e5f6f 300deg,
+      #239f94 360deg
+    );
+    animation: spiralRotate 20s linear infinite;
+    opacity: 0.8;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      from 180deg,
+      #1e5f6f 0deg,
+      #239f94 60deg,
+      #2c7a8c 120deg,
+      #1e5f6f 180deg,
+      #239f94 240deg,
+      #2c7a8c 300deg,
+      #1e5f6f 360deg
+    );
+    animation: spiralRotateReverse 25s linear infinite;
+    opacity: 0.6;
+  }
+
+  @keyframes spiralRotate {
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+    50% {
+      transform: rotate(180deg) scale(1.2);
+    }
+    100% {
+      transform: rotate(360deg) scale(1);
+    }
+  }
+
+  @keyframes spiralRotateReverse {
+    0% {
+      transform: rotate(360deg) scale(1.1);
+    }
+    50% {
+      transform: rotate(180deg) scale(0.9);
+    }
+    100% {
+      transform: rotate(0deg) scale(1.1);
+    }
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 `;
 const LoginCard = styled.div`
   background: rgb(84, 81, 81);
