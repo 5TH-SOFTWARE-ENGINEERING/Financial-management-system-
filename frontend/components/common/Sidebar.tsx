@@ -716,7 +716,7 @@ const Sidebar: React.FC = () => {
                         $collapsed={collapsed}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <DropdownIcon $active={pathname.includes('/budget')} $collapsed={collapsed}>
+                            <DropdownIcon $active={pathname.includes('/budget')} $collapsed={collapsed} $iconType="dollar-sign">
                                 <DollarSign />
                             </DropdownIcon>
                             {!collapsed && <span style={{ marginLeft: '12px' }}>Budgets</span>}
