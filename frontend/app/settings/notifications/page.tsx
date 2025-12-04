@@ -7,10 +7,77 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import { Save, Mail, MessageSquare, Bell, BellRing, PhoneCall, BellOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// Icon color mapping for different icon types
+const getIconColor = (iconType: string, active: boolean = false): string => {
+    if (active) {
+        // Active state colors (brighter)
+        const activeColors: Record<string, string> = {
+            'save': '#22c55e',              // Green
+            'mail': '#3b82f6',              // Blue
+            'message-square': '#8b5cf6',     // Purple
+            'bell': '#f59e0b',              // Amber
+            'bell-ring': '#10b981',         // Green
+            'phone-call': '#06b6d4',        // Cyan
+            'bell-off': '#ef4444',          // Red
+        };
+        return activeColors[iconType] || '#6b7280';
+    } else {
+        // Inactive state colors (muted but colorful)
+        const inactiveColors: Record<string, string> = {
+            'save': '#4ade80',              // Light Green
+            'mail': '#60a5fa',              // Light Blue
+            'message-square': '#a78bfa',    // Light Purple
+            'bell': '#fbbf24',              // Light Amber
+            'bell-ring': '#34d399',         // Light Green
+            'phone-call': '#22d3ee',        // Light Cyan
+            'bell-off': '#f87171',          // Light Red
+        };
+        return inactiveColors[iconType] || '#9ca3af';
+    }
+};
+
+// Icon styled components
+const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : '#6b7280'};
+    opacity: ${props => props.$active ? 1 : 0.8};
+    transition: all 0.2s ease;
+    
+    svg {
+        width: ${props => props.$size ? `${props.$size}px` : '18px'};
+        height: ${props => props.$size ? `${props.$size}px` : '18px'};
+        transition: all 0.2s ease;
+    }
+
+    &:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+`;
+
+const CardIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const NotificationIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const ChannelIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
+const ButtonIcon = styled(IconWrapper)`
+    margin-right: 0.5rem;
+`;
+
 // Styled components
 const Container = styled.div`
   max-width: 1000px;
   margin: 0 auto;
+  padding: 2rem;
 `;
 
 const Header = styled.div`
@@ -384,7 +451,9 @@ export default function NotificationsSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              <BellRing size={18} />
+              <CardIcon $iconType="bell-ring" $size={18} $active={true}>
+                <BellRing size={18} />
+              </CardIcon>
               Global Notification Settings
             </CardTitle>
           </CardHeader>
