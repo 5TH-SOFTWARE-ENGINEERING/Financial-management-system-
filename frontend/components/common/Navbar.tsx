@@ -745,22 +745,30 @@ export default function Navbar() {
           const initialNotifs = notifResponse.data || [];
           if (initialNotifs.length > 0) {
             lastNotificationIdsRef.current = new Set(initialNotifs.map((n: Notification) => n.id));
+            // Set the initial unread count to prevent false positives on first load
+            previousUnreadCountRef.current = initialNotifs.length;
+          } else {
+            // Even if no notifications, set count to 0 to prevent false positives
+            previousUnreadCountRef.current = 0;
           }
-          // Also set the initial unread count to prevent false positives on first load
-          previousUnreadCountRef.current = initialNotifs.length;
         } catch (err) {
-          // Ignore errors on initialization
+          // If initialization fails, set count to 0 to prevent false positives
+          // The first loadUnreadCount() call will then properly initialize the state
+          previousUnreadCountRef.current = 0;
+          lastNotificationIdsRef.current = new Set();
         }
       };
       
       // Initialize notifications first, then start loading unread count
       // This prevents race condition where existing notifications are treated as new
-      (async () => {
+      const initAndStart = async () => {
         await initializeNotifications();
         loadUnreadCount();
         // Refresh every 30 seconds (or 60 seconds if backend is down)
         intervalId = setInterval(loadUnreadCount, 30000);
-      })();
+      };
+      
+      initAndStart();
       
       return () => {
         if (intervalId) clearInterval(intervalId);
