@@ -242,6 +242,29 @@ const FeatureGrid = styled.div`
   margin-top: 2rem;
 `;
 
+const ParallelFeaturesContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const RegularFeaturesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+`;
+
 const Card = styled(motion.div)`
   background-color: ${theme.colors.card};
   border-radius: ${theme.radius};
@@ -586,22 +609,40 @@ export default function Home() {
 
   const modals = {
     growth: {
-      title: 'Growth Analyzer',
-      description: 'Dive deep into your business performance with our AI-driven analyzer.',
-      features: ['AI Insights', 'Forecasting', 'Dashboards'],
+      title: 'Advanced Financial Analytics',
+      description: 'Transform raw financial data into actionable insights with real-time analytics, predictive modeling, and comprehensive reporting. Track revenue trends, identify cost-saving opportunities, and make data-driven decisions that drive business growth.',
+      features: ['Real-time Revenue Tracking', 'Predictive Financial Forecasting', 'Interactive Dashboards', 'Profit Margin Analysis', 'Cash Flow Projections'],
       image: '/images/growth-analyzer.png',
     },
     budget: {
-      title: 'Budget Allocator',
-      description: 'Manage finances efficiently with automated allocation tools.',
-      features: ['Automation', 'Tracking', 'Integrations'],
+      title: 'Intelligent Budget Management',
+      description: 'Streamline budget planning, allocation, and monitoring across departments. Set spending limits, track expenses in real-time, and receive automated alerts when budgets are exceeded. Optimize resource allocation with AI-powered recommendations.',
+      features: ['Multi-Department Budgeting', 'Automated Expense Tracking', 'Real-time Budget Alerts', 'Spend Analytics', 'Approval Workflows'],
       image: '/images/budget-allocator.png',
     },
     secure: {
-      title: 'Secure Investments',
-      description: 'Protect and grow your portfolio with security and compliance.',
-      features: ['Encryption', 'MFA', 'Risk Analytics'],
+      title: 'Enterprise-Grade Security',
+      description: 'Protect sensitive financial data with bank-level encryption, multi-factor authentication, and comprehensive audit trails. Ensure compliance with financial regulations while maintaining seamless user experience.',
+      features: ['256-bit Encryption', 'Multi-Factor Authentication', 'Role-Based Access Control', 'Audit Logging', 'GDPR & SOX Compliance'],
       image: '/images/secure-investments.png',
+    },
+    inventory: {
+      title: 'Inventory & Sales Management',
+      description: 'Complete inventory control with real-time stock tracking, automated reorder points, and integrated sales management. Monitor product performance, manage suppliers, and optimize inventory turnover.',
+      features: ['Real-time Stock Tracking', 'Automated Reorder Alerts', 'Sales Performance Analytics', 'Supplier Management', 'Inventory Valuation'],
+      image: '/images/inventory-management.png',
+    },
+    reporting: {
+      title: 'Comprehensive Financial Reporting',
+      description: 'Generate professional financial reports, balance sheets, income statements, and custom analytics. Export to PDF, Excel, or share via email. Schedule automated reports for stakeholders.',
+      features: ['Financial Statements', 'Custom Report Builder', 'Automated Scheduling', 'Multi-format Export', 'Interactive Charts'],
+      image: '/images/financial-reporting.png',
+    },
+    approval: {
+      title: 'Smart Approval Workflows',
+      description: 'Streamline expense approvals with intelligent routing, multi-level authorization, and real-time notifications. Track approval status, set spending limits, and ensure policy compliance.',
+      features: ['Multi-level Approvals', 'Automated Routing', 'Policy Enforcement', 'Approval History', 'Mobile Notifications'],
+      image: '/images/approval-workflows.png',
     },
   };
 
@@ -638,35 +679,93 @@ export default function Home() {
 
         <div style={{ zIndex: 10 }}>
           <Title initial="hidden" animate="visible">
-            {['Secure', 'Financial', 'Management', 'System'].map((word, i) => (
+            {['Enterprise', 'Financial', 'Management', 'Platform'].map((word, i) => (
               <Word key={i} variants={wordVariants} custom={i} initial="hidden" animate="visible">
                 {word}{' '}
               </Word>
             ))}
           </Title>
           <Subtitle initial="hidden" animate="visible">
-            Streamline revenue tracking, expense approvals, and compliance-ready reporting.
+            Transform your financial operations with intelligent automation, real-time analytics, and enterprise-grade security. 
+            Manage revenue, control expenses, optimize budgets, and ensure compliance—all in one powerful platform designed for modern finance teams.
           </Subtitle>
-          <Link href="/auth/login">
-            <Button size="lg" className=" cursor-pointer transition-all duration-300 text-zinc-700 dark:text-zinc-300 
-             hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 
-             hover:scale-105 hover:shadow-[0_0_10px_rgba(99,102,241,0.3)]">Get Started</Button>
-          </Link>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+          >
+            <Link href="/auth/login">
+              <Button 
+                size="lg" 
+                className="cursor-pointer transition-all duration-300 text-zinc-700 dark:text-zinc-300 
+                hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 
+                hover:scale-105 hover:shadow-[0_0_10px_rgba(99,102,241,0.3)]"
+                style={{
+                  fontSize: '1.1rem',
+                  padding: '1rem 2.5rem',
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  border: 'none',
+                  color: 'white',
+                  boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                }}
+              >
+                Start Free Trial
+              </Button>
+            </Link>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6, duration: 0.6 }}
+              style={{ 
+                marginTop: '1rem', 
+                fontSize: '0.9rem', 
+                color: '#9ca3af' 
+              }}
+            >
+              No credit card required • 14-day free trial • Cancel anytime
+            </motion.p>
+          </motion.div>
         </div>
       </HeroSection>
 
       <FeatureSection ref={featuresRef}>
-        <motion.h2
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={featuresInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 700 }}
+          style={{ textAlign: 'center', marginBottom: '1rem' }}
         >
-          Key Features
-        </motion.h2>
+          <h2 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '0.5rem', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            Powerful Features for Modern Finance Teams
+          </h2>
+          <p style={{ fontSize: '1.1rem', color: '#9ca3af', maxWidth: '700px', margin: '0 auto' }}>
+            Everything you need to manage finances, control costs, and drive business growth
+          </p>
+        </motion.div>
 
-        <FeatureGrid>
-          {filteredFeatures.map((feature) => (
+        <ParallelFeaturesContainer>
+          {filteredFeatures
+            .filter(f => ['inventory', 'reporting', 'approval'].includes(f.id))
+            .map((feature) => (
+              <Card
+                key={feature.id}
+                onClick={() => setOpenModal(feature.id)}
+                whileHover={{ scale: 1.03 }}
+                style={{ minHeight: '280px', display: 'flex', flexDirection: 'column' }}
+              >
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '0.75rem', lineHeight: '1.3' }}>
+                  {feature.title}
+                </h3>
+                <p style={{ color: '#d1d5db', fontSize: '0.95rem', lineHeight: '1.6', flex: 1 }}>{feature.description}</p>
+              </Card>
+            ))}
+        </ParallelFeaturesContainer>
+
+        <RegularFeaturesGrid>
+          {filteredFeatures
+            .filter(f => !['inventory', 'reporting', 'approval'].includes(f.id))
+            .map((feature) => (
             <Card
               key={feature.id}
               onClick={() => setOpenModal(feature.id)}
@@ -678,11 +777,42 @@ export default function Home() {
               <p style={{ color: '#d1d5db' }}>{feature.description}</p>
             </Card>
           ))}
-        </FeatureGrid>
+        </RegularFeaturesGrid>
       </FeatureSection>
 
       <TeamSection>
-        <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>Meet Our Team</h2>
+        <motion.h2 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          style={{ 
+            fontSize: '2.5rem', 
+            fontWeight: 700, 
+            marginBottom: '0.5rem',
+            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}
+        >
+          Trusted by Finance Professionals Worldwide
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          style={{ 
+            fontSize: '1.1rem', 
+            color: '#9ca3af', 
+            marginBottom: '2rem',
+            maxWidth: '600px',
+            margin: '0 auto 2rem auto'
+          }}
+        >
+          Built by a global team of finance experts, accountants, and software engineers dedicated to transforming how businesses manage their finances.
+        </motion.p>
         <TeamImage
           src="/images/team-photo.png"
           alt="Team"
@@ -690,7 +820,22 @@ export default function Home() {
           height={400}
           style={{ objectFit: 'cover', marginBottom: '1rem' }}
         />
-        <p>A global team of finance experts driving innovation.</p>
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          style={{ 
+            fontSize: '1rem', 
+            color: '#d1d5db',
+            maxWidth: '700px',
+            margin: '0 auto',
+            lineHeight: '1.6'
+          }}
+        >
+          Our platform powers financial operations for businesses of all sizes—from startups to Fortune 500 companies. 
+          We combine deep financial expertise with cutting-edge technology to deliver solutions that drive real business value.
+        </motion.p>
       </TeamSection>
 
       <Footer />
@@ -699,18 +844,80 @@ export default function Home() {
         <ModalOverlay onClick={() => setOpenModal(null)}>
           <ModalCard onClick={(e) => e.stopPropagation()}>
             <CloseButton onClick={() => setOpenModal(null)}>×</CloseButton>
-            <h2 style={{ fontSize: '1.8rem', marginBottom: '1rem' }}>
+            <h2 style={{ 
+              fontSize: '2rem', 
+              marginBottom: '1rem',
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              fontWeight: 700
+            }}>
               {modals[openModal as keyof typeof modals].title}
             </h2>
-            <p style={{ marginBottom: '1rem' }}>
+            <p style={{ 
+              marginBottom: '1.5rem', 
+              fontSize: '1.1rem',
+              lineHeight: '1.7',
+              color: '#d1d5db'
+            }}>
               {modals[openModal as keyof typeof modals].description}
             </p>
-            <ul style={{ marginBottom: '1.5rem' }}>
-              {modals[openModal as keyof typeof modals].features.map((f) => (
-                <li key={f}>✅ {f}</li>
-              ))}
-            </ul>
-            <Button onClick={() => setOpenModal(null)}>Close</Button>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ 
+                fontSize: '1.2rem', 
+                fontWeight: 600, 
+                marginBottom: '1rem',
+                color: 'white'
+              }}>
+                Key Capabilities:
+              </h3>
+              <ul style={{ 
+                listStyle: 'none', 
+                padding: 0,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '0.75rem'
+              }}>
+                {modals[openModal as keyof typeof modals].features.map((f) => (
+                  <li key={f} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(59, 130, 246, 0.2)'
+                  }}>
+                    <span style={{ color: '#10b981', fontSize: '1.2rem' }}>✓</span>
+                    <span style={{ color: '#e5e7eb' }}>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <Button 
+                onClick={() => setOpenModal(null)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'white'
+                }}
+              >
+                Close
+              </Button>
+              <Link href="/auth/login">
+                <Button 
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                    border: 'none',
+                    color: 'white'
+                  }}
+                >
+                  Try It Now
+                </Button>
+              </Link>
+            </div>
           </ModalCard>
         </ModalOverlay>
       )}
