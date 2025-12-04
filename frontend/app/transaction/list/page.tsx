@@ -723,23 +723,6 @@ export default function TransactionListPage() {
                           </td>
                           <td>
                             <TransactionTitle>{transaction.title}</TransactionTitle>
-                            {isSale && transaction.item_name && (
-                              <TransactionDescription>
-                                {transaction.quantity_sold && `${transaction.quantity_sold}x `}
-                                {transaction.item_name}
-                                {transaction.receipt_number && ` • ${transaction.receipt_number}`}
-                              </TransactionDescription>
-                            )}
-                            {transaction.transaction_type === 'inventory' && transaction.item_name && (
-                              <TransactionDescription>
-                                {transaction.quantity && `Qty: ${transaction.quantity} • `}
-                                {transaction.sku && `SKU: ${transaction.sku}`}
-                                {!transaction.sku && transaction.description}
-                              </TransactionDescription>
-                            )}
-                            {transaction.description && !isSale && transaction.transaction_type !== 'inventory' && (
-                              <TransactionDescription>{transaction.description}</TransactionDescription>
-                            )}
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <CategoryBadge>{transaction.category || 'N/A'}</CategoryBadge>
