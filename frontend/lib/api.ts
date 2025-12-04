@@ -100,7 +100,7 @@ class ApiClient {
                                    url.includes('/backup');
           
           if (!suppressWarnings && typeof window !== 'undefined') {
-            console.warn('Access forbidden:', error.response?.data?.detail || 'Insufficient permissions');
+              console.warn('Access forbidden:', error.response?.data?.detail || 'Insufficient permissions');
           }
         }
         

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Layout from '@/components/layout';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
+import { UserType } from '@/lib/rbac/models';
 import { Settings, Users, Globe, Lock, Bell, Database, List, History, RefreshCw, Loader2, Activity, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { theme } from '@/components/common/theme';
 import apiClient from '@/lib/api';
@@ -316,7 +317,10 @@ const RoleCard = styled.div`
 const SettingsPage: React.FC = () => {
   const pathname = usePathname();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  // Allow access for both admin and super_admin roles
+  const isAdmin = user?.role?.toLowerCase() === 'admin' || 
+                  user?.role?.toLowerCase() === 'super_admin' ||
+                  user?.userType === UserType.ADMIN;
 
   const [systemStats, setSystemStats] = useState<any>(null);
   const [systemSettings, setSystemSettings] = useState<any>(null);
@@ -356,33 +360,79 @@ const SettingsPage: React.FC = () => {
       setError(null);
       setSettingsError(null);
 
-      const [statsResponse, settingsResponse, healthResponse] = await Promise.all([
+      const [statsResponse, settingsResponse, healthResponse] = await Promise.allSettled([
         apiClient.getAdminSystemStats(),
-        apiClient.getSystemSettings().catch((err) => {
-          if (err?.response?.status === 403) {
-            setSettingsError('System settings are visible only to super administrators.');
-            return null;
-          }
-          throw err;
-        }),
-        apiClient.getSystemHealth().catch(() => null),
+        apiClient.getSystemSettings(),
+        apiClient.getSystemHealth(),
       ]);
 
-      setSystemStats(statsResponse?.data ?? statsResponse);
-      if (settingsResponse) {
-        setSystemSettings(settingsResponse.data ?? settingsResponse);
+      // Handle stats response
+      if (statsResponse.status === 'fulfilled') {
+        const stats = statsResponse.value;
+        setSystemStats(stats?.data ?? stats);
       } else {
-        setSystemSettings(null);
+        const err = statsResponse.reason;
+        // Check if it's a network/CORS error vs auth error
+        if (err?.code === 'ERR_NETWORK' || err?.message?.includes('CORS') || err?.message?.includes('Failed to fetch') || !err?.response) {
+          console.error('Backend connection error:', err);
+          throw new Error('Unable to connect to backend server. Please ensure the backend is running on http://localhost:8000');
+        } else if (err?.response?.status === 401) {
+          throw new Error('Authentication required. Please log in again.');
+        } else if (err?.response?.status === 403) {
+          throw new Error('Access denied. You do not have permission to view system statistics.');
+        } else {
+          throw err;
+        }
       }
-      if (healthResponse) {
-        setHealthStatus(healthResponse.data ?? healthResponse);
+
+      // Handle settings response
+      if (settingsResponse.status === 'fulfilled') {
+        const settings = settingsResponse.value;
+        setSystemSettings(settings?.data ?? settings);
       } else {
+        const err = settingsResponse.reason;
+        if (err?.response?.status === 403) {
+          setSettingsError('System settings are visible only to super administrators.');
+        } else if (err?.response?.status === 401) {
+          // Don't show error for settings if it's just auth - it's optional
+          setSystemSettings(null);
+        } else {
+          // Only log other errors, don't block the page
+          console.warn('Failed to load system settings:', err);
+          setSystemSettings(null);
+        }
+      }
+
+      // Handle health response
+      if (healthResponse.status === 'fulfilled') {
+        const health = healthResponse.value;
+        setHealthStatus(health?.data ?? health);
+      } else {
+        // Health check is optional, just log and continue
+        console.warn('Failed to load system health:', healthResponse.reason);
         setHealthStatus(null);
       }
+
+      // Responses are already handled above in Promise.allSettled
     } catch (err: any) {
-      const message = err?.response?.data?.detail || err?.message || 'Failed to load system data';
+      let message = 'Failed to load system data';
+      
+      // Handle specific error types
+      if (err?.code === 'ERR_NETWORK' || err?.message?.includes('Failed to fetch') || err?.message?.includes('ERR_FAILED')) {
+        message = 'Unable to connect to backend server. Please ensure the backend is running on http://localhost:8000';
+      } else if (err?.message?.includes('CORS')) {
+        message = 'CORS error: Backend may not be configured to allow requests from this origin. Check backend CORS settings.';
+      } else if (err?.response?.status === 403) {
+        message = 'Access denied. You do not have permission to view system statistics.';
+      } else if (err?.response?.data?.detail) {
+        message = err.response.data.detail;
+      } else if (err?.message) {
+        message = err.message;
+      }
+      
       setError(message);
       toast.error(message);
+      console.error('Error loading system data:', err);
     } finally {
       setLoading(false);
     }
@@ -544,7 +594,25 @@ const SettingsPage: React.FC = () => {
                 {error && (
                   <ErrorBanner>
                     <AlertTriangle size={18} />
-                    {error}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>{error}</div>
+                      {error.includes('Unable to connect to backend server') && (
+                        <div style={{ fontSize: theme.typography.fontSizes.sm, marginTop: theme.spacing.xs, opacity: 0.9 }}>
+                          To start the backend server, navigate to the backend directory and run:
+                          <code style={{ 
+                            display: 'block', 
+                            marginTop: theme.spacing.xs, 
+                            padding: theme.spacing.sm, 
+                            background: 'rgba(0, 0, 0, 0.1)', 
+                            borderRadius: theme.borderRadius.sm,
+                            fontFamily: 'monospace',
+                            fontSize: theme.typography.fontSizes.xs
+                          }}>
+                            uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+                          </code>
+                        </div>
+                      )}
+                    </div>
                   </ErrorBanner>
                 )}
 

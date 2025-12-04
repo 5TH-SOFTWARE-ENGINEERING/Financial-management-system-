@@ -1047,19 +1047,19 @@ export default function ApprovalsPage() {
       }
     } else {
       // For other items, require both reason and password
-      if (!reason.trim()) {
-        setRejectPasswordError('Please provide a rejection reason');
-        return;
-      }
+    if (!reason.trim()) {
+      setRejectPasswordError('Please provide a rejection reason');
+      return;
+    }
 
-      if (reason.trim().length < 10) {
-        setRejectPasswordError('Rejection reason must be at least 10 characters long');
-        return;
-      }
+    if (reason.trim().length < 10) {
+      setRejectPasswordError('Rejection reason must be at least 10 characters long');
+      return;
+    }
 
-      if (!password.trim()) {
-        setRejectPasswordError('Password is required');
-        return;
+    if (!password.trim()) {
+      setRejectPasswordError('Password is required');
+      return;
       }
     }
 
@@ -1348,12 +1348,12 @@ export default function ApprovalsPage() {
                         return canApprove();
                       })() && (
                         <>
-                          <ActionButton
-                            $variant="primary"
-                            onClick={() => handleApprove(item)}
-                            disabled={processingId === `${item.type}-${item.id}`}
-                          >
-                            {processingId === `${item.type}-${item.id}` ? (
+                      <ActionButton
+                        $variant="primary"
+                        onClick={() => handleApprove(item)}
+                        disabled={processingId === `${item.type}-${item.id}`}
+                      >
+                        {processingId === `${item.type}-${item.id}` ? (
                               <>
                                 <SpinningIcon size={16} />
                                 {item.type === 'sale' ? 'Posting...' : 'Approving...'}
@@ -1367,19 +1367,19 @@ export default function ApprovalsPage() {
                           </ActionButton>
                           {/* Show reject/cancel button - for sales, only finance managers/admins can cancel */}
                           {(item.type !== 'sale' || canCancelSales()) && (
-                            <ActionButton
-                              $variant="danger"
-                              onClick={() => {
-                                setShowRejectModal(`${item.type}-${item.id}`);
-                                setRejectionReason('');
-                                setRejectPassword('');
-                                setRejectPasswordError(null);
-                              }}
-                              disabled={processingId === `${item.type}-${item.id}`}
-                            >
-                              <XCircle />
+                          <ActionButton
+                            $variant="danger"
+                            onClick={() => {
+                              setShowRejectModal(`${item.type}-${item.id}`);
+                              setRejectionReason('');
+                              setRejectPassword('');
+                              setRejectPasswordError(null);
+                            }}
+                            disabled={processingId === `${item.type}-${item.id}`}
+                          >
+                            <XCircle />
                               {item.type === 'sale' ? 'Cancel' : 'Reject'}
-                            </ActionButton>
+                          </ActionButton>
                           )}
                         </>
                       )}
@@ -1460,29 +1460,29 @@ export default function ApprovalsPage() {
                 </FormGroup>
 
                 {itemToReject.type !== 'sale' && (
-                  <FormGroup>
-                    <Label htmlFor="reject-password">
-                      Enter your own password to confirm rejection:
-                    </Label>
-                    <PasswordInput
-                      id="reject-password"
-                      type="password"
-                      value={rejectPassword}
-                      onChange={(e) => {
-                        setRejectPassword(e.target.value);
-                        setRejectPasswordError(null);
-                      }}
-                      placeholder="Enter your password"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && rejectionReason.trim().length >= 10 && rejectPassword.trim()) {
-                          handleReject(itemToReject, rejectionReason, rejectPassword);
-                        }
-                      }}
-                    />
-                    {rejectPasswordError && (
-                      <ErrorText>{rejectPasswordError}</ErrorText>
-                    )}
-                  </FormGroup>
+                <FormGroup>
+                  <Label htmlFor="reject-password">
+                    Enter your own password to confirm rejection:
+                  </Label>
+                  <PasswordInput
+                    id="reject-password"
+                    type="password"
+                    value={rejectPassword}
+                    onChange={(e) => {
+                      setRejectPassword(e.target.value);
+                      setRejectPasswordError(null);
+                    }}
+                    placeholder="Enter your password"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && rejectionReason.trim().length >= 10 && rejectPassword.trim()) {
+                        handleReject(itemToReject, rejectionReason, rejectPassword);
+                      }
+                    }}
+                  />
+                  {rejectPasswordError && (
+                    <ErrorText>{rejectPasswordError}</ErrorText>
+                  )}
+                </FormGroup>
                 )}
 
                 {itemToReject.type === 'sale' && rejectPasswordError && (
