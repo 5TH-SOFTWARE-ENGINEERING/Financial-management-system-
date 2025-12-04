@@ -36,21 +36,97 @@ const Wrapper = styled.div`
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 `;
 
 const GradientBackground = styled.div`
   position: absolute;
   inset: 0;
-  pointer-events: none;  /* ← IMPORTANT FIX */
-  background: linear-gradient(
-    135deg,
-    rgb(9, 10, 10) 0%,
-    rgb(112, 98, 100) 50%,
-    rgb(116, 105, 105) 50%,
-    rgb(12, 11, 11) 70%,
-    rgb(13, 14, 13) 100%
-  );
+  pointer-events: none;
   z-index: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+              linear-gradient(135deg, rgb(9, 10, 10) 0%, rgb(12, 11, 11) 100%);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: -100%;
+    width: 300%;
+    height: 300%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(59, 130, 246, 0.3) 45deg,
+      transparent 90deg,
+      rgba(139, 92, 246, 0.3) 135deg,
+      transparent 180deg,
+      rgba(59, 130, 246, 0.3) 225deg,
+      transparent 270deg,
+      rgba(139, 92, 246, 0.3) 315deg,
+      transparent 360deg
+    );
+    animation: spiralRotatePrimary 30s linear infinite;
+    opacity: 0.6;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -100%;
+    right: -100%;
+    width: 300%;
+    height: 300%;
+    background: conic-gradient(
+      from 180deg,
+      transparent 0deg,
+      rgba(139, 92, 246, 0.25) 60deg,
+      transparent 120deg,
+      rgba(59, 130, 246, 0.25) 180deg,
+      transparent 240deg,
+      rgba(139, 92, 246, 0.25) 300deg,
+      transparent 360deg
+    );
+    animation: spiralRotateSecondary 35s linear infinite reverse;
+    opacity: 0.5;
+  }
+
+  @keyframes spiralRotatePrimary {
+    0% {
+      transform: rotate(0deg) scale(1) translate(0, 0);
+    }
+    25% {
+      transform: rotate(90deg) scale(1.1) translate(5%, 5%);
+    }
+    50% {
+      transform: rotate(180deg) scale(1.2) translate(0, 0);
+    }
+    75% {
+      transform: rotate(270deg) scale(1.1) translate(-5%, -5%);
+    }
+    100% {
+      transform: rotate(360deg) scale(1) translate(0, 0);
+    }
+  }
+
+  @keyframes spiralRotateSecondary {
+    0% {
+      transform: rotate(360deg) scale(1.1) translate(0, 0);
+    }
+    25% {
+      transform: rotate(270deg) scale(1) translate(-5%, 5%);
+    }
+    50% {
+      transform: rotate(180deg) scale(0.9) translate(0, 0);
+    }
+    75% {
+      transform: rotate(90deg) scale(1) translate(5%, -5%);
+    }
+    100% {
+      transform: rotate(0deg) scale(1.1) translate(0, 0);
+    }
+  }
 `;
 
 
@@ -64,6 +140,44 @@ const HeroSection = styled.section`
   overflow: hidden;
   text-align: center;
   padding: 3rem 1rem;
+  z-index: 1;
+  
+  /* Additional spiral particles effect */
+  &::before {
+    content: '';
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: rgba(59, 130, 246, 0.8);
+    border-radius: 50%;
+    box-shadow: 
+      100px 200px 0 0 rgba(139, 92, 246, 0.6),
+      -150px 300px 0 0 rgba(59, 130, 246, 0.5),
+      200px -100px 0 0 rgba(139, 92, 246, 0.7),
+      -200px -200px 0 0 rgba(59, 130, 246, 0.4),
+      300px 100px 0 0 rgba(139, 92, 246, 0.5);
+    animation: particleFloat 20s ease-in-out infinite;
+    z-index: 0;
+  }
+
+  @keyframes particleFloat {
+    0%, 100% {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 0.8;
+    }
+    25% {
+      transform: translate(50px, -50px) rotate(90deg);
+      opacity: 1;
+    }
+    50% {
+      transform: translate(-30px, -100px) rotate(180deg);
+      opacity: 0.6;
+    }
+    75% {
+      transform: translate(-50px, 30px) rotate(270deg);
+      opacity: 0.9;
+    }
+  }
 `;
 
 const Title = styled(motion.h1)`
@@ -91,6 +205,34 @@ const FeatureSection = styled.section`
   padding: 5rem 1.5rem;
   background-color: #111827;
   position: relative;
+  z-index: 1;
+  
+  /* Subtle spiral accent */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      ellipse at top left,
+      rgba(59, 130, 246, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at bottom right,
+      rgba(139, 92, 246, 0.1) 0%,
+      transparent 50%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 `;
 
 const FeatureGrid = styled.div`
@@ -108,10 +250,48 @@ const Card = styled(motion.div)`
   text-align: left;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(59, 130, 246, 0.1) 90deg,
+      transparent 180deg,
+      rgba(139, 92, 246, 0.1) 270deg,
+      transparent 360deg
+    );
+    animation: cardSpiral 8s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
 
   &:hover {
     transform: translateY(-8px);
     background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 15px 40px rgba(59, 130, 246, 0.2);
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  @keyframes cardSpiral {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 `;
 
@@ -154,7 +334,70 @@ const CloseButton = styled.button`
 const TeamSection = styled.section`
   padding: 4rem 1rem;
   text-align: center;
-  background-color:rgb(32, 35, 37);
+  background-color: rgb(32, 35, 37);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  
+  /* Spiral background accent */
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      from 45deg,
+      transparent 0deg,
+      rgba(59, 130, 246, 0.08) 120deg,
+      transparent 240deg,
+      rgba(139, 92, 246, 0.08) 360deg
+    );
+    animation: teamSpiral 25s linear infinite;
+    z-index: 0;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      from 225deg,
+      transparent 0deg,
+      rgba(139, 92, 246, 0.06) 120deg,
+      transparent 240deg,
+      rgba(59, 130, 246, 0.06) 360deg
+    );
+    animation: teamSpiralReverse 30s linear infinite reverse;
+    z-index: 0;
+  }
+
+  @keyframes teamSpiral {
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+    100% {
+      transform: rotate(360deg) scale(1.1);
+    }
+  }
+
+  @keyframes teamSpiralReverse {
+    0% {
+      transform: rotate(360deg) scale(1.1);
+    }
+    100% {
+      transform: rotate(0deg) scale(1);
+    }
+  }
+  
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 `;
 
 const TeamImage = styled(Image)`
