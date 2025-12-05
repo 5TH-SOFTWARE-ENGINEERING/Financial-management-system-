@@ -8,7 +8,12 @@ import StyledComponentsRegistry from '@/lib/registry';
 import { AuthProvider } from '@/lib/rbac/auth-context'; 
 import { Toaster } from '@/components/ui/sonner';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  fallback: ['system-ui', 'arial'],
+  adjustFontFallback: false,
+});
 
 const LayoutContainer = styled.div`
   min-height: 100vh;
