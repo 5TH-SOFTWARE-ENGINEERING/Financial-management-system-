@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import DashboardPage from '@/app/dashboard/page'
 import apiClient from '@/lib/api'
 
@@ -36,6 +36,8 @@ jest.mock('@/lib/api', () => ({
     getDashboardOverview: jest.fn(),
     getDashboardRecentActivity: jest.fn(),
     getAdvancedKPIs: jest.fn(),
+    getInventorySummary: jest.fn(),
+    getSalesSummary: jest.fn(),
     getApprovals: jest.fn(),
     getRevenues: jest.fn(),
     getExpenses: jest.fn(),
@@ -49,6 +51,9 @@ jest.mock('@/components/layout', () => {
 })
 
 describe('DashboardPage', () => {
+  // Set a timeout for all tests in this suite
+  jest.setTimeout(10000)
+
   beforeEach(() => {
     // Reset all mocks before each test
     jest.clearAllMocks()
@@ -74,6 +79,14 @@ describe('DashboardPage', () => {
       data: {},
     })
     
+    ;(apiClient.getInventorySummary as jest.Mock).mockResolvedValue({
+      data: {},
+    })
+    
+    ;(apiClient.getSalesSummary as jest.Mock).mockResolvedValue({
+      data: {},
+    })
+    
     ;(apiClient.getApprovals as jest.Mock).mockResolvedValue({
       data: [],
     })
@@ -89,6 +102,7 @@ describe('DashboardPage', () => {
 
   afterEach(() => {
     jest.clearAllMocks()
+    cleanup()
   })
 
   it('renders page component and loads dashboard data', async () => {
@@ -97,19 +111,25 @@ describe('DashboardPage', () => {
     // Wait for layout to appear
     await waitFor(() => {
       expect(screen.getByTestId('layout')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    }, { timeout: 3000 })
     
-    // Wait for API calls to complete
+    // Wait for all API calls to complete
     await waitFor(() => {
       expect(apiClient.getDashboardOverview).toHaveBeenCalled()
-    }, { timeout: 5000 })
+      expect(apiClient.getDashboardRecentActivity).toHaveBeenCalled()
+      expect(apiClient.getAdvancedKPIs).toHaveBeenCalled()
+      expect(apiClient.getInventorySummary).toHaveBeenCalled()
+      expect(apiClient.getSalesSummary).toHaveBeenCalled()
+      expect(apiClient.getApprovals).toHaveBeenCalled()
+      expect(apiClient.getRevenues).toHaveBeenCalled()
+      expect(apiClient.getExpenses).toHaveBeenCalled()
+    }, { timeout: 3000 })
     
-    // Verify all API methods were called
+    // Verify API methods were called with correct parameters
     expect(apiClient.getDashboardRecentActivity).toHaveBeenCalledWith(8)
-    expect(apiClient.getAdvancedKPIs).toHaveBeenCalled()
-    expect(apiClient.getApprovals).toHaveBeenCalled()
-    expect(apiClient.getRevenues).toHaveBeenCalled()
-    expect(apiClient.getExpenses).toHaveBeenCalled()
+    expect(apiClient.getAdvancedKPIs).toHaveBeenCalledWith({ period: 'month' })
+    expect(apiClient.getRevenues).toHaveBeenCalledWith({ limit: 1000 })
+    expect(apiClient.getExpenses).toHaveBeenCalledWith({ limit: 1000 })
   })
 
   it('handles loading state', async () => {

@@ -1,6 +1,8 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import NotificationsPage from '@/app/notifications/page'
+import { AuthProvider } from '@/lib/rbac/auth-context'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
@@ -10,13 +12,37 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
-jest.mock('@/store/userStore', () => ({
-  useUserStore: () => ({
-    user: { id: '1', role: 'admin' },
-    isAuthenticated: true,
-    isLoading: false,
-  }),
-}))
+jest.mock('@/store/userStore', () => {
+  const mockUser = {
+    id: '1',
+    name: 'Test User',
+    email: 'admin@test.com',
+    role: 'admin' as const,
+    isActive: true,
+  }
+  
+  return {
+    __esModule: true,
+    default: jest.fn(() => ({
+      user: mockUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: jest.fn(),
+      logout: jest.fn(),
+      getCurrentUser: jest.fn(),
+    })),
+    useUserStore: jest.fn(() => ({
+      user: mockUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: jest.fn(),
+      logout: jest.fn(),
+      getCurrentUser: jest.fn(),
+    })),
+  }
+})
 
 jest.mock('@/lib/api', () => ({
   __esModule: true,
@@ -24,6 +50,9 @@ jest.mock('@/lib/api', () => ({
     getNotifications: jest.fn().mockResolvedValue({ data: [] }),
     markNotificationAsRead: jest.fn(),
     deleteNotification: jest.fn(),
+    getCurrentUser: jest.fn().mockResolvedValue({
+      data: { id: 1, email: 'admin@test.com', role: 'admin' },
+    }),
   },
 }))
 
@@ -40,9 +69,35 @@ jest.mock('@/components/layout', () => {
   }
 })
 
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  })
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  )
+}
+
 describe('NotificationsPage', () => {
+  beforeEach(() => {
+    // Mock localStorage
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => null),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+        clear: jest.fn(),
+      },
+      writable: true,
+    })
+  })
+
   it('renders page component', async () => {
-    render(<NotificationsPage />)
+    render(<NotificationsPage />, { wrapper: createWrapper() })
     
     // Wait for the heading to appear, which indicates loading is complete
     await waitFor(() => {

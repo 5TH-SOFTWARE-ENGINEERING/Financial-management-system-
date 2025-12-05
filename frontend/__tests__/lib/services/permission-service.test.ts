@@ -1,11 +1,35 @@
+// Mock apiClient to prevent real API calls in tests
+jest.mock('@/lib/api', () => ({
+  __esModule: true,
+  default: {
+    getPermissions: jest.fn(),
+  },
+}))
+
 import { PermissionService } from '@/lib/services/permission-service'
 import { Resource, Action, DEFAULT_PERMISSIONS } from '@/lib/rbac/models'
+import apiClient from '@/lib/api'
 
 describe('PermissionService', () => {
   let service: PermissionService
+  const mockGetPermissions = apiClient.getPermissions as jest.Mock
+  let originalWarn: typeof console.warn
 
   beforeEach(() => {
+    // Suppress console.warn for tests since we're testing fallback behavior
+    originalWarn = console.warn
+    console.warn = jest.fn()
+    
     service = new PermissionService()
+    // Mock API to return empty array so it falls back to DEFAULT_PERMISSIONS
+    // This prevents real API calls and ensures we use the default permissions
+    mockGetPermissions.mockResolvedValue({ data: [] })
+    mockGetPermissions.mockClear()
+  })
+
+  afterEach(() => {
+    // Restore console.warn
+    console.warn = originalWarn
   })
 
   it('getAllPermissions returns default permissions', async () => {

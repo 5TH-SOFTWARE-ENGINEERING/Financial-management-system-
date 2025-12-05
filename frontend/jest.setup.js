@@ -65,5 +65,46 @@ jest.mock('sonner', () => ({
   Toaster: () => null,
 }))
 
+// Mock ResizeObserver for jsdom environment (needed for Radix UI components)
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+// Mock Pointer Capture API for jsdom environment (needed for Radix UI Select component)
+// These methods are not implemented in jsdom but are required by Radix UI
+Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
+  value: jest.fn().mockReturnValue(false),
+  writable: true,
+  configurable: true,
+})
+
+Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+  value: jest.fn(),
+  writable: true,
+  configurable: true,
+})
+
+Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
+  value: jest.fn(),
+  writable: true,
+  configurable: true,
+})
+
+// Mock scrollIntoView for jsdom environment (needed for Radix UI Select component)
+// Add to both Element and HTMLElement prototypes to cover all cases
+Object.defineProperty(Element.prototype, 'scrollIntoView', {
+  value: jest.fn(),
+  writable: true,
+  configurable: true,
+})
+
+Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+  value: jest.fn(),
+  writable: true,
+  configurable: true,
+})
+
 // Global test timeout
 jest.setTimeout(10000)

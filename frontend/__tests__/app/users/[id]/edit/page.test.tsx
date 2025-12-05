@@ -5,7 +5,6 @@ import apiClient from '@/lib/api'
 
 // Mock dependencies
 const mockPush = jest.fn()
-const mockGetUsers = apiClient.getUsers as jest.Mock
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -30,17 +29,15 @@ jest.mock('@/store/userStore', () => ({
 jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
-    getUsers: jest.fn().mockResolvedValue({
-      data: [
-        {
-          id: 1,
-          full_name: 'Test User',
-          email: 'test@test.com',
-          username: 'testuser',
-          role: 'admin',
-          is_active: true,
-        },
-      ],
+    getUser: jest.fn().mockResolvedValue({
+      data: {
+        id: 1,
+        full_name: 'Test User',
+        email: 'test@test.com',
+        username: 'testuser',
+        role: 'admin',
+        is_active: true,
+      },
     }),
     updateUser: jest.fn(),
   },
@@ -66,20 +63,20 @@ jest.mock('next/link', () => {
 })
 
 describe('EditUserPage', () => {
+  const mockGetUser = apiClient.getUser as jest.Mock
+
   beforeEach(() => {
     mockPush.mockClear()
-    mockGetUsers.mockClear()
-    mockGetUsers.mockResolvedValue({
-      data: [
-        {
-          id: 1,
-          full_name: 'Test User',
-          email: 'test@test.com',
-          username: 'testuser',
-          role: 'admin',
-          is_active: true,
-        },
-      ],
+    mockGetUser.mockClear()
+    mockGetUser.mockResolvedValue({
+      data: {
+        id: 1,
+        full_name: 'Test User',
+        email: 'test@test.com',
+        username: 'testuser',
+        role: 'admin',
+        is_active: true,
+      },
     })
   })
 
@@ -92,7 +89,7 @@ describe('EditUserPage', () => {
     
     // Wait for async user loading to complete
     await waitFor(() => {
-      expect(mockGetUsers).toHaveBeenCalled()
+      expect(mockGetUser).toHaveBeenCalled()
     }, { timeout: 3000 })
   })
 
@@ -106,7 +103,7 @@ describe('EditUserPage', () => {
     
     // Wait for async operations to complete
     await waitFor(() => {
-      expect(mockGetUsers).toHaveBeenCalled()
+      expect(mockGetUser).toHaveBeenCalled()
     }, { timeout: 3000 })
   })
 })
