@@ -212,10 +212,10 @@ const CardTitle = styled.h3`
   font-weight: ${theme.typography.fontWeights.medium};
 `;
 
-const CardValue = styled.div`
+const CardValue = styled.div<{ $isNegative?: boolean }>`
   font-size: clamp(28px, 3vw, 36px);
   font-weight: ${theme.typography.fontWeights.bold};
-  color: ${TEXT_COLOR_DARK};
+  color: ${props => props.$isNegative ? '#ef4444' : TEXT_COLOR_DARK};
   line-height: 1.1;
   transition: color ${theme.transitions.default};
   display: flex;
@@ -849,7 +849,8 @@ const AdminDashboard: React.FC = () => {
     clickable: boolean = false,
     onClick?: () => void,
     growth?: number,
-    growthLabel?: string
+    growthLabel?: string,
+    isNegative?: boolean
   ) => (
     <StatsCard 
       $IconComponent={Icon} 
@@ -858,7 +859,7 @@ const AdminDashboard: React.FC = () => {
     >
       <CardIcon $IconComponent={Icon}><Icon /></CardIcon> 
       <CardTitle>{title}</CardTitle>
-      <CardValue>
+      <CardValue $isNegative={isNegative}>
         {value}
         {clickable && <ClickableIndicator />}
       </CardValue>
@@ -927,7 +928,9 @@ const AdminDashboard: React.FC = () => {
                   `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                   false,
                   undefined,
-                  analyticsData?.growth?.profit_growth_percent
+                  analyticsData?.growth?.profit_growth_percent,
+                  undefined,
+                  netProfit < 0
                 )}
                 {createStatsCard(
                   ClipboardList, 
