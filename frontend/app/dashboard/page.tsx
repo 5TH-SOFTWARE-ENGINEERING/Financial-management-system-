@@ -600,54 +600,22 @@ const AdminDashboard: React.FC = () => {
           debugInfo.expenseIdsWithWorkflow = expenseIdsWithWorkflow.size;
 
           // Fetch pending revenue entries - only count those WITHOUT workflows
-          // Backend already filters by role, so we get appropriate data
-          const revenuesRes = await apiClient.getRevenues({ limit: 1000 });
+          const revenuesRes = await apiClient.getRevenues({ is_approved: false });
           if (revenuesRes?.data && Array.isArray(revenuesRes.data)) {
-            // Filter based on user role - backend already filters, but we ensure we only count relevant entries
-            const userRoleLower = user?.role?.toLowerCase();
-            const isAdmin = userRoleLower === 'admin' || userRoleLower === 'super_admin' || userRoleLower === 'finance_admin' || userRoleLower === 'accountant';
-            const isManager = userRoleLower === 'manager';
-            
-            let relevantRevenues = revenuesRes.data;
-            if (!isAdmin && !isManager) {
-              // For regular users (including employees), only count their own entries
-              relevantRevenues = revenuesRes.data.filter((r: any) => r.created_by_id === user?.id);
-            } else if (isManager) {
-              // For managers, backend already filters to their team, but we can double-check
-              // (Backend handles this, so this is just a safety check)
-            }
-            
-            const pendingRevenues = relevantRevenues.filter((r: any) => {
-              // Only count if not approved (is_approved is false or undefined) AND doesn't have an existing workflow
-              const isNotApproved = r.is_approved === false || r.is_approved === undefined || !r.is_approved;
-              return isNotApproved && !revenueIdsWithWorkflow.has(r.id);
+            const pendingRevenues = revenuesRes.data.filter((r: any) => {
+              // Only count if not approved AND doesn't have an existing workflow
+              return !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
             });
             totalPendingCount += pendingRevenues.length;
             debugInfo.pendingRevenuesCount = pendingRevenues.length;
           }
 
           // Fetch pending expense entries - only count those WITHOUT workflows
-          // Backend already filters by role, so we get appropriate data
-          const expensesRes = await apiClient.getExpenses({ limit: 1000 });
+          const expensesRes = await apiClient.getExpenses({ is_approved: false });
           if (expensesRes?.data && Array.isArray(expensesRes.data)) {
-            // Filter based on user role - backend already filters, but we ensure we only count relevant entries
-            const userRoleLower = user?.role?.toLowerCase();
-            const isAdmin = userRoleLower === 'admin' || userRoleLower === 'super_admin' || userRoleLower === 'finance_admin' || userRoleLower === 'accountant';
-            const isManager = userRoleLower === 'manager';
-            
-            let relevantExpenses = expensesRes.data;
-            if (!isAdmin && !isManager) {
-              // For regular users (including employees), only count their own entries
-              relevantExpenses = expensesRes.data.filter((e: any) => e.created_by_id === user?.id);
-            } else if (isManager) {
-              // For managers, backend already filters to their team, but we can double-check
-              // (Backend handles this, so this is just a safety check)
-            }
-            
-            const pendingExpenses = relevantExpenses.filter((e: any) => {
-              // Only count if not approved (is_approved is false or undefined) AND doesn't have an existing workflow
-              const isNotApproved = e.is_approved === false || e.is_approved === undefined || !e.is_approved;
-              return isNotApproved && !expenseIdsWithWorkflow.has(e.id);
+            const pendingExpenses = expensesRes.data.filter((e: any) => {
+              // Only count if not approved AND doesn't have an existing workflow
+              return !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
             });
             totalPendingCount += pendingExpenses.length;
             debugInfo.pendingExpensesCount = pendingExpenses.length;
