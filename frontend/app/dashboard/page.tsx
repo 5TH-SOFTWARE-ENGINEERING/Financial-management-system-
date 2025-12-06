@@ -1141,22 +1141,25 @@ const AdminDashboard: React.FC = () => {
             </Table>
           </TableContainer>
 
-          <AnalyticsSection>
-            <div className="analytics-info">
-              <h3>
-                <BarChart3 size={24} />
-                Advanced Analytics
-              </h3>
-              <p>
-                Get real-time insights into KPIs, trends, profitability analysis, and detailed financial reports.
-                View comprehensive analytics with customizable dashboards and reporting tools.
-              </p>
-            </div>
-            <AnalyticsButton onClick={handleAnalyticsClick}>
-              <LineChart size={20} />
-              View Analytics
-            </AnalyticsButton>
-          </AnalyticsSection>
+          {/* Advanced Analytics - Hidden from Accountant and Employee */}
+          {user?.role?.toLowerCase() !== 'accountant' && user?.role?.toLowerCase() !== 'employee' && (
+            <AnalyticsSection>
+              <div className="analytics-info">
+                <h3>
+                  <BarChart3 size={24} />
+                  Advanced Analytics
+                </h3>
+                <p>
+                  Get real-time insights into KPIs, trends, profitability analysis, and detailed financial reports.
+                  View comprehensive analytics with customizable dashboards and reporting tools.
+                </p>
+              </div>
+              <AnalyticsButton onClick={handleAnalyticsClick}>
+                <LineChart size={20} />
+                View Analytics
+              </AnalyticsButton>
+            </AnalyticsSection>
+          )}
 
         </ContentContainer>
       </PageContainer>
