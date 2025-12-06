@@ -564,51 +564,53 @@ const Sidebar: React.FC = () => {
             </NavItem>
         </ComponentGate>
 
-        {/* Forecasts - Full access for Admin and Finance Admin, View only for Accountant and Employee */}
-        <ComponentGate componentId={ComponentId.SIDEBAR_FORECAST}>
-            <>
-                <DropdownHeader
-                    onClick={() => toggleSection('forecast')}
-                    $open={isOpen('forecast')}
-                    $active={pathname.includes('/forecast')}
-                    $collapsed={collapsed}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <DropdownIcon $active={pathname.includes('/forecast')} $collapsed={collapsed} $iconType="trending-up">
-                            <TrendingUp />
-                        </DropdownIcon>
-                        {!collapsed && <span style={{ marginLeft: '12px' }}>Forecasts</span>}
-                    </div>
-                    <ChevronIcon $open={isOpen('forecast')}>
-                        <ChevronDown />
-                    </ChevronIcon>
-                </DropdownHeader>
-                {isOpen('forecast') && (
-                    <SubMenu $collapsed={collapsed}>
-                        {/* Create - Only for Admin */}
-                        {isAdmin && (
-                            <ComponentGate componentId={ComponentId.FORECAST_CREATE}>
-                                <NavItem href="/forecast/create" $active={pathname === '/forecast/create'} $collapsed={collapsed}>
-                                    <NavIcon $active={pathname === '/forecast/create'} $collapsed={collapsed} $size={16} $iconType="plus">
-                                        <Plus />
+        {/* Forecasts - Only for Admin, Finance Admin, and Manager (hidden from Accountant and Employee) */}
+        {!isAccountant && !isEmployee && (
+            <ComponentGate componentId={ComponentId.SIDEBAR_FORECAST}>
+                <>
+                    <DropdownHeader
+                        onClick={() => toggleSection('forecast')}
+                        $open={isOpen('forecast')}
+                        $active={pathname.includes('/forecast')}
+                        $collapsed={collapsed}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <DropdownIcon $active={pathname.includes('/forecast')} $collapsed={collapsed} $iconType="trending-up">
+                                <TrendingUp />
+                            </DropdownIcon>
+                            {!collapsed && <span style={{ marginLeft: '12px' }}>Forecasts</span>}
+                        </div>
+                        <ChevronIcon $open={isOpen('forecast')}>
+                            <ChevronDown />
+                        </ChevronIcon>
+                    </DropdownHeader>
+                    {isOpen('forecast') && (
+                        <SubMenu $collapsed={collapsed}>
+                            {/* Create - Only for Admin */}
+                            {isAdmin && (
+                                <ComponentGate componentId={ComponentId.FORECAST_CREATE}>
+                                    <NavItem href="/forecast/create" $active={pathname === '/forecast/create'} $collapsed={collapsed}>
+                                        <NavIcon $active={pathname === '/forecast/create'} $collapsed={collapsed} $size={16} $iconType="plus">
+                                            <Plus />
+                                        </NavIcon>
+                                        {!collapsed && 'new forecast'}
+                                    </NavItem>
+                                </ComponentGate>
+                            )}
+                            {/* List - Available for all authorized users */}
+                            <ComponentGate componentId={ComponentId.FORECAST_LIST}>
+                                <NavItem href="/forecast/list" $active={pathname === '/forecast/list'} $collapsed={collapsed}>
+                                    <NavIcon $active={pathname === '/forecast/list'} $collapsed={collapsed} $size={16} $iconType="list">
+                                        <List />
                                     </NavIcon>
-                                    {!collapsed && 'new forecast'}
+                                    {!collapsed && 'forecasts'}
                                 </NavItem>
                             </ComponentGate>
-                        )}
-                        {/* List - Available for all authorized users */}
-                        <ComponentGate componentId={ComponentId.FORECAST_LIST}>
-                            <NavItem href="/forecast/list" $active={pathname === '/forecast/list'} $collapsed={collapsed}>
-                                <NavIcon $active={pathname === '/forecast/list'} $collapsed={collapsed} $size={16} $iconType="list">
-                                    <List />
-                                </NavIcon>
-                                {!collapsed && 'forecasts'}
-                            </NavItem>
-                        </ComponentGate>
-                    </SubMenu>
-                )}
-            </>
-        </ComponentGate>
+                        </SubMenu>
+                    )}
+                </>
+            </ComponentGate>
+        )}
 
         {/* Scenarios - Only for Admin */}
         {isAdmin && (
