@@ -101,6 +101,17 @@ const SummaryGrid = styled.div`
   margin-bottom: ${theme.spacing.lg};
 `;
 
+const BottomSummaryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.lg};
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
 const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'net' | 'total' | 'inventory' }>`
   background: ${theme.colors.background};
   border: 1px solid ${theme.colors.border};
@@ -623,6 +634,9 @@ export default function TransactionListPage() {
               <div className="label">Total Expenses</div>
               <div className="value">{formatCurrency(totalExpenses)}</div>
             </SummaryCard>
+          </SummaryGrid>
+
+          <BottomSummaryGrid>
             <SummaryCard $type="expense">
               <div className="label">Total Inventory Cost</div>
               <div className="value">{formatCurrency(totalInventory)}</div>
@@ -637,7 +651,7 @@ export default function TransactionListPage() {
               <div className="label">Total Transactions</div>
               <div className="value">{filteredTransactions.length}</div>
             </SummaryCard>
-          </SummaryGrid>
+          </BottomSummaryGrid>
 
           <FiltersContainer>
             <FiltersGrid>
