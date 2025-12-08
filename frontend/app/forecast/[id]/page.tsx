@@ -87,25 +87,24 @@ const InfoCard = styled.div`
   border-radius: ${theme.borderRadius.md};
   border: 1px solid ${theme.colors.border};
   box-shadow: ${CardShadow};
-  padding: ${theme.spacing.lg};
+  padding: ${theme.spacing.xl};
   margin-bottom: ${theme.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.md};
 `;
 
 const InfoRow = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  margin-bottom: ${theme.spacing.md};
+  gap: ${theme.spacing.md};
   font-size: ${theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_MUTED};
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
   
   strong {
     color: ${TEXT_COLOR_DARK};
     min-width: 150px;
+    font-weight: ${theme.typography.fontWeights.medium};
   }
 `;
 
@@ -138,8 +137,11 @@ const ForecastDataCard = styled.div`
   border-radius: ${theme.borderRadius.md};
   border: 1px solid ${theme.colors.border};
   box-shadow: ${CardShadow};
-  padding: ${theme.spacing.lg};
+  padding: ${theme.spacing.xl};
   margin-bottom: ${theme.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.md};
 `;
 
 const ForecastTable = styled.table`
@@ -341,7 +343,7 @@ const ForecastDetailPage: React.FC = () => {
           </HeaderContainer>
 
           <InfoCard>
-            <h3 style={{ marginTop: 0, marginBottom: theme.spacing.lg }}>Forecast Information</h3>
+            <h3 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>Forecast Information</h3>
             <InfoRow>
               <strong>Forecast Type:</strong>
               <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
@@ -389,7 +391,7 @@ const ForecastDetailPage: React.FC = () => {
           </InfoCard>
 
           <ForecastDataCard>
-            <h3 style={{ marginTop: 0, marginBottom: theme.spacing.md }}>Forecast Data</h3>
+            <h3 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>Forecast Data</h3>
             {forecastDataArray.length === 0 ? (
               <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
                 <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />

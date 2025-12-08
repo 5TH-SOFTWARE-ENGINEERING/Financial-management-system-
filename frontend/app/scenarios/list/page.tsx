@@ -11,7 +11,6 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -95,10 +94,97 @@ const FiltersContainer = styled.div`
   border: 1px solid ${theme.colors.border};
   box-shadow: ${CardShadow};
   margin-bottom: ${theme.spacing.xl};
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
   gap: ${theme.spacing.md};
   align-items: center;
-  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const FilterGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 const ScenariosGrid = styled.div`
@@ -356,20 +442,16 @@ const ScenarioListPage: React.FC = () => {
           </HeaderContainer>
 
           <FiltersContainer>
-            <Building2 size={20} color={TEXT_COLOR_MUTED} />
-            <label style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
-              Select Budget:
-            </label>
-            <select
+            <FilterGroup>
+              <Building2 size={20} color={TEXT_COLOR_MUTED} />
+              <label style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK, whiteSpace: 'nowrap' }}>
+                Select Budget:
+              </label>
+            </FilterGroup>
+            <StyledSelect
               value={selectedBudgetId}
               onChange={(e) => setSelectedBudgetId(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                fontSize: theme.typography.fontSizes.sm,
-                minWidth: '250px'
-              }}
+              style={{ minWidth: '250px' }}
             >
               <option value="">Select a budget...</option>
               {budgets.map((budget) => (
@@ -377,29 +459,32 @@ const ScenarioListPage: React.FC = () => {
                   {budget.name} ({budget.status})
                 </option>
               ))}
-            </select>
+            </StyledSelect>
             {selectedBudgetId && (
               <>
-                <Search size={20} color={TEXT_COLOR_MUTED} />
-                <Input
-                  type="text"
-                  placeholder="Search scenarios..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ flex: 1, maxWidth: '300px' }}
-                />
-                <Filter size={20} color={TEXT_COLOR_MUTED} />
-                <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
-                  style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-                >
-                  <option value="">All Types</option>
-                  <option value="best_case">Best Case</option>
-                  <option value="worst_case">Worst Case</option>
-                  <option value="most_likely">Most Likely</option>
-                  <option value="custom">Custom</option>
-                </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, position: 'relative' }}>
+                  <Search size={20} color={TEXT_COLOR_MUTED} style={{ position: 'absolute', left: '12px', zIndex: 1 }} />
+                  <StyledInput
+                    type="text"
+                    placeholder="Search scenarios..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ paddingLeft: '40px' }}
+                  />
+                </div>
+                <FilterGroup>
+                  <Filter size={20} color={TEXT_COLOR_MUTED} />
+                  <StyledSelect
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value)}
+                  >
+                    <option value="">All Types</option>
+                    <option value="best_case">Best Case</option>
+                    <option value="worst_case">Worst Case</option>
+                    <option value="most_likely">Most Likely</option>
+                    <option value="custom">Custom</option>
+                  </StyledSelect>
+                </FilterGroup>
               </>
             )}
           </FiltersContainer>
