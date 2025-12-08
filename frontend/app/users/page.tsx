@@ -1203,6 +1203,74 @@ export default function UsersPage() {
               </p>
             </WarningBox>
 
+            {(() => {
+              const userDetails = accessibleUsers.find((u: any) => {
+                const userId = typeof u.id === 'string' ? parseInt(u.id) : u.id;
+                return userId === userToDelete.id;
+              });
+              
+              return userDetails ? (
+                <div style={{
+                  background: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: theme.borderRadius.md,
+                  padding: theme.spacing.md,
+                  marginBottom: theme.spacing.lg
+                }}>
+                  <h4 style={{
+                    fontSize: theme.typography.fontSizes.sm,
+                    fontWeight: theme.typography.fontWeights.bold,
+                    color: TEXT_COLOR_DARK,
+                    margin: `0 0 ${theme.spacing.md} 0`
+                  }}>
+                    User Details to be Deleted:
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                        {userDetails.full_name || userDetails.name || userDetails.email || 'N/A'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Email:</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                        {userDetails.email || 'N/A'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
+                      <Badge variant={getRoleBadgeVariant(userDetails.role || 'default')}>
+                        {getRoleDisplayName(userDetails.role || '')}
+                      </Badge>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                      <Badge variant={userDetails.is_active !== false ? 'active' : 'inactive'}>
+                        {userDetails.is_active !== false ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                    {userDetails.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                        <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Phone:</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                          {userDetails.phone}
+                        </span>
+                      </div>
+                    )}
+                    {userDetails.created_at && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                        <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Joined:</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                          {formatDate(userDetails.created_at)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
             <FormGroup>
               <Label htmlFor="delete-password">
                 Enter <strong>your own password</strong> to confirm deletion of <strong>{userToDelete.name}</strong>:
