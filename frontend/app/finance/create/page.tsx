@@ -252,6 +252,8 @@ const ButtonRow = styled.div`
   display: flex;
   gap: 12px;
   padding-top: 12px;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 /* --------------------------------- PAGE ---------------------------------- */
@@ -512,7 +514,6 @@ export default function CreateFinancePage() {
               <Button 
                 type="submit" 
                 disabled={loading || isSubmitting} 
-                className="flex-1"
                 onClick={(e) => {
                   // Prevent double submission
                   if (loading || isSubmitting) {
