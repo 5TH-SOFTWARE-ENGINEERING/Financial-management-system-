@@ -962,7 +962,9 @@ class ApiClient {
   }
 
   async getDepartment(departmentId: string | number): Promise<ApiResponse<any>> {
-    return this.get(`/departments/${departmentId}`);
+    // URL encode the department ID to handle special characters like colons
+    const encodedId = encodeURIComponent(String(departmentId));
+    return this.get(`/departments/${encodedId}`);
   }
 
   async createDepartment(departmentData: any): Promise<ApiResponse<any>> {
@@ -970,11 +972,15 @@ class ApiClient {
   }
 
   async updateDepartment(departmentId: string | number, departmentData: any): Promise<ApiResponse<any>> {
-    return this.put(`/departments/${departmentId}`, departmentData);
+    // URL encode the department ID to handle special characters like colons
+    const encodedId = encodeURIComponent(String(departmentId));
+    return this.put(`/departments/${encodedId}`, departmentData);
   }
 
   async deleteDepartment(departmentId: string | number, password: string): Promise<ApiResponse<{ message: string }>> {
-    return this.post(`/departments/${departmentId}/delete`, { password });
+    // URL encode the department ID to handle special characters like colons
+    const encodedId = encodeURIComponent(String(departmentId));
+    return this.post(`/departments/${encodedId}/delete`, { password });
   }
 
   // Project endpoints

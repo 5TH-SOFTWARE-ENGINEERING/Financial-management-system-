@@ -5,9 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateDepartmentSchema, type CreateDepartmentInput } from '@/lib/validation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import Navbar from '@/components/common/Navbar';
 import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
@@ -90,19 +88,30 @@ const FormCard = styled.form`
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 28px;
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
 `;
 
 const FieldError = styled.p`
   color: #dc2626;
   font-size: 14px;
   margin-top: 4px;
+`;
+
+const HelpText = styled.p`
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted-foreground);
 `;
 
 const MessageBox = styled.div<{ type: 'error' | 'success' }>`
@@ -118,31 +127,90 @@ const MessageBox = styled.div<{ type: 'error' | 'success' }>`
   color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
 `;
 
-const ButtonRow = styled.div`
-  display: flex;
-  gap: 12px;
-  padding-top: 12px;
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
 `;
 
-const Select = styled.select`
+const StyledTextarea = styled.textarea`
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
   font-size: 14px;
-  color: var(--foreground);
-  
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  resize: vertical;
+  min-height: 100px;
+
   &:focus {
-    outline: none;
-    border-color: var(--primary);
+    border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
   }
-  
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
   &:disabled {
-    opacity: 0.6;
+    background-color: #f9fafb;
+    color: #6b7280;
     cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding-top: 12px;
+  margin-top: 8px;
 `;
 
 const LoadingContainer = styled.div`
@@ -274,7 +342,7 @@ export default function EditDepartmentPage() {
           <FormCard onSubmit={handleSubmit(onSubmit)}>
             <FormGroup>
               <Label htmlFor="name">Department Name *</Label>
-              <Input
+              <StyledInput
                 id="name"
                 {...register('name')}
                 placeholder="e.g., Finance, HR, IT"
@@ -285,7 +353,7 @@ export default function EditDepartmentPage() {
 
             <FormGroup>
               <Label htmlFor="description">Description</Label>
-              <Textarea
+              <StyledTextarea
                 id="description"
                 {...register('description')}
                 placeholder="Brief description of the department"
@@ -304,7 +372,7 @@ export default function EditDepartmentPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting} className="flex-1">
+              <Button type="submit" disabled={submitting}>
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
