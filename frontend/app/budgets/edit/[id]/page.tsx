@@ -10,7 +10,6 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -82,6 +81,14 @@ const FormCard = styled.div`
 `;
 
 const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
   margin-bottom: ${theme.spacing.md};
   
   label {
@@ -89,36 +96,146 @@ const FormGroup = styled.div`
     font-size: ${theme.typography.fontSizes.sm};
     font-weight: ${theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
-    margin-bottom: ${theme.spacing.xs};
+    margin: 0;
   }
-  
-  input, select, textarea {
-    width: 100%;
-    padding: ${theme.spacing.sm};
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.sm};
-    font-size: ${theme.typography.fontSizes.sm};
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
     
-    &:focus {
-      outline: none;
-      border-color: ${PRIMARY_COLOR};
-      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
   }
-  
-  textarea {
-    min-height: 100px;
-    resize: vertical;
+
+  &[type="date"] {
+    cursor: pointer;
+  }
+`;
+
+const StyledTextarea = styled.textarea`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  resize: vertical;
+  min-height: 100px;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
 const TwoColumnGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: ${theme.spacing.md};
-  
+  gap: 28px;
+  width: 100%;
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 28px;
   }
 `;
 
@@ -164,28 +281,17 @@ const ItemsTableRow = styled.div`
   gap: ${theme.spacing.sm};
   padding: ${theme.spacing.md};
   border-bottom: 1px solid ${theme.colors.border};
+  align-items: center;
   
   &:last-child {
     border-bottom: none;
-  }
-  
-  input, select {
-    padding: ${theme.spacing.xs} ${theme.spacing.sm};
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.sm};
-    font-size: ${theme.typography.fontSizes.sm};
-    
-    &:focus {
-      outline: none;
-      border-color: ${PRIMARY_COLOR};
-    }
   }
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  justify-content: flex-end;
-  gap: ${theme.spacing.md};
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.xl};
   padding-top: ${theme.spacing.lg};
   border-top: 1px solid ${theme.colors.border};
@@ -299,24 +405,39 @@ const Label = styled.label`
 
 const PasswordInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
   font-family: inherit;
-  transition: all ${theme.transitions.default};
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
 
   &:focus {
-    outline: none;
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
   }
 
   &::placeholder {
-    color: ${TEXT_COLOR_MUTED};
-    opacity: 0.6;
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -328,8 +449,8 @@ const ErrorText = styled.p`
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
-  justify-content: flex-end;
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.lg};
 `;
 
@@ -606,8 +727,8 @@ const BudgetEditPage: React.FC = () => {
               </h2>
 
               <FormGroup>
-                <label>Budget Name *</label>
-                <Input
+                <label>Budget Name </label>
+                <StyledInput
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
@@ -618,17 +739,18 @@ const BudgetEditPage: React.FC = () => {
 
               <FormGroup>
                 <label>Description</label>
-                <textarea
+                <StyledTextarea
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Budget description..."
+                  rows={4}
                 />
               </FormGroup>
 
               <TwoColumnGrid>
                 <FormGroup>
-                  <label>Period *</label>
-                  <select
+                  <label>Period </label>
+                  <StyledSelect
                     value={formData.period}
                     onChange={(e) => handleInputChange('period', e.target.value)}
                     required
@@ -637,12 +759,12 @@ const BudgetEditPage: React.FC = () => {
                     <option value="quarterly">Quarterly</option>
                     <option value="yearly">Yearly</option>
                     <option value="custom">Custom</option>
-                  </select>
+                  </StyledSelect>
                 </FormGroup>
 
                 <FormGroup>
                   <label>Status</label>
-                  <select
+                  <StyledSelect
                     value={formData.status}
                     onChange={(e) => handleInputChange('status', e.target.value)}
                   >
@@ -650,14 +772,14 @@ const BudgetEditPage: React.FC = () => {
                     <option value="submitted">Submitted</option>
                     <option value="approved">Approved</option>
                     <option value="active">Active</option>
-                  </select>
+                  </StyledSelect>
                 </FormGroup>
               </TwoColumnGrid>
 
               <TwoColumnGrid>
                 <FormGroup>
-                  <label>Start Date *</label>
-                  <Input
+                  <label>Start Date </label>
+                  <StyledInput
                     type="date"
                     value={formData.start_date}
                     onChange={(e) => handleInputChange('start_date', e.target.value)}
@@ -666,8 +788,8 @@ const BudgetEditPage: React.FC = () => {
                 </FormGroup>
 
                 <FormGroup>
-                  <label>End Date *</label>
-                  <Input
+                  <label>End Date </label>
+                  <StyledInput
                     type="date"
                     value={formData.end_date}
                     onChange={(e) => handleInputChange('end_date', e.target.value)}
@@ -679,7 +801,7 @@ const BudgetEditPage: React.FC = () => {
               <TwoColumnGrid>
                 <FormGroup>
                   <label>Department</label>
-                  <Input
+                  <StyledInput
                     type="text"
                     value={formData.department}
                     onChange={(e) => handleInputChange('department', e.target.value)}
@@ -689,7 +811,7 @@ const BudgetEditPage: React.FC = () => {
 
                 <FormGroup>
                   <label>Project</label>
-                  <Input
+                  <StyledInput
                     type="text"
                     value={formData.project}
                     onChange={(e) => handleInputChange('project', e.target.value)}
@@ -743,29 +865,29 @@ const BudgetEditPage: React.FC = () => {
                     </ItemsTableHeader>
                     {items.map((item, index) => (
                       <ItemsTableRow key={item.id || index}>
-                        <input
+                        <StyledInput
                           type="text"
                           value={item.name}
                           onChange={(e) => handleItemChange(index, 'name', e.target.value)}
                           onBlur={() => handleSaveItem(index, item)}
                           placeholder="Item name"
                         />
-                        <select
+                        <StyledSelect
                           value={item.type}
                           onChange={(e) => handleItemChange(index, 'type', e.target.value)}
                           onBlur={() => handleSaveItem(index, item)}
                         >
                           <option value="revenue">Revenue</option>
                           <option value="expense">Expense</option>
-                        </select>
-                        <input
+                        </StyledSelect>
+                        <StyledInput
                           type="text"
                           value={item.category}
                           onChange={(e) => handleItemChange(index, 'category', e.target.value)}
                           onBlur={() => handleSaveItem(index, item)}
                           placeholder="Category"
                         />
-                        <input
+                        <StyledInput
                           type="number"
                           value={item.amount}
                           onChange={(e) => handleItemChange(index, 'amount', parseFloat(e.target.value) || 0)}
@@ -773,7 +895,7 @@ const BudgetEditPage: React.FC = () => {
                           min="0"
                           step="0.01"
                         />
-                        <input
+                        <StyledInput
                           type="text"
                           value={item.description}
                           onChange={(e) => handleItemChange(index, 'description', e.target.value)}
