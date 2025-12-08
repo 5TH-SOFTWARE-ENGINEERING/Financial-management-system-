@@ -940,9 +940,76 @@ export default function AccountantListPage() {
               </p>
             </WarningBox>
 
+            <div style={{
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: theme.borderRadius.md,
+              padding: theme.spacing.md,
+              marginBottom: theme.spacing.lg
+            }}>
+              <h4 style={{
+                fontSize: theme.typography.fontSizes.sm,
+                fontWeight: theme.typography.fontWeights.bold,
+                color: TEXT_COLOR_DARK,
+                margin: `0 0 ${theme.spacing.md} 0`
+              }}>
+                Accountant Details to be Deactivated:
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    {accountantToDeactivate.full_name || 'N/A'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Email:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    {accountantToDeactivate.email}
+                  </span>
+                </div>
+                {accountantToDeactivate.username && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Username:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {accountantToDeactivate.username}
+                    </span>
+                  </div>
+                )}
+                {accountantToDeactivate.phone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Phone:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {accountantToDeactivate.phone}
+                    </span>
+                  </div>
+                )}
+                {accountantToDeactivate.department && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Department:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {accountantToDeactivate.department}
+                    </span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
+                  <Badge variant={getRoleBadgeVariant(accountantToDeactivate.role)}>
+                    {getRoleDisplayName(accountantToDeactivate.role)}
+                  </Badge>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                  <Badge variant={accountantToDeactivate.is_active ? 'active' : 'inactive'}>
+                    {accountantToDeactivate.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
             <FormGroup>
               <Label htmlFor="deactivate-password">
-                Enter <strong>your own password</strong> to confirm deactivation of <strong>{accountantToDeactivate.full_name}</strong>:
+                Enter your password to confirm deactivation:
               </Label>
               <PasswordInput
                 id="deactivate-password"
