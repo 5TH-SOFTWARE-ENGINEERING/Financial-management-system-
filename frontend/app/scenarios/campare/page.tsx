@@ -79,6 +79,9 @@ const ComparisonCard = styled.div`
   box-shadow: ${CardShadow};
   padding: ${theme.spacing.xl};
   margin-bottom: ${theme.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.md};
 `;
 
 const ScenarioSelector = styled.div`
@@ -86,7 +89,10 @@ const ScenarioSelector = styled.div`
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.xl};
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.xs};
 `;
 
 const ScenarioCheckbox = styled.label`
@@ -165,7 +171,7 @@ const ComparisonGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: ${theme.spacing.md};
-  margin-top: ${theme.spacing.lg};
+  margin-top: 0;
 `;
 
 const LoadingContainer = styled.div`
@@ -341,7 +347,7 @@ const CompareScenariosPage: React.FC = () => {
           </HeaderContainer>
 
           <ComparisonCard>
-            <h2 style={{ marginBottom: theme.spacing.md, color: TEXT_COLOR_DARK }}>
+            <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
               Select Scenarios to Compare
             </h2>
             <ScenarioSelector>
@@ -374,11 +380,11 @@ const CompareScenariosPage: React.FC = () => {
             </LoadingContainer>
           ) : comparison && comparison.scenarios.length > 0 ? (
             <ComparisonCard>
-              <h2 style={{ marginBottom: theme.spacing.md, color: TEXT_COLOR_DARK }}>
+              <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
                 Comparison Results
               </h2>
               
-              <div style={{ overflowX: 'auto' }}>
+              <div style={{ overflowX: 'auto', marginTop: 0 }}>
                 <ComparisonTable>
                   <thead>
                     <tr>

@@ -10,7 +10,6 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -80,36 +79,150 @@ const FormCard = styled.div`
   box-shadow: ${CardShadow};
   padding: ${theme.spacing.xl};
   margin-bottom: ${theme.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: ${theme.spacing.md};
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
   
   label {
     display: block;
     font-size: ${theme.typography.fontSizes.sm};
     font-weight: ${theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
-    margin-bottom: ${theme.spacing.xs};
+    margin: 0;
   }
-  
-  input, select, textarea {
-    width: 100%;
-    padding: ${theme.spacing.sm};
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.sm};
-    font-size: ${theme.typography.fontSizes.sm};
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
     
-    &:focus {
-      outline: none;
-      border-color: ${PRIMARY_COLOR};
-      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
   }
-  
-  textarea {
-    min-height: 100px;
-    resize: vertical;
+`;
+
+const StyledTextarea = styled.textarea`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  resize: vertical;
+  min-height: 100px;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -145,17 +258,18 @@ const ItemHeader = styled.div`
 const AdjustmentInputs = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: ${theme.spacing.sm};
+  gap: 28px;
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 28px;
   }
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  justify-content: flex-end;
-  gap: ${theme.spacing.md};
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.xl};
   padding-top: ${theme.spacing.lg};
   border-top: 1px solid ${theme.colors.border};
@@ -361,13 +475,13 @@ const ScenarioCreatePage: React.FC<ScenarioCreatePageProps> = () => {
 
           <form onSubmit={handleSubmit}>
             <FormCard>
-              <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
+              <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
                 Scenario Information
               </h2>
 
               <FormGroup>
                 <label>Scenario Name *</label>
-                <Input
+                <StyledInput
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -378,16 +492,17 @@ const ScenarioCreatePage: React.FC<ScenarioCreatePageProps> = () => {
 
               <FormGroup>
                 <label>Description</label>
-                <textarea
+                <StyledTextarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Scenario description..."
+                  rows={4}
                 />
               </FormGroup>
 
               <FormGroup>
                 <label>Scenario Type </label>
-                <select
+                <StyledSelect
                   value={formData.scenario_type}
                   onChange={(e) => setFormData({ ...formData, scenario_type: e.target.value })}
                   required
@@ -396,15 +511,15 @@ const ScenarioCreatePage: React.FC<ScenarioCreatePageProps> = () => {
                   <option value="worst_case">Worst Case</option>
                   <option value="most_likely">Most Likely</option>
                   <option value="custom">Custom</option>
-                </select>
+                </StyledSelect>
               </FormGroup>
             </FormCard>
 
             <FormCard>
-              <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
+              <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
                 Budget Items Adjustments
               </h2>
-              <p style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.md }}>
+              <p style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, margin: 0 }}>
                 Adjust budget items using multipliers (e.g., 1.2 for 20% increase) or fixed amounts.
               </p>
 
@@ -423,9 +538,9 @@ const ScenarioCreatePage: React.FC<ScenarioCreatePageProps> = () => {
                         Original: {formatCurrency(item.amount)} → Adjusted: {formatCurrency(adjustedAmount)}
                       </div>
                       <AdjustmentInputs>
-                        <div>
-                          <label style={{ fontSize: theme.typography.fontSizes.xs }}>Multiplier (e.g., 1.2 = +20%)</label>
-                          <Input
+                        <FormGroup>
+                          <label style={{ fontSize: theme.typography.fontSizes.xs, margin: 0 }}>Multiplier (e.g., 1.2 = +20%)</label>
+                          <StyledInput
                             type="number"
                             step="0.1"
                             value={adjustment.amount_multiplier !== undefined ? adjustment.amount_multiplier : ''}
@@ -437,10 +552,10 @@ const ScenarioCreatePage: React.FC<ScenarioCreatePageProps> = () => {
                             }}
                             placeholder="1.0"
                           />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: theme.typography.fontSizes.xs }}>Fixed Amount</label>
-                          <Input
+                        </FormGroup>
+                        <FormGroup>
+                          <label style={{ fontSize: theme.typography.fontSizes.xs, margin: 0 }}>Fixed Amount</label>
+                          <StyledInput
                             type="number"
                             step="0.01"
                             value={adjustment.amount !== undefined ? adjustment.amount : ''}
@@ -452,7 +567,7 @@ const ScenarioCreatePage: React.FC<ScenarioCreatePageProps> = () => {
                             }}
                             placeholder="Fixed amount"
                           />
-                        </div>
+                        </FormGroup>
                       </AdjustmentInputs>
                     </ItemCard>
                   );
