@@ -8,7 +8,6 @@ import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, FolderKanban, Plus, Edit, Trash2, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/utils';
 import { theme } from '@/components/common/theme';
 
@@ -147,25 +146,81 @@ const SearchWrapper = styled.div`
     color: ${TEXT_COLOR_MUTED};
     width: 16px;
     height: 16px;
-  }
-  
-  input {
-    padding-left: 40px;
+    z-index: 1;
   }
 `;
 
-const Select = styled.select`
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  font-size: ${theme.typography.fontSizes.sm};
-  color: ${TEXT_COLOR_DARK};
-  
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  padding-left: 40px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
   &:focus {
-    outline: none;
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -381,20 +436,41 @@ const Label = styled.label`
   margin-bottom: ${theme.spacing.xs};
 `;
 
-const PasswordInput = styled(Input)`
+const PasswordInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
   font-family: inherit;
-  
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
   &:focus {
-    outline: none;
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -406,8 +482,8 @@ const ErrorText = styled.p`
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
-  justify-content: flex-end;
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.lg};
 `;
 
@@ -590,14 +666,14 @@ export default function ProjectListPage() {
           <FiltersCard>
             <SearchWrapper>
               <Search size={16} />
-              <Input
+              <StyledInput
                 type="text"
                 placeholder="Search by name, description, or department..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </SearchWrapper>
-            <Select
+            <StyledSelect
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
             >
@@ -607,15 +683,15 @@ export default function ProjectListPage() {
                   {dept.name}
                 </option>
               ))}
-            </Select>
-            <Select
+            </StyledSelect>
+            <StyledSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
-            </Select>
+            </StyledSelect>
           </FiltersCard>
 
           <Card>
@@ -717,18 +793,108 @@ export default function ProjectListPage() {
         <ModalOverlay onClick={handleDeleteCancel}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
-              <ModalAlertIcon size={20} />
-              Confirm Project Deletion
+              <Trash2 size={20} style={{ color: '#ef4444' }} />
+              Delete Project
             </ModalTitle>
             <WarningBox>
               <p>
-                You are about to permanently delete the project <strong>{projectToDelete.name}</strong>. This action cannot be undone.
-                Please enter your own password to verify this action.
+                <strong>Warning:</strong> You are about to permanently delete this project. 
+                This action cannot be undone. Please enter your password to confirm this deletion.
               </p>
             </WarningBox>
+
+            <div style={{
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: theme.borderRadius.md,
+              padding: theme.spacing.md,
+              marginBottom: theme.spacing.lg
+            }}>
+              <h4 style={{
+                fontSize: theme.typography.fontSizes.sm,
+                fontWeight: theme.typography.fontWeights.bold,
+                color: TEXT_COLOR_DARK,
+                margin: `0 0 ${theme.spacing.md} 0`
+              }}>
+                Project Details to be Deleted:
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    {projectToDelete.name || 'N/A'}
+                  </span>
+                </div>
+                {projectToDelete.description && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Description:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, flex: 1 }}>
+                      {projectToDelete.description}
+                    </span>
+                  </div>
+                )}
+                {projectToDelete.department_name && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Department:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {projectToDelete.department_name}
+                    </span>
+                  </div>
+                )}
+                {projectToDelete.budget && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Budget:</strong>
+                    <span style={{ 
+                      fontSize: theme.typography.fontSizes.sm, 
+                      fontWeight: theme.typography.fontWeights.bold, 
+                      color: TEXT_COLOR_DARK
+                    }}>
+                      ${projectToDelete.budget.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Start Date:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    {formatDate(projectToDelete.start_date)}
+                  </span>
+                </div>
+                {projectToDelete.end_date && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>End Date:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {formatDate(projectToDelete.end_date)}
+                    </span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                  <StatusBadge $active={projectToDelete.is_active}>
+                    {projectToDelete.is_active ? 'Active' : 'Inactive'}
+                  </StatusBadge>
+                </div>
+                {projectToDelete.assigned_users_names && projectToDelete.assigned_users_names.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Assigned Users:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, flex: 1 }}>
+                      {projectToDelete.assigned_users_names.join(', ')}
+                    </span>
+                  </div>
+                )}
+                {projectToDelete.created_at && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Created:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {formatDate(projectToDelete.created_at)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <FormGroup>
               <Label htmlFor="delete-password">
-                Enter your own password to confirm deletion of <strong>{projectToDelete.name}</strong>:
+                Enter your password to confirm deletion:
               </Label>
               <PasswordInput
                 id="delete-password"
