@@ -193,7 +193,7 @@ const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'profit' | 'cas
   .value {
     font-size: clamp(20px, 4vw, 28px);
     font-weight: ${theme.typography.fontWeights.bold};
-    color: ${TEXT_COLOR_DARK};
+    color: ${(p) => p.$type === 'expense' ? '#dc2626' : TEXT_COLOR_DARK};
     margin-bottom: ${theme.spacing.xs};
   }
   
@@ -1178,7 +1178,7 @@ export default function ReportPage() {
                               .map(([category, amount]) => (
                                 <tr key={category}>
                                   <td>{capitalize(category)}</td>
-                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount as number)}</td>
+                                  <td style={{ textAlign: 'right', color: '#dc2626', fontWeight: theme.typography.fontWeights.bold }}>{formatCurrency(amount as number)}</td>
                                 </tr>
                               ))
                           ) : (
@@ -1332,7 +1332,7 @@ export default function ReportPage() {
                               .map(([category, amount]) => (
                                 <tr key={category}>
                                   <td>{capitalize(category)}</td>
-                                  <td style={{ textAlign: 'right' }}>{formatCurrency(amount as number)}</td>
+                                  <td style={{ textAlign: 'right', color: '#dc2626', fontWeight: theme.typography.fontWeights.bold }}>{formatCurrency(amount as number)}</td>
                                 </tr>
                               ))
                           ) : (
