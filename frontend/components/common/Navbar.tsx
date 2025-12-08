@@ -872,7 +872,7 @@ export default function Navbar() {
 
   // Load language preference from localStorage
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('language') || 'EN';
+    const savedLanguage = localStorage.getItem('language') || 'ENG';
     setLanguage(savedLanguage);
   }, []);
 
