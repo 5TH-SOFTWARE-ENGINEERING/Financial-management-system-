@@ -219,10 +219,15 @@ const StatInfo = styled.div`
 `;
 
 const FiltersContainer = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: ${theme.spacing.md};
   margin-bottom: ${theme.spacing.lg};
-  flex-wrap: wrap;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const StyledInput = styled.input`
