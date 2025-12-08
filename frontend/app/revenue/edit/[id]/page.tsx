@@ -5,9 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RevenueSchema, type RevenueInput } from '@/lib/validation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import Navbar from '@/components/common/Navbar';
 import Sidebar from '@/components/common/Sidebar';
 import apiClient from '@/lib/api';
@@ -90,19 +88,30 @@ const FormCard = styled.form`
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 28px;
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
 `;
 
 const FieldError = styled.p`
   color: #dc2626;
   font-size: 14px;
   margin-top: 4px;
+`;
+
+const HelpText = styled.p`
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted-foreground);
 `;
 
 const MessageBox = styled.div<{ type: 'error' | 'success' }>`
@@ -118,40 +127,154 @@ const MessageBox = styled.div<{ type: 'error' | 'success' }>`
   color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
 `;
 
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
+    
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+
+  &[type="date"] {
+    cursor: pointer;
+  }
+
+  &[type="url"] {
+    font-family: inherit;
+  }
+`;
+
+const StyledTextarea = styled.textarea`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  resize: vertical;
+  min-height: 100px;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
 const ButtonRow = styled.div`
   display: flex;
-  gap: 12px;
+  gap: 16px;
+  justify-content: space-between;
   padding-top: 12px;
+  margin-top: 8px;
 `;
 
 const GridRow = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const Select = styled.select`
+  gap: 28px;
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 14px;
-  color: var(--foreground);
-  
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 28px;
   }
 `;
 
@@ -339,8 +462,8 @@ export default function EditRevenuePage() {
 
           <FormCard onSubmit={handleSubmit(onSubmit)}>
             <FormGroup>
-              <Label htmlFor="title">Title *</Label>
-              <Input
+              <Label htmlFor="title">Title </Label>
+              <StyledInput
                 id="title"
                 {...register('title')}
                 placeholder="e.g., Product Sales"
@@ -351,7 +474,7 @@ export default function EditRevenuePage() {
 
             <FormGroup>
               <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
+              <StyledTextarea
                 id="description"
                 {...register('description')}
                 placeholder="Brief description of the revenue"
@@ -363,8 +486,8 @@ export default function EditRevenuePage() {
 
             <GridRow>
               <FormGroup>
-                <Label htmlFor="category">Category *</Label>
-                <Select
+                <Label htmlFor="category">Category </Label>
+                <StyledSelect
                   id="category"
                   {...register('category')}
                   disabled={submitting}
@@ -374,13 +497,13 @@ export default function EditRevenuePage() {
                   <option value="investment">Investment</option>
                   <option value="rental">Rental</option>
                   <option value="other">Other</option>
-                </Select>
+                </StyledSelect>
                 {errors.category && <FieldError>{errors.category.message}</FieldError>}
               </FormGroup>
 
               <FormGroup>
-                <Label htmlFor="amount">Amount *</Label>
-                <Input
+                <Label htmlFor="amount">Amount </Label>
+                <StyledInput
                   id="amount"
                   type="number"
                   step="0.01"
@@ -395,7 +518,7 @@ export default function EditRevenuePage() {
 
             <FormGroup>
               <Label htmlFor="source">Source (Optional)</Label>
-              <Input
+              <StyledInput
                 id="source"
                 {...register('source')}
                 placeholder="e.g., Customer name or company"
@@ -404,8 +527,8 @@ export default function EditRevenuePage() {
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="date">Date *</Label>
-              <Input
+              <Label htmlFor="date">Date </Label>
+              <StyledInput
                 id="date"
                 type="date"
                 {...register('date')}
@@ -428,8 +551,8 @@ export default function EditRevenuePage() {
 
             {isRecurring && (
               <FormGroup>
-                <Label htmlFor="recurringFrequency">Recurring Frequency *</Label>
-                <Select
+                <Label htmlFor="recurringFrequency">Recurring Frequency </Label>
+                <StyledSelect
                   id="recurringFrequency"
                   {...register('recurringFrequency')}
                   disabled={submitting}
@@ -438,14 +561,14 @@ export default function EditRevenuePage() {
                   <option value="monthly">Monthly</option>
                   <option value="quarterly">Quarterly</option>
                   <option value="yearly">Yearly</option>
-                </Select>
+                </StyledSelect>
                 {errors.recurringFrequency && <FieldError>{errors.recurringFrequency.message}</FieldError>}
               </FormGroup>
             )}
 
             <FormGroup>
               <Label htmlFor="attachmentUrl">Attachment URL (Optional)</Label>
-              <Input
+              <StyledInput
                 id="attachmentUrl"
                 type="url"
                 {...register('attachmentUrl')}
@@ -464,7 +587,7 @@ export default function EditRevenuePage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting} className="flex-1">
+              <Button type="submit" disabled={submitting}>
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
