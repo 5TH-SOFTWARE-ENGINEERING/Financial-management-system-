@@ -14,7 +14,6 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -128,8 +127,11 @@ const Card = styled.div`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
   border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.lg};
+  padding: ${theme.spacing.xl};
   box-shadow: ${CardShadow};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.md};
 `;
 
 const Table = styled.table`
@@ -216,16 +218,168 @@ const ModalHeader = styled.div`
     color: ${TEXT_COLOR_DARK};
     margin: 0;
   }
+
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    color: ${TEXT_COLOR_MUTED};
+    padding: ${theme.spacing.xs};
+    line-height: 1;
+    transition: color ${theme.transitions.default};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: ${theme.borderRadius.sm};
+
+    &:hover {
+      color: ${TEXT_COLOR_DARK};
+      background: ${theme.colors.backgroundSecondary};
+    }
+  }
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  transition: all ${theme.transitions.default};
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: ${PRIMARY_COLOR}80;
+  }
+
+  &:disabled {
+    background: ${theme.colors.backgroundSecondary};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const StyledTextarea = styled.textarea`
+  width: 100%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  transition: all ${theme.transitions.default};
+  box-sizing: border-box;
+  margin: 0;
+  min-height: 60px;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: ${PRIMARY_COLOR}80;
+  }
+
+  &:disabled {
+    background: ${theme.colors.backgroundSecondary};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: ${PRIMARY_COLOR}80;
+  }
+
+  &:disabled {
+    background: ${theme.colors.backgroundSecondary};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+`;
+
+const StyledLabel = styled(Label)`
+  display: block;
+  margin-bottom: ${theme.spacing.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
 `;
 
 const FormGroup = styled.div`
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.xs};
   margin-bottom: ${theme.spacing.md};
+
+  label {
+    margin-bottom: 0;
+  }
+`;
+
+const HelpText = styled.p`
+  font-size: ${theme.typography.fontSizes.xs};
+  color: ${TEXT_COLOR_MUTED};
+  margin: 0;
+  margin-top: ${theme.spacing.xs};
 `;
 
 const ModalActions = styled.div`
   display: flex;
   gap: ${theme.spacing.md};
-  justify-content: flex-end;
+  justify-content: space-between;
   margin-top: ${theme.spacing.xl};
 `;
 
@@ -480,19 +634,15 @@ export default function AccountingDashboard() {
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg }}>
               <h2 style={{ margin: 0 }}>Sales Transactions</h2>
-              <select
+              <StyledSelect
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                style={{
-                  padding: theme.spacing.sm,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.borderRadius.md,
-                }}
+                style={{ width: 'auto', minWidth: '150px' }}
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="posted">Posted</option>
-              </select>
+              </StyledSelect>
             </div>
 
             {loading ? (
@@ -616,10 +766,7 @@ export default function AccountingDashboard() {
             <ModalContent onClick={(e) => e.stopPropagation()}>
               <ModalHeader>
                 <h2>Post Sale to Ledger</h2>
-                <button
-                  onClick={() => setShowPostModal(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px' }}
-                >
+                <button onClick={() => setShowPostModal(false)}>
                   ×
                 </button>
               </ModalHeader>
@@ -634,47 +781,42 @@ export default function AccountingDashboard() {
               </div>
 
               <FormGroup>
-                <Label htmlFor="debit_account">Debit Account</Label>
-                <Input
+                <StyledLabel htmlFor="debit_account">Debit Account</StyledLabel>
+                <StyledInput
                   id="debit_account"
+                  type="text"
                   value={postData.debit_account}
                   onChange={(e) => setPostData({ ...postData, debit_account: e.target.value })}
                 />
               </FormGroup>
 
               <FormGroup>
-                <Label htmlFor="credit_account">Credit Account</Label>
-                <Input
+                <StyledLabel htmlFor="credit_account">Credit Account</StyledLabel>
+                <StyledInput
                   id="credit_account"
+                  type="text"
                   value={postData.credit_account}
                   onChange={(e) => setPostData({ ...postData, credit_account: e.target.value })}
                 />
               </FormGroup>
 
               <FormGroup>
-                <Label htmlFor="reference_number">Reference Number</Label>
-                <Input
+                <StyledLabel htmlFor="reference_number">Reference Number</StyledLabel>
+                <StyledInput
                   id="reference_number"
+                  type="text"
                   value={postData.reference_number}
                   onChange={(e) => setPostData({ ...postData, reference_number: e.target.value })}
                 />
               </FormGroup>
 
               <FormGroup>
-                <Label htmlFor="notes">Notes</Label>
-                <textarea
+                <StyledLabel htmlFor="notes">Notes</StyledLabel>
+                <StyledTextarea
                   id="notes"
                   value={postData.notes}
                   onChange={(e) => setPostData({ ...postData, notes: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: theme.spacing.sm,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.borderRadius.md,
-                    minHeight: '60px',
-                    fontFamily: 'inherit',
-                    fontSize: theme.typography.fontSizes.sm,
-                  }}
+                  placeholder="Optional notes for this journal entry"
                 />
               </FormGroup>
 

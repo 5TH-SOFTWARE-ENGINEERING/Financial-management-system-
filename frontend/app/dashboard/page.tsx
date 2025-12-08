@@ -494,6 +494,15 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper function to safely convert values to numbers, handling NaN, null, undefined
+  const safeNumber = (value: any): number => {
+    if (value === null || value === undefined || value === '') {
+      return 0;
+    }
+    const num = Number(value);
+    return isNaN(num) ? 0 : num;
+  };
+
   useEffect(() => {
     if (!user) {
       setOverview(null);
@@ -762,7 +771,9 @@ const AdminDashboard: React.FC = () => {
           console.log('Dashboard Overview Data:', {
             overview: overviewData,
             financials: overviewData.financials,
-            total_revenue: overviewData.financials?.total_revenue,
+            base_revenue: overviewData.financials?.total_revenue,
+            sales_revenue: salesSummary?.total_revenue,
+            total_revenue_calculated: safeNumber(overviewData.financials?.total_revenue) + (salesSummary ? safeNumber(salesSummary?.total_revenue) : 0),
             total_expenses: overviewData.financials?.total_expenses,
             profit: overviewData.financials?.profit,
             pending_approvals_count: totalPendingCount,
@@ -858,15 +869,26 @@ const AdminDashboard: React.FC = () => {
 
   // Extract financial data with proper type conversion (handles Decimal from backend)
   // Always ensure we have valid numbers, defaulting to 0 if data is missing
-  const totalRevenue = (overview?.financials?.total_revenue !== undefined && overview?.financials?.total_revenue !== null)
-    ? Number(overview.financials.total_revenue) 
-    : 0;
-  const totalExpenses = (overview?.financials?.total_expenses !== undefined && overview?.financials?.total_expenses !== null)
-    ? Number(overview.financials.total_expenses) 
-    : 0;
-  const netProfit = (overview?.financials?.profit !== undefined && overview?.financials?.profit !== null)
-    ? Number(overview.financials.profit)
-    : (totalRevenue - totalExpenses);
+  // Base revenue from overview (includes revenue entries)
+  const baseRevenue = safeNumber(overview?.financials?.total_revenue);
+  
+  // Sales revenue from sales summary (if available for accountants and finance admins)
+  // Only include sales revenue if salesSummary exists (meaning user has access to sales data)
+  const salesRevenue = salesSummary ? safeNumber(salesSummary?.total_revenue) : 0;
+  
+  // Total revenue = base revenue + sales revenue
+  // This ensures total revenue includes both revenue entries and posted sales
+  const totalRevenue = baseRevenue + salesRevenue;
+  
+  const totalExpenses = safeNumber(overview?.financials?.total_expenses);
+  
+  // Net profit calculation - use backend profit if available, otherwise calculate
+  const backendProfit = safeNumber(overview?.financials?.profit);
+  const calculatedProfit = totalRevenue - totalExpenses;
+  // Use backend profit if it's a valid non-zero value, otherwise calculate from revenue and expenses
+  const netProfit = (overview?.financials?.profit !== undefined && overview?.financials?.profit !== null && backendProfit !== 0)
+    ? backendProfit
+    : calculatedProfit;
   
   // Use the pending approvals count from state (fetched from multiple sources)
   const pendingApprovals = pendingApprovalsCount;

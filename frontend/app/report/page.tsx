@@ -591,8 +591,9 @@ export default function ReportPage() {
         s.status === 'posted' || s.status === 'POSTED' || s.status?.toLowerCase() === 'posted'
       );
       
-      // Calculate sales totals - ONLY from POSTED (approved) sales
-      const totalSales = postedSalesData.reduce((sum: number, s: any) => sum + safeNumber(s.total_sale), 0);
+      // Calculate sales totals from individual sales - ONLY from POSTED (approved) sales
+      // This is a fallback if sales summary API is not available
+      const totalSalesFromData = postedSalesData.reduce((sum: number, s: any) => sum + safeNumber(s.total_sale), 0);
       const salesByCategory: Record<string, number> = {};
       postedSalesData.forEach((s: any) => {
         const category = s.item?.category || 'Sales';
@@ -602,10 +603,10 @@ export default function ReportPage() {
       if (summaryResult.status === 'fulfilled') {
         const summaryData = summaryResult.value.data || summaryResult.value;
         if (summaryData && (summaryData.financials || summaryData.revenue_by_category || summaryData.expenses_by_category)) {
-          // Enhance summary with sales data - use safeNumber to prevent NaN
+          // Initial calculation with individual sales data (will be updated if sales summary is available)
           const baseRevenue = safeNumber(summaryData.financials?.total_revenue);
           const baseExpenses = safeNumber(summaryData.financials?.total_expenses);
-          const calculatedRevenue = baseRevenue + totalSales;
+          const calculatedRevenue = baseRevenue + totalSalesFromData;
           const calculatedProfit = calculatedRevenue - baseExpenses;
           const calculatedProfitMargin = calculatedRevenue > 0 
             ? (calculatedProfit / calculatedRevenue) * 100
@@ -615,7 +616,7 @@ export default function ReportPage() {
             ...summaryData,
             financials: {
               ...summaryData.financials,
-              total_sales: safeNumber(totalSales),
+              total_sales: safeNumber(totalSalesFromData),
               total_revenue: calculatedRevenue,
               total_expenses: baseExpenses,
               profit: calculatedProfit,
@@ -630,7 +631,9 @@ export default function ReportPage() {
           };
           
           if (process.env.NODE_ENV === 'development') {
-            console.log('Financial Summary loaded:', {
+            console.log('Financial Summary loaded (initial):', {
+              base_revenue: baseRevenue,
+              sales_from_data: totalSalesFromData,
               total_revenue: enhancedSummary.financials?.total_revenue,
               total_sales: enhancedSummary.financials?.total_sales,
               total_expenses: enhancedSummary.financials?.total_expenses,
@@ -652,7 +655,7 @@ export default function ReportPage() {
           const expenseCategories = Object.keys(incomeData.expenses?.by_category || {}).length;
           const baseRevenue = safeNumber(incomeData.revenue?.total);
           const baseExpenses = safeNumber(incomeData.expenses?.total);
-          const calculatedRevenue = baseRevenue + totalSales;
+          const calculatedRevenue = baseRevenue + totalSalesFromData;
           const calculatedProfit = calculatedRevenue - baseExpenses;
           const calculatedProfitMargin = calculatedRevenue > 0
             ? (calculatedProfit / calculatedRevenue) * 100
@@ -662,7 +665,7 @@ export default function ReportPage() {
             period: { start_date: startDate, end_date: endDate },
             financials: {
               total_revenue: calculatedRevenue,
-              total_sales: safeNumber(totalSales),
+              total_sales: safeNumber(totalSalesFromData),
               total_expenses: baseExpenses,
               profit: calculatedProfit,
               profit_margin: calculatedProfitMargin,
@@ -689,7 +692,7 @@ export default function ReportPage() {
           // Enhance income statement with sales data
           const baseRevenue = safeNumber(incomeData.revenue?.total);
           const baseExpenses = safeNumber(incomeData.expenses?.total);
-          const calculatedRevenue = baseRevenue + totalSales;
+          const calculatedRevenue = baseRevenue + totalSalesFromData;
           const calculatedProfit = calculatedRevenue - baseExpenses;
           const calculatedProfitMargin = calculatedRevenue > 0
             ? (calculatedProfit / calculatedRevenue) * 100
@@ -698,7 +701,7 @@ export default function ReportPage() {
           const enhancedIncome = {
             ...incomeData,
             sales: {
-              total: safeNumber(totalSales),
+              total: safeNumber(totalSalesFromData),
               by_category: salesByCategory,
             },
             revenue: {
@@ -749,12 +752,22 @@ export default function ReportPage() {
           const baseInflow = safeNumber(cashFlowData.summary?.total_inflow);
           const baseNetFlow = safeNumber(cashFlowData.summary?.net_cash_flow);
           
+          // Use sales revenue from summary result if available, otherwise use calculated totalSalesFromData
+          // Check salesSummaryResult to get the sales revenue value
+          let salesRevenueForCashFlow = totalSalesFromData;
+          if (salesSummaryResult.status === 'fulfilled') {
+            const salesSummaryData = salesSummaryResult.value.data || salesSummaryResult.value;
+            if (salesSummaryData && typeof salesSummaryData === 'object' && 'total_revenue' in salesSummaryData) {
+              salesRevenueForCashFlow = safeNumber((salesSummaryData as SalesSummary).total_revenue);
+            }
+          }
+          
           const enhancedCashFlow = {
             ...cashFlowData,
             summary: {
               ...cashFlowData.summary,
-              total_inflow: baseInflow + safeNumber(totalSales),
-              net_cash_flow: baseNetFlow + safeNumber(totalSales),
+              total_inflow: baseInflow + salesRevenueForCashFlow,
+              net_cash_flow: baseNetFlow + salesRevenueForCashFlow,
             },
             daily_cash_flow: enhancedDailyFlow,
           };
@@ -788,6 +801,7 @@ export default function ReportPage() {
       }
       
       // Handle sales summary and integrate with financial data
+      // Sales summary API provides more accurate aggregated data from the backend
       if (salesSummaryResult.status === 'fulfilled') {
         const salesData = salesSummaryResult.value.data || salesSummaryResult.value;
         if (salesData && typeof salesData === 'object' && 
@@ -795,42 +809,56 @@ export default function ReportPage() {
           const salesSummaryData = salesData as SalesSummary;
           setSalesSummary(salesSummaryData);
           
-          // Use sales summary revenue if available (more accurate than calculating from individual sales)
+          // Always use sales summary revenue when available (more accurate than calculating from individual sales)
           // This ensures we use the backend's aggregated data which only includes POSTED sales
-          if (salesSummaryData.total_revenue && salesSummaryData.total_revenue > 0) {
-            // Update financial summary with accurate sales data from summary API
-            if (summaryResult.status === 'fulfilled') {
-              const summaryData = summaryResult.value.data || summaryResult.value;
-              if (summaryData && (summaryData.financials || summaryData.revenue_by_category || summaryData.expenses_by_category)) {
-                // Use sales summary revenue instead of calculated totalSales
-                const baseRevenue = safeNumber(summaryData.financials?.total_revenue);
-                const baseExpenses = safeNumber(summaryData.financials?.total_expenses);
-                const salesRevenue = safeNumber(salesSummaryData.total_revenue);
-                const calculatedRevenue = baseRevenue + salesRevenue;
-                const calculatedProfit = calculatedRevenue - baseExpenses;
-                const calculatedProfitMargin = calculatedRevenue > 0 
-                  ? (calculatedProfit / calculatedRevenue) * 100
-                  : 0;
-                
-                const enhancedSummary = {
-                  ...summaryData,
-                  financials: {
-                    ...summaryData.financials,
-                    total_sales: salesRevenue,
-                    total_revenue: calculatedRevenue,
-                    total_expenses: baseExpenses,
-                    profit: calculatedProfit,
-                    profit_margin: calculatedProfitMargin,
-                  },
-                  sales_by_category: salesByCategory,
-                  transaction_counts: {
-                    ...summaryData.transaction_counts,
-                    sales: salesSummaryData.posted_sales || postedSalesData.length,
-                    total: (summaryData.transaction_counts?.total || 0) + (salesSummaryData.posted_sales || postedSalesData.length),
-                  },
-                };
-                setFinancialSummary(enhancedSummary);
+          // Update financial summary with accurate sales data from summary API
+          if (summaryResult.status === 'fulfilled') {
+            const summaryData = summaryResult.value.data || summaryResult.value;
+            if (summaryData && (summaryData.financials || summaryData.revenue_by_category || summaryData.expenses_by_category)) {
+              // Use sales summary revenue instead of calculated totalSalesFromData
+              // Sales summary is more accurate as it's aggregated by the backend
+              const baseRevenue = safeNumber(summaryData.financials?.total_revenue);
+              const baseExpenses = safeNumber(summaryData.financials?.total_expenses);
+              const salesRevenue = safeNumber(salesSummaryData.total_revenue);
+              
+              // Total revenue = base revenue (from revenue entries) + sales revenue (from posted sales)
+              const calculatedRevenue = baseRevenue + salesRevenue;
+              const calculatedProfit = calculatedRevenue - baseExpenses;
+              const calculatedProfitMargin = calculatedRevenue > 0 
+                ? (calculatedProfit / calculatedRevenue) * 100
+                : 0;
+              
+              const enhancedSummary = {
+                ...summaryData,
+                financials: {
+                  ...summaryData.financials,
+                  total_sales: salesRevenue, // Use sales revenue from summary API
+                  total_revenue: calculatedRevenue, // Base revenue + sales revenue
+                  total_expenses: baseExpenses,
+                  profit: calculatedProfit,
+                  profit_margin: calculatedProfitMargin,
+                },
+                sales_by_category: salesByCategory, // Keep category breakdown from individual sales
+                transaction_counts: {
+                  ...summaryData.transaction_counts,
+                  sales: salesSummaryData.posted_sales || postedSalesData.length,
+                  total: (summaryData.transaction_counts?.total || 0) + (salesSummaryData.posted_sales || postedSalesData.length),
+                },
+              };
+              
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Financial Summary updated with Sales Summary:', {
+                  base_revenue: baseRevenue,
+                  sales_revenue_from_summary: salesRevenue,
+                  total_revenue_calculated: calculatedRevenue,
+                  total_sales: enhancedSummary.financials?.total_sales,
+                  total_expenses: enhancedSummary.financials?.total_expenses,
+                  profit: enhancedSummary.financials?.profit,
+                  profit_margin: enhancedSummary.financials?.profit_margin,
+                });
               }
+              
+              setFinancialSummary(enhancedSummary);
             }
           }
         } else {

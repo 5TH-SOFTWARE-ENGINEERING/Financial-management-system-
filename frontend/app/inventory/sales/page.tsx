@@ -14,8 +14,6 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -80,15 +78,18 @@ const Card = styled.div`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
   border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.lg};
+  padding: ${theme.spacing.xl};
   box-shadow: ${CardShadow};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.md};
 `;
 
 const CardTitle = styled.h2`
   font-size: ${theme.typography.fontSizes.lg};
   font-weight: ${theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
-  margin: 0 0 ${theme.spacing.lg};
+  margin: 0;
 `;
 
 const ItemsGrid = styled.div`
@@ -107,6 +108,9 @@ const ItemCard = styled.div<{ selected?: boolean }>`
   padding: ${theme.spacing.md};
   cursor: pointer;
   transition: all ${theme.transitions.default};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.xs};
 
   &:hover {
     border-color: ${PRIMARY_COLOR};
@@ -114,22 +118,41 @@ const ItemCard = styled.div<{ selected?: boolean }>`
   }
 `;
 
+const ItemInfoRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${theme.spacing.sm};
+  flex-wrap: wrap;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+`;
+
 const ItemName = styled.div`
   font-weight: ${theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
-  margin-bottom: ${theme.spacing.xs};
+  flex: 1;
+  min-width: 0;
+  font-size: ${theme.typography.fontSizes.sm};
 `;
 
 const ItemPrice = styled.div`
-  font-size: ${theme.typography.fontSizes.lg};
+  font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.bold};
   color: ${PRIMARY_COLOR};
-  margin-bottom: ${theme.spacing.xs};
+  white-space: nowrap;
 `;
 
 const ItemStock = styled.div`
   font-size: ${theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_MUTED};
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
 `;
 
 const Badge = styled.span<{ $variant: 'success' | 'warning' | 'danger' }>`
@@ -159,7 +182,12 @@ const SaleForm = styled.div`
 const FormRow = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: ${theme.spacing.md};
+  gap: ${theme.spacing.xl};
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: ${theme.spacing.lg};
+  }
 `;
 
 const SummaryCard = styled.div`
@@ -205,25 +233,24 @@ const ReceiptContent = styled.div`
 
 const CustomerInfoSection = styled.div`
   margin-top: ${theme.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.md};
 `;
 
-const FormField = styled.div`
-  margin-bottom: ${theme.spacing.md};
-`;
 
-const NotesTextarea = styled.textarea`
+const StyledInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.sm};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
-  min-height: 60px;
-  font-family: inherit;
-  font-size: ${theme.typography.fontSizes.sm};
-  margin-bottom: ${theme.spacing.md};
   background: ${theme.colors.background};
   color: ${TEXT_COLOR_DARK};
-  resize: vertical;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
   transition: all ${theme.transitions.default};
+  box-sizing: border-box;
+  margin: 0;
 
   &:focus {
     outline: none;
@@ -231,10 +258,88 @@ const NotesTextarea = styled.textarea`
     box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
   }
 
+  &:hover:not(:disabled) {
+    border-color: ${PRIMARY_COLOR}80;
+  }
+
+  &:disabled {
+    background: ${theme.colors.backgroundSecondary};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
   &::placeholder {
     color: ${TEXT_COLOR_MUTED};
     opacity: 0.6;
   }
+`;
+
+const StyledTextarea = styled.textarea`
+  width: 100%;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background: ${theme.colors.background};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-family: inherit;
+  transition: all ${theme.transitions.default};
+  box-sizing: border-box;
+  margin: 0;
+  min-height: 60px;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: ${PRIMARY_COLOR}80;
+  }
+
+  &:disabled {
+    background: ${theme.colors.backgroundSecondary};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &::placeholder {
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
+  }
+`;
+
+const StyledLabel = styled.label`
+  display: block;
+  margin-bottom: ${theme.spacing.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.sm};
+`;
+
+const FormGroup = styled.div`
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.xs};
+  margin-bottom: ${theme.spacing.md};
+
+  label {
+    margin-bottom: 0;
+  }
+`;
+
+const HelpText = styled.p`
+  font-size: ${theme.typography.fontSizes.xs};
+  color: ${TEXT_COLOR_MUTED};
+  margin: 0;
+  margin-top: ${theme.spacing.xs};
 `;
 
 const CompleteSaleButton = styled(Button).withConfig({
@@ -465,12 +570,11 @@ export default function SalesPage() {
         <TwoColumnLayout>
           <Card>
             <CardTitle>Available Items</CardTitle>
-            <Input
+            <StyledInput
               type="text"
               placeholder="Search items..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ marginBottom: theme.spacing.md }}
             />
             {loading ? (
               <div style={{ textAlign: 'center', padding: theme.spacing.xxl }}>
@@ -501,13 +605,18 @@ export default function SalesPage() {
                         cursor: item.quantity === 0 ? 'not-allowed' : 'pointer'
                       }}
                     >
-                    <ItemName>{item.item_name}</ItemName>
-                    <ItemPrice>${Number(item.selling_price).toFixed(2)}</ItemPrice>
-                    <ItemStock>
-                      Stock: <Badge $variant={item.quantity < 10 ? 'danger' : item.quantity < 50 ? 'warning' : 'success'}>
-                        {item.quantity}
-                      </Badge>
-                    </ItemStock>
+                    <ItemInfoRow>
+                      <ItemName>{item.item_name}</ItemName>
+                      <ItemPrice>
+                        <span style={{ color: '#dc2626' }}>selling price:</span> ${Number(item.selling_price).toFixed(2)}
+                      </ItemPrice>
+                      <ItemStock>
+                        <span>Stock:</span>
+                        <Badge $variant={item.quantity < 10 ? 'danger' : item.quantity < 50 ? 'warning' : 'success'}>
+                          {item.quantity}
+                        </Badge>
+                      </ItemStock>
+                    </ItemInfoRow>
                     {item.quantity === 0 && (
                       <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: '#dc2626' }}>
                         Out of Stock
@@ -524,16 +633,16 @@ export default function SalesPage() {
             <CardTitle>Current Sale</CardTitle>
             {selectedItem && (
               <SaleForm>
-                <div>
-                  <Label>Selected Item: {selectedItem.item_name}</Label>
-                  <p style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, margin: `${theme.spacing.xs} 0` }}>
+                <FormGroup>
+                  <StyledLabel>Selected Item: {selectedItem.item_name}</StyledLabel>
+                  <HelpText>
                     Price: ${Number(selectedItem.selling_price).toFixed(2)} | Available: {selectedItem.quantity}
-                  </p>
-                </div>
+                  </HelpText>
+                </FormGroup>
                 <FormRow>
-                  <div style={{ marginBottom: theme.spacing.md }}>
-                    <Label htmlFor="quantity">Quantity</Label>
-                    <Input
+                  <FormGroup>
+                    <StyledLabel htmlFor="quantity">Quantity</StyledLabel>
+                    <StyledInput
                       id="quantity"
                       type="number"
                       min="1"
@@ -541,8 +650,8 @@ export default function SalesPage() {
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
                     />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: theme.spacing.md }}>
+                  </FormGroup>
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                     <Button onClick={handleAddToSale} style={{ width: '100%' }}>
                       <Plus size={16} style={{ marginRight: theme.spacing.sm }} />
                       Add to Sale
@@ -554,8 +663,8 @@ export default function SalesPage() {
 
             {saleItems.length > 0 && (
               <>
-                <div style={{ marginTop: theme.spacing.lg }}>
-                  <Label>Sale Items</Label>
+                <FormGroup>
+                  <StyledLabel>Sale Items</StyledLabel>
                   <div style={{ marginTop: theme.spacing.sm }}>
                     {saleItems.map((item) => (
                       <div
@@ -573,7 +682,7 @@ export default function SalesPage() {
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>{item.item_name}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                            <Input
+                            <StyledInput
                               type="number"
                               min="1"
                               max={items.find(i => i.id === item.item_id)?.quantity || item.quantity}
@@ -602,7 +711,7 @@ export default function SalesPage() {
                       </div>
                     ))}
                   </div>
-                </div>
+                </FormGroup>
 
                 <SummaryCard>
                   <SummaryRow>
@@ -616,32 +725,35 @@ export default function SalesPage() {
                 </SummaryCard>
 
                 <CustomerInfoSection>
-                  <FormField>
-                    <Label htmlFor="customer_name">Customer Name (Optional):</Label>
-                    <Input
+                  <FormGroup>
+                    <StyledLabel htmlFor="customer_name">Customer Name (Optional)</StyledLabel>
+                    <StyledInput
                       id="customer_name"
+                      type="text"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Enter customer name"
                     />
-                  </FormField>
-                  <FormField>
-                    <Label htmlFor="customer_email">Customer Email (Optional):</Label>
-                    <Input
+                  </FormGroup>
+                  <FormGroup>
+                    <StyledLabel htmlFor="customer_email">Customer Email (Optional)</StyledLabel>
+                    <StyledInput
                       id="customer_email"
                       type="email"
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="Enter customer email"
                     />
-                  </FormField>
-                  <FormField>
-                    <Label htmlFor="notes">Notes (Optional):</Label>
-                    <NotesTextarea
+                  </FormGroup>
+                  <FormGroup>
+                    <StyledLabel htmlFor="notes">Notes (Optional)</StyledLabel>
+                    <StyledTextarea
                       id="notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Add any additional notes about this sale..."
                     />
-                  </FormField>
+                  </FormGroup>
                   <CompleteSaleButton
                     onClick={handleCompleteSale}
                     disabled={processing}
@@ -699,7 +811,7 @@ export default function SalesPage() {
                   Date: {receiptData.created_at ? new Date(receiptData.created_at).toLocaleString() : new Date().toLocaleString()}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
+              <div style={{ display: 'flex', gap: theme.spacing.md, marginTop: theme.spacing.lg, justifyContent: 'space-between' }}>
                 <Button variant="outline" onClick={() => setShowReceipt(false)} style={{ flex: 1 }}>
                   Close
                 </Button>
