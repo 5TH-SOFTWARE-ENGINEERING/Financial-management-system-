@@ -213,7 +213,7 @@ export default function CreateDepartmentPage() {
 
           <FormCard onSubmit={handleSubmit(onSubmit)}>
             <FormGroup>
-              <Label htmlFor="name">Department Name *</Label>
+              <Label htmlFor="name">Department Name </Label>
               <Input
                 id="name"
                 {...register('name')}
