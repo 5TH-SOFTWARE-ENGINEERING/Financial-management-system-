@@ -305,7 +305,7 @@ export default function CreateProjectPage() {
 
           <FormCard onSubmit={handleSubmit(onSubmit)}>
             <FormGroup>
-              <Label htmlFor="name">Project Name *</Label>
+              <Label htmlFor="name">Project Name </Label>
               <Input
                 id="name"
                 {...register('name')}
@@ -328,7 +328,7 @@ export default function CreateProjectPage() {
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="departmentId">Department *</Label>
+              <Label htmlFor="departmentId">Department </Label>
               <Select
                 id="departmentId"
                 {...register('departmentId')}
@@ -360,7 +360,7 @@ export default function CreateProjectPage() {
 
             <GridRow>
               <FormGroup>
-                <Label htmlFor="startDate">Start Date *</Label>
+                <Label htmlFor="startDate">Start Date </Label>
                 <Input
                   id="startDate"
                   type="date"
