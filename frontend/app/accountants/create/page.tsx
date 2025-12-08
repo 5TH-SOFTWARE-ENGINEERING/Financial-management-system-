@@ -6,14 +6,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Layout from '@/components/layout';
 import { RegisterSchema } from '@/lib/validation';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
-import { CheckCircle, AlertCircle, ArrowLeft, Users, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, ArrowLeft, Users, Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
@@ -129,10 +128,111 @@ const FormGroup = styled.div`
   gap: ${theme.spacing.sm};
 `;
 
+const FormRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${theme.spacing.lg};
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
 const FieldError = styled.p`
   color: #dc2626;
   font-size: ${theme.typography.fontSizes.sm};
   margin-top: ${theme.spacing.xs};
+`;
+
+const StyledInput = styled.input`
+  width: 70%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
+    
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+
+  &[type="password"] {
+    letter-spacing: 0.05em;
+  }
+`;
+
+const PasswordInputContainer = styled.div`
+  position: relative;
+  width: 70%;
+`;
+
+const PasswordInput = styled(StyledInput)`
+  width: 100%;
+  padding-right: 40px;
+`;
+
+const TogglePasswordButton = styled.button`
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    color: #4b5563;
+    background: #f3f4f6;
+  }
+
+  &:focus {
+    outline: none;
+    background: #f3f4f6;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 `;
 
 const ErrorBanner = styled.div`
@@ -189,14 +289,22 @@ export default function CreateAccountantPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
-    resolver: zodResolver(RegisterSchema),
+    resolver: zodResolver(RegisterSchema.extend({
+      confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    }).refine((data) => data.password === data.confirmPassword, {
+      message: "Passwords don't match",
+      path: ["confirmPassword"],
+    })),
     defaultValues: {
       full_name: '',
       email: '',
       username: '',
       password: '',
+      confirmPassword: '',
       role: 'ACCOUNTANT' as const,
       phone: '',
       department: '',
@@ -287,37 +395,79 @@ export default function CreateAccountantPage() {
           <FormCard onSubmit={handleSubmit(onSubmit)}>
             <FormGroup>
               <Label htmlFor="full_name">Full Name </Label>
-              <Input id="full_name" {...register('full_name')} disabled={loading} />
+              <StyledInput id="full_name" {...register('full_name')} disabled={loading} />
               {errors.full_name && <FieldError>{errors.full_name.message}</FieldError>}
             </FormGroup>
 
-            <FormGroup>
-              <Label htmlFor="email">Email </Label>
-              <Input id="email" type="email" {...register('email')} disabled={loading} />
-              {errors.email && <FieldError>{errors.email.message}</FieldError>}
-            </FormGroup>
+            <FormRow>
+              <FormGroup>
+                <Label htmlFor="email">Email </Label>
+                <StyledInput id="email" type="email" {...register('email')} disabled={loading} />
+                {errors.email && <FieldError>{errors.email.message}</FieldError>}
+              </FormGroup>
 
-            <FormGroup>
-              <Label htmlFor="username">Username </Label>
-              <Input id="username" {...register('username')} disabled={loading} />
-              {errors.username && <FieldError>{errors.username.message}</FieldError>}
-            </FormGroup>
+              <FormGroup>
+                <Label htmlFor="username">Username </Label>
+                <StyledInput id="username" {...register('username')} disabled={loading} />
+                {errors.username && <FieldError>{errors.username.message}</FieldError>}
+              </FormGroup>
+            </FormRow>
 
-            <FormGroup>
-              <Label htmlFor="password">Password </Label>
-              <Input id="password" type="password" {...register('password')} disabled={loading} />
-              {errors.password && <FieldError>{errors.password.message}</FieldError>}
-            </FormGroup>
+            <FormRow>
+              <FormGroup>
+                <Label htmlFor="password">Password </Label>
+                <PasswordInputContainer>
+                  <PasswordInput 
+                    id="password" 
+                    type={showPassword ? 'text' : 'password'} 
+                    {...register('password')} 
+                    disabled={loading} 
+                  />
+                  <TogglePasswordButton
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </TogglePasswordButton>
+                </PasswordInputContainer>
+                {errors.password && <FieldError>{errors.password.message}</FieldError>}
+              </FormGroup>
 
-            <FormGroup>
-              <Label htmlFor="phone">Phone (Optional)</Label>
-              <Input id="phone" {...register('phone')} disabled={loading} />
-            </FormGroup>
+              <FormGroup>
+                <Label htmlFor="confirmPassword">Confirm Password </Label>
+                <PasswordInputContainer>
+                  <PasswordInput 
+                    id="confirmPassword" 
+                    type={showConfirmPassword ? 'text' : 'password'} 
+                    {...register('confirmPassword')} 
+                    disabled={loading} 
+                  />
+                  <TogglePasswordButton
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={loading}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </TogglePasswordButton>
+                </PasswordInputContainer>
+                {errors.confirmPassword && <FieldError>{errors.confirmPassword.message}</FieldError>}
+              </FormGroup>
+            </FormRow>
 
-            <FormGroup>
-              <Label htmlFor="department">Department (Optional)</Label>
-              <Input id="department" {...register('department')} disabled={loading} />
-            </FormGroup>
+            <FormRow>
+              <FormGroup>
+                <Label htmlFor="phone">Phone (Optional)</Label>
+                <StyledInput id="phone" {...register('phone')} disabled={loading} />
+              </FormGroup>
+
+              <FormGroup>
+                <Label htmlFor="department">Department (Optional)</Label>
+                <StyledInput id="department" {...register('department')} disabled={loading} />
+              </FormGroup>
+            </FormRow>
 
             <ButtonRow>
               <Button
