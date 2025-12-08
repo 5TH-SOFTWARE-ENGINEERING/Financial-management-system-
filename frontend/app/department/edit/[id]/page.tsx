@@ -341,7 +341,7 @@ export default function EditDepartmentPage() {
 
           <FormCard onSubmit={handleSubmit(onSubmit)}>
             <FormGroup>
-              <Label htmlFor="name">Department Name *</Label>
+              <Label htmlFor="name">Department Name </Label>
               <StyledInput
                 id="name"
                 {...register('name')}
