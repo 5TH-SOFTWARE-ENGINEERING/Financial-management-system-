@@ -224,6 +224,8 @@ const ButtonRow = styled.div`
   display: flex;
   gap: 12px;
   padding-top: 12px;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 type FormData = z.infer<typeof RegisterSchema>;
@@ -429,7 +431,7 @@ export default function CreateEmployeePage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading} className="flex-1">
+              <Button type="submit" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
