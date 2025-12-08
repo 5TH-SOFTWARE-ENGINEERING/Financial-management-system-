@@ -10,33 +10,39 @@ import { Camera, Mail, User as UserIcon, Users, Building, Phone, Briefcase, Cale
 import {Button} from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
+import { theme } from '@/components/common/theme';
 
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
 
 // Styled components
 const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
+  padding: ${theme.spacing.md};
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: ${theme.spacing.xl};
+  padding-bottom: ${theme.spacing.md};
+  border-bottom: 1px solid ${theme.colors.border};
 `;
 
 const Title = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0;
 `;
 
 const ProfileGrid = styled.div`
   display: grid;
   grid-template-columns: 280px 1fr;
-  gap: 1.5rem;
+  gap: ${theme.spacing.xl};
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -44,19 +50,21 @@ const ProfileGrid = styled.div`
 `;
 
 const ProfileSidebar = styled.div`
-  background-color: white;
-  border-radius: 0.375rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
 `;
 
 const ProfileImage = styled.div`
   width: 100%;
   height: 180px;
-  background-color: #f3f4f6;
+  background-color: ${theme.colors.backgroundSecondary};
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  border-radius: ${theme.borderRadius.md} ${theme.borderRadius.md} 0 0;
 `;
 
 const Avatar = styled.div<{ $bgColor: string }>`
@@ -69,15 +77,15 @@ const Avatar = styled.div<{ $bgColor: string }>`
   justify-content: center;
   color: white;
   font-size: 2rem;
-  font-weight: 600;
+  font-weight: ${theme.typography.fontWeights.bold};
 `;
 
 const UploadButton = styled.button`
   position: absolute;
-  bottom: 0.75rem;
-  right: 0.75rem;
-  background-color: white;
-  border: none;
+  bottom: ${theme.spacing.md};
+  right: ${theme.spacing.md};
+  background-color: ${theme.colors.background};
+  border: 1px solid ${theme.colors.border};
   border-radius: 50%;
   width: 2rem;
   height: 2rem;
@@ -86,73 +94,76 @@ const UploadButton = styled.button`
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.2s;
+  transition: all ${theme.transitions.default};
 
   &:hover {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
+    transform: scale(1.05);
   }
 `;
 
 const ProfileInfo = styled.div`
-  padding: 1.25rem;
+  padding: ${theme.spacing.lg};
 `;
 
 const ProfileName = styled.h2`
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  color: #111827;
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  margin: 0 0 ${theme.spacing.xs} 0;
+  color: ${TEXT_COLOR_DARK};
 `;
 
 const ProfileRole = styled.p`
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 1.25rem;
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_MUTED};
+  margin: 0 0 ${theme.spacing.lg} 0;
 `;
 
 const ProfileDetail = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  margin-bottom: 0.875rem;
-  font-size: 0.875rem;
-  color: #4b5563;
+  gap: ${theme.spacing.sm};
+  margin-bottom: ${theme.spacing.md};
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_MUTED};
 
   svg {
     min-width: 16px;
-    color: #6b7280;
+    color: ${TEXT_COLOR_MUTED};
   }
 `;
 
 const Card = styled.div`
-  background-color: white;
-  border-radius: 0.375rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.25rem;
+  background-color: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  margin-bottom: ${theme.spacing.lg};
 `;
 
 const CardHeader = styled.div`
-  padding: 1rem 1.25rem;
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid ${theme.colors.border};
 `;
 
 const CardTitle = styled.h3`
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
+  font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0;
 `;
 
 const CardContent = styled.div`
-  padding: 1.25rem;
+  padding: ${theme.spacing.lg};
 `;
 
 const FormGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.25rem;
+  gap: ${theme.spacing.xl};
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -160,76 +171,120 @@ const FormGrid = styled.div`
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 1rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.xs};
 `;
 
 const Label = styled.label`
   display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 0.375rem;
-  color: #4b5563;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0;
 `;
 
-const Input = styled.input`
+const StyledInput = styled.input`
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  transition: border-color 0.15s ease;
-  
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
   &:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    background: #ffffff;
   }
-  
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
   &:disabled {
     background-color: #f9fafb;
-    color: #9ca3af;
+    color: #6b7280;
     cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
-const TextArea = styled.textarea`
+const StyledTextArea = styled.textarea`
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  transition: border-color 0.15s ease;
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
   resize: vertical;
-  
+
   &:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    background: #ffffff;
   }
-  
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
   &:disabled {
     background-color: #f9fafb;
-    color: #9ca3af;
+    color: #6b7280;
     cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
+  justify-content: space-between;
+  gap: 16px;
 `;
 
 const Message = styled.div<{ type: 'error' | 'success' }>`
-  background-color: ${props => props.type === 'error' ? '#fee2e2' : '#dcfce7'};
-  color: ${props => props.type === 'error' ? '#b91c1c' : '#166534'};
-  padding: 0.75rem;
-  border-radius: 0.25rem;
-  margin-bottom: 1.25rem;
+  background-color: ${props => props.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'};
+  border: 1px solid ${props => props.type === 'error' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'};
+  color: ${props => props.type === 'error' ? '#dc2626' : '#059669'};
+  padding: ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  gap: ${theme.spacing.sm};
+  font-size: ${theme.typography.fontSizes.sm};
 `;
 
 // Enhanced user data interface
@@ -544,7 +599,7 @@ export default function ProfilePage() {
                 <FormGrid>
                   <FormGroup>
                     <Label htmlFor="name">Full Name</Label>
-                    <Input
+                    <StyledInput
                       id="name"
                       name="name"
                       value={userData.name}
@@ -555,7 +610,7 @@ export default function ProfilePage() {
                   
                   <FormGroup>
                     <Label htmlFor="email">Email Address</Label>
-                    <Input
+                    <StyledInput
                       id="email"
                       name="email"
                       type="email"
@@ -567,7 +622,7 @@ export default function ProfilePage() {
                   
                   <FormGroup>
                     <Label htmlFor="phoneNumber">Phone Number</Label>
-                    <Input
+                    <StyledInput
                       id="phoneNumber"
                       name="phoneNumber"
                       type="tel"
@@ -580,7 +635,7 @@ export default function ProfilePage() {
                   
                   <FormGroup>
                     <Label htmlFor="address">Address</Label>
-                    <Input
+                    <StyledInput
                       id="address"
                       name="address"
                       value={userData.address || ''}
@@ -601,7 +656,7 @@ export default function ProfilePage() {
                 <FormGrid>
                   <FormGroup>
                     <Label htmlFor="username">Username</Label>
-                    <Input
+                    <StyledInput
                       id="username"
                       name="username"
                       value={userData.username}
@@ -611,7 +666,7 @@ export default function ProfilePage() {
                   
                   <FormGroup>
                     <Label htmlFor="userType">Role</Label>
-                    <Input
+                    <StyledInput
                       id="userType"
                       name="userType"
                       value={formatUserType(userData.userType)}
@@ -630,7 +685,7 @@ export default function ProfilePage() {
                 <FormGrid>
                   <FormGroup>
                     <Label htmlFor="department">Department</Label>
-                    <Input
+                    <StyledInput
                       id="department"
                       name="department"
                       value={userData.department || ''}
@@ -643,7 +698,7 @@ export default function ProfilePage() {
                   {userData.joinDate && (
                     <FormGroup>
                       <Label htmlFor="joinDate">Join Date</Label>
-                      <Input
+                      <StyledInput
                         id="joinDate"
                         name="joinDate"
                         type="date"
@@ -664,7 +719,7 @@ export default function ProfilePage() {
               <CardContent>
                 <FormGroup>
                   <Label htmlFor="bio">About Me</Label>
-                  <TextArea
+                  <StyledTextArea
                     id="bio"
                     name="bio"
                     value={userData.bio || ''}
