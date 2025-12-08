@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Layout from '@/components/layout';
 import { useRouter } from 'next/navigation';
@@ -309,31 +308,96 @@ const AddButton = styled(Button)`
 const SaveButtonRow = styled.div`
   display: flex;
   gap: ${theme.spacing.md};
-  justify-content: flex-end;
+  justify-content: space-between;
   margin-top: ${theme.spacing.lg};
   padding-top: ${theme.spacing.lg};
   border-top: 2px solid ${theme.colors.border};
 `;
 
-const Select = styled.select`
+const StyledInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
-  transition: all ${theme.transitions.default};
-  
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
   &:focus {
-    outline: none;
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
   }
-  
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
   &:disabled {
-    opacity: 0.6;
+    background-color: #f9fafb;
+    color: #6b7280;
     cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
+    
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+
+  &[type="date"] {
+    cursor: pointer;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -814,7 +878,7 @@ export default function ExpenseItemsPage() {
             <FormGrid>
               <FormGroup>
                 <Label htmlFor="globalDate">Date </Label>
-                <Input
+                <StyledInput
                   id="globalDate"
                   type="date"
                   value={globalDate}
@@ -824,7 +888,7 @@ export default function ExpenseItemsPage() {
               </FormGroup>
               <FormGroup>
                 <Label htmlFor="globalCategory">Category </Label>
-                <Select
+                <StyledSelect
                   id="globalCategory"
                   value={globalCategory}
                   onChange={(e) => setGlobalCategory(e.target.value)}
@@ -840,11 +904,11 @@ export default function ExpenseItemsPage() {
                   <option value="insurance">Insurance</option>
                   <option value="taxes">Taxes</option>
                   <option value="other">Other</option>
-                </Select>
+                </StyledSelect>
               </FormGroup>
               <FormGroup>
                 <Label htmlFor="globalVendor">Vendor (Optional)</Label>
-                <Input
+                <StyledInput
                   id="globalVendor"
                   value={globalVendor}
                   onChange={(e) => setGlobalVendor(e.target.value)}
@@ -878,7 +942,7 @@ export default function ExpenseItemsPage() {
                 <FormGrid>
                   <FormGroup>
                     <Label htmlFor={`itemName-${item.id}`}>Item Name / Type </Label>
-                    <Input
+                    <StyledInput
                       id={`itemName-${item.id}`}
                       value={item.itemName}
                       onChange={(e) => updateItem(item.id, 'itemName', e.target.value)}
@@ -889,7 +953,7 @@ export default function ExpenseItemsPage() {
 
                   <FormGroup>
                     <Label htmlFor={`expenseAmount-${item.id}`}>Expense Amount (Opt)</Label>
-                    <Input
+                    <StyledInput
                       id={`expenseAmount-${item.id}`}
                       type="number"
                       step="0.01"
@@ -908,10 +972,6 @@ export default function ExpenseItemsPage() {
                         <li>Cost of shipping</li>
                         <li>Labor cost</li>
                         <li>Packaging cost</li>
-                        <li>Operational cost</li>
-                        <li>Additional purchase cost</li>
-                        <li>Handling fees</li>
-                        <li>Repair cost</li>
                         <li>Other related expenses</li>
                       </ul>
                     </HelperText>
@@ -924,7 +984,7 @@ export default function ExpenseItemsPage() {
 
                   <FormGroup>
                     <Label htmlFor={`buyAtPrice-${item.id}`}>Buy-at Price </Label>
-                    <Input
+                    <StyledInput
                       id={`buyAtPrice-${item.id}`}
                       type="number"
                       step="0.01"
@@ -946,7 +1006,7 @@ export default function ExpenseItemsPage() {
 
                   <FormGroup>
                     <Label htmlFor={`soldAtPrice-${item.id}`}>Sold-at Price </Label>
-                    <Input
+                    <StyledInput
                       id={`soldAtPrice-${item.id}`}
                       type="number"
                       step="0.01"
