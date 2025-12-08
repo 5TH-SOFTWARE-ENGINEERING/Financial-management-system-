@@ -1093,25 +1093,110 @@ export default function RevenueListPage() {
           )}
 
           {/* Delete Modal */}
-          {showDeleteModal && (
-            <ModalOverlay onClick={handleDeleteCancel}>
-              <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalTitle>
-                  <ModalAlertIcon size={20} />
-                  Delete Revenue Entry
-                </ModalTitle>
-                
-                <WarningBox>
-                  <p>
-                    You are about to permanently delete this revenue entry. This action cannot be undone.
-                    Please enter your own password to verify this action.
-                  </p>
-                </WarningBox>
+          {showDeleteModal && (() => {
+            const revenueToDelete = revenues.find((r: Revenue) => r.id === showDeleteModal);
+            
+            return (
+              <ModalOverlay onClick={handleDeleteCancel}>
+                <ModalContent onClick={(e) => e.stopPropagation()}>
+                  <ModalTitle>
+                    <ModalAlertIcon size={20} />
+                    Delete Revenue Entry
+                  </ModalTitle>
+                  
+                  <WarningBox>
+                    <p>
+                      You are about to permanently delete this revenue entry. This action cannot be undone.
+                      Please enter your own password to verify this action.
+                    </p>
+                  </WarningBox>
 
-                <FormGroup>
-                  <StyledLabel htmlFor="delete-password">
-                    Enter your own password to confirm deletion:
-                  </StyledLabel>
+                  {revenueToDelete && (
+                    <div style={{
+                      background: '#f9fafb',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: theme.borderRadius.md,
+                      padding: theme.spacing.md,
+                      marginBottom: theme.spacing.lg
+                    }}>
+                      <h4 style={{
+                        fontSize: theme.typography.fontSizes.sm,
+                        fontWeight: theme.typography.fontWeights.bold,
+                        color: TEXT_COLOR_DARK,
+                        margin: `0 0 ${theme.spacing.md} 0`
+                      }}>
+                        Revenue Entry Details to be Deleted:
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Title:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                            {getItemType(revenueToDelete.title) || revenueToDelete.title || 'N/A'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Category:</strong>
+                          <CategoryBadge>{revenueToDelete.category || 'N/A'}</CategoryBadge>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Amount:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.bold, color: '#16a34a' }}>
+                            {formatCurrency(revenueToDelete.amount)}
+                          </span>
+                        </div>
+                        {revenueToDelete.source && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Source:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                              {revenueToDelete.source}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Date:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                            {formatDate(revenueToDelete.date)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                          <StatusBadge $approved={revenueToDelete.is_approved}>
+                            {revenueToDelete.is_approved ? 'Approved' : 'Pending'}
+                          </StatusBadge>
+                          {revenueToDelete.is_recurring && (
+                            <RecurringBadge>Recurring</RecurringBadge>
+                          )}
+                          {isAutoGenerated(revenueToDelete) && (
+                            <AutoGeneratedBadge>
+                              <Calculator />
+                              Auto
+                            </AutoGeneratedBadge>
+                          )}
+                        </div>
+                        {revenueToDelete.description && (
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Description:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, flex: 1 }}>
+                              {revenueToDelete.description}
+                            </span>
+                          </div>
+                        )}
+                        {revenueToDelete.recurring_frequency && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Frequency:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                              {revenueToDelete.recurring_frequency}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <FormGroup>
+                    <StyledLabel htmlFor="delete-password">
+                      Enter your own password to confirm deletion:
+                    </StyledLabel>
                   <PasswordInput
                     id="delete-password"
                     type="password"
@@ -1164,7 +1249,8 @@ export default function RevenueListPage() {
                 </ModalActions>
               </ModalContent>
             </ModalOverlay>
-          )}
+            );
+          })()}
         </ContentContainer>
       </PageContainer>
     </Layout>
