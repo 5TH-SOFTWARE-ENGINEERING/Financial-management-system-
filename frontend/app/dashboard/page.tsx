@@ -886,7 +886,9 @@ const AdminDashboard: React.FC = () => {
                   `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                   false,
                   undefined,
-                  analyticsData?.growth?.expense_growth_percent
+                  analyticsData?.growth?.expense_growth_percent,
+                  undefined,
+                  true
                 )}
               </DashboardGrid>
               <DashboardGrid style={{ marginTop: theme.spacing.lg }}>
