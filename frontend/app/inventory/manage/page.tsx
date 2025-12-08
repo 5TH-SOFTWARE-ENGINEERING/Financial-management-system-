@@ -14,7 +14,6 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 // Icon color mapping for different icon types
@@ -226,18 +225,132 @@ const FiltersContainer = styled.div`
   flex-wrap: wrap;
 `;
 
-const SearchInput = styled(Input)`
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
+    
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+`;
+
+const SearchInput = styled(StyledInput)`
   flex: 1;
   min-width: 200px;
 `;
 
-const Select = styled.select`
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+const StyledTextarea = styled.textarea`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  resize: vertical;
+  min-height: 100px;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
 `;
 
 const ItemsTable = styled.div`
@@ -359,8 +472,8 @@ const FormRow = styled.div`
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
-  justify-content: flex-end;
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.xl};
 `;
 
@@ -851,12 +964,12 @@ export default function InventoryManagePage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ paddingLeft: '40px' }}
           />
-          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+          <StyledSelect value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
             <option value="all">All Categories</option>
             {categories.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
-          </Select>
+          </StyledSelect>
         </FiltersContainer>
 
         {loading ? (
@@ -1026,7 +1139,7 @@ export default function InventoryManagePage() {
 
               <FormGroup>
                 <Label htmlFor="item_name">Item Name :</Label>
-                <Input
+                <StyledInput
                   id="item_name"
                   value={formData.item_name}
                   onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
@@ -1037,7 +1150,7 @@ export default function InventoryManagePage() {
               <FormRow>
                 <FormGroup>
                   <Label htmlFor="buying_price">Buying Price: </Label>
-                  <Input
+                  <StyledInput
                     id="buying_price"
                     type="number"
                     step="0.01"
@@ -1048,7 +1161,7 @@ export default function InventoryManagePage() {
                 </FormGroup>
                 <FormGroup>
                   <Label htmlFor="expense_amount">Expense Amount: </Label>
-                  <Input
+                  <StyledInput
                     id="expense_amount"
                     type="number"
                     step="0.01"
@@ -1062,7 +1175,7 @@ export default function InventoryManagePage() {
               <FormRow>
                 <FormGroup>
                   <Label htmlFor="selling_price">Selling Price: </Label>
-                  <Input
+                  <StyledInput
                     id="selling_price"
                     type="number"
                     step="0.01"
@@ -1073,7 +1186,7 @@ export default function InventoryManagePage() {
                 </FormGroup>
                 <FormGroup>
                   <Label htmlFor="quantity">Initial Stock: </Label>
-                  <Input
+                  <StyledInput
                     id="quantity"
                     type="number"
                     value={formData.quantity}
@@ -1086,7 +1199,7 @@ export default function InventoryManagePage() {
               <FormRow>
                 <FormGroup>
                   <Label htmlFor="category">Category: </Label>
-                  <Input
+                  <StyledInput
                     id="category"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
@@ -1095,7 +1208,7 @@ export default function InventoryManagePage() {
                 </FormGroup>
                 <FormGroup>
                   <Label htmlFor="sku">SKU: </Label>
-                  <Input
+                  <StyledInput
                     id="sku"
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
@@ -1106,20 +1219,12 @@ export default function InventoryManagePage() {
 
               <FormGroup>
                 <Label htmlFor="description">Description: </Label>
-                <textarea
+                <StyledTextarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Item description"
-                  style={{
-                    width: '100%',
-                    padding: theme.spacing.sm,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.borderRadius.md,
-                    minHeight: '80px',
-                    fontFamily: 'inherit',
-                    fontSize: theme.typography.fontSizes.sm,
-                  }}
+                  rows={4}
                 />
               </FormGroup>
 
@@ -1180,7 +1285,7 @@ export default function InventoryManagePage() {
                 <Label htmlFor="delete-password">
                   Enter your password to confirm deletion:
                 </Label>
-                <Input
+                <StyledInput
                   id="delete-password"
                   type="password"
                   value={deletePassword}
@@ -1284,7 +1389,7 @@ export default function InventoryManagePage() {
                 <Label htmlFor="activate-deactivate-password">
                   Enter your password to confirm:
                 </Label>
-                <Input
+                <StyledInput
                   id="activate-deactivate-password"
                   type="password"
                   value={activateDeactivatePassword}
