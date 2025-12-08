@@ -10,7 +10,6 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -83,6 +82,14 @@ const FormCard = styled.div`
 `;
 
 const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
   margin-bottom: ${theme.spacing.md};
   
   label {
@@ -90,38 +97,103 @@ const FormGroup = styled.div`
     font-size: ${theme.typography.fontSizes.sm};
     font-weight: ${theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
-    margin-bottom: ${theme.spacing.xs};
+    margin: 0;
   }
-  
-  input, select {
-    width: 100%;
-    padding: ${theme.spacing.sm};
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.sm};
-    font-size: ${theme.typography.fontSizes.sm};
-    
-    &:focus {
-      outline: none;
-      border-color: ${PRIMARY_COLOR};
-      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
-    }
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="date"] {
+    cursor: pointer;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
 const TwoColumnGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: ${theme.spacing.md};
-  
+  gap: 28px;
+  width: 100%;
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 28px;
   }
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  justify-content: flex-end;
-  gap: ${theme.spacing.md};
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.xl};
   padding-top: ${theme.spacing.lg};
   border-top: 1px solid ${theme.colors.border};
@@ -345,8 +417,8 @@ const CalculateVariancePage: React.FC = () => {
               </h2>
 
               <FormGroup>
-                <label>Budget *</label>
-                <select
+                <label>Budget </label>
+                <StyledSelect
                   value={formData.budget_id}
                   onChange={(e) => setFormData({ ...formData, budget_id: e.target.value })}
                   required
@@ -357,13 +429,13 @@ const CalculateVariancePage: React.FC = () => {
                       {budget.name} ({budget.status})
                     </option>
                   ))}
-                </select>
+                </StyledSelect>
               </FormGroup>
 
               <TwoColumnGrid>
                 <FormGroup>
-                  <label>Period Start Date *</label>
-                  <Input
+                  <label>Period Start Date </label>
+                  <StyledInput
                     type="date"
                     value={formData.period_start}
                     onChange={(e) => setFormData({ ...formData, period_start: e.target.value })}
@@ -372,8 +444,8 @@ const CalculateVariancePage: React.FC = () => {
                 </FormGroup>
 
                 <FormGroup>
-                  <label>Period End Date *</label>
-                  <Input
+                  <label>Period End Date </label>
+                  <StyledInput
                     type="date"
                     value={formData.period_end}
                     onChange={(e) => setFormData({ ...formData, period_end: e.target.value })}
