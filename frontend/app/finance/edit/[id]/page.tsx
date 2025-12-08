@@ -421,11 +421,11 @@ export default function EditFinancePage() {
               <StyledInput
                 type="number"
                 {...register('managerId')}
-                disabled={loading}
+                disabled={true}
                 placeholder="Enter manager ID (optional)"
               />
               <HelpText>
-                Finance managers can be assigned to an admin manager.
+              Manager ID cannot be changed. Contact an administrator to modify this field.
               </HelpText>
             </FormGroup>
 
