@@ -473,18 +473,39 @@ const Label = styled.label`
 
 const PasswordInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  color: #111827;
-  font-size: ${theme.typography.fontSizes.sm};
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
   font-family: inherit;
-  
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
   &:focus {
-    outline: none;
-    border-color: ${theme.colors.primary || '#00AA00'};
-    box-shadow: 0 0 0 3px ${theme.colors.primary || '#00AA00'}15;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -496,8 +517,8 @@ const ErrorText = styled.p`
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
-  justify-content: flex-end;
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.lg};
 `;
 
@@ -1411,9 +1432,93 @@ export default function UsersPage() {
               </p>
             </WarningBox>
 
+            {(() => {
+              const userDetails = accessibleUsers.find((u: any) => {
+                const userId = typeof u.id === 'string' ? parseInt(u.id) : u.id;
+                return userId === userToDeactivate.id;
+              });
+              
+              return userDetails ? (
+                <div style={{
+                  background: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: theme.borderRadius.md,
+                  padding: theme.spacing.md,
+                  marginBottom: theme.spacing.lg
+                }}>
+                  <h4 style={{
+                    fontSize: theme.typography.fontSizes.sm,
+                    fontWeight: theme.typography.fontWeights.bold,
+                    color: TEXT_COLOR_DARK,
+                    margin: `0 0 ${theme.spacing.md} 0`
+                  }}>
+                    User Details to be Deactivated:
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                        {userDetails.full_name || userDetails.name || userDetails.email || 'N/A'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Email:</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                        {userDetails.email || 'N/A'}
+                      </span>
+                    </div>
+                    {userDetails.username && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                        <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Username:</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                          {userDetails.username}
+                        </span>
+                      </div>
+                    )}
+                    {userDetails.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                        <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Phone:</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                          {userDetails.phone}
+                        </span>
+                      </div>
+                    )}
+                    {userDetails.department && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                        <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Department:</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                          {userDetails.department}
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
+                      <Badge variant={getRoleBadgeVariant(userDetails.role || 'default')}>
+                        {getRoleDisplayName(userDetails.role || '')}
+                      </Badge>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                      <Badge variant={userDetails.is_active !== false ? 'active' : 'inactive'}>
+                        {userDetails.is_active !== false ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                    {userDetails.created_at && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                        <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Joined:</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                          {formatDate(userDetails.created_at)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
             <FormGroup>
               <Label htmlFor="deactivate-password">
-                Enter <strong>your own password</strong> to confirm deactivation of <strong>{userToDeactivate.name}</strong>:
+                Enter your password to confirm deactivation:
               </Label>
               <PasswordInput
                 id="deactivate-password"
