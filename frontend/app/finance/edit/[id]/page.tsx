@@ -7,7 +7,6 @@ import { z } from 'zod';
 import styled from 'styled-components';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import Navbar from '@/components/common/Navbar';
@@ -43,35 +42,38 @@ type FormData = z.infer<typeof UpdateFinanceSchema>;
 
 /* -------------------------------- STYLES --------------------------------- */
 
-const Layout = styled.div`
+const LayoutWrapper = styled.div`
   display: flex;
-  width: 100%;
+  background: #f5f6fa;
   min-height: 100vh;
-  background: var(--background);
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
   background: var(--card);
   border-right: 1px solid var(--border);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 
   @media (max-width: 768px) {
     width: auto;
   }
 `;
 
-const MainWrapper = styled.div`
+const ContentArea = styled.div`
   flex: 1;
+  padding-left: 250px;
   display: flex;
   flex-direction: column;
 `;
 
-const ContentWrapper = styled.div`
+const InnerContent = styled.div`
   padding: 32px;
-`;
-
-const PageWrapper = styled.div`
-  max-width: 720px;
+  width: 100%;
+  max-width: 700px;
   margin: 0 auto;
 `;
 
@@ -82,74 +84,142 @@ const BackLink = styled(Link)`
   color: var(--muted-foreground);
   font-size: 14px;
   margin-bottom: 16px;
+  transition: 0.2s;
 
   &:hover {
     color: var(--foreground);
   }
 `;
 
-const Header = styled.div`
-  margin-bottom: 24px;
-`;
-
-const HeaderRow = styled.div`
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 6px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 700;
 `;
 
 const Subtitle = styled.p`
   color: var(--muted-foreground);
+  margin-bottom: 24px;
 `;
 
 const AlertBox = styled.div<{ status: 'error' | 'success' }>`
   padding: 14px;
   border-radius: 6px;
   margin-bottom: 16px;
+
   display: flex;
   align-items: center;
   gap: 8px;
 
-  background: ${({ status }) => (status === 'error' ? '#FEF2F2' : '#ECFDF5')};
+  background: ${({ status }) =>
+    status === 'error' ? '#FEF2F2' : '#ECFDF5'};
   border: 1px solid
-    ${({ status }) => (status === 'error' ? '#FECACA' : '#A7F3D0')};
-  color: ${({ status }) => (status === 'error' ? '#B91C1C' : '#047857')};
+    ${({ status }) =>
+      status === 'error' ? '#FECACA' : '#A7F3D0'};
+  color: ${({ status }) =>
+    status === 'error' ? '#B91C1C' : '#047857'};
 `;
 
-const Card = styled.div`
-  background: var(--card);
-  padding: 24px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+const FormCard = styled.form`
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
 `;
 
-const ErrorText = styled.p`
-  color: #dc2626;
-  font-size: 13px;
-  margin-top: 4px;
+const FormRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
 `;
 
 const HelpText = styled.p`
+  margin-top: 4px;
   font-size: 13px;
   color: var(--muted-foreground);
+`;
+
+const FieldError = styled.p`
+  color: #dc2626;
+  font-size: 14px;
   margin-top: 4px;
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
+    
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
 `;
 
 const ButtonRow = styled.div`
   display: flex;
   gap: 16px;
+  justify-content: space-between;
   padding-top: 12px;
+  margin-top: 8px;
 `;
 
 /* -------------------------------- PAGE ----------------------------------- */
@@ -254,115 +324,135 @@ export default function EditFinancePage() {
   }
 
   return (
-    <Layout>
+    <LayoutWrapper>
       <SidebarWrapper>
         <Sidebar />
       </SidebarWrapper>
 
-      <MainWrapper>
+      <ContentArea>
         <Navbar />
 
-        <ContentWrapper>
-          <PageWrapper>
-            <BackLink href="/finance/list">
-              <ArrowLeft size={16} />
-              Back to Finance Managers
-            </BackLink>
+        <InnerContent>
+          <BackLink href="/finance/list">
+            <ArrowLeft size={16} />
+            Back to Finance Managers
+          </BackLink>
 
-            <Header>
-              <HeaderRow>
-                <Briefcase className="h-8 w-8 text-primary" />
-                <Title>Edit Finance Manager</Title>
-              </HeaderRow>
-              <Subtitle>Update finance manager information</Subtitle>
-            </Header>
+          <Title>
+            <Briefcase size={32} />
+            Edit Finance Manager
+          </Title>
+          <Subtitle>Update finance manager information</Subtitle>
 
-            {error && (
-              <AlertBox status="error">
-                <AlertCircle size={16} /> {error}
-              </AlertBox>
-            )}
+          {error && (
+            <AlertBox status="error">
+              <AlertCircle size={16} /> {error}
+            </AlertBox>
+          )}
 
-            {success && (
-              <AlertBox status="success">
-                <CheckCircle size={16} /> {success}
-              </AlertBox>
-            )}
+          {success && (
+            <AlertBox status="success">
+              <CheckCircle size={16} /> {success}
+            </AlertBox>
+          )}
 
-            <Card>
-              <form onSubmit={handleSubmit(onSubmit)}>
-                <FormGroup>
-                  <Label>Full Name *</Label>
-                  <Input {...register('full_name')} disabled={loading} />
-                  {errors.full_name && (
-                    <ErrorText>{errors.full_name.message}</ErrorText>
-                  )}
-                </FormGroup>
+          <FormCard onSubmit={handleSubmit(onSubmit)}>
+            <FormRow>
+              <FormGroup>
+                <Label>Full Name</Label>
+                <StyledInput
+                  {...register('full_name')}
+                  disabled={loading}
+                  placeholder="Enter full name"
+                />
+                {errors.full_name && (
+                  <FieldError>{errors.full_name.message}</FieldError>
+                )}
+              </FormGroup>
 
-                <FormGroup>
-                  <Label>Email *</Label>
-                  <Input type="email" {...register('email')} disabled={loading} />
-                  {errors.email && (
-                    <ErrorText>{errors.email.message}</ErrorText>
-                  )}
-                </FormGroup>
+              <FormGroup>
+                <Label>Username</Label>
+                <StyledInput
+                  {...register('username')}
+                  disabled={loading}
+                  placeholder="Enter username"
+                />
+                {errors.username && (
+                  <FieldError>{errors.username.message}</FieldError>
+                )}
+              </FormGroup>
+            </FormRow>
 
-                <FormGroup>
-                  <Label>Username *</Label>
-                  <Input {...register('username')} disabled={loading} />
-                  {errors.username && (
-                    <ErrorText>{errors.username.message}</ErrorText>
-                  )}
-                </FormGroup>
+            <FormGroup>
+              <Label>Email</Label>
+              <StyledInput
+                type="email"
+                {...register('email')}
+                disabled={loading}
+                placeholder="Enter email address"
+              />
+              {errors.email && (
+                <FieldError>{errors.email.message}</FieldError>
+              )}
+            </FormGroup>
 
-                <FormGroup>
-                  <Label>Phone</Label>
-                  <Input {...register('phone')} disabled={loading} />
-                </FormGroup>
+            <FormRow>
+              <FormGroup>
+                <Label>Phone</Label>
+                <StyledInput
+                  {...register('phone')}
+                  disabled={loading}
+                  placeholder="Enter phone number"
+                />
+              </FormGroup>
 
-                <FormGroup>
-                  <Label>Department</Label>
-                  <Input {...register('department')} disabled={loading} />
-                </FormGroup>
+              <FormGroup>
+                <Label>Department</Label>
+                <StyledInput
+                  {...register('department')}
+                  disabled={loading}
+                  placeholder="Enter department"
+                />
+              </FormGroup>
+            </FormRow>
 
-                <FormGroup>
-                  <Label>Manager ID</Label>
-                  <Input
-                    type="number"
-                    {...register('managerId')}
-                    disabled={loading}
-                  />
-                  <HelpText>
-                    Finance managers can be assigned to an admin manager.
-                  </HelpText>
-                </FormGroup>
+            <FormGroup>
+              <Label>Manager ID</Label>
+              <StyledInput
+                type="number"
+                {...register('managerId')}
+                disabled={loading}
+                placeholder="Enter manager ID (optional)"
+              />
+              <HelpText>
+                Finance managers can be assigned to an admin manager.
+              </HelpText>
+            </FormGroup>
 
-                <ButtonRow>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => router.push('/finance/list')}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
+            <ButtonRow>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => router.push('/finance/list')}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
 
-                  <Button type="submit" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      'Update Finance Manager'
-                    )}
-                  </Button>
-                </ButtonRow>
-              </form>
-            </Card>
-          </PageWrapper>
-        </ContentWrapper>
-      </MainWrapper>
-    </Layout>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Finance Manager'
+                )}
+              </Button>
+            </ButtonRow>
+          </FormCard>
+        </InnerContent>
+      </ContentArea>
+    </LayoutWrapper>
   );
 }
