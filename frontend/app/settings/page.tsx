@@ -243,15 +243,16 @@ const ContentHeader = styled.div`
 `;
 
 const ErrorBanner = styled.div`
-  background: #fee2e2;
-  border: 1px solid #fecaca;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: ${theme.borderRadius.md};
   padding: ${theme.spacing.md};
-  color: #b91c1c;
+  color: #dc2626;
   margin-bottom: ${theme.spacing.lg};
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
+  font-size: ${theme.typography.fontSizes.sm};
 `;
 
 const LoadingState = styled.div`
@@ -330,8 +331,8 @@ const StatusPill = styled.span<{ $healthy: boolean }>`
   border-radius: 999px;
   font-size: ${theme.typography.fontSizes.xs};
   font-weight: ${theme.typography.fontWeights.medium};
-  background: ${props => props.$healthy ? '#d1fae5' : '#fee2e2'};
-  color: ${props => props.$healthy ? '#166534' : '#b91c1c'};
+  background: ${props => props.$healthy ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'};
+  color: ${props => props.$healthy ? '#065f46' : '#991b1b'};
 `;
 
 const QuickActionsGrid = styled.div`
@@ -746,7 +747,7 @@ const SettingsPage: React.FC = () => {
                           </StatCard>
                           <StatCard>
                             <StatLabel>Expenses (30d)</StatLabel>
-                            <StatValue>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
+                            <StatValue style={{ color: '#dc2626' }}>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
                             <StatSubtext>Updated daily</StatSubtext>
                           </StatCard>
                         </StatGrid>
