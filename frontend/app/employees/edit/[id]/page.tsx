@@ -418,11 +418,11 @@ export default function EditEmployeePage() {
                 id="managerId"
                 type="number"
                 {...register('managerId')}
-                disabled={loading}
+                disabled={true}
                 placeholder="Enter manager ID (optional)"
               />
               <HelpText>
-                Employees can be assigned to a finance manager.
+                Manager ID cannot be changed. Contact an administrator to modify this field.
               </HelpText>
               {errors.managerId && <FieldError>{errors.managerId.message}</FieldError>}
             </FormGroup>
