@@ -657,7 +657,7 @@ export default function EmployeeListPage() {
                           <ActionButtons>
                             <Link href={`/employees/edit/${employee.id}`}>
                               <Button size="sm" variant="secondary">
-                                <Edit className="h-4 w-4 mr-1" />
+                                <Edit size={14} className="h-4 w-4 mr-1" />
                               </Button>
                             </Link>
                             <Button 
@@ -671,7 +671,7 @@ export default function EmployeeListPage() {
                                   <Loader2 size={16} className="h-4 w-4 mr-1 animate-spin" />
                                 </>
                               ) : (
-                                <Trash2 className="h-4 w-4 mr-1" />
+                                <Trash2 size={14} className="h-4 w-4 mr-1" />
                               )}
                             </Button>
                           </ActionButtons>
