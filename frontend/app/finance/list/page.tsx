@@ -6,12 +6,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 
 import apiClient from '@/lib/api';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
+import { formatDate } from '@/lib/utils';
 
 import {
   AlertCircle,
@@ -336,20 +336,41 @@ const Label = styled.label`
   margin-bottom: ${theme.spacing.xs};
 `;
 
-const PasswordInput = styled(Input)`
+const PasswordInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
   font-family: inherit;
-  
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
   &:focus {
-    outline: none;
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -361,9 +382,38 @@ const ErrorText = styled.p`
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
-  justify-content: flex-end;
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.lg};
+`;
+
+const Badge = styled.span<{ variant: 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
+  display: inline-flex;
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.bold};
+  border-radius: 9999px;
+
+  ${(p) => {
+    switch (p.variant) {
+      case 'admin':
+        return 'background-color: #f3e8ff; color: #6b21a8;';
+      case 'finance_manager':
+        return 'background-color: #dbeafe; color: #1e40af;';
+      case 'finance_admin':
+        return 'background-color: #dbeafe; color: #1e40af;';
+      case 'accountant':
+        return 'background-color: #dcfce7; color: #166534;';
+      case 'employee':
+        return 'background-color: #fed7aa; color: #9a3412;';
+      case 'active':
+        return 'background-color: #dcfce7; color: #166534;';
+      case 'inactive':
+        return 'background-color: #fee2e2; color: #991b1b;';
+      default:
+        return 'background-color: #f3f4f6; color: #374151;';
+    }
+  }}
 `;
 
 interface FinanceManager {
@@ -569,6 +619,38 @@ export default function FinanceListPage() {
       .includes(search.toLowerCase())
   );
 
+  const getRoleBadgeVariant = (role: string): 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'default' => {
+    const normalizedRole = (role || '').toLowerCase();
+    switch (normalizedRole) {
+      case 'admin':
+        return 'admin';
+      case 'finance_manager':
+      case 'manager':
+        return 'finance_manager';
+      case 'finance_admin':
+        return 'finance_admin';
+      case 'accountant':
+        return 'accountant';
+      case 'employee':
+        return 'employee';
+      default:
+        return 'default';
+    }
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    const roleNames: Record<string, string> = {
+      admin: 'Administrator',
+      finance_manager: 'Finance Manager',
+      manager: 'Manager',
+      finance_admin: 'Finance Admin',
+      accountant: 'Accountant',
+      employee: 'Employee',
+    };
+    const normalizedRole = (role || '').toLowerCase();
+    return roleNames[normalizedRole] || normalizedRole;
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -700,18 +782,85 @@ export default function FinanceListPage() {
         <ModalOverlay onClick={handleDeleteCancel}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
-              <AlertCircle size={20} style={{ color: '#ef4444' }} />
-              Confirm Finance Manager Deletion
+              <Trash2 size={20} style={{ color: '#ef4444' }} />
+              Delete Finance Manager
             </ModalTitle>
             <WarningBox>
               <p>
-                You are about to permanently delete <strong>{managerToDelete.full_name || managerToDelete.email}</strong>. This action cannot be undone.
-                Please enter your own password to verify this action.
+                <strong>Warning:</strong> This action cannot be undone. All data associated with this finance manager will be permanently deleted.
               </p>
             </WarningBox>
+
+            <div style={{
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: theme.borderRadius.md,
+              padding: theme.spacing.md,
+              marginBottom: theme.spacing.lg
+            }}>
+              <h4 style={{
+                fontSize: theme.typography.fontSizes.sm,
+                fontWeight: theme.typography.fontWeights.bold,
+                color: TEXT_COLOR_DARK,
+                margin: `0 0 ${theme.spacing.md} 0`
+              }}>
+                Finance Manager Details to be Deleted:
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    {managerToDelete.full_name || 'N/A'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Email:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    {managerToDelete.email}
+                  </span>
+                </div>
+                {managerToDelete.username && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Username:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {managerToDelete.username}
+                    </span>
+                  </div>
+                )}
+                {managerToDelete.phone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Phone:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {managerToDelete.phone}
+                    </span>
+                  </div>
+                )}
+                {managerToDelete.department && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Department:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {managerToDelete.department}
+                    </span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
+                  <Badge variant={getRoleBadgeVariant(managerToDelete.role)}>
+                    {getRoleDisplayName(managerToDelete.role)}
+                  </Badge>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                  <Badge variant={managerToDelete.is_active ? 'active' : 'inactive'}>
+                    {managerToDelete.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
             <FormGroup>
               <Label htmlFor="delete-password">
-                Enter your own password to confirm deletion of <strong>{managerToDelete.full_name || managerToDelete.email}</strong>:
+                Enter your password to confirm deletion:
               </Label>
               <PasswordInput
                 id="delete-password"
