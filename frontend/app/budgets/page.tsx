@@ -12,7 +12,6 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -81,10 +80,14 @@ const FiltersContainer = styled.div`
   border: 1px solid ${theme.colors.border};
   box-shadow: ${CardShadow};
   margin-bottom: ${theme.spacing.xl};
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: ${theme.spacing.md};
   align-items: center;
-  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const BudgetsGrid = styled.div`
@@ -234,6 +237,14 @@ const ModalHeader = styled.div`
 `;
 
 const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
   margin-bottom: ${theme.spacing.md};
   
   label {
@@ -241,21 +252,94 @@ const FormGroup = styled.div`
     font-size: ${theme.typography.fontSizes.sm};
     font-weight: ${theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
-    margin-bottom: ${theme.spacing.xs};
+    margin: 0;
   }
-  
-  input, select {
-    width: 100%;
-    padding: ${theme.spacing.sm};
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.sm};
-    font-size: ${theme.typography.fontSizes.sm};
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
     
-    &:focus {
-      outline: none;
-      border-color: ${PRIMARY_COLOR};
-      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
+  }
+
+  &[type="date"] {
+    cursor: pointer;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -321,24 +405,39 @@ const Label = styled.label`
 
 const PasswordInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
   font-family: inherit;
-  transition: all ${theme.transitions.default};
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
 
   &:focus {
-    outline: none;
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
   }
 
   &::placeholder {
-    color: ${TEXT_COLOR_MUTED};
-    opacity: 0.6;
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -350,8 +449,8 @@ const ErrorText = styled.p`
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
-  justify-content: flex-end;
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.lg};
 `;
 
@@ -507,27 +606,30 @@ const BudgetsPage: React.FC = () => {
           </HeaderContainer>
 
           <FiltersContainer>
-            <Search size={20} color={TEXT_COLOR_MUTED} />
-            <Input
-              type="text"
-              placeholder="Search budgets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ flex: 1, maxWidth: '300px' }}
-            />
-            <Filter size={20} color={TEXT_COLOR_MUTED} />
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-            >
-              <option value="">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="submitted">Submitted</option>
-              <option value="approved">Approved</option>
-              <option value="active">Active</option>
-              <option value="archived">Archived</option>
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, position: 'relative' }}>
+              <Search size={20} color={TEXT_COLOR_MUTED} style={{ position: 'absolute', left: '12px', zIndex: 1 }} />
+              <StyledInput
+                type="text"
+                placeholder="Search budgets..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ paddingLeft: '40px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Filter size={20} color={TEXT_COLOR_MUTED} />
+              <StyledSelect
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted</option>
+                <option value="approved">Approved</option>
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+              </StyledSelect>
+            </div>
           </FiltersContainer>
 
           {filteredBudgets.length === 0 ? (
@@ -786,18 +888,17 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
     <form onSubmit={handleSubmit}>
       <FormGroup>
         <label>Template *</label>
-        <select
+        <StyledSelect
           value={formData.templateName}
           onChange={(e) => setFormData(prev => ({ ...prev, templateName: e.target.value }))}
           required
-          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
         >
           {templates.map(template => (
             <option key={template.value} value={template.value}>
               {template.label}
             </option>
           ))}
-        </select>
+        </StyledSelect>
         <p style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginTop: theme.spacing.xs }}>
           {templates.find(t => t.value === formData.templateName)?.description}
         </p>
@@ -805,7 +906,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
 
       <FormGroup>
         <label>Budget Name</label>
-        <Input
+        <StyledInput
           type="text"
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -813,10 +914,10 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
         />
       </FormGroup>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.md }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px' }}>
         <FormGroup>
           <label>Start Date *</label>
-          <Input
+          <StyledInput
             type="date"
             value={formData.start_date}
             onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
@@ -826,7 +927,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
 
         <FormGroup>
           <label>End Date *</label>
-          <Input
+          <StyledInput
             type="date"
             value={formData.end_date}
             onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
@@ -837,7 +938,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
 
       <FormGroup>
         <label>Department</label>
-        <Input
+        <StyledInput
           type="text"
           value={formData.department}
           onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
@@ -847,7 +948,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
 
       <FormGroup>
         <label>Project</label>
-        <Input
+        <StyledInput
           type="text"
           value={formData.project}
           onChange={(e) => setFormData(prev => ({ ...prev, project: e.target.value }))}
@@ -855,7 +956,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
         />
       </FormGroup>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
+      <div style={{ display: 'flex', gap: '16px', justifyContent: 'space-between', marginTop: theme.spacing.lg }}>
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
