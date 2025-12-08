@@ -563,8 +563,44 @@ const AdminDashboard: React.FC = () => {
         const overviewData = overviewRes.data || {};
         setOverview(overviewData);
         
+        // Get accessible user IDs for finance admins (themselves + subordinates)
+        // Finance admins should only see approvals/activities from themselves and their subordinates
+        let accessibleUserIds: number[] = [];
+        const isFinanceAdminRole = userRole === 'finance_admin' || userRole === 'finance_manager';
+        
+        if (isFinanceAdminRole && user?.id) {
+          try {
+            // Get subordinates - backend already filters to return only accountants and employees under this finance admin
+            const financeAdminId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+            const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
+            const subordinates = subordinatesRes?.data || [];
+            // Include the finance admin themselves
+            accessibleUserIds = [financeAdminId, ...subordinates.map((sub: any) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+              return subId;
+            })];
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Finance Admin - Accessible User IDs:', {
+                financeAdminId: financeAdminId,
+                subordinatesCount: subordinates.length,
+                accessibleUserIds: accessibleUserIds
+              });
+            }
+          } catch (err) {
+            console.warn('Failed to fetch subordinates, using only finance admin ID:', err);
+            const financeAdminId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+            accessibleUserIds = [financeAdminId];
+          }
+        } else if (user?.id) {
+          // For other roles, they can only see their own data
+          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+          accessibleUserIds = [userId];
+        }
+        
         // Fetch all pending approvals in real-time (workflows, revenue, expenses, sales)
         // Use deduplication logic to avoid counting items with workflows twice
+        // IMPORTANT: For finance admins, only count approvals from themselves and their subordinates
         let totalPendingCount = 0;
         let debugInfo: any = {};
         
@@ -576,10 +612,20 @@ const AdminDashboard: React.FC = () => {
           const workflowsRes = await apiClient.getApprovals();
           const workflows = workflowsRes?.data || [];
           
-          // Count pending workflows
+          // Count pending workflows - filter by requester_id for finance admins
           const pendingWorkflows = workflows.filter((w: any) => {
             const status = w.status?.value || w.status || 'pending';
-            return status.toString().toLowerCase() === 'pending';
+            const isPending = status.toString().toLowerCase() === 'pending';
+            
+            // For finance admins, only count workflows they requested or from their subordinates
+            if (isPending && isFinanceAdminRole && accessibleUserIds.length > 0) {
+              const requesterId = typeof (w.requester_id || w.requesterId) === 'string' 
+                ? parseInt(w.requester_id || w.requesterId, 10) 
+                : (w.requester_id || w.requesterId);
+              return requesterId && accessibleUserIds.includes(requesterId);
+            }
+            
+            return isPending;
           });
           totalPendingCount += pendingWorkflows.length;
           debugInfo.pendingWorkflowsCount = pendingWorkflows.length;
@@ -600,22 +646,48 @@ const AdminDashboard: React.FC = () => {
           debugInfo.expenseIdsWithWorkflow = expenseIdsWithWorkflow.size;
 
           // Fetch pending revenue entries - only count those WITHOUT workflows
+          // For finance admins, only count revenues created by themselves or their subordinates
           const revenuesRes = await apiClient.getRevenues({ is_approved: false });
           if (revenuesRes?.data && Array.isArray(revenuesRes.data)) {
             const pendingRevenues = revenuesRes.data.filter((r: any) => {
               // Only count if not approved AND doesn't have an existing workflow
-              return !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
+              const isPending = !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
+              
+              // For finance admins, also check if created by them or their subordinates
+              if (isPending && isFinanceAdminRole && accessibleUserIds.length > 0) {
+                const createdByIdRaw = r.created_by_id || r.createdBy || r.created_by;
+                if (!createdByIdRaw) return false;
+                const createdById = typeof createdByIdRaw === 'string'
+                  ? parseInt(createdByIdRaw, 10)
+                  : Number(createdByIdRaw);
+                return !isNaN(createdById) && accessibleUserIds.includes(createdById);
+              }
+              
+              return isPending;
             });
             totalPendingCount += pendingRevenues.length;
             debugInfo.pendingRevenuesCount = pendingRevenues.length;
           }
 
           // Fetch pending expense entries - only count those WITHOUT workflows
+          // For finance admins, only count expenses created by themselves or their subordinates
           const expensesRes = await apiClient.getExpenses({ is_approved: false });
           if (expensesRes?.data && Array.isArray(expensesRes.data)) {
             const pendingExpenses = expensesRes.data.filter((e: any) => {
               // Only count if not approved AND doesn't have an existing workflow
-              return !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
+              const isPending = !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
+              
+              // For finance admins, also check if created by them or their subordinates
+              if (isPending && isFinanceAdminRole && accessibleUserIds.length > 0) {
+                const createdByIdRaw = e.created_by_id || e.createdBy || e.created_by;
+                if (!createdByIdRaw) return false;
+                const createdById = typeof createdByIdRaw === 'string'
+                  ? parseInt(createdByIdRaw, 10)
+                  : Number(createdByIdRaw);
+                return !isNaN(createdById) && accessibleUserIds.includes(createdById);
+              }
+              
+              return isPending;
             });
             totalPendingCount += pendingExpenses.length;
             debugInfo.pendingExpensesCount = pendingExpenses.length;
@@ -641,9 +713,21 @@ const AdminDashboard: React.FC = () => {
                   : []);
               
               // Filter for pending sales (status is 'pending' or 'PENDING')
+              // For finance admins, only count sales created by themselves or their subordinates
               const pendingSales = (salesData || []).filter((s: any) => {
                 const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
-                return saleStatus === 'pending';
+                const isPending = saleStatus === 'pending';
+                
+                // For finance admins, also check if sold by them or their subordinates
+                if (isPending && isFinanceAdminRole && accessibleUserIds.length > 0) {
+                  const soldByIdRaw = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
+                  const soldById = typeof soldByIdRaw === 'string' 
+                    ? parseInt(soldByIdRaw, 10) 
+                    : soldByIdRaw;
+                  return soldById && accessibleUserIds.includes(soldById);
+                }
+                
+                return isPending;
               });
               
               totalPendingCount += pendingSales.length;
@@ -902,13 +986,20 @@ const AdminDashboard: React.FC = () => {
                   undefined,
                   netProfit < 0
                 )}
-                {createStatsCard(
-                  ClipboardList, 
-                  'Pending Approvals', 
-                  pendingApprovals.toString(),
-                  true,
-                  handlePendingApprovalsClick
-                )}
+                {/* Only show Pending Approvals card if user has approval permissions */}
+                {(user?.role === 'admin' || 
+                  user?.role === 'super_admin' || 
+                  user?.role === 'manager' || 
+                  user?.role === 'finance_manager' || 
+                  user?.role === 'finance_admin' || 
+                  user?.role === 'accountant') && 
+                  createStatsCard(
+                    ClipboardList, 
+                    'Pending Approvals', 
+                    pendingApprovals.toString(),
+                    true,
+                    handlePendingApprovalsClick
+                  )}
               </DashboardGrid>
               
               {/* Inventory & Sales Section - Role-based */}
