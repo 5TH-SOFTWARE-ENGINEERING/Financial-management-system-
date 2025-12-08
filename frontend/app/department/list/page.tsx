@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -280,20 +279,41 @@ const Label = styled.label`
   margin-bottom: ${theme.spacing.xs};
 `;
 
-const PasswordInput = styled(Input)`
+const PasswordInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
   font-family: inherit;
-  
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
   &:focus {
-    outline: none;
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
@@ -305,8 +325,8 @@ const ErrorText = styled.p`
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
-  justify-content: flex-end;
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.lg};
 `;
 
@@ -517,18 +537,75 @@ export default function DepartmentListPage() {
         <ModalOverlay onClick={handleDeleteCancel}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
-              <AlertCircle size={20} style={{ color: '#ef4444' }} />
-              Confirm Department Deletion
+              <Trash2 size={20} style={{ color: '#ef4444' }} />
+              Delete Department
             </ModalTitle>
             <WarningBox>
               <p>
-                You are about to permanently delete the department <strong>{departmentToDelete.name}</strong>. This action cannot be undone and will remove all users from this department.
-                Please enter your own password to verify this action.
+                <strong>Warning:</strong> You are about to permanently delete this department. 
+                This action cannot be undone and will remove all users from this department. 
+                Please enter your password to confirm this deletion.
               </p>
             </WarningBox>
+
+            <div style={{
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: theme.borderRadius.md,
+              padding: theme.spacing.md,
+              marginBottom: theme.spacing.lg
+            }}>
+              <h4 style={{
+                fontSize: theme.typography.fontSizes.sm,
+                fontWeight: theme.typography.fontWeights.bold,
+                color: TEXT_COLOR_DARK,
+                margin: `0 0 ${theme.spacing.md} 0`
+              }}>
+                Department Details to be Deleted:
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    {departmentToDelete.name || 'N/A'}
+                  </span>
+                </div>
+                {departmentToDelete.description && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Description:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, flex: 1 }}>
+                      {departmentToDelete.description}
+                    </span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Employees:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    {departmentToDelete.user_count ?? departmentToDelete.employee_count ?? 0}
+                  </span>
+                </div>
+                {departmentToDelete.manager_name && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Manager:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {departmentToDelete.manager_name}
+                    </span>
+                  </div>
+                )}
+                {departmentToDelete.created_at && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Created:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {new Date(departmentToDelete.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <FormGroup>
               <Label htmlFor="delete-password">
-                Enter your own password to confirm deletion of <strong>{departmentToDelete.name}</strong>:
+                Enter your password to confirm deletion:
               </Label>
               <PasswordInput
                 id="delete-password"
