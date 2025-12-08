@@ -1016,25 +1016,106 @@ export default function ExpenseListPage() {
           )}
 
           {/* Delete Modal */}
-          {showDeleteModal && (
-            <ModalOverlay onClick={handleDeleteCancel}>
-              <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalTitle>
-                  <ModalAlertIcon size={20} />
-                  Delete Expense Entry
-                </ModalTitle>
-                
-                <WarningBox>
-                  <p>
-                    You are about to permanently delete this expense entry. This action cannot be undone.
-                    Please enter your own password to verify this action.
-                  </p>
-                </WarningBox>
+          {showDeleteModal && (() => {
+            const expenseToDelete = expenses.find((e: Expense) => e.id === showDeleteModal);
+            
+            return (
+              <ModalOverlay onClick={handleDeleteCancel}>
+                <ModalContent onClick={(e) => e.stopPropagation()}>
+                  <ModalTitle>
+                    <ModalAlertIcon size={20} />
+                    Delete Expense Entry
+                  </ModalTitle>
+                  
+                  <WarningBox>
+                    <p>
+                      You are about to permanently delete this expense entry. This action cannot be undone.
+                      Please enter your own password to verify this action.
+                    </p>
+                  </WarningBox>
 
-                <FormGroup>
-                  <StyledLabel htmlFor="delete-password">
-                    Enter your own password to confirm deletion:
-                  </StyledLabel>
+                  {expenseToDelete && (
+                    <div style={{
+                      background: '#f9fafb',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: theme.borderRadius.md,
+                      padding: theme.spacing.md,
+                      marginBottom: theme.spacing.lg
+                    }}>
+                      <h4 style={{
+                        fontSize: theme.typography.fontSizes.sm,
+                        fontWeight: theme.typography.fontWeights.bold,
+                        color: TEXT_COLOR_DARK,
+                        margin: `0 0 ${theme.spacing.md} 0`
+                      }}>
+                        Expense Entry Details to be Deleted:
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Title:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                            {getItemType(expenseToDelete.title) || expenseToDelete.title || 'N/A'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Category:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, textTransform: 'capitalize' }}>
+                            {expenseToDelete.category || 'N/A'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Amount:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
+                            {formatCurrency(expenseToDelete.amount)}
+                          </span>
+                        </div>
+                        {expenseToDelete.vendor && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Vendor:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                              {expenseToDelete.vendor}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Date:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                            {formatDate(expenseToDelete.date)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                          <StatusBadge $approved={expenseToDelete.is_approved}>
+                            {expenseToDelete.is_approved ? 'Approved' : 'Pending'}
+                          </StatusBadge>
+                          {expenseToDelete.is_recurring && (
+                            <RecurringBadge>Recurring</RecurringBadge>
+                          )}
+                        </div>
+                        {expenseToDelete.description && (
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Description:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, flex: 1 }}>
+                              {expenseToDelete.description}
+                            </span>
+                          </div>
+                        )}
+                        {expenseToDelete.recurring_frequency && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Frequency:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                              {expenseToDelete.recurring_frequency}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <FormGroup>
+                    <StyledLabel htmlFor="delete-password">
+                      Enter your own password to confirm deletion:
+                    </StyledLabel>
                   <PasswordInput
                     id="delete-password"
                     type="password"
@@ -1087,7 +1168,8 @@ export default function ExpenseListPage() {
                 </ModalActions>
               </ModalContent>
             </ModalOverlay>
-          )}
+            );
+          })()}
         </ContentContainer>
       </PageContainer>
     </Layout>
