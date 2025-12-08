@@ -1120,8 +1120,8 @@ class ApiClient {
     return this.get(`/budgeting/forecasts/${id}`);
   }
 
-  async deleteForecast(id: number) {
-    return this.delete(`/budgeting/forecasts/${id}`);
+  async deleteForecast(id: number, password: string) {
+    return this.post(`/budgeting/forecasts/${id}/delete`, { password });
   }
 
   // Variance Analysis

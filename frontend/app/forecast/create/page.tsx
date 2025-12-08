@@ -10,7 +10,6 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -67,6 +66,14 @@ const FormCard = styled.div`
 `;
 
 const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
   margin-bottom: ${theme.spacing.md};
   
   label {
@@ -74,36 +81,146 @@ const FormGroup = styled.div`
     font-size: ${theme.typography.fontSizes.sm};
     font-weight: ${theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
-    margin-bottom: ${theme.spacing.xs};
+    margin: 0;
   }
-  
-  input, select, textarea {
-    width: 100%;
-    padding: ${theme.spacing.sm};
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.sm};
-    font-size: ${theme.typography.fontSizes.sm};
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
     
-    &:focus {
-      outline: none;
-      border-color: ${PRIMARY_COLOR};
-      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
   }
-  
-  textarea {
-    min-height: 100px;
-    resize: vertical;
+
+  &[type="date"] {
+    cursor: pointer;
+  }
+`;
+
+const StyledTextarea = styled.textarea`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  resize: vertical;
+  min-height: 100px;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
 const TwoColumnGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: ${theme.spacing.md};
-  
+  gap: 28px;
+  width: 100%;
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 28px;
   }
 `;
 
@@ -130,8 +247,8 @@ const MethodInfo = styled.div`
 
 const ActionButtons = styled.div`
   display: flex;
-  justify-content: flex-end;
-  gap: ${theme.spacing.md};
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.xl};
   padding-top: ${theme.spacing.lg};
   border-top: 1px solid ${theme.colors.border};
@@ -295,7 +412,7 @@ const ForecastCreatePage: React.FC = () => {
 
               <FormGroup>
                 <label>Forecast Name </label>
-                <Input
+                <StyledInput
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
@@ -306,17 +423,18 @@ const ForecastCreatePage: React.FC = () => {
 
               <FormGroup>
                 <label>Description</label>
-                <textarea
+                <StyledTextarea
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Forecast description..."
+                  rows={4}
                 />
               </FormGroup>
 
               <TwoColumnGrid>
                 <FormGroup>
                   <label>Forecast Type </label>
-                  <select
+                  <StyledSelect
                     value={formData.forecast_type}
                     onChange={(e) => handleInputChange('forecast_type', e.target.value)}
                     required
@@ -325,12 +443,12 @@ const ForecastCreatePage: React.FC = () => {
                     <option value="expense">Expense</option>
                     <option value="profit">Profit</option>
                     <option value="all">All</option>
-                  </select>
+                  </StyledSelect>
                 </FormGroup>
 
                 <FormGroup>
                   <label>Period Type </label>
-                  <select
+                  <StyledSelect
                     value={formData.period_type}
                     onChange={(e) => handleInputChange('period_type', e.target.value)}
                     required
@@ -338,14 +456,14 @@ const ForecastCreatePage: React.FC = () => {
                     <option value="monthly">Monthly</option>
                     <option value="quarterly">Quarterly</option>
                     <option value="yearly">Yearly</option>
-                  </select>
+                  </StyledSelect>
                 </FormGroup>
               </TwoColumnGrid>
 
               <TwoColumnGrid>
                 <FormGroup>
                   <label>Forecast Start Date </label>
-                  <Input
+                  <StyledInput
                     type="date"
                     value={formData.start_date}
                     onChange={(e) => handleInputChange('start_date', e.target.value)}
@@ -355,7 +473,7 @@ const ForecastCreatePage: React.FC = () => {
 
                 <FormGroup>
                   <label>Forecast End Date </label>
-                  <Input
+                  <StyledInput
                     type="date"
                     value={formData.end_date}
                     onChange={(e) => handleInputChange('end_date', e.target.value)}
@@ -372,7 +490,7 @@ const ForecastCreatePage: React.FC = () => {
 
               <FormGroup>
                 <label>Method </label>
-                <select
+                <StyledSelect
                   value={formData.method}
                   onChange={(e) => handleInputChange('method', e.target.value)}
                   required
@@ -380,7 +498,7 @@ const ForecastCreatePage: React.FC = () => {
                   <option value="moving_average">Moving Average</option>
                   <option value="linear_growth">Linear Growth</option>
                   <option value="trend">Trend Analysis</option>
-                </select>
+                </StyledSelect>
               </FormGroup>
 
               {methodInfo.title && (
@@ -392,8 +510,8 @@ const ForecastCreatePage: React.FC = () => {
 
               {formData.method === 'moving_average' && (
                 <FormGroup>
-                  <label>Moving Average Window (periods) *</label>
-                  <Input
+                  <label>Moving Average Window (periods) </label>
+                  <StyledInput
                     type="number"
                     value={formData.window}
                     onChange={(e) => handleInputChange('window', parseInt(e.target.value) || 3)}
@@ -409,8 +527,8 @@ const ForecastCreatePage: React.FC = () => {
 
               {formData.method === 'linear_growth' && (
                 <FormGroup>
-                  <label>Growth Rate (decimal) *</label>
-                  <Input
+                  <label>Growth Rate (decimal) </label>
+                  <StyledInput
                     type="number"
                     value={formData.growth_rate}
                     onChange={(e) => handleInputChange('growth_rate', parseFloat(e.target.value) || 0.05)}
@@ -437,7 +555,7 @@ const ForecastCreatePage: React.FC = () => {
               <TwoColumnGrid>
                 <FormGroup>
                   <label>Historical Start Date</label>
-                  <Input
+                  <StyledInput
                     type="date"
                     value={formData.historical_start_date}
                     onChange={(e) => handleInputChange('historical_start_date', e.target.value)}
@@ -446,7 +564,7 @@ const ForecastCreatePage: React.FC = () => {
 
                 <FormGroup>
                   <label>Historical End Date</label>
-                  <Input
+                  <StyledInput
                     type="date"
                     value={formData.historical_end_date}
                     onChange={(e) => handleInputChange('historical_end_date', e.target.value)}

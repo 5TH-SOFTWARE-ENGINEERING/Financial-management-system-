@@ -6,13 +6,12 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import {
   LineChart, FileText, Plus, Edit, Trash2, Calendar,
   TrendingUp, TrendingDown, AlertCircle, Filter, Search,
-  BarChart3, Target, Activity
+  BarChart3, Target, Activity, Loader2
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -81,10 +80,87 @@ const FiltersContainer = styled.div`
   border: 1px solid ${theme.colors.border};
   box-shadow: ${CardShadow};
   margin-bottom: ${theme.spacing.xl};
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: ${theme.spacing.md};
   align-items: center;
-  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
 `;
 
 const ForecastsGrid = styled.div`
@@ -193,6 +269,123 @@ const ForecastActions = styled.div`
   border-top: 1px solid ${theme.colors.border};
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContent = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.xl};
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0 0 ${theme.spacing.lg};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0;
+`;
+
+const PasswordInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: ${theme.spacing.lg};
+`;
+
 const LoadingContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -241,6 +434,10 @@ const ForecastListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
+  const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
+  const [deletePassword, setDeletePassword] = useState<string>('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadForecasts();
@@ -259,16 +456,39 @@ const ForecastListPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this forecast?')) return;
-    
+  const handleDeleteClick = (id: number) => {
+    setShowDeleteModal(id);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(null);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
+  const handleDelete = async (id: number, password: string) => {
+    if (!password.trim()) {
+      setDeletePasswordError('Password is required');
+      return;
+    }
+
+    setDeletingId(id);
+    setDeletePasswordError(null);
+
     try {
-      await apiClient.deleteForecast(id);
+      await apiClient.deleteForecast(id, password.trim());
       toast.success('Forecast deleted successfully');
+      setShowDeleteModal(null);
+      setDeletePassword('');
       loadForecasts();
     } catch (error: any) {
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete forecast';
+      setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -359,26 +579,29 @@ const ForecastListPage: React.FC = () => {
           </HeaderContainer>
 
           <FiltersContainer>
-            <Search size={20} color={TEXT_COLOR_MUTED} />
-            <Input
-              type="text"
-              placeholder="Search forecasts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ flex: 1, maxWidth: '300px' }}
-            />
-            <Filter size={20} color={TEXT_COLOR_MUTED} />
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-            >
-              <option value="">All Types</option>
-              <option value="revenue">Revenue</option>
-              <option value="expense">Expense</option>
-              <option value="profit">Profit</option>
-              <option value="all">All</option>
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, position: 'relative' }}>
+              <Search size={20} color={TEXT_COLOR_MUTED} style={{ position: 'absolute', left: '12px', zIndex: 1 }} />
+              <StyledInput
+                type="text"
+                placeholder="Search forecasts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ paddingLeft: '40px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Filter size={20} color={TEXT_COLOR_MUTED} />
+              <StyledSelect
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+              >
+                <option value="">All Types</option>
+                <option value="revenue">Revenue</option>
+                <option value="expense">Expense</option>
+                <option value="profit">Profit</option>
+                <option value="all">All</option>
+              </StyledSelect>
+            </div>
           </FiltersContainer>
 
           {filteredForecasts.length === 0 ? (
@@ -464,7 +687,10 @@ const ForecastListPage: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(forecast.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(forecast.id);
+                        }}
                         style={{ color: '#ef4444', borderColor: '#ef4444' }}
                       >
                         <Trash2 size={14} />
@@ -476,6 +702,167 @@ const ForecastListPage: React.FC = () => {
               })}
             </ForecastsGrid>
           )}
+
+          {/* Delete Modal with Password Verification */}
+          {showDeleteModal && (() => {
+            const forecastToDelete = forecasts.find((f: Forecast) => f.id === showDeleteModal);
+            const summary = forecastToDelete ? getForecastSummary(forecastToDelete) : { count: 0, total: 0, average: 0 };
+            
+            return (
+              <ModalOverlay onClick={handleDeleteCancel}>
+                <ModalContent onClick={(e) => e.stopPropagation()}>
+                  <ModalTitle>
+                    <Trash2 size={20} style={{ color: '#ef4444' }} />
+                    Delete Forecast
+                  </ModalTitle>
+                  
+                  <WarningBox>
+                    <p>
+                      <strong>Warning:</strong> You are about to permanently delete this forecast. 
+                      This action cannot be undone. Please enter your password to confirm this deletion.
+                    </p>
+                  </WarningBox>
+
+                  {forecastToDelete && (
+                    <div style={{
+                      background: '#f9fafb',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: theme.borderRadius.md,
+                      padding: theme.spacing.md,
+                      marginBottom: theme.spacing.lg
+                    }}>
+                      <h4 style={{
+                        fontSize: theme.typography.fontSizes.sm,
+                        fontWeight: theme.typography.fontWeights.bold,
+                        color: TEXT_COLOR_DARK,
+                        margin: `0 0 ${theme.spacing.md} 0`
+                      }}>
+                        Forecast Details to be Deleted:
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                            {forecastToDelete.name || 'N/A'}
+                          </span>
+                        </div>
+                        {forecastToDelete.description && (
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Description:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, flex: 1 }}>
+                              {forecastToDelete.description}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Type:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, textTransform: 'capitalize' }}>
+                            {forecastToDelete.forecast_type || 'N/A'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Period Type:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, textTransform: 'capitalize' }}>
+                            {forecastToDelete.period_type || 'N/A'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Method:</strong>
+                          <MethodBadge $method={forecastToDelete.method}>
+                            {forecastToDelete.method.replace('_', ' ')}
+                          </MethodBadge>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Date Range:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                            {formatDate(forecastToDelete.start_date)} - {formatDate(forecastToDelete.end_date)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Data Points:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                            {summary.count}
+                          </span>
+                        </div>
+                        {summary.count > 0 && (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                              <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Total Forecast:</strong>
+                              <span style={{ fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
+                                ${summary.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                              <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Average:</strong>
+                              <span style={{ fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
+                                ${summary.average.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <FormGroup>
+                    <Label htmlFor="delete-password">
+                      Enter your own password to confirm deletion:
+                    </Label>
+                    <PasswordInput
+                      id="delete-password"
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => {
+                        setDeletePassword(e.target.value);
+                        setDeletePasswordError(null);
+                      }}
+                      placeholder="Enter your password"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && deletePassword.trim() && showDeleteModal !== null) {
+                          handleDelete(showDeleteModal, deletePassword);
+                        }
+                      }}
+                      autoFocus
+                    />
+                    {deletePasswordError && (
+                      <ErrorText>{deletePasswordError}</ErrorText>
+                    )}
+                  </FormGroup>
+
+                  <ModalActions>
+                    <Button
+                      variant="outline"
+                      onClick={handleDeleteCancel}
+                      disabled={deletingId === showDeleteModal}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        if (showDeleteModal !== null) {
+                          handleDelete(showDeleteModal, deletePassword);
+                        }
+                      }}
+                      disabled={!deletePassword.trim() || deletingId === showDeleteModal || showDeleteModal === null}
+                    >
+                      {deletingId === showDeleteModal ? (
+                        <>
+                          <Loader2 size={16} style={{ marginRight: theme.spacing.sm, animation: 'spin 1s linear infinite' }} />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                          Delete
+                        </>
+                      )}
+                    </Button>
+                  </ModalActions>
+                </ModalContent>
+              </ModalOverlay>
+            );
+          })()}
         </ContentContainer>
       </PageContainer>
     </Layout>
