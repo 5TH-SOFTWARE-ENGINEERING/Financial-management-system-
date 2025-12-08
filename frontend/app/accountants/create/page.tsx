@@ -278,6 +278,8 @@ const ButtonRow = styled.div`
   gap: ${theme.spacing.md};
   padding-top: ${theme.spacing.md};
   margin-top: ${theme.spacing.sm};
+  justify-content: space-between;
+  align-items: center;
 `;
 
 type FormData = z.infer<typeof RegisterSchema>;
@@ -479,7 +481,7 @@ export default function CreateAccountantPage() {
                 Cancel
               </Button>
 
-              <Button type="submit" disabled={loading} className="flex-1">
+              <Button type="submit" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
