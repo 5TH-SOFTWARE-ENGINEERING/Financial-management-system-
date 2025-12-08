@@ -747,50 +747,146 @@ const BudgetsPage: React.FC = () => {
           )}
 
           {/* Delete Modal with Password Verification */}
-          {showDeleteModal && (
-            <ModalOverlay onClick={() => {
-              setShowDeleteModal(false);
-              setDeleteBudgetId(null);
-              setDeletePassword('');
-              setDeletePasswordError(null);
-            }}>
-              <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalTitle>
-                  <Trash2 size={20} style={{ color: '#ef4444' }} />
-                  Delete Budget
-                </ModalTitle>
-                
-                <WarningBox>
-                  <p>
-                    <strong>Warning:</strong> You are about to permanently delete this budget. 
-                    This action cannot be undone. Please enter your password to confirm this deletion.
-                  </p>
-                </WarningBox>
+          {showDeleteModal && deleteBudgetId && (() => {
+            const budgetToDelete = budgets.find((b: Budget) => b.id === deleteBudgetId);
+            
+            return (
+              <ModalOverlay onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteBudgetId(null);
+                setDeletePassword('');
+                setDeletePasswordError(null);
+              }}>
+                <ModalContent onClick={(e) => e.stopPropagation()}>
+                  <ModalTitle>
+                    <Trash2 size={20} style={{ color: '#ef4444' }} />
+                    Delete Budget
+                  </ModalTitle>
+                  
+                  <WarningBox>
+                    <p>
+                      <strong>Warning:</strong> You are about to permanently delete this budget. 
+                      This action cannot be undone. Please enter your password to confirm this deletion.
+                    </p>
+                  </WarningBox>
 
-                <FormGroup>
-                  <Label htmlFor="delete-password">
-                    Enter your password to confirm deletion:
-                  </Label>
-                  <PasswordInput
-                    id="delete-password"
-                    type="password"
-                    value={deletePassword}
-                    onChange={(e) => {
-                      setDeletePassword(e.target.value);
-                      setDeletePasswordError(null);
-                    }}
-                    placeholder="Enter your password"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && deletePassword.trim()) {
-                        handleDelete(deletePassword);
-                      }
-                    }}
-                    autoFocus
-                  />
-                  {deletePasswordError && (
-                    <ErrorText>{deletePasswordError}</ErrorText>
+                  {budgetToDelete && (
+                    <div style={{
+                      background: '#f9fafb',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: theme.borderRadius.md,
+                      padding: theme.spacing.md,
+                      marginBottom: theme.spacing.lg
+                    }}>
+                      <h4 style={{
+                        fontSize: theme.typography.fontSizes.sm,
+                        fontWeight: theme.typography.fontWeights.bold,
+                        color: TEXT_COLOR_DARK,
+                        margin: `0 0 ${theme.spacing.md} 0`
+                      }}>
+                        Budget Details to be Deleted:
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                            {budgetToDelete.name || 'N/A'}
+                          </span>
+                        </div>
+                        {budgetToDelete.description && (
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Description:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, flex: 1 }}>
+                              {budgetToDelete.description}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                          <StatusBadge $status={budgetToDelete.status}>
+                            {budgetToDelete.status.toUpperCase()}
+                          </StatusBadge>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Period:</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                            {formatDate(budgetToDelete.start_date)} - {formatDate(budgetToDelete.end_date)}
+                          </span>
+                        </div>
+                        {budgetToDelete.department && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Department:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                              {budgetToDelete.department}
+                            </span>
+                          </div>
+                        )}
+                        {budgetToDelete.project && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                            <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Project:</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                              {budgetToDelete.project}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Total Revenue:</strong>
+                          <span style={{ 
+                            fontSize: theme.typography.fontSizes.sm, 
+                            fontWeight: theme.typography.fontWeights.bold, 
+                            color: '#059669'
+                          }}>
+                            {formatCurrency(budgetToDelete.total_revenue)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Total Expenses:</strong>
+                          <span style={{ 
+                            fontSize: theme.typography.fontSizes.sm, 
+                            fontWeight: theme.typography.fontWeights.bold, 
+                            color: '#ef4444'
+                          }}>
+                            {formatCurrency(budgetToDelete.total_expenses)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                          <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Total Profit:</strong>
+                          <span style={{ 
+                            fontSize: theme.typography.fontSizes.sm, 
+                            fontWeight: theme.typography.fontWeights.bold, 
+                            color: budgetToDelete.total_profit >= 0 ? '#059669' : '#ef4444'
+                          }}>
+                            {formatCurrency(budgetToDelete.total_profit)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </FormGroup>
+
+                  <FormGroup>
+                    <Label htmlFor="delete-password">
+                      Enter your password to confirm deletion:
+                    </Label>
+                    <PasswordInput
+                      id="delete-password"
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => {
+                        setDeletePassword(e.target.value);
+                        setDeletePasswordError(null);
+                      }}
+                      placeholder="Enter your password"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && deletePassword.trim()) {
+                          handleDelete(deletePassword);
+                        }
+                      }}
+                      autoFocus
+                    />
+                    {deletePasswordError && (
+                      <ErrorText>{deletePasswordError}</ErrorText>
+                    )}
+                  </FormGroup>
 
                 <ModalActions>
                   <Button
@@ -825,7 +921,8 @@ const BudgetsPage: React.FC = () => {
                 </ModalActions>
               </ModalContent>
             </ModalOverlay>
-          )}
+            );
+          })()}
         </ContentContainer>
       </PageContainer>
     </Layout>
@@ -887,7 +984,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
   return (
     <form onSubmit={handleSubmit}>
       <FormGroup>
-        <label>Template *</label>
+        <label>Template </label>
         <StyledSelect
           value={formData.templateName}
           onChange={(e) => setFormData(prev => ({ ...prev, templateName: e.target.value }))}
@@ -916,7 +1013,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px' }}>
         <FormGroup>
-          <label>Start Date *</label>
+          <label>Start Date </label>
           <StyledInput
             type="date"
             value={formData.start_date}
@@ -926,7 +1023,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
         </FormGroup>
 
         <FormGroup>
-          <label>End Date *</label>
+          <label>End Date </label>
           <StyledInput
             type="date"
             value={formData.end_date}
