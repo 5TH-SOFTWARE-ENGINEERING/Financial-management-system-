@@ -400,6 +400,7 @@ interface InventoryItem {
   profit_margin?: number;
   created_at: string;
   updated_at?: string;
+  created_by_id?: number;
 }
 
 export default function InventoryManagePage() {
@@ -424,6 +425,7 @@ export default function InventoryManagePage() {
   const [activateDeactivatePasswordError, setActivateDeactivatePasswordError] = useState<string | null>(null);
   const [activatingDeactivating, setActivatingDeactivating] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+  const [accessibleUserIds, setAccessibleUserIds] = useState<number[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -439,7 +441,7 @@ export default function InventoryManagePage() {
   });
 
   useEffect(() => {
-    if (!user || (user.role !== 'finance_manager' && user.role !== 'admin' && user.role !== 'manager')) {
+    if (!user || (user.role !== 'finance_manager' && user.role !== 'admin' && user.role !== 'manager' && user.role !== 'finance_admin')) {
       router.push('/dashboard');
       return;
     }
@@ -448,14 +450,88 @@ export default function InventoryManagePage() {
   }, [user, router]);
 
   const loadItems = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       const response: any = await apiClient.getInventoryItems({ limit: 1000 });
       // Handle both direct array response and wrapped response
-      const itemsData = Array.isArray(response?.data) 
+      let itemsData = Array.isArray(response?.data) 
         ? response.data 
         : (response?.data?.data || []);
+
+      // Get accessible user IDs for finance admins (themselves + subordinates)
+      // IMPORTANT: Subordinates (accountants/employees) should ONLY see their own items
+      // They should NOT see items from other finance admins' subordinates
+      const isFinanceAdminRole = user?.role?.toLowerCase() === 'finance_admin';
+      const currentUserRole = user?.role?.toLowerCase();
+      const isSubordinateRole = currentUserRole === 'accountant' || currentUserRole === 'employee';
+      let currentAccessibleUserIds: number[] = [];
+
+      if (isFinanceAdminRole && user?.id) {
+        try {
+          // Get subordinates - backend already filters to return only accountants and employees under this finance admin
+          const financeAdminId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+          const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
+          const subordinates = subordinatesRes?.data || [];
+          // Include the finance admin themselves
+          currentAccessibleUserIds = [financeAdminId, ...subordinates.map((sub: any) => {
+            const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+            return subId;
+          })];
+
+          // Store in state for use in action handlers
+          setAccessibleUserIds(currentAccessibleUserIds);
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Finance Admin - Accessible User IDs for Inventory:', {
+              financeAdminId: financeAdminId,
+              subordinatesCount: subordinates.length,
+              accessibleUserIds: currentAccessibleUserIds
+            });
+          }
+        } catch (err) {
+          console.warn('Failed to fetch subordinates, using only finance admin ID:', err);
+          const financeAdminId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+          currentAccessibleUserIds = [financeAdminId];
+          setAccessibleUserIds(currentAccessibleUserIds);
+        }
+      } else if (user?.id) {
+        // For subordinates (accountants/employees) and other non-finance-admin roles:
+        // They can ONLY see their own items, NOT items from other finance admins' subordinates
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+        currentAccessibleUserIds = [userId];
+        setAccessibleUserIds(currentAccessibleUserIds);
+
+        if (process.env.NODE_ENV === 'development' && isSubordinateRole) {
+          console.log('Subordinate User - Can only access own inventory items:', {
+            userId: userId,
+            role: currentUserRole,
+            accessibleUserIds: currentAccessibleUserIds
+          });
+        }
+      }
+
+      // Filter items based on access control
+      if (isFinanceAdminRole && currentAccessibleUserIds.length > 0) {
+        // Finance admin: show items from themselves and their subordinates only
+        itemsData = itemsData.filter((item: InventoryItem) => {
+          const createdById = item.created_by_id;
+          return createdById && currentAccessibleUserIds.includes(createdById);
+        });
+      } else if (user?.id) {
+        // For subordinates and other roles: ONLY show their own items
+        // This prevents subordinates from seeing other finance admins' subordinates' items
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+        itemsData = itemsData.filter((item: InventoryItem) => {
+          return item.created_by_id === userId;
+        });
+      }
+
       setItems(itemsData);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to load inventory items';
@@ -495,6 +571,23 @@ export default function InventoryManagePage() {
   };
 
   const handleEdit = (item: InventoryItem) => {
+    // Check access control for finance admins - can only edit items created by themselves or their subordinates
+    const isFinanceAdminRole = user?.role?.toLowerCase() === 'finance_admin';
+    if (isFinanceAdminRole && accessibleUserIds.length > 0) {
+      const createdById = item.created_by_id;
+      if (createdById && !accessibleUserIds.includes(createdById)) {
+        toast.error('You can only edit items created by yourself or your subordinates');
+        return;
+      }
+    } else if (user?.id && item.created_by_id) {
+      // For subordinates and other roles: can only edit their own items
+      const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+      if (item.created_by_id !== userId) {
+        toast.error('You can only edit your own items');
+        return;
+      }
+    }
+
     setEditingItem(item);
     setFormData({
       item_name: item.item_name,
@@ -553,6 +646,25 @@ export default function InventoryManagePage() {
       return;
     }
 
+    // Check access control for finance admins - can only delete items created by themselves or their subordinates
+    const isFinanceAdminRole = user?.role?.toLowerCase() === 'finance_admin';
+    if (isFinanceAdminRole && accessibleUserIds.length > 0) {
+      const createdById = itemToDelete.created_by_id;
+      if (createdById && !accessibleUserIds.includes(createdById)) {
+        setDeletePasswordError('You can only delete items created by yourself or your subordinates');
+        toast.error('You can only delete items created by yourself or your subordinates');
+        return;
+      }
+    } else if (user?.id && itemToDelete.created_by_id) {
+      // For subordinates and other roles: can only delete their own items
+      const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+      if (itemToDelete.created_by_id !== userId) {
+        setDeletePasswordError('You can only delete your own items');
+        toast.error('You can only delete your own items');
+        return;
+      }
+    }
+
     setDeleting(true);
     setDeletePasswordError(null);
 
@@ -577,6 +689,25 @@ export default function InventoryManagePage() {
     if (!itemToActivateDeactivate || !activateDeactivatePassword.trim()) {
       setActivateDeactivatePasswordError('Password is required');
       return;
+    }
+
+    // Check access control for finance admins - can only activate/deactivate items created by themselves or their subordinates
+    const isFinanceAdminRole = user?.role?.toLowerCase() === 'finance_admin';
+    if (isFinanceAdminRole && accessibleUserIds.length > 0) {
+      const createdById = itemToActivateDeactivate.created_by_id;
+      if (createdById && !accessibleUserIds.includes(createdById)) {
+        setActivateDeactivatePasswordError('You can only activate/deactivate items created by yourself or your subordinates');
+        toast.error('You can only activate/deactivate items created by yourself or your subordinates');
+        return;
+      }
+    } else if (user?.id && itemToActivateDeactivate.created_by_id) {
+      // For subordinates and other roles: can only activate/deactivate their own items
+      const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+      if (itemToActivateDeactivate.created_by_id !== userId) {
+        setActivateDeactivatePasswordError('You can only activate/deactivate your own items');
+        toast.error('You can only activate/deactivate your own items');
+        return;
+      }
     }
 
     setActivatingDeactivating(true);
@@ -613,7 +744,7 @@ export default function InventoryManagePage() {
 
   const categories = Array.from(new Set(items.map(item => item.category).filter(Boolean)));
 
-  if (!user || (user.role !== 'finance_manager' && user.role !== 'admin' && user.role !== 'manager')) {
+  if (!user || (user.role !== 'finance_manager' && user.role !== 'admin' && user.role !== 'manager' && user.role !== 'finance_admin')) {
     return null;
   }
 
