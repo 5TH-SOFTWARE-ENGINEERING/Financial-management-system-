@@ -10,7 +10,6 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -83,6 +82,14 @@ const FormCard = styled.div`
 `;
 
 const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
   margin-bottom: ${theme.spacing.md};
   
   label {
@@ -90,33 +97,141 @@ const FormGroup = styled.div`
     font-size: ${theme.typography.fontSizes.sm};
     font-weight: ${theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
-    margin-bottom: ${theme.spacing.xs};
+    margin: 0;
   }
-  
-  input, select, textarea {
-    width: 100%;
-    padding: ${theme.spacing.sm};
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.sm};
-    font-size: ${theme.typography.fontSizes.sm};
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
     
-    &:focus {
-      outline: none;
-      border-color: ${PRIMARY_COLOR};
-      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
   }
-  
-  textarea {
-    min-height: 100px;
-    resize: vertical;
+
+  &[type="date"] {
+    cursor: pointer;
+  }
+`;
+
+const StyledTextarea = styled.textarea`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  resize: vertical;
+  min-height: 100px;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
   }
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  justify-content: flex-end;
-  gap: ${theme.spacing.md};
+  gap: 16px;
+  justify-content: space-between;
   margin-top: ${theme.spacing.xl};
   padding-top: ${theme.spacing.lg};
   border-top: 1px solid ${theme.colors.border};
@@ -289,17 +404,16 @@ const AddBudgetItemPage: React.FC = () => {
                 <>
                   <FormGroup>
                     <label>Select Budget</label>
-                    <select
+                    <StyledSelect
                       value={selectedBudgetForNav}
                       onChange={(e) => setSelectedBudgetForNav(e.target.value)}
-                      style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}
                     >
                       {availableBudgets.map((b) => (
                         <option key={b.id} value={b.id}>
                           {b.name}
                         </option>
                       ))}
-                    </select>
+                    </StyledSelect>
                   </FormGroup>
                   <Button onClick={handleNavigateToBudget} style={{ marginTop: theme.spacing.md }}>
                     Continue
@@ -351,8 +465,8 @@ const AddBudgetItemPage: React.FC = () => {
               </h2>
 
               <FormGroup>
-                <label>Item Name *</label>
-                <Input
+                <label>Item Name </label>
+                <StyledInput
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -363,28 +477,29 @@ const AddBudgetItemPage: React.FC = () => {
 
               <FormGroup>
                 <label>Description</label>
-                <textarea
+                <StyledTextarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Item description..."
+                  rows={4}
                 />
               </FormGroup>
 
               <FormGroup>
-                <label>Type *</label>
-                <select
+                <label>Type </label>
+                <StyledSelect
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   required
                 >
                   <option value="revenue">Revenue</option>
                   <option value="expense">Expense</option>
-                </select>
+                </StyledSelect>
               </FormGroup>
 
               <FormGroup>
-                <label>Category *</label>
-                <Input
+                <label>Category </label>
+                <StyledInput
                   type="text"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
@@ -394,8 +509,8 @@ const AddBudgetItemPage: React.FC = () => {
               </FormGroup>
 
               <FormGroup>
-                <label>Amount *</label>
-                <Input
+                <label>Amount </label>
+                <StyledInput
                   type="number"
                   step="0.01"
                   min="0"
