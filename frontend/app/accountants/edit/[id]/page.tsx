@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -116,25 +115,78 @@ const BackLink = styled(Link)`
 `;
 
 const FormCard = styled.form`
-  background: ${theme.colors.background};
-  padding: ${theme.spacing.xl};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  box-shadow: ${CardShadow};
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.lg};
-  transition: box-shadow ${theme.transitions.default};
-
-  &:hover {
-    box-shadow: ${CardShadowHover};
-  }
+  gap: 28px;
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.sm};
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+`;
+
+const FormRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #d1d5db;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: #e5e7eb;
+  }
+`;
+
+const HelpText = styled.p`
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted-foreground);
 `;
 
 const FieldError = styled.p`
@@ -183,9 +235,10 @@ const SuccessBanner = styled.div`
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
-  padding-top: ${theme.spacing.md};
-  margin-top: ${theme.spacing.sm};
+  gap: 16px;
+  justify-content: space-between;
+  padding-top: 12px;
+  margin-top: 8px;
 `;
 
 const LoadingContainer = styled.div`
@@ -347,33 +400,63 @@ export default function EditAccountantPage() {
           )}
 
           <FormCard onSubmit={handleSubmit(onSubmit)}>
-            <FormGroup>
-              <Label htmlFor="full_name">Full Name *</Label>
-              <Input id="full_name" {...register('full_name')} disabled={loading} />
-              {errors.full_name && <FieldError>{errors.full_name.message}</FieldError>}
-            </FormGroup>
+            <FormRow>
+              <FormGroup>
+                <Label htmlFor="full_name">Full Name</Label>
+                <StyledInput
+                  id="full_name"
+                  {...register('full_name')}
+                  disabled={loading}
+                  placeholder="Enter full name"
+                />
+                {errors.full_name && <FieldError>{errors.full_name.message}</FieldError>}
+              </FormGroup>
+
+              <FormGroup>
+                <Label htmlFor="username">Username</Label>
+                <StyledInput
+                  id="username"
+                  {...register('username')}
+                  disabled={loading}
+                  placeholder="Enter username"
+                />
+                {errors.username && <FieldError>{errors.username.message}</FieldError>}
+              </FormGroup>
+            </FormRow>
 
             <FormGroup>
-              <Label htmlFor="email">Email *</Label>
-              <Input id="email" type="email" {...register('email')} disabled={loading} />
+              <Label htmlFor="email">Email</Label>
+              <StyledInput
+                id="email"
+                type="email"
+                {...register('email')}
+                disabled={loading}
+                placeholder="Enter email address"
+              />
               {errors.email && <FieldError>{errors.email.message}</FieldError>}
             </FormGroup>
 
-            <FormGroup>
-              <Label htmlFor="username">Username *</Label>
-              <Input id="username" {...register('username')} disabled={loading} />
-              {errors.username && <FieldError>{errors.username.message}</FieldError>}
-            </FormGroup>
+            <FormRow>
+              <FormGroup>
+                <Label htmlFor="phone">Phone</Label>
+                <StyledInput
+                  id="phone"
+                  {...register('phone')}
+                  disabled={loading}
+                  placeholder="Enter phone number"
+                />
+              </FormGroup>
 
-            <FormGroup>
-              <Label htmlFor="phone">Phone (Optional)</Label>
-              <Input id="phone" {...register('phone')} disabled={loading} />
-            </FormGroup>
-
-            <FormGroup>
-              <Label htmlFor="department">Department (Optional)</Label>
-              <Input id="department" {...register('department')} disabled={loading} />
-            </FormGroup>
+              <FormGroup>
+                <Label htmlFor="department">Department</Label>
+                <StyledInput
+                  id="department"
+                  {...register('department')}
+                  disabled={loading}
+                  placeholder="Enter department"
+                />
+              </FormGroup>
+            </FormRow>
 
             <ButtonRow>
               <Button 
@@ -384,7 +467,7 @@ export default function EditAccountantPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading} className="flex-1">
+              <Button type="submit" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
