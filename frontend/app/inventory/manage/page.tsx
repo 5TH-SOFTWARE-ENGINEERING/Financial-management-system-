@@ -366,9 +366,11 @@ const ItemsTable = styled.div`
   overflow: hidden;
 `;
 
-const TableHeader = styled.div`
+const TableHeader = styled.div<{ $isAccountant?: boolean }>`
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 80px;
+  grid-template-columns: ${props => props.$isAccountant 
+    ? '3fr 1.2fr 1fr 1fr'  // Accountant: Item Name, Selling Price, Stock, Status
+    : '2.5fr 1fr 0.9fr 1fr 1.2fr 1fr 1fr 1fr 1fr 100px'};  // Full: Item Name, Buying Price, Expense, Total Cost, Selling Price, Stock, Profit/Unit, Margin %, Status, Actions
   gap: ${theme.spacing.md};
   padding: ${theme.spacing.md};
   background: ${theme.colors.backgroundSecondary};
@@ -376,11 +378,21 @@ const TableHeader = styled.div`
   font-weight: ${theme.typography.fontWeights.bold};
   font-size: ${theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_DARK};
+  
+  @media (max-width: 1200px) {
+    grid-template-columns: ${props => props.$isAccountant 
+      ? '2.5fr 1.2fr 1fr 1fr'
+      : '2fr 0.9fr 0.8fr 0.9fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 90px'};
+    gap: ${theme.spacing.sm};
+    font-size: ${theme.typography.fontSizes.xs};
+  }
 `;
 
-const TableRow = styled.div`
+const TableRow = styled.div<{ $isAccountant?: boolean }>`
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 80px;
+  grid-template-columns: ${props => props.$isAccountant 
+    ? '3fr 1.2fr 1fr 1fr'  // Accountant: Item Name, Selling Price, Stock, Status
+    : '2.5fr 1fr 0.9fr 1fr 1.2fr 1fr 1fr 1fr 1fr 100px'};  // Full: Item Name, Buying Price, Expense, Total Cost, Selling Price, Stock, Profit/Unit, Margin %, Status, Actions
   gap: ${theme.spacing.md};
   padding: ${theme.spacing.md};
   border-bottom: 1px solid ${theme.colors.border};
@@ -394,6 +406,14 @@ const TableRow = styled.div`
   &:last-child {
     border-bottom: none;
   }
+  
+  @media (max-width: 1200px) {
+    grid-template-columns: ${props => props.$isAccountant 
+      ? '2.5fr 1.2fr 1fr 1fr'
+      : '2fr 0.9fr 0.8fr 0.9fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 90px'};
+    gap: ${theme.spacing.sm};
+    padding: ${theme.spacing.sm};
+  }
 `;
 
 const TableCell = styled.div`
@@ -402,6 +422,11 @@ const TableCell = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0; /* Allows text truncation in grid */
+  
+  @media (max-width: 1200px) {
+    font-size: ${theme.typography.fontSizes.xs};
+  }
 `;
 
 const ActionButton = styled.button`
@@ -1047,7 +1072,7 @@ export default function InventoryManagePage() {
           </div>
         ) : (
           <ItemsTable>
-            <TableHeader>
+            <TableHeader $isAccountant={isAccountant}>
               <div>Item Name</div>
               {!isAccountant && <div>Buying Price</div>}
               {!isAccountant && <div>Expense</div>}
@@ -1080,11 +1105,11 @@ export default function InventoryManagePage() {
               </div>
             ) : (
               filteredItems.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} $isAccountant={isAccountant}>
                   <TableCell>
-                    <div>
-                      <div style={{ fontWeight: 'bold' }}>{item.item_name}</div>
-                      {item.sku && <div style={{ fontSize: '12px', color: TEXT_COLOR_MUTED }}>SKU: {item.sku}</div>}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.item_name}</div>
+                      {item.sku && <div style={{ fontSize: '12px', color: TEXT_COLOR_MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>SKU: {item.sku}</div>}
                     </div>
                   </TableCell>
                   {!isAccountant && (
