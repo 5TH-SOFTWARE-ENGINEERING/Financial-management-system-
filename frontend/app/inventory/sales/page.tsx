@@ -11,6 +11,7 @@ import {
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
+import useUserStore from '@/store/userStore';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
@@ -359,6 +360,9 @@ interface InventoryItem {
   quantity: number;
   category?: string;
   sku?: string;
+  created_by_id?: number;
+  createdBy?: number;
+  created_by?: number;
 }
 
 interface SaleItem {
@@ -372,6 +376,7 @@ interface SaleItem {
 export default function SalesPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const storeUser = useUserStore((state) => state.user);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -384,23 +389,89 @@ export default function SalesPage() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
+  const [managerId, setManagerId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!user || user.role !== 'employee') {
+    if (!user) {
       router.push('/dashboard');
       return;
     }
-    loadItems();
-  }, [user, router]);
+    
+    // Allow Admin, Finance Admin, Accountant, and Employee to access sales page
+    const userRole = user?.role?.toLowerCase() || '';
+    const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'accountant', 'employee'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      router.push('/dashboard');
+      return;
+    }
+    
+    // For Employee/Accountant: Get their manager (Finance Admin) ID from store
+    // They should only see items created by their Finance Admin
+    if ((userRole === 'employee' || userRole === 'accountant') && storeUser?.managerId) {
+      // Get manager ID from store user (Finance Admin who manages this employee/accountant)
+      const managerIdValue = storeUser.managerId;
+      const managerIdNum = typeof managerIdValue === 'string' ? parseInt(managerIdValue, 10) : managerIdValue;
+      setManagerId(managerIdNum);
+    } else if (userRole === 'finance_manager' || userRole === 'finance_admin') {
+      // Finance Admin: See items created by themselves
+      const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+      setManagerId(userId);
+    } else {
+      // Admin: See all items (no filtering needed)
+      setManagerId(null);
+      // Admin can load items immediately (no manager needed)
+      loadItems();
+    }
+  }, [user, storeUser, router]);
+
+  // Reload items when managerId changes (for Finance Admin, Accountant, Employee)
+  useEffect(() => {
+    if (user && managerId !== null) {
+      loadItems();
+    }
+  }, [managerId]);
 
   const loadItems = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
       const response: any = await apiClient.getInventoryItems({ limit: 1000, is_active: true });
       // Handle both direct array response and wrapped response
-      const itemsData = Array.isArray(response?.data) 
+      let itemsData = Array.isArray(response?.data) 
         ? response.data 
         : (response?.data?.data || []);
+      
+      // Apply role-based filtering
+      const userRole = user?.role?.toLowerCase() || '';
+      const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
+      const isAccountant = userRole === 'accountant';
+      const isEmployee = userRole === 'employee';
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      
+      if (isFinanceAdmin && managerId) {
+        // Finance Admin: See only items created by themselves
+        itemsData = itemsData.filter((item: InventoryItem) => {
+          const createdById = item.created_by_id || item.createdBy || item.created_by;
+          if (!createdById) return false;
+          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
+          return createdByIdNum === managerId;
+        });
+      } else if ((isAccountant || isEmployee) && managerId) {
+        // Employee/Accountant: See only items created by their Finance Admin (manager)
+        itemsData = itemsData.filter((item: InventoryItem) => {
+          const createdById = item.created_by_id || item.createdBy || item.created_by;
+          if (!createdById) return false;
+          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
+          return createdByIdNum === managerId;
+        });
+      } else if (isAccountant || isEmployee) {
+        // Employee/Accountant without manager: See no items
+        itemsData = [];
+      }
+      // Admin sees all items - no filtering needed
+      
       setItems(itemsData);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to load items';
@@ -548,7 +619,11 @@ export default function SalesPage() {
     (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (!user || user.role !== 'employee') {
+  // Allow Admin, Finance Admin, Accountant, and Employee to access sales page
+  const userRole = user?.role?.toLowerCase() || '';
+  const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'accountant', 'employee'];
+  
+  if (!user || !userRole || !allowedRoles.includes(userRole)) {
     return null;
   }
 
@@ -562,7 +637,7 @@ export default function SalesPage() {
                 <ShoppingCart size={32} style={{ marginRight: theme.spacing.md, display: 'inline' }} />
                 Sales
               </h1>
-              <p>Sell items and generate receipts (Employee Access)</p>
+              <p>Sell items and generate receipts</p>
             </HeaderText>
           </HeaderContent>
         </HeaderContainer>
