@@ -521,10 +521,44 @@ export default function ReportPage() {
   };
 
   const loadReports = async (useDateFilter: boolean = true) => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
     try {
+      const userRole = user?.role?.toLowerCase();
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
+      const isAccountant = userRole === 'accountant';
+      const isEmployee = userRole === 'employee';
+
+      // Get accessible user IDs for Finance Admin (themselves + subordinates)
+      let accessibleUserIds: number[] | null = null;
+      if (isFinanceAdmin && user?.id) {
+        try {
+          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+          const subordinatesRes = await apiClient.getSubordinates(userId);
+          const subordinates = subordinatesRes?.data || [];
+          accessibleUserIds = [userId, ...subordinates.map((sub: any) => {
+            const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+            return subId;
+          })];
+        } catch (err) {
+          console.warn('Failed to fetch subordinates, using only finance admin ID:', err);
+          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+          accessibleUserIds = [userId];
+        }
+      } else if ((isAccountant || isEmployee) && user?.id) {
+        // Accountant and Employee can only see their own
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        accessibleUserIds = [userId];
+      }
+      // Admin can see all - no filtering needed
+
       const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
       
       // Fetch sales data for the period (for detailed breakdowns)
@@ -542,6 +576,27 @@ export default function ReportPage() {
             ? (salesResponse.data as any).data || [] 
             : []);
         salesData = salesArray || [];
+
+        // Apply role-based filtering to sales data
+        if (isFinanceAdmin && accessibleUserIds && accessibleUserIds.length > 0) {
+          // Finance Admin: filter to only their team's sales
+          salesData = salesData.filter((s: any) => {
+            const soldById = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
+            if (!soldById) return false;
+            const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
+            return accessibleUserIds!.includes(soldByIdNum);
+          });
+        } else if (isAccountant || isEmployee) {
+          // Accountant and Employee: filter to only their own sales
+          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+          salesData = salesData.filter((s: any) => {
+            const soldById = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
+            if (!soldById) return false;
+            const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
+            return soldByIdNum === userId;
+          });
+        }
+        // Admin sees all - no filtering needed
       } catch (err) {
         console.warn('Failed to fetch detailed sales data for reports:', err);
         // Continue without sales data - we'll use sales summary API instead
@@ -562,6 +617,8 @@ export default function ReportPage() {
                                   user?.role === 'super_admin' ||
                                   user?.role === 'manager';
       
+      // Note: Backend APIs (getFinancialSummary, getIncomeStatement, getCashFlow) should already filter
+      // data by user role. The frontend trusts these responses. Sales data is filtered above.
       const [summaryResult, incomeResult, cashFlowResult, inventoryResult, salesSummaryResult] = await Promise.allSettled([
         apiClient.getFinancialSummary(dateParams.startDate, dateParams.endDate),
         apiClient.getIncomeStatement(dateParams.startDate, dateParams.endDate),
