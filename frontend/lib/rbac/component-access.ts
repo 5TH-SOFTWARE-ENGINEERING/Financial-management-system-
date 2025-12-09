@@ -286,9 +286,12 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.EMPLOYEE_CREATE,
         ComponentId.EMPLOYEE_EDIT,
         ComponentId.EMPLOYEE_DELETE,
+        ComponentId.PERMISSION_VIEW,
+        ComponentId.PERMISSION_EDIT,
 
         // Sidebar
         ComponentId.SIDEBAR_USERS,
+        ComponentId.SIDEBAR_PERMISSIONS,
         ComponentId.SIDEBAR_REVENUE,
         ComponentId.SIDEBAR_EXPENSE,
         ComponentId.SIDEBAR_TRANSACTION,

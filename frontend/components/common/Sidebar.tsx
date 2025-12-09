@@ -8,6 +8,7 @@ import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List, Calculator,
     DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3, Package, ShoppingCart, BookOpen,
+    Key,
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -153,6 +154,7 @@ const getIconColor = (iconType: string, active: boolean): string => {
             'calculator': '#10b981',      // Green
             'plus': '#22c55e',            // Green
             'file-text': '#3b82f6',       // Blue
+            'key': '#8b5cf6',             // Purple
         };
         return activeColors[iconType] || theme.colors.primary;
     } else {
@@ -181,6 +183,7 @@ const getIconColor = (iconType: string, active: boolean): string => {
             'calculator': '#34d399',      // Light Green
             'plus': '#4ade80',            // Light Green
             'file-text': '#60a5fa',       // Light Blue
+            'key': '#a78bfa',             // Light Purple
         };
         return inactiveColors[iconType] || theme.colors.textSecondary;
     }
@@ -936,6 +939,16 @@ const Sidebar: React.FC = () => {
                             <Briefcase />
                         </NavIcon>
                         {!collapsed && 'Projects'}
+                    </NavItem>
+                </ComponentGate>
+
+                {/* Permissions */}
+                <ComponentGate componentId={ComponentId.SIDEBAR_PERMISSIONS}>
+                    <NavItem href="/permissions" $active={pathname.includes('/permissions')} $collapsed={collapsed}>
+                        <NavIcon $active={pathname.includes('/permissions')} $collapsed={collapsed} $iconType="shield">
+                            <Key />
+                        </NavIcon>
+                        {!collapsed && 'Permissions'}
                     </NavItem>
                 </ComponentGate>
             </>
