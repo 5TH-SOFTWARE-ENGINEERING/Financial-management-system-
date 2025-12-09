@@ -447,7 +447,28 @@ const ForecastListPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await apiClient.getForecasts();
-      setForecasts(Array.isArray(response.data) ? response.data : []);
+      const forecastsData = Array.isArray(response.data) ? response.data : [];
+      
+      // Parse JSON fields if they're strings
+      const parsedForecasts = forecastsData.map((forecast: any) => {
+        if (typeof forecast.forecast_data === 'string') {
+          try {
+            forecast.forecast_data = JSON.parse(forecast.forecast_data);
+          } catch (e) {
+            forecast.forecast_data = [];
+          }
+        }
+        if (typeof forecast.method_params === 'string') {
+          try {
+            forecast.method_params = JSON.parse(forecast.method_params);
+          } catch (e) {
+            forecast.method_params = {};
+          }
+        }
+        return forecast;
+      });
+      
+      setForecasts(parsedForecasts);
     } catch (error: any) {
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to load forecasts';
       toast.error(errorMessage);

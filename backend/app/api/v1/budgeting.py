@@ -583,6 +583,59 @@ def delete_forecast(
     return None
 
 
+class DeleteForecastRequest(BaseModel):
+    password: str
+
+@router.post("/forecasts/{forecast_id}/delete")
+def delete_forecast_with_password(
+    forecast_id: int,
+    delete_request: DeleteForecastRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a forecast - requires password verification"""
+    # Reload current user from database to ensure we have the password hash
+    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user_for_auth:
+        raise HTTPException(status_code=404, detail="Current user not found")
+    
+    # Validate that password hash exists
+    if not db_user_for_auth.hashed_password:
+        raise HTTPException(
+            status_code=500,
+            detail="User password hash not found. Please contact administrator."
+        )
+    
+    # Verify password before deletion
+    if not delete_request.password or not delete_request.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password is required to delete a forecast."
+        )
+    
+    # Verify password
+    password_to_verify = delete_request.password.strip()
+    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid password. Please verify your password to delete this forecast."
+        )
+    
+    # Check forecast exists
+    forecast_obj = forecast.get(db, forecast_id)
+    if not forecast_obj:
+        raise HTTPException(status_code=404, detail="Forecast not found")
+    
+    # Check permissions
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        if forecast_obj.created_by_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Delete the forecast
+    forecast.delete(db, forecast_id)
+    return {"message": "Forecast deleted successfully"}
+
+
 # ============================================================================
 # VARIANCE ANALYSIS
 # ============================================================================
