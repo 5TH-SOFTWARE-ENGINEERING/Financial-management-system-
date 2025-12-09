@@ -11,7 +11,6 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -262,9 +261,9 @@ const VarianceHistoryPage: React.FC = () => {
     <Layout>
       <PageContainer>
         <ContentContainer>
-          <BackLink href="/budgets">
+          <BackLink href="/variance">
             <ArrowLeft size={16} />
-            Back to Budgets
+            Back to Variance Analysis
           </BackLink>
 
           <HeaderContainer>

@@ -395,9 +395,9 @@ const CalculateVariancePage: React.FC = () => {
     <Layout>
       <PageContainer>
         <ContentContainer>
-          <BackLink href="/budgets">
+          <BackLink href="/variance">
             <ArrowLeft size={16} />
-            Back to Budgets
+            Back to Variance Analysis
           </BackLink>
 
           <HeaderContainer>
