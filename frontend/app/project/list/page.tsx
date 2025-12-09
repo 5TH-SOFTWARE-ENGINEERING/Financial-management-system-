@@ -763,7 +763,7 @@ export default function ProjectListPage() {
                           <ActionButtons>
                             <Link href={`/project/edit/${project.id}`}>
                               <IconButton variant="ghost" size="sm">
-                                <Edit className="h-4 w-4" />
+                                <Edit size={14}className="h-4 w-4" />
                               </IconButton>
                             </Link>
                             <DeleteIconButton
@@ -775,7 +775,7 @@ export default function ProjectListPage() {
                               {deleting && projectToDelete?.id === project.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 size={14} className="h-4 w-4" />
                               )}
                             </DeleteIconButton>
                           </ActionButtons>
