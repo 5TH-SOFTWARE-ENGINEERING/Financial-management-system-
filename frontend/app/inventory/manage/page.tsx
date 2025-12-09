@@ -11,6 +11,7 @@ import {
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
+import useUserStore from '@/store/userStore';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
@@ -549,6 +550,7 @@ interface InventoryItem {
 export default function InventoryManagePage() {
   const router = useRouter();
   const { user } = useAuth();
+  const storeUser = useUserStore((state) => state.user);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -632,9 +634,78 @@ export default function InventoryManagePage() {
         // No filtering needed for admins
         setAccessibleUserIds([]);
       } else if (isAccountant) {
-        // Accountants can see ALL items from Finance Admin, Manager, and Employee
-        // No filtering needed - show all items (backend will filter appropriately)
-        setAccessibleUserIds([]);
+        // Accountants can only see items from their Finance Admin (manager) and their team
+        // Get the accountant's manager_id (Finance Admin)
+        const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+        let managerId: number | null = null;
+        
+        // Try to get managerId from storeUser first
+        const managerIdStr = storeUser?.managerId;
+        if (managerIdStr) {
+          managerId = typeof managerIdStr === 'string' ? parseInt(managerIdStr, 10) : Number(managerIdStr);
+        } else {
+          // If not in storeUser, try to fetch current user profile from API
+          try {
+            const currentUserRes = await apiClient.getCurrentUser();
+            const currentUserData = currentUserRes?.data;
+            if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
+              managerId = typeof currentUserData.manager_id === 'string' 
+                ? parseInt(currentUserData.manager_id, 10) 
+                : Number(currentUserData.manager_id);
+            }
+          } catch (err) {
+            console.warn('Failed to fetch current user profile for manager_id:', err);
+          }
+        }
+        
+        if (managerId) {
+          try {
+            const financeAdminId = managerId;
+            
+            // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
+            const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
+            const subordinates = subordinatesRes?.data || [];
+            
+            // Include the Finance Admin themselves and all their subordinates
+            currentAccessibleUserIds = [financeAdminId, ...subordinates.map((sub: any) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+              return subId;
+            })];
+            
+            // Store in state for use in filtering
+            setAccessibleUserIds(currentAccessibleUserIds);
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Accountant - Accessible User IDs for Inventory (from Finance Admin):', {
+                accountantId: accountantId,
+                financeAdminId: financeAdminId,
+                subordinatesCount: subordinates.length,
+                accessibleUserIds: currentAccessibleUserIds
+              });
+            }
+          } catch (err) {
+            console.error('Failed to fetch Finance Admin subordinates for accountant:', err);
+            // Fallback: if we can't get subordinates, at least try to show items from the Finance Admin
+            // This prevents all items from vanishing if there's a temporary API issue
+            currentAccessibleUserIds = [managerId];
+            setAccessibleUserIds(currentAccessibleUserIds);
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Accountant - Using fallback (Finance Admin only):', {
+                accountantId: accountantId,
+                financeAdminId: managerId,
+                accessibleUserIds: currentAccessibleUserIds
+              });
+            }
+          }
+        } else {
+          // Accountant has no manager assigned - this is a data issue, but don't hide all items
+          // Instead, show a warning and allow them to see items (fallback behavior)
+          console.warn('Accountant has no manager (Finance Admin) assigned - showing all items as fallback');
+          // Don't set currentAccessibleUserIds to empty - let it remain unset so filtering doesn't apply
+          // This way items won't vanish completely
+          setAccessibleUserIds([]);
+        }
       } else if (isFinanceAdminRole && user?.id) {
         try {
           // Get subordinates - backend already filters to return only accountants and employees under this finance admin
@@ -680,8 +751,21 @@ export default function InventoryManagePage() {
       }
 
       // Filter items based on access control
-      if (!isAdmin && !isAccountant) {
-        if (isFinanceAdminRole && currentAccessibleUserIds.length > 0) {
+      if (!isAdmin) {
+        if (isAccountant) {
+          if (currentAccessibleUserIds.length > 0) {
+            // Accountant: show items from their Finance Admin and their team only
+            itemsData = itemsData.filter((item: InventoryItem) => {
+              const createdById = item.created_by_id;
+              return createdById && currentAccessibleUserIds.includes(createdById);
+            });
+          } else {
+            // If accessibleUserIds is empty but we're an accountant, it means no manager was found
+            // In this case, don't filter (show all items as fallback) rather than hiding everything
+            // This prevents items from vanishing due to data issues
+            console.warn('Accountant filtering skipped - no manager found, showing all items');
+          }
+        } else if (isFinanceAdminRole && currentAccessibleUserIds.length > 0) {
           // Finance admin: show items from themselves and their subordinates only
           itemsData = itemsData.filter((item: InventoryItem) => {
             const createdById = item.created_by_id;
@@ -695,7 +779,7 @@ export default function InventoryManagePage() {
           });
         }
       }
-      // Accountants and Admins see all items (no filtering)
+      // Admins see all items (no filtering)
 
       setItems(itemsData);
     } catch (err: any) {
