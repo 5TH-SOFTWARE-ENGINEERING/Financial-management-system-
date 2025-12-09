@@ -390,6 +390,7 @@ export default function SalesPage() {
   const [receiptData, setReceiptData] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
   const [managerId, setManagerId] = useState<number | null>(null);
+  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -406,31 +407,119 @@ export default function SalesPage() {
       return;
     }
     
-    // For Employee/Accountant: Get their manager (Finance Admin) ID from store
-    // They should only see items created by their Finance Admin
-    if ((userRole === 'employee' || userRole === 'accountant') && storeUser?.managerId) {
-      // Get manager ID from store user (Finance Admin who manages this employee/accountant)
-      const managerIdValue = storeUser.managerId;
-      const managerIdNum = typeof managerIdValue === 'string' ? parseInt(managerIdValue, 10) : managerIdValue;
-      setManagerId(managerIdNum);
-    } else if (userRole === 'finance_manager' || userRole === 'finance_admin') {
-      // Finance Admin: See items created by themselves
-      const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-      setManagerId(userId);
-    } else {
+    // Initialize accessible user IDs based on role
+    const initializeAccess = async () => {
       // Admin: See all items (no filtering needed)
-      setManagerId(null);
-      // Admin can load items immediately (no manager needed)
-      loadItems();
-    }
+      if (userRole === 'admin' || userRole === 'super_admin') {
+        setAccessibleUserIds(null);
+        setManagerId(null);
+        loadItems();
+        return;
+      }
+      
+      // Finance Admin/Manager: Get their own subordinates
+      if (userRole === 'finance_manager' || userRole === 'finance_admin') {
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        try {
+          const subordinatesRes = await apiClient.getSubordinates(userId);
+          const subordinates = subordinatesRes?.data || [];
+          const userIds = [userId, ...subordinates.map((sub: any) => {
+            const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+            return subId;
+          })];
+          setAccessibleUserIds(userIds);
+          setManagerId(userId);
+        } catch (err) {
+          console.error('Failed to fetch subordinates for Finance Admin:', err);
+          setAccessibleUserIds([userId]);
+          setManagerId(userId);
+        }
+        return;
+      }
+      
+      // Employee/Accountant: Get their Finance Admin's (manager's) subordinates
+      if (userRole === 'employee' || userRole === 'accountant') {
+        const employeeId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+        let managerIdValue: number | null = null;
+        
+        // Try to get managerId from storeUser first
+        const managerIdStr = storeUser?.managerId;
+        if (managerIdStr) {
+          managerIdValue = typeof managerIdStr === 'string' ? parseInt(managerIdStr, 10) : Number(managerIdStr);
+        } else {
+          // If not in storeUser, try to fetch current user profile from API
+          try {
+            const currentUserRes = await apiClient.getCurrentUser();
+            const currentUserData = currentUserRes?.data;
+            if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
+              managerIdValue = typeof currentUserData.manager_id === 'string' 
+                ? parseInt(currentUserData.manager_id, 10) 
+                : Number(currentUserData.manager_id);
+            }
+          } catch (err) {
+            console.warn('Failed to fetch current user profile for manager_id:', err);
+          }
+        }
+        
+        if (managerIdValue) {
+          try {
+            const financeAdminId = managerIdValue;
+            
+            // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
+            const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
+            const subordinates = subordinatesRes?.data || [];
+            
+            // Include the Finance Admin themselves and all their subordinates
+            const userIds = [financeAdminId, ...subordinates.map((sub: any) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+              return subId;
+            })];
+            
+            setAccessibleUserIds(userIds);
+            setManagerId(financeAdminId);
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`${userRole === 'employee' ? 'Employee' : 'Accountant'} - Accessible User IDs (from Finance Admin):`, {
+                userId: employeeId,
+                financeAdminId: financeAdminId,
+                subordinatesCount: subordinates.length,
+                accessibleUserIds: userIds
+              });
+            }
+          } catch (err) {
+            console.error(`Failed to fetch Finance Admin subordinates for ${userRole}:`, err);
+            // Fallback: if we can't get subordinates, at least try to show items from the Finance Admin
+            const fallbackUserIds = [managerIdValue];
+            setAccessibleUserIds(fallbackUserIds);
+            setManagerId(managerIdValue);
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`${userRole === 'employee' ? 'Employee' : 'Accountant'} - Using fallback (Finance Admin only):`, {
+                userId: employeeId,
+                financeAdminId: managerIdValue,
+                accessibleUserIds: fallbackUserIds
+              });
+            }
+          }
+        } else {
+          // Employee/Accountant has no manager assigned - show no items
+          console.warn(`${userRole === 'employee' ? 'Employee' : 'Accountant'} has no manager (Finance Admin) assigned`);
+          setAccessibleUserIds([]);
+          setManagerId(null);
+        }
+        return;
+      }
+    };
+    
+    initializeAccess();
   }, [user, storeUser, router]);
 
-  // Reload items when managerId changes (for Finance Admin, Accountant, Employee)
+  // Reload items when accessibleUserIds changes (for Finance Admin, Accountant, Employee)
   useEffect(() => {
-    if (user && managerId !== null) {
+    if (user && accessibleUserIds !== null) {
       loadItems();
     }
-  }, [managerId]);
+  }, [accessibleUserIds]);
 
   const loadItems = async () => {
     if (!user) return;
@@ -450,27 +539,29 @@ export default function SalesPage() {
       const isEmployee = userRole === 'employee';
       const isAdmin = userRole === 'admin' || userRole === 'super_admin';
       
-      if (isFinanceAdmin && managerId) {
-        // Finance Admin: See only items created by themselves
+      if (isAdmin) {
+        // Admin sees all items - no filtering needed
+        // itemsData remains unchanged
+      } else if (isFinanceAdmin && accessibleUserIds && accessibleUserIds.length > 0) {
+        // Finance Admin: See items created by themselves and their subordinates
         itemsData = itemsData.filter((item: InventoryItem) => {
           const createdById = item.created_by_id || item.createdBy || item.created_by;
           if (!createdById) return false;
           const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return createdByIdNum === managerId;
+          return accessibleUserIds.includes(createdByIdNum);
         });
-      } else if ((isAccountant || isEmployee) && managerId) {
-        // Employee/Accountant: See only items created by their Finance Admin (manager)
+      } else if ((isAccountant || isEmployee) && accessibleUserIds && accessibleUserIds.length > 0) {
+        // Employee/Accountant: See items created by their Finance Admin's team (Finance Admin + all subordinates)
         itemsData = itemsData.filter((item: InventoryItem) => {
           const createdById = item.created_by_id || item.createdBy || item.created_by;
           if (!createdById) return false;
           const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return createdByIdNum === managerId;
+          return accessibleUserIds.includes(createdByIdNum);
         });
       } else if (isAccountant || isEmployee) {
-        // Employee/Accountant without manager: See no items
+        // Employee/Accountant without manager or accessibleUserIds: See no items
         itemsData = [];
       }
-      // Admin sees all items - no filtering needed
       
       setItems(itemsData);
     } catch (err: any) {
