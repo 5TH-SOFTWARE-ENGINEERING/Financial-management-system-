@@ -559,12 +559,22 @@ export default function InventoryManagePage() {
   });
 
   useEffect(() => {
-    if (!user || (user.role !== 'finance_manager' && user.role !== 'admin' && user.role !== 'manager' && user.role !== 'finance_admin')) {
+    if (!user) {
+      router.push('/dashboard');
+      return;
+    }
+    // Allow Admin, Finance Admin, Manager, and Accountant (read-only) to view inventory
+    const userRole = user?.role?.toLowerCase() || '';
+    const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'manager', 'accountant'];
+    if (!allowedRoles.includes(userRole)) {
       router.push('/dashboard');
       return;
     }
     loadItems();
-    loadSummary();
+    // Only Finance Admin and Admin can see summary
+    if (userRole !== 'accountant') {
+      loadSummary();
+    }
   }, [user, router]);
 
   const loadItems = async () => {
@@ -583,18 +593,22 @@ export default function InventoryManagePage() {
         : (response?.data?.data || []);
 
       // Get accessible user IDs for finance admins (themselves + subordinates)
-      // IMPORTANT: Subordinates (accountants/employees) should ONLY see their own items
-      // They should NOT see items from other finance admins' subordinates
+      // Accountants can see ALL items from Finance Admin and Employee for revenue posting
       // Admin/Super Admin can see ALL items (no filtering)
       const currentUserRole = user?.role?.toLowerCase();
       const isAdmin = currentUserRole === 'admin' || currentUserRole === 'super_admin';
       const isFinanceAdminRole = currentUserRole === 'finance_admin' || currentUserRole === 'finance_manager';
+      const isAccountant = currentUserRole === 'accountant';
       const isSubordinateRole = currentUserRole === 'accountant' || currentUserRole === 'employee';
       let currentAccessibleUserIds: number[] = [];
 
       // Admins can see all items - skip filtering
       if (isAdmin) {
         // No filtering needed for admins
+        setAccessibleUserIds([]);
+      } else if (isAccountant) {
+        // Accountants can see ALL items from Finance Admin, Manager, and Employee
+        // No filtering needed - show all items (backend will filter appropriately)
         setAccessibleUserIds([]);
       } else if (isFinanceAdminRole && user?.id) {
         try {
@@ -625,8 +639,8 @@ export default function InventoryManagePage() {
           setAccessibleUserIds(currentAccessibleUserIds);
         }
       } else if (user?.id) {
-        // For subordinates (accountants/employees) and other non-finance-admin roles:
-        // They can ONLY see their own items, NOT items from other finance admins' subordinates
+        // For employees and other non-finance-admin roles:
+        // They can ONLY see their own items
         const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
         currentAccessibleUserIds = [userId];
         setAccessibleUserIds(currentAccessibleUserIds);
@@ -640,8 +654,8 @@ export default function InventoryManagePage() {
         }
       }
 
-      // Filter items based on access control (admins see all, no filtering)
-      if (!isAdmin) {
+      // Filter items based on access control
+      if (!isAdmin && !isAccountant) {
         if (isFinanceAdminRole && currentAccessibleUserIds.length > 0) {
           // Finance admin: show items from themselves and their subordinates only
           itemsData = itemsData.filter((item: InventoryItem) => {
@@ -649,14 +663,14 @@ export default function InventoryManagePage() {
             return createdById && currentAccessibleUserIds.includes(createdById);
           });
         } else if (user?.id) {
-          // For subordinates and other roles: ONLY show their own items
-          // This prevents subordinates from seeing other finance admins' subordinates' items
+          // For employees and other roles: ONLY show their own items
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
           itemsData = itemsData.filter((item: InventoryItem) => {
             return item.created_by_id === userId;
           });
         }
       }
+      // Accountants and Admins see all items (no filtering)
 
       setItems(itemsData);
     } catch (err: any) {
@@ -891,7 +905,11 @@ export default function InventoryManagePage() {
 
   const categories = Array.from(new Set(items.map(item => item.category).filter(Boolean)));
 
-  if (!user || (user.role !== 'finance_manager' && user.role !== 'admin' && user.role !== 'manager' && user.role !== 'finance_admin')) {
+  const userRole = user?.role?.toLowerCase() || '';
+  const isAccountant = userRole === 'accountant';
+  const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'manager', 'accountant'];
+  
+  if (!user || !allowedRoles.includes(userRole)) {
     return null;
   }
 
@@ -905,16 +923,23 @@ export default function InventoryManagePage() {
                 <HeaderIcon $iconType="package" $size={32} $active={true}>
                   <Package size={32} />
                 </HeaderIcon>
-                Inventory Management
+                {isAccountant ? 'Inventory Items' : 'Inventory Management'}
               </h1>
-              <p>Manage inventory items, costs, and pricing (Finance Admin Only)</p>
+              <p>
+                {isAccountant 
+                  ? 'View inventory items, selling prices, and quantities (Read Only)'
+                  : 'Manage inventory items, costs, and pricing (Finance Admin Only)'
+                }
+              </p>
             </HeaderText>
-            <Button onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-              <ButtonIcon $iconType="plus" $size={16} $active={true}>
-                <Plus size={16} />
-              </ButtonIcon>
-              Add Item
-            </Button>
+            {!isAccountant && (
+              <Button onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                <ButtonIcon $iconType="plus" $size={16} $active={true}>
+                  <Plus size={16} />
+                </ButtonIcon>
+                Add Item
+              </Button>
+            )}
           </HeaderContent>
         </HeaderContainer>
 
@@ -1024,15 +1049,15 @@ export default function InventoryManagePage() {
           <ItemsTable>
             <TableHeader>
               <div>Item Name</div>
-              <div>Buying Price</div>
-              <div>Expense</div>
-              <div>Total Cost</div>
+              {!isAccountant && <div>Buying Price</div>}
+              {!isAccountant && <div>Expense</div>}
+              {!isAccountant && <div>Total Cost</div>}
               <div>Selling Price</div>
               <div>Stock</div>
-              <div>Profit/Unit</div>
-              <div>Margin %</div>
+              {!isAccountant && <div>Profit/Unit</div>}
+              {!isAccountant && <div>Margin %</div>}
               <div>Status</div>
-              <div>Actions</div>
+              {!isAccountant && <div>Actions</div>}
             </TableHeader>
             {filteredItems.length === 0 ? (
               <div style={{ padding: theme.spacing.xxl, textAlign: 'center', color: TEXT_COLOR_MUTED }}>
@@ -1062,96 +1087,108 @@ export default function InventoryManagePage() {
                       {item.sku && <div style={{ fontSize: '12px', color: TEXT_COLOR_MUTED }}>SKU: {item.sku}</div>}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {item.buying_price !== undefined && item.buying_price !== null 
-                      ? `$${Number(item.buying_price).toFixed(2)}` 
-                      : 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    {item.expense_amount !== undefined && item.expense_amount !== null 
-                      ? `$${Number(item.expense_amount).toFixed(2)}` 
-                      : '$0.00'}
-                  </TableCell>
-                  <TableCell>
-                    {item.total_cost !== undefined && item.total_cost !== null 
-                      ? `$${Number(item.total_cost).toFixed(2)}` 
-                      : 'N/A'}
-                  </TableCell>
+                  {!isAccountant && (
+                    <TableCell>
+                      {item.buying_price !== undefined && item.buying_price !== null 
+                        ? `$${Number(item.buying_price).toFixed(2)}` 
+                        : 'N/A'}
+                    </TableCell>
+                  )}
+                  {!isAccountant && (
+                    <TableCell>
+                      {item.expense_amount !== undefined && item.expense_amount !== null 
+                        ? `$${Number(item.expense_amount).toFixed(2)}` 
+                        : '$0.00'}
+                    </TableCell>
+                  )}
+                  {!isAccountant && (
+                    <TableCell>
+                      {item.total_cost !== undefined && item.total_cost !== null 
+                        ? `$${Number(item.total_cost).toFixed(2)}` 
+                        : 'N/A'}
+                    </TableCell>
+                  )}
                   <TableCell>${Number(item.selling_price).toFixed(2)}</TableCell>
                   <TableCell>
                     <Badge $variant={item.quantity < 10 ? 'danger' : item.quantity < 50 ? 'warning' : 'success'}>
                       {item.quantity}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {item.profit_per_unit !== undefined && item.profit_per_unit !== null
-                      ? `$${Number(item.profit_per_unit).toFixed(2)}` 
-                      : 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    {item.profit_margin !== undefined && item.profit_margin !== null
-                      ? `${Number(item.profit_margin).toFixed(1)}%` 
-                      : 'N/A'}
-                  </TableCell>
+                  {!isAccountant && (
+                    <TableCell>
+                      {item.profit_per_unit !== undefined && item.profit_per_unit !== null
+                        ? `$${Number(item.profit_per_unit).toFixed(2)}` 
+                        : 'N/A'}
+                    </TableCell>
+                  )}
+                  {!isAccountant && (
+                    <TableCell>
+                      {item.profit_margin !== undefined && item.profit_margin !== null
+                        ? `${Number(item.profit_margin).toFixed(1)}%` 
+                        : 'N/A'}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge $variant={item.is_active ? 'success' : 'danger'}>
                       {item.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <div style={{ display: 'flex', gap: theme.spacing.xs }}>
-                      <ActionButton onClick={() => handleEdit(item)} title="Edit">
-                        <ActionIcon $iconType="edit" $size={16} $active={true}>
-                          <Edit size={16} />
-                        </ActionIcon>
-                      </ActionButton>
-                      <ActionButton 
-                        onClick={() => {
-                          setItemToDelete(item);
-                          setShowDeleteModal(true);
-                          setDeletePassword('');
-                          setDeletePasswordError(null);
-                        }}
-                        title="Delete"
-                        data-destructive="true"
-                      >
-                        <ActionIcon $iconType="trash2" $size={16} $active={true}>
-                          <Trash2 size={16} />
-                        </ActionIcon>
-                      </ActionButton>
-                      {item.is_active ? (
-                        <ActionButton 
-                          onClick={() => {
-                            setItemToActivateDeactivate(item);
-                            setIsActivating(false);
-                            setShowActivateDeactivateModal(true);
-                            setActivateDeactivatePassword('');
-                            setActivateDeactivatePasswordError(null);
-                          }}
-                          title="Deactivate"
-                        >
-                          <ActionIcon $iconType="power-off" $size={16} $active={true}>
-                            <PowerOff size={16} />
+                  {!isAccountant && (
+                    <TableCell>
+                      <div style={{ display: 'flex', gap: theme.spacing.xs }}>
+                        <ActionButton onClick={() => handleEdit(item)} title="Edit">
+                          <ActionIcon $iconType="edit" $size={16} $active={true}>
+                            <Edit size={16} />
                           </ActionIcon>
                         </ActionButton>
-                      ) : (
                         <ActionButton 
                           onClick={() => {
-                            setItemToActivateDeactivate(item);
-                            setIsActivating(true);
-                            setShowActivateDeactivateModal(true);
-                            setActivateDeactivatePassword('');
-                            setActivateDeactivatePasswordError(null);
+                            setItemToDelete(item);
+                            setShowDeleteModal(true);
+                            setDeletePassword('');
+                            setDeletePasswordError(null);
                           }}
-                          title="Activate"
+                          title="Delete"
+                          data-destructive="true"
                         >
-                          <ActionIcon $iconType="power" $size={16} $active={true}>
-                            <Power size={16} />
+                          <ActionIcon $iconType="trash2" $size={16} $active={true}>
+                            <Trash2 size={16} />
                           </ActionIcon>
                         </ActionButton>
-                      )}
-                    </div>
-                  </TableCell>
+                        {item.is_active ? (
+                          <ActionButton 
+                            onClick={() => {
+                              setItemToActivateDeactivate(item);
+                              setIsActivating(false);
+                              setShowActivateDeactivateModal(true);
+                              setActivateDeactivatePassword('');
+                              setActivateDeactivatePasswordError(null);
+                            }}
+                            title="Deactivate"
+                          >
+                            <ActionIcon $iconType="power-off" $size={16} $active={true}>
+                              <PowerOff size={16} />
+                            </ActionIcon>
+                          </ActionButton>
+                        ) : (
+                          <ActionButton 
+                            onClick={() => {
+                              setItemToActivateDeactivate(item);
+                              setIsActivating(true);
+                              setShowActivateDeactivateModal(true);
+                              setActivateDeactivatePassword('');
+                              setActivateDeactivatePasswordError(null);
+                            }}
+                            title="Activate"
+                          >
+                            <ActionIcon $iconType="power" $size={16} $active={true}>
+                              <Power size={16} />
+                            </ActionIcon>
+                          </ActionButton>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

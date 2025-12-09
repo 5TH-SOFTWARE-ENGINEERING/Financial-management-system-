@@ -3,7 +3,7 @@
 Sales Management API
 Role-based access control:
 - Employee: Can create sales (sell items)
-- Accountant: Can view sales and post them to ledger
+- Accountant: Can view all sales from Finance Admin and Employee, post journal entries, approve sales for revenue recording
 - Finance Admin: Can view all sales and profit information
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
@@ -158,17 +158,21 @@ def get_sales(
         # Employees can only see their own sales
         sold_by_id = current_user.id
     elif current_user.role == UserRole.ACCOUNTANT:
-        # Accountants can see sales from their subordinates (employees) for approval purposes
-        # This allows them to approve employee sales on the approvals page
+        # Accountants can see ALL sales from Finance Admin and Employee for revenue posting
+        # They need to see all sales transactions to record revenue properly
+        # Filter to show sales from Finance Admin, Manager, and Employee roles only
         from ...crud.user import user as user_crud
-        subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-        # Include subordinates (employees) only, not themselves
-        # Accountants need to see employee sales to approve them, but not their own
-        if subordinate_ids:
-            user_ids = subordinate_ids
-        else:
-            # If no subordinates, accountant sees nothing (can't approve anything)
-            user_ids = []
+        # Get all users with Finance Admin, Manager, or Employee roles
+        finance_admins = db.query(User).filter(
+            User.role.in_([UserRole.FINANCE_ADMIN, UserRole.MANAGER])
+        ).all()
+        employees = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()
+        
+        # Combine all user IDs that accountants should see sales from
+        user_ids = [u.id for u in finance_admins] + [u.id for u in employees]
+        
+        # If no users found, return empty list (no sales to show)
+        # Don't set to None - we want to filter, not show all
     elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
         # Finance Admin/Manager: See only their team's sales (subordinates)
         from ...crud.user import user as user_crud
@@ -222,6 +226,14 @@ def get_sale(
                 status_code=403,
                 detail="You can only view your own sales"
             )
+        elif current_user.role == UserRole.ACCOUNTANT:
+            # Accountants can view all sales from Finance Admin, Manager, and Employee
+            seller = db.query(User).filter(User.id == sale.sold_by_id).first()
+            if seller and seller.role not in [UserRole.FINANCE_ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE]:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You can only view sales from Finance Admin, Manager, and Employee"
+                )
         
         return _format_sale_output(sale, current_user)
     except HTTPException:
@@ -400,11 +412,14 @@ def get_sales_summary(
             subordinate_ids.append(current_user.id)  # Include themselves
             user_ids = subordinate_ids
         elif current_user.role == UserRole.ACCOUNTANT:
-            # Accountant: See sales from themselves and their subordinates (employees)
+            # Accountant: See sales from Finance Admin, Manager, and Employee for revenue reporting
             from ...crud.user import user as user_crud
-            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-            subordinate_ids.append(current_user.id)  # Include themselves
-            user_ids = subordinate_ids
+            # Get all users with Finance Admin, Manager, or Employee roles
+            finance_admins = db.query(User).filter(
+                User.role.in_([UserRole.FINANCE_ADMIN, UserRole.MANAGER])
+            ).all()
+            employees = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()
+            user_ids = [u.id for u in finance_admins] + [u.id for u in employees]
         
         summary = sale_crud.get_sales_summary(db, start_date_dt, end_date_dt, user_ids=user_ids)
         return summary
@@ -444,6 +459,7 @@ def get_receipt(
         'selling_price': sale.selling_price,
         'total_sale': sale.total_sale,
         'customer_name': sale.customer_name,
+        'customer_email': sale.customer_email,
         'sold_by_name': sale.sold_by.full_name if sale.sold_by else None,
         'created_at': sale.created_at,
     }

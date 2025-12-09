@@ -123,6 +123,8 @@ export enum ComponentId {    
     SIDEBAR_VARIANCE = 'sidebar.variance',
     SIDEBAR_DEPARTMENT = 'sidebar.department',
     SIDEBAR_PROJECT = 'sidebar.project',
+    SIDEBAR_INVENTORY = 'sidebar.inventory',
+    SIDEBAR_SALES = 'sidebar.sales',
     
     // NEW ADMINISTRATION SECTION SIDEBAR IDs
     SIDEBAR_FINANCE_ADMINS = 'sidebar.finance_admins', 
@@ -314,18 +316,22 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.EXPENSE_CREATE,
         ComponentId.EXPENSE_EDIT,
         ComponentId.TRANSACTION_LIST,
+        ComponentId.TRANSACTION_APPROVE,
         ComponentId.REPORT_LIST,
         ComponentId.REPORT_CREATE,
+        ComponentId.REPORT_EDIT,
         ComponentId.FORECAST_LIST,
         ComponentId.FORECAST_VIEW,
         ComponentId.PROFILE_VIEW,
         ComponentId.PROFILE_EDIT,
-        // Sidebar
+        // Sidebar - Added inventory and sales access for viewing items and sales
         ComponentId.SIDEBAR_REVENUE,
         ComponentId.SIDEBAR_EXPENSE,
         ComponentId.SIDEBAR_TRANSACTION,
         ComponentId.SIDEBAR_REPORT,
         ComponentId.SIDEBAR_FORECAST,
+        ComponentId.SIDEBAR_INVENTORY,
+        ComponentId.SIDEBAR_SALES,
     ],
     
     [UserType.EMPLOYEE]: [

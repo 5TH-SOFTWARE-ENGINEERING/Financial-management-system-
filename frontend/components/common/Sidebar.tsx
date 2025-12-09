@@ -522,6 +522,15 @@ const Sidebar: React.FC = () => {
                                 {!collapsed && 'Manage Inventory'}
                             </NavItem>
                         )}
+                        {/* Inventory View - Accountant (view only) */}
+                        {isAccountant && (
+                            <NavItem href="/inventory/manage" $active={pathname === '/inventory/manage'} $collapsed={collapsed}>
+                                <NavIcon $active={pathname === '/inventory/manage'} $collapsed={collapsed} $size={16} $iconType="package">
+                                    <Package />
+                                </NavIcon>
+                                {!collapsed && 'View Items'}
+                            </NavItem>
+                        )}
                         {/* Sales - Employee only */}
                         {isEmployee && (
                             <NavItem href="/inventory/sales" $active={pathname === '/inventory/sales'} $collapsed={collapsed}>

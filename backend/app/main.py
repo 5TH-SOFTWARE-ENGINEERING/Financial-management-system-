@@ -9,7 +9,7 @@ import logging
 import logging.config
 import time
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .core.config import settings
 from .core.database import engine, Base, get_db, SessionLocal
@@ -26,6 +26,22 @@ from .utils.audit import AuditLogger, AuditAction
 from .models.user import User, UserRole        # SQLAlchemy model + Enum
 from .schemas.user import UserCreate           # Pydantic schema
 from .utils.security import get_password_hash
+
+# --- Import all models to ensure they're registered with Base ---
+# This ensures all tables are created when Base.metadata.create_all() is called
+from .models import (  # noqa: F401
+    User, UserRole, Role,
+    RevenueEntry, ExpenseEntry,
+    ApprovalWorkflow, ApprovalComment,
+    Report, ReportSchedule,
+    AuditLog, Notification,
+    Project, LoginHistory,
+    Budget, BudgetItem, BudgetScenario, Forecast, BudgetVariance,
+    BudgetType, BudgetPeriod, BudgetStatus,
+    InventoryItem,
+    Sale, SaleStatus, JournalEntry,
+    InventoryAuditLog, InventoryChangeType
+)
 
 # Create log directory early if LOG_FILE is set (prevents FileNotFoundError during config)
 if settings.LOG_FILE:
@@ -170,6 +186,25 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
     openapi_url="/openapi.json" if settings.DEBUG else None,
     lifespan=lifespan,                     # <-- new way
+)
+
+# ------------------------------------------------------------------
+# CORS configuration
+# ------------------------------------------------------------------
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+# Allow all in debug to simplify local dev
+if settings.DEBUG:
+    allowed_origins.append("*")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -514,7 +549,8 @@ async def health_check():
         db_gen = get_db()
         db = next(db_gen)
         try:
-            db.execute("SELECT 1")
+            from sqlalchemy import text  # type: ignore
+            db.execute(text("SELECT 1"))
             db.commit()  # Explicit commit for test
             db_status = "healthy"
         finally:
@@ -539,7 +575,7 @@ async def health_check():
     
     return {
         "status": overall_status,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": settings.VERSION,
         "services": {
             "database": db_status,

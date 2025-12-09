@@ -105,6 +105,7 @@ class ReceiptOut(BaseModel):
     selling_price: Decimal
     total_sale: Decimal
     customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
     sold_by_name: Optional[str] = None
     created_at: datetime
 

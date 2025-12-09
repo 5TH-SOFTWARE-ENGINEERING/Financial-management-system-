@@ -173,7 +173,7 @@ class CRUDInventory:
         old_quantity = item.quantity
         item.quantity -= quantity
         item.last_modified_by_id = changed_by_id
-        item.updated_at = datetime.utcnow()
+        item.updated_at = datetime.now(timezone.utc)
 
         db.commit()
         db.refresh(item)
@@ -207,7 +207,7 @@ class CRUDInventory:
         old_quantity = item.quantity
         item.quantity += quantity
         item.last_modified_by_id = changed_by_id
-        item.updated_at = datetime.utcnow()
+        item.updated_at = datetime.now(timezone.utc)
 
         db.commit()
         db.refresh(item)

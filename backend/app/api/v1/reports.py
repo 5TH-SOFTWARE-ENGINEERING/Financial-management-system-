@@ -47,6 +47,24 @@ def read_reports(
             all_reports = [r for r in all_reports if r.status == status]
         
         reports = all_reports[skip:skip + limit]
+    elif current_user.role == UserRole.ACCOUNTANT:
+        # Accountants can view revenue reports and financial reports
+        # Get all reports that are revenue-related or public
+        all_reports = report_crud.get_multi(db, 0, 1000)
+        # Filter to show revenue reports, financial reports, and public reports
+        revenue_report_types = [ReportType.REVENUE_REPORT, ReportType.FINANCIAL_SUMMARY, ReportType.PROFIT_LOSS]
+        accountant_reports = [
+            r for r in all_reports 
+            if r.type in revenue_report_types or r.is_public or r.created_by_id == current_user.id
+        ]
+        
+        # Apply filters
+        if report_type:
+            accountant_reports = [r for r in accountant_reports if r.type == report_type]
+        if status:
+            accountant_reports = [r for r in accountant_reports if r.status == status]
+        
+        reports = accountant_reports[skip:skip + limit]
     else:
         # Regular users can only see their own reports
         if report_type:
@@ -78,6 +96,11 @@ def read_report(
         if current_user.role == UserRole.MANAGER:
             # Managers can see their own reports and public reports
             if report.created_by_id != current_user.id and not report.is_public:
+                raise HTTPException(status_code=403, detail="Not enough permissions")
+        elif current_user.role == UserRole.ACCOUNTANT:
+            # Accountants can see revenue reports, financial reports, and public reports
+            revenue_report_types = [ReportType.REVENUE_REPORT, ReportType.FINANCIAL_SUMMARY, ReportType.PROFIT_LOSS]
+            if report.type not in revenue_report_types and not report.is_public and report.created_by_id != current_user.id:
                 raise HTTPException(status_code=403, detail="Not enough permissions")
         else:
             # Regular users can only see their own reports

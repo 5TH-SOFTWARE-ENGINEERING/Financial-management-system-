@@ -778,10 +778,10 @@ export default function AccountingDashboard() {
                 <TableHeader>
                   <tr>
                     <TableHeaderCell>Receipt #</TableHeaderCell>
-                    <TableHeaderCell>Item</TableHeaderCell>
-                    <TableHeaderCell>Quantity</TableHeaderCell>
-                    <TableHeaderCell>Price</TableHeaderCell>
-                    <TableHeaderCell>Total</TableHeaderCell>
+                    <TableHeaderCell>Item Name</TableHeaderCell>
+                    <TableHeaderCell>Quantity Sold</TableHeaderCell>
+                    <TableHeaderCell>Selling Price</TableHeaderCell>
+                    <TableHeaderCell>Revenue</TableHeaderCell>
                     <TableHeaderCell>Customer</TableHeaderCell>
                     <TableHeaderCell>Status</TableHeaderCell>
                     <TableHeaderCell>Date</TableHeaderCell>
