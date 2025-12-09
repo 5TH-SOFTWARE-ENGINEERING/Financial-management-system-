@@ -11,6 +11,7 @@ export interface Theme {
   borderRadius: {
     sm: string;
     md: string;
+    lg: string;
   };
   spacing: {
     xs: string;
@@ -51,6 +52,7 @@ export const theme: Theme = {
   borderRadius: {
     sm: "4px",
     md: "8px",
+    lg: "12px",
   },
   spacing: {
     xs: "4px",

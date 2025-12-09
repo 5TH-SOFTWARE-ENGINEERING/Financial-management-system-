@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { theme } from '@/components/common/theme';
 import {Button} from '@/components/ui/button';
@@ -388,6 +388,29 @@ interface RoleTemplate {
   permissions: PermissionItem[];
 }
 
+// Ensure permissions are unique per resource and merged
+const mergePermissionsByResource = (perms: PermissionItem[]): PermissionItem[] => {
+  const merged = new Map<Resource, PermissionItem>();
+  perms.forEach((perm) => {
+    const existing = merged.get(perm.resource);
+    if (existing) {
+      merged.set(perm.resource, {
+        resource: perm.resource,
+        actions: {
+          ...existing.actions,
+          ...perm.actions,
+        },
+      });
+    } else {
+      merged.set(perm.resource, {
+        resource: perm.resource,
+        actions: { ...perm.actions },
+      });
+    }
+  });
+  return Array.from(merged.values());
+};
+
 const PermissionManager: React.FC<PermissionManagerProps> = ({ 
   title, 
   adminType,
@@ -496,79 +519,79 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     return defaultPerms;
   };
 
+  const loadUsers = useCallback(async () => {
+    if (!currentUser) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await apiClient.getUsers();
+      const apiUsers = response.data || [];
+      
+      // Load permissions from backend for each user
+      const usersWithPermissions = await Promise.allSettled(
+        apiUsers.map(async (apiUser: any) => {
+          const userType = mapRoleToUserType(apiUser.role);
+          
+          // Try to load permissions from backend
+          let permissions = getDefaultPermissions(userType);
+          try {
+            const permResponse = await apiClient.getUserPermissions(apiUser.id);
+            // If backend returns permissions and it's a non-empty array, use them
+            // Empty array or null/undefined means use defaults
+            if (permResponse.data?.permissions && 
+                Array.isArray(permResponse.data.permissions) && 
+                permResponse.data.permissions.length > 0) {
+              permissions = permResponse.data.permissions;
+            }
+          } catch (permErr: any) {
+            // If 403 (forbidden) or 404 (not found), user doesn't have permissions set yet, use defaults
+            // This is expected for new users or users without custom permissions
+            if (permErr.response?.status === 403 || permErr.response?.status === 404) {
+              // Use defaults, no error needed
+            } else {
+              // Other errors (network, server error, etc.) - log but continue with defaults
+              console.warn(`Failed to load permissions for user ${apiUser.id}:`, permErr);
+            }
+          }
+          
+          return {
+            userId: apiUser.id.toString(),
+            userName: apiUser.full_name || apiUser.username || apiUser.email,
+            email: apiUser.email,
+            userType: userType,
+            isActive: apiUser.is_active,
+            permissions: mergePermissionsByResource(permissions),
+          };
+        })
+      );
+      
+      // Convert Promise.allSettled results to UserPermissions array
+      const users: UserPermissions[] = usersWithPermissions
+        .filter((result): result is PromiseFulfilledResult<UserPermissions> => result.status === 'fulfilled')
+        .map(result => result.value);
+      
+      // Filter users based on managedUserTypes
+      const filteredUsers = users.filter(user => 
+        managedUserTypes.includes(user.userType)
+      );
+      
+      setUserPermissions(filteredUsers);
+      if (filteredUsers.length > 0 && !selectedUser) {
+        setSelectedUser(filteredUsers[0].userId);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser, managedUserTypes, selectedUser]);
+
   // Load users from API
   useEffect(() => {
-    const loadUsers = async () => {
-      if (!currentUser) return;
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const response = await apiClient.getUsers();
-        const apiUsers = response.data || [];
-        
-        // Load permissions from backend for each user
-        const usersWithPermissions = await Promise.allSettled(
-          apiUsers.map(async (apiUser: any) => {
-            const userType = mapRoleToUserType(apiUser.role);
-            
-            // Try to load permissions from backend
-            let permissions = getDefaultPermissions(userType);
-            try {
-              const permResponse = await apiClient.getUserPermissions(apiUser.id);
-              // If backend returns permissions and it's a non-empty array, use them
-              // Empty array or null/undefined means use defaults
-              if (permResponse.data?.permissions && 
-                  Array.isArray(permResponse.data.permissions) && 
-                  permResponse.data.permissions.length > 0) {
-                permissions = permResponse.data.permissions;
-              }
-            } catch (permErr: any) {
-              // If 403 (forbidden) or 404 (not found), user doesn't have permissions set yet, use defaults
-              // This is expected for new users or users without custom permissions
-              if (permErr.response?.status === 403 || permErr.response?.status === 404) {
-                // Use defaults, no error needed
-              } else {
-                // Other errors (network, server error, etc.) - log but continue with defaults
-                console.warn(`Failed to load permissions for user ${apiUser.id}:`, permErr);
-              }
-            }
-            
-            return {
-              userId: apiUser.id.toString(),
-              userName: apiUser.full_name || apiUser.username || apiUser.email,
-              email: apiUser.email,
-              userType: userType,
-              isActive: apiUser.is_active,
-              permissions: permissions,
-            };
-          })
-        );
-        
-        // Convert Promise.allSettled results to UserPermissions array
-        const users: UserPermissions[] = usersWithPermissions
-          .filter((result): result is PromiseFulfilledResult<UserPermissions> => result.status === 'fulfilled')
-          .map(result => result.value);
-        
-        // Filter users based on managedUserTypes
-        const filteredUsers = users.filter(user => 
-          managedUserTypes.includes(user.userType)
-        );
-        
-        setUserPermissions(filteredUsers);
-        if (filteredUsers.length > 0 && !selectedUser) {
-          setSelectedUser(filteredUsers[0].userId);
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.detail || 'Failed to load users');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadUsers();
-  }, [currentUser, managedUserTypes]);
+  }, [loadUsers]);
 
   // Handlers
   const handlePermissionChange = (
@@ -700,6 +723,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
       setTimeout(() => setSuccess(null), 3000);
       setShowConfirm(false);
       setConfirmUser(null);
+      // Refresh from backend to reflect real-time state
+      await loadUsers();
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to save permissions';
       setError(errorMessage);
@@ -787,7 +812,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
         if (user.userId === selectedUser) {
           return {
             ...user,
-            permissions: JSON.parse(JSON.stringify(template.permissions))
+            permissions: mergePermissionsByResource(JSON.parse(JSON.stringify(template.permissions)))
           };
         }
         return user;
