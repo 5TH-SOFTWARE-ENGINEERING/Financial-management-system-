@@ -120,6 +120,10 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await apiClient.login(identifier, password);
+          // Verify response has user data before setting authentication
+          if (!response.data || !response.data.user) {
+            throw new Error('Invalid login response: missing user data');
+          }
           const mappedUser = mapToStoreUser(response.data.user);
           set({
             user: mappedUser,
@@ -127,8 +131,17 @@ export const useUserStore = create<UserState>()(
             error: null,
           });
         } catch (error: any) {
+          // Clear any stored tokens on login failure
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+          }
           const detail = error.response?.data?.detail || error.response?.data?.error || error.message;
-          set({ error: detail || 'Login failed', isAuthenticated: false });
+          set({ 
+            user: null,
+            error: detail || 'Login failed', 
+            isAuthenticated: false 
+          });
           throw error;
         } finally {
           set({ isLoading: false });

@@ -86,10 +86,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
       await storeLogin(identifier, password);
+      // Verify that user is actually authenticated before returning true
+      const currentState = useUserStore.getState();
+      if (!currentState.isAuthenticated || !currentState.user) {
+        throw new Error('Login failed: User not authenticated');
+      }
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      return false;
+      // Re-throw the error so the calling code can handle it properly
+      throw error;
     }
   };
 

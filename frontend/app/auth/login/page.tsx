@@ -379,11 +379,86 @@ const ErrorMessage = styled.div`
   border-left: 3px solid #ff4d4f;
   text-align: left;
 `;
+const NotFoundContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: ${theme.typography.fontFamily};
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #239f94 0%, #2c7a8c 50%, #1e5f6f 100%);
+  padding: ${theme.spacing.xl};
+  text-align: center;
+`;
+
+const NotFoundCard = styled.div`
+  background: rgb(84, 81, 81);
+  padding: ${theme.spacing.xl};
+  border-radius: ${theme.borderRadius.lg};
+  box-shadow: ${theme.shadows.lg};
+  max-width: 600px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+`;
+
+const NotFoundTitle = styled.h1`
+  font-size: 72px;
+  font-weight: ${theme.typography.fontWeights.semibold};
+  background: linear-gradient(90deg, #ff7e5f, #feb47b);
+  -webkit-background-clip: text;
+  color: transparent;
+  margin-bottom: ${theme.spacing.md};
+  text-shadow: 
+    0 0 10px rgba(255, 126, 95, 0.8),
+    0 0 20px rgba(255, 126, 95, 0.6);
+`;
+
+const NotFoundSubtitle = styled.h2`
+  color: #ffffff;
+  font-size: ${theme.typography.fontSizes.xl};
+  font-weight: ${theme.typography.fontWeights.medium};
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const NotFoundMessage = styled.p`
+  color: #b3b3b3;
+  font-size: ${theme.typography.fontSizes.md};
+  margin-bottom: ${theme.spacing.xl};
+  line-height: 1.6;
+`;
+
+const BackButton = styled.button`
+  padding: ${theme.spacing.md} ${theme.spacing.xl};
+  background: linear-gradient(135deg, ${theme.colors.primary} 0%, #feb47b 100%);
+  color: rgb(255, 255, 255);
+  border: none;
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.default};
+  box-shadow: 0 2px 8px rgba(255, 126, 95, 0.3);
+
+  &:hover {
+    background: linear-gradient(135deg, #feb47b 0%, ${theme.colors.primary} 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 126, 95, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 export default function Login() {
   const { login, error: authError, isLoading: authLoading, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [userNotFound, setUserNotFound] = useState(false);
   const router = useRouter();
 
   const {
@@ -396,17 +471,73 @@ export default function Login() {
 
   const onSubmit = async (data: LoginInput) => {
     setIsLoading(true);
+    setUserNotFound(false);
     try {
-      await login(data.identifier, data.password);
-      toast.success('Login successful!');
-      router.push('/dashboard');
-    } catch (error) {
-      console.error(error);
-      toast.error('Login failed. Please try again.');
+      const loginSuccess = await login(data.identifier, data.password);
+      
+      // Only redirect if login was successful AND user is authenticated
+      if (loginSuccess && isAuthenticated) {
+        toast.success('Login successful!');
+        router.push('/dashboard');
+      } else {
+        // Login returned false or user is not authenticated
+        toast.error('Login failed. Please check your credentials and try again.');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      // Check for network/database connection errors
+      const isNetworkError = !error?.response || 
+                            error?.code === 'ECONNREFUSED' ||
+                            error?.code === 'ERR_NETWORK' ||
+                            error?.message?.includes('Network Error') ||
+                            error?.message?.includes('Failed to fetch');
+      
+      // Check if error is 500 (server/database error)
+      const isServerError = error?.response?.status === 500 ||
+                           error?.response?.status === 503 ||
+                           error?.response?.status === 502;
+      
+      // Check if error is 401 (user not found) or contains "Incorrect username or password"
+      const errorStatus = error?.response?.status;
+      const errorDetail = error?.response?.data?.detail || error?.message || '';
+      const isUserNotFound = errorStatus === 401 || 
+                            errorDetail.toLowerCase().includes('incorrect username') ||
+                            errorDetail.toLowerCase().includes('incorrect password') ||
+                            errorDetail.toLowerCase().includes('user not found');
+      
+      if (isNetworkError || isServerError) {
+        // Database/server connection error
+        toast.error('Unable to connect to the server. Please check if the database is running and try again.');
+      } else if (isUserNotFound) {
+        setUserNotFound(true);
+      } else {
+        toast.error(errorDetail || 'Login failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Show 404 page if user not found
+  if (userNotFound) {
+    return (
+      <NotFoundContainer>
+        <NotFoundCard>
+          <NotFoundTitle>404</NotFoundTitle>
+          <NotFoundSubtitle>User Not Found</NotFoundSubtitle>
+          <NotFoundMessage>
+            The user account you're trying to access doesn't exist in our system.
+            <br />
+            Please check your email/username and password, or contact your administrator.
+          </NotFoundMessage>
+          <BackButton onClick={() => setUserNotFound(false)}>
+            Back to Login
+          </BackButton>
+        </NotFoundCard>
+      </NotFoundContainer>
+    );
+  }
 
   return (
     <LoginContainer>

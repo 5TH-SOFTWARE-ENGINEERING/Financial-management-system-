@@ -178,9 +178,21 @@ class ApiClient {
       password,
     });
     const normalized = this.normalizeResponse<LoginResponse>(response.data);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('access_token', normalized.data.access_token);
+    
+    // Only set token if we have a valid access token and user data
+    if (normalized.data?.access_token && normalized.data?.user) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('access_token', normalized.data.access_token);
+      }
+    } else {
+      // Clear any existing tokens if response is invalid
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+      }
+      throw new Error('Invalid login response: missing access token or user data');
     }
+    
     return normalized;
   }
 
