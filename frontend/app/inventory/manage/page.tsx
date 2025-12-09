@@ -585,12 +585,18 @@ export default function InventoryManagePage() {
       // Get accessible user IDs for finance admins (themselves + subordinates)
       // IMPORTANT: Subordinates (accountants/employees) should ONLY see their own items
       // They should NOT see items from other finance admins' subordinates
-      const isFinanceAdminRole = user?.role?.toLowerCase() === 'finance_admin';
+      // Admin/Super Admin can see ALL items (no filtering)
       const currentUserRole = user?.role?.toLowerCase();
+      const isAdmin = currentUserRole === 'admin' || currentUserRole === 'super_admin';
+      const isFinanceAdminRole = currentUserRole === 'finance_admin' || currentUserRole === 'finance_manager';
       const isSubordinateRole = currentUserRole === 'accountant' || currentUserRole === 'employee';
       let currentAccessibleUserIds: number[] = [];
 
-      if (isFinanceAdminRole && user?.id) {
+      // Admins can see all items - skip filtering
+      if (isAdmin) {
+        // No filtering needed for admins
+        setAccessibleUserIds([]);
+      } else if (isFinanceAdminRole && user?.id) {
         try {
           // Get subordinates - backend already filters to return only accountants and employees under this finance admin
           const financeAdminId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
@@ -634,20 +640,22 @@ export default function InventoryManagePage() {
         }
       }
 
-      // Filter items based on access control
-      if (isFinanceAdminRole && currentAccessibleUserIds.length > 0) {
-        // Finance admin: show items from themselves and their subordinates only
-        itemsData = itemsData.filter((item: InventoryItem) => {
-          const createdById = item.created_by_id;
-          return createdById && currentAccessibleUserIds.includes(createdById);
-        });
-      } else if (user?.id) {
-        // For subordinates and other roles: ONLY show their own items
-        // This prevents subordinates from seeing other finance admins' subordinates' items
-        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-        itemsData = itemsData.filter((item: InventoryItem) => {
-          return item.created_by_id === userId;
-        });
+      // Filter items based on access control (admins see all, no filtering)
+      if (!isAdmin) {
+        if (isFinanceAdminRole && currentAccessibleUserIds.length > 0) {
+          // Finance admin: show items from themselves and their subordinates only
+          itemsData = itemsData.filter((item: InventoryItem) => {
+            const createdById = item.created_by_id;
+            return createdById && currentAccessibleUserIds.includes(createdById);
+          });
+        } else if (user?.id) {
+          // For subordinates and other roles: ONLY show their own items
+          // This prevents subordinates from seeing other finance admins' subordinates' items
+          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+          itemsData = itemsData.filter((item: InventoryItem) => {
+            return item.created_by_id === userId;
+          });
+        }
       }
 
       setItems(itemsData);
@@ -689,9 +697,16 @@ export default function InventoryManagePage() {
   };
 
   const handleEdit = (item: InventoryItem) => {
-    // Check access control for finance admins - can only edit items created by themselves or their subordinates
-    const isFinanceAdminRole = user?.role?.toLowerCase() === 'finance_admin';
-    if (isFinanceAdminRole && accessibleUserIds.length > 0) {
+    // Check access control - admins can edit all items
+    const currentUserRole = user?.role?.toLowerCase();
+    const isAdmin = currentUserRole === 'admin' || currentUserRole === 'super_admin';
+    const isFinanceAdminRole = currentUserRole === 'finance_admin' || currentUserRole === 'finance_manager';
+    
+    // Admins can edit any item
+    if (isAdmin) {
+      // No access check needed
+    } else if (isFinanceAdminRole && accessibleUserIds.length > 0) {
+      // Finance admins can only edit items created by themselves or their subordinates
       const createdById = item.created_by_id;
       if (createdById && !accessibleUserIds.includes(createdById)) {
         toast.error('You can only edit items created by yourself or your subordinates');
@@ -764,9 +779,16 @@ export default function InventoryManagePage() {
       return;
     }
 
-    // Check access control for finance admins - can only delete items created by themselves or their subordinates
-    const isFinanceAdminRole = user?.role?.toLowerCase() === 'finance_admin';
-    if (isFinanceAdminRole && accessibleUserIds.length > 0) {
+    // Check access control - admins can delete all items
+    const currentUserRole = user?.role?.toLowerCase();
+    const isAdmin = currentUserRole === 'admin' || currentUserRole === 'super_admin';
+    const isFinanceAdminRole = currentUserRole === 'finance_admin' || currentUserRole === 'finance_manager';
+    
+    // Admins can delete any item
+    if (isAdmin) {
+      // No access check needed
+    } else if (isFinanceAdminRole && accessibleUserIds.length > 0) {
+      // Finance admins can only delete items created by themselves or their subordinates
       const createdById = itemToDelete.created_by_id;
       if (createdById && !accessibleUserIds.includes(createdById)) {
         setDeletePasswordError('You can only delete items created by yourself or your subordinates');
@@ -809,9 +831,16 @@ export default function InventoryManagePage() {
       return;
     }
 
-    // Check access control for finance admins - can only activate/deactivate items created by themselves or their subordinates
-    const isFinanceAdminRole = user?.role?.toLowerCase() === 'finance_admin';
-    if (isFinanceAdminRole && accessibleUserIds.length > 0) {
+    // Check access control - admins can activate/deactivate all items
+    const currentUserRole = user?.role?.toLowerCase();
+    const isAdmin = currentUserRole === 'admin' || currentUserRole === 'super_admin';
+    const isFinanceAdminRole = currentUserRole === 'finance_admin' || currentUserRole === 'finance_manager';
+    
+    // Admins can activate/deactivate any item
+    if (isAdmin) {
+      // No access check needed
+    } else if (isFinanceAdminRole && accessibleUserIds.length > 0) {
+      // Finance admins can only activate/deactivate items created by themselves or their subordinates
       const createdById = itemToActivateDeactivate.created_by_id;
       if (createdById && !accessibleUserIds.includes(createdById)) {
         setActivateDeactivatePasswordError('You can only activate/deactivate items created by yourself or your subordinates');
