@@ -477,8 +477,8 @@ export default function Login() {
       
       // Only redirect if login was successful AND user is authenticated
       if (loginSuccess && isAuthenticated) {
-        toast.success('Login successful!');
-        router.push('/dashboard');
+      toast.success('Login successful!');
+      router.push('/dashboard');
       } else {
         // Login returned false or user is not authenticated
         toast.error('Login failed. Please check your credentials and try again.');
