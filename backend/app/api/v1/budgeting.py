@@ -529,6 +529,13 @@ def create_forecast(
         forecast_dict["method_params"] = json.dumps(forecast_dict["method_params"])
     
     new_forecast = forecast.create(db, forecast_dict)
+    
+    # Parse JSON strings back to dicts for response
+    if new_forecast.method_params and isinstance(new_forecast.method_params, str):
+        new_forecast.method_params = json.loads(new_forecast.method_params)
+    if new_forecast.forecast_data and isinstance(new_forecast.forecast_data, str):
+        new_forecast.forecast_data = json.loads(new_forecast.forecast_data)
+    
     return new_forecast
 
 
@@ -541,6 +548,12 @@ def get_forecasts(
 ):
     """Get all forecasts"""
     forecasts = forecast.get_all(db, skip, limit, current_user.id, current_user.role)
+    # Parse JSON strings back to dicts for response
+    for f in forecasts:
+        if f.method_params and isinstance(f.method_params, str):
+            f.method_params = json.loads(f.method_params)
+        if f.forecast_data and isinstance(f.forecast_data, str):
+            f.forecast_data = json.loads(f.forecast_data)
     return forecasts
 
 
@@ -559,6 +572,12 @@ def get_forecast(
     if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
         if forecast_obj.created_by_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Parse JSON strings back to dicts for response
+    if forecast_obj.method_params and isinstance(forecast_obj.method_params, str):
+        forecast_obj.method_params = json.loads(forecast_obj.method_params)
+    if forecast_obj.forecast_data and isinstance(forecast_obj.forecast_data, str):
+        forecast_obj.forecast_data = json.loads(forecast_obj.forecast_data)
     
     return forecast_obj
 
