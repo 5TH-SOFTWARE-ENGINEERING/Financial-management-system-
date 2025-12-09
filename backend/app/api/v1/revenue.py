@@ -237,16 +237,68 @@ def delete_revenue_entry(
 @router.post("/{revenue_id}/approve")
 def approve_revenue_entry(
     revenue_id: int,
-    current_user: User = Depends(require_min_role(UserRole.MANAGER)),
+    current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Approve revenue entry (manager and above)"""
+    """
+    Approve revenue entry
+    
+    Role-based access control:
+    - Admin/Super Admin: Can approve all revenue entries
+    - Finance Admin/Manager: Can approve their own entries and their subordinates' (accountant and employee) entries
+    - Accountant: Can approve entries from their subordinates (employees) only, not their own
+    """
     entry = revenue_crud.get(db, id=revenue_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Revenue entry not found")
     
     if entry.is_approved:
         raise HTTPException(status_code=400, detail="Entry already approved")
+    
+    created_by_id = entry.created_by_id
+    
+    # Admin and Super Admin can approve all revenue entries
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        pass  # Allow all entries
+    # Finance Admin/Manager can approve their own entries and their subordinates' entries
+    elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+        from ...crud.user import user as user_crud
+        # Get all subordinates (accountants and employees)
+        subordinates = user_crud.get_hierarchy(db, current_user.id)
+        subordinate_ids = [sub.id for sub in subordinates]
+        subordinate_ids.append(current_user.id)  # Include themselves
+        
+        if created_by_id not in subordinate_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only approve revenue entries created by yourself or your subordinates (accountants and employees)"
+            )
+    # Accountant can only approve entries from their subordinates (employees), not their own
+    elif current_user.role == UserRole.ACCOUNTANT:
+        from ...crud.user import user as user_crud
+        # Get subordinates (employees only)
+        subordinates = user_crud.get_hierarchy(db, current_user.id)
+        subordinate_ids = [sub.id for sub in subordinates]
+        
+        # Accountant cannot approve their own entries
+        if created_by_id == current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Accountants cannot approve their own revenue entries. Only entries from employees can be approved."
+            )
+        
+        # Check if entry was created by a subordinate (employee)
+        if created_by_id not in subordinate_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only approve revenue entries created by your subordinates (employees)"
+            )
+    else:
+        # Other roles cannot approve revenue entries
+        raise HTTPException(
+            status_code=403,
+            detail="Only accountants, finance admins, managers, or admins can approve revenue entries"
+        )
     
     revenue_crud.approve(db, id=revenue_id, approved_by_id=current_user.id)
     return {"message": "Revenue entry approved successfully"}

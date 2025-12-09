@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
 
@@ -12,7 +12,7 @@ from ...models.user import User, UserRole
 from ...models.approval import ApprovalStatus
 from ...api.deps import get_current_active_user, require_min_role
 from ...core.security import verify_password
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore[import-untyped]
 
 router = APIRouter()
 
@@ -206,16 +206,68 @@ def delete_expense_entry(
 @router.post("/{expense_id}/approve")
 def approve_expense_entry(
     expense_id: int,
-    current_user: User = Depends(require_min_role(UserRole.MANAGER)),
+    current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Approve expense entry (manager and above)"""
+    """
+    Approve expense entry
+    
+    Role-based access control:
+    - Admin/Super Admin: Can approve all expense entries
+    - Finance Admin/Manager: Can approve their own entries and their subordinates' (accountant and employee) entries
+    - Accountant: Can approve entries from their subordinates (employees) only, not their own
+    """
     entry = expense_crud.get(db, id=expense_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Expense entry not found")
     
     if entry.is_approved:
         raise HTTPException(status_code=400, detail="Entry already approved")
+    
+    created_by_id = entry.created_by_id
+    
+    # Admin and Super Admin can approve all expense entries
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        pass  # Allow all entries
+    # Finance Admin/Manager can approve their own entries and their subordinates' entries
+    elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+        from ...crud.user import user as user_crud
+        # Get all subordinates (accountants and employees)
+        subordinates = user_crud.get_hierarchy(db, current_user.id)
+        subordinate_ids = [sub.id for sub in subordinates]
+        subordinate_ids.append(current_user.id)  # Include themselves
+        
+        if created_by_id not in subordinate_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only approve expense entries created by yourself or your subordinates (accountants and employees)"
+            )
+    # Accountant can only approve entries from their subordinates (employees), not their own
+    elif current_user.role == UserRole.ACCOUNTANT:
+        from ...crud.user import user as user_crud
+        # Get subordinates (employees only)
+        subordinates = user_crud.get_hierarchy(db, current_user.id)
+        subordinate_ids = [sub.id for sub in subordinates]
+        
+        # Accountant cannot approve their own entries
+        if created_by_id == current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Accountants cannot approve their own expense entries. Only entries from employees can be approved."
+            )
+        
+        # Check if entry was created by a subordinate (employee)
+        if created_by_id not in subordinate_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only approve expense entries created by your subordinates (employees)"
+            )
+    else:
+        # Other roles cannot approve expense entries
+        raise HTTPException(
+            status_code=403,
+            detail="Only accountants, finance admins, managers, or admins can approve expense entries"
+        )
     
     expense_crud.approve(db, id=expense_id, approved_by_id=current_user.id)
     return {"message": "Expense entry approved successfully"}

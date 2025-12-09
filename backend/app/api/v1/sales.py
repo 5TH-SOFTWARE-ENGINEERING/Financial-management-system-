@@ -124,8 +124,8 @@ def get_sales(
 ):
     """Get sales with role-based filtering:
     - Admin/Super Admin: See all sales
-    - Finance Admin/Manager: See only their team's sales (subordinates)
-    - Accountant: See only their own sales
+    - Finance Admin/Manager: See their own sales and their team's sales (subordinates)
+    - Accountant: See sales from their subordinates (employees) for approval purposes
     - Employee: See only their own sales
     """
     # Parse dates
@@ -150,8 +150,17 @@ def get_sales(
         # Employees can only see their own sales
         sold_by_id = current_user.id
     elif current_user.role == UserRole.ACCOUNTANT:
-        # Accountants can only see their own sales
-        sold_by_id = current_user.id
+        # Accountants can see sales from their subordinates (employees) for approval purposes
+        # This allows them to approve employee sales on the approvals page
+        from ...crud.user import user as user_crud
+        subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+        # Include subordinates (employees) only, not themselves
+        # Accountants need to see employee sales to approve them, but not their own
+        if subordinate_ids:
+            user_ids = subordinate_ids
+        else:
+            # If no subordinates, accountant sees nothing (can't approve anything)
+            user_ids = []
     elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
         # Finance Admin/Manager: See only their team's sales (subordinates)
         from ...crud.user import user as user_crud
@@ -161,19 +170,23 @@ def get_sales(
     
     # If user_ids is set, we need to filter by multiple user IDs
     # Fetch all matching sales and filter by user_ids in Python
-    if user_ids:
-        # Fetch all sales matching the filters (without sold_by_id restriction)
-        all_sales = sale_crud.get_multi(
-            db, skip=0, limit=10000, status=status,
-            sold_by_id=None, item_id=item_id,
-            start_date=start_date_dt, end_date=end_date_dt
-        )
-        # Filter by user_ids (subordinates + finance admin themselves)
-        sales = [s for s in all_sales if s.sold_by_id in user_ids]
-        # Apply pagination
-        sales = sales[skip:skip+limit]
+    if user_ids is not None:
+        # For accountants with no subordinates, return empty list
+        if len(user_ids) == 0:
+            sales = []
+        else:
+            # Fetch all sales matching the filters (without sold_by_id restriction)
+            all_sales = sale_crud.get_multi(
+                db, skip=0, limit=10000, status=status,
+                sold_by_id=None, item_id=item_id,
+                start_date=start_date_dt, end_date=end_date_dt
+            )
+            # Filter by user_ids (subordinates for accountants, subordinates + themselves for finance admins)
+            sales = [s for s in all_sales if s.sold_by_id in user_ids]
+            # Apply pagination
+            sales = sales[skip:skip+limit]
     else:
-        # For single user (Employee, Accountant) or Admin (no filter)
+        # For single user (Employee) or Admin (no filter)
         sales = sale_crud.get_multi(
             db, skip=skip, limit=limit, status=status,
             sold_by_id=sold_by_id, item_id=item_id,
