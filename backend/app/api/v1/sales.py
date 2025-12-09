@@ -136,76 +136,85 @@ def get_sales(
     - Accountant: See sales from their subordinates (employees) for approval purposes
     - Employee: See only their own sales
     """
-    # Parse dates
-    start_date_dt = None
-    end_date_dt = None
-    if start_date:
-        try:
-            start_date_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid start_date format. Use ISO format.")
-    if end_date:
-        try:
-            end_date_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid end_date format. Use ISO format.")
-    
-    # Filter by user role
-    sold_by_id = None
-    user_ids = None
-    
-    if current_user.role == UserRole.EMPLOYEE:
-        # Employees can only see their own sales
-        sold_by_id = current_user.id
-    elif current_user.role == UserRole.ACCOUNTANT:
-        # Accountants can see ALL sales from Finance Admin and Employee for revenue posting
-        # They need to see all sales transactions to record revenue properly
-        # Filter to show sales from Finance Admin, Manager, and Employee roles only
-        from ...crud.user import user as user_crud
-        # Get all users with Finance Admin, Manager, or Employee roles
-        finance_admins = db.query(User).filter(
-            User.role.in_([UserRole.FINANCE_ADMIN, UserRole.MANAGER])
-        ).all()
-        employees = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()
+    try:
+        # Parse dates
+        start_date_dt = None
+        end_date_dt = None
+        if start_date:
+            try:
+                start_date_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use ISO format.")
+        if end_date:
+            try:
+                end_date_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use ISO format.")
         
-        # Combine all user IDs that accountants should see sales from
-        user_ids = [u.id for u in finance_admins] + [u.id for u in employees]
+        # Filter by user role
+        sold_by_id = None
+        user_ids = None
         
-        # If no users found, return empty list (no sales to show)
-        # Don't set to None - we want to filter, not show all
-    elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
-        # Finance Admin/Manager: See only their team's sales (subordinates)
-        from ...crud.user import user as user_crud
-        subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-        subordinate_ids.append(current_user.id)  # Include themselves
-        user_ids = subordinate_ids
-    
-    # If user_ids is set, we need to filter by multiple user IDs
-    # Fetch all matching sales and filter by user_ids in Python
-    if user_ids is not None:
-        # For accountants with no subordinates, return empty list
-        if len(user_ids) == 0:
-            sales = []
+        if current_user.role == UserRole.EMPLOYEE:
+            # Employees can only see their own sales
+            sold_by_id = current_user.id
+        elif current_user.role == UserRole.ACCOUNTANT:
+            # Accountants can see ALL sales from Finance Admin and Employee for revenue posting
+            # They need to see all sales transactions to record revenue properly
+            # Filter to show sales from Finance Admin, Manager, and Employee roles only
+            from ...crud.user import user as user_crud
+            # Get all users with Finance Admin, Manager, or Employee roles
+            finance_admins = db.query(User).filter(
+                User.role.in_([UserRole.FINANCE_ADMIN, UserRole.MANAGER])
+            ).all()
+            employees = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()
+            
+            # Combine all user IDs that accountants should see sales from
+            user_ids = [u.id for u in finance_admins] + [u.id for u in employees]
+            
+            # If no users found, return empty list (no sales to show)
+            # Don't set to None - we want to filter, not show all
+        elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            # Finance Admin/Manager: See only their team's sales (subordinates)
+            from ...crud.user import user as user_crud
+            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+            subordinate_ids.append(current_user.id)  # Include themselves
+            user_ids = subordinate_ids
+        
+        # If user_ids is set, we need to filter by multiple user IDs
+        # Fetch all matching sales and filter by user_ids in Python
+        if user_ids is not None:
+            # For accountants with no subordinates, return empty list
+            if len(user_ids) == 0:
+                sales = []
+            else:
+                # Fetch all sales matching the filters (without sold_by_id restriction)
+                all_sales = sale_crud.get_multi(
+                    db, skip=0, limit=10000, status=status,
+                    sold_by_id=None, item_id=item_id,
+                    start_date=start_date_dt, end_date=end_date_dt
+                )
+                # Filter by user_ids (subordinates for accountants, subordinates + themselves for finance admins)
+                sales = [s for s in all_sales if s.sold_by_id in user_ids]
+                # Apply pagination
+                sales = sales[skip:skip+limit]
         else:
-            # Fetch all sales matching the filters (without sold_by_id restriction)
-            all_sales = sale_crud.get_multi(
-                db, skip=0, limit=10000, status=status,
-                sold_by_id=None, item_id=item_id,
+            # For single user (Employee) or Admin (no filter)
+            sales = sale_crud.get_multi(
+                db, skip=skip, limit=limit, status=status,
+                sold_by_id=sold_by_id, item_id=item_id,
                 start_date=start_date_dt, end_date=end_date_dt
             )
-            # Filter by user_ids (subordinates for accountants, subordinates + themselves for finance admins)
-            sales = [s for s in all_sales if s.sold_by_id in user_ids]
-            # Apply pagination
-            sales = sales[skip:skip+limit]
-    else:
-        # For single user (Employee) or Admin (no filter)
-        sales = sale_crud.get_multi(
-            db, skip=skip, limit=limit, status=status,
-            sold_by_id=sold_by_id, item_id=item_id,
-            start_date=start_date_dt, end_date=end_date_dt
+        
+        return [_format_sale_output(s, current_user) for s in sales]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in get_sales for user {current_user.id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch sales: {str(e)}"
         )
-    
-    return [_format_sale_output(s, current_user) for s in sales]
 
 
 @router.get("/{sale_id}", response_model=SaleOut)
