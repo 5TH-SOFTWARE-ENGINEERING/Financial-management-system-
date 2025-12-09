@@ -705,7 +705,6 @@ const BudgetItemsListPage: React.FC = () => {
                                 onClick={() => router.push(`/budgets/edititems/${item.id}?budget_id=${budgetIdParam}`)}
                               >
                                 <Edit size={14} />
-                                Edit
                               </Button>
                               <Button
                                 variant="outline"
@@ -714,7 +713,6 @@ const BudgetItemsListPage: React.FC = () => {
                                 style={{ color: '#ef4444', borderColor: '#ef4444' }}
                               >
                                 <Trash2 size={14} />
-                                Delete
                               </Button>
                             </div>
                           </td>
