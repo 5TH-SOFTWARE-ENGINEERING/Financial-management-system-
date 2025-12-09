@@ -503,7 +503,7 @@ export default function DepartmentListPage() {
                           <ActionButtons>
                             <Link href={`/department/edit/${dept.id}`}>
                               <Button size="sm" variant="secondary">
-                                <Edit className="h-4 w-4 mr-1" />
+                                <Edit size={14} className="h-4 w-4 mr-1" />
                               </Button>
                             </Link>
                             <Button 
@@ -514,10 +514,10 @@ export default function DepartmentListPage() {
                             >
                               {deleting && departmentToDelete?.id === dept.id ? (
                                 <>
-                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  <Loader2  className="h-4 w-4 mr-1 animate-spin" />
                                 </>
                               ) : (
-                                <Trash2 className="h-4 w-4 mr-1" />
+                                <Trash2 size={14} className="h-4 w-4 mr-1" />
                               )}
                             </Button>
                           </ActionButtons>
