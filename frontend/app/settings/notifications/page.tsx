@@ -6,6 +6,7 @@ import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { Save, Mail, MessageSquare, Bell, BellRing, PhoneCall, BellOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import apiClient from '@/lib/api';
 
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
@@ -302,28 +303,60 @@ export default function NotificationsSettingsPage() {
     endTime: '08:00'
   });
   
-  // Load settings from localStorage on mount
+  // Load settings from backend API and localStorage on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    const loadSettings = async () => {
+      if (!user) return;
+      
       try {
-        const stored = localStorage.getItem('user_notification_settings');
-        if (stored) {
-          const settings = JSON.parse(stored);
-          if (settings.notificationPreferences) {
-            setNotificationPreferences(settings.notificationPreferences);
+        // Try to load from backend first
+        const response = await apiClient.getNotificationPreferences();
+        if (response.data) {
+          const prefs = response.data;
+          if (prefs.notificationPreferences) {
+            setNotificationPreferences(prefs.notificationPreferences);
           }
-          if (settings.doNotDisturb !== undefined) {
-            setDoNotDisturb(settings.doNotDisturb);
+          if (prefs.doNotDisturb !== undefined) {
+            setDoNotDisturb(prefs.doNotDisturb);
           }
-          if (settings.quietHours) {
-            setQuietHours(settings.quietHours);
+          if (prefs.quietHours) {
+            setQuietHours(prefs.quietHours);
           }
+          
+          // Also save to localStorage for offline access
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('user_notification_settings', JSON.stringify(prefs));
+          }
+          return;
         }
-      } catch (error) {
-        console.error('Failed to load notification settings:', error);
+      } catch (apiError) {
+        console.log('Failed to load from backend, trying localStorage:', apiError);
       }
-    }
-  }, []);
+      
+      // Fallback to localStorage if backend fails
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('user_notification_settings');
+          if (stored) {
+            const settings = JSON.parse(stored);
+            if (settings.notificationPreferences) {
+              setNotificationPreferences(settings.notificationPreferences);
+            }
+            if (settings.doNotDisturb !== undefined) {
+              setDoNotDisturb(settings.doNotDisturb);
+            }
+            if (settings.quietHours) {
+              setQuietHours(settings.quietHours);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load notification settings:', error);
+        }
+      }
+    };
+    
+    loadSettings();
+  }, [user]);
   
   // Initialize notification preferences for each type and channel
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationSettings>({
@@ -401,27 +434,32 @@ export default function NotificationsSettingsPage() {
     setSuccess(null);
     
     try {
-      // Save to localStorage (client-side preferences)
-      if (typeof window !== 'undefined') {
-        const settings = {
-          notificationPreferences,
-          doNotDisturb,
-          quietHours,
-          lastUpdated: new Date().toISOString()
-        };
-        localStorage.setItem('user_notification_settings', JSON.stringify(settings));
-        
-        // Also try to save to backend if API is available
-        try {
-          // TODO: Add API endpoint for saving notification preferences
-          // await apiClient.updateNotificationPreferences(settings);
-        } catch (apiError) {
-          // Silently fail if backend is not available
-          console.log('Backend API not available, settings saved locally');
+      const settings = {
+        notificationPreferences,
+        doNotDisturb,
+        quietHours,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      // Save to backend API
+      try {
+        await apiClient.updateNotificationPreferences(settings);
+        // Also save to localStorage for offline access
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user_notification_settings', JSON.stringify(settings));
         }
+        setSuccess('Notification settings saved successfully');
+      } catch (apiError: any) {
+        // If backend fails, still save to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user_notification_settings', JSON.stringify(settings));
+        }
+        
+        const errorMessage = apiError.response?.data?.detail || apiError.message || 'Failed to save to server';
+        console.error('Failed to save to backend:', errorMessage);
+        setSuccess('Settings saved locally, but failed to sync with server. Please try again.');
       }
       
-      setSuccess('Notification settings saved successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Failed to save notification settings:', error);

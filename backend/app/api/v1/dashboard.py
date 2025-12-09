@@ -29,9 +29,9 @@ def get_dashboard_overview(
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=30)
         
-        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT]:
-            # Full overview for admins and accountants
-            # Accountants need to see all financial data for their accounting duties
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            # Full overview for admins only
+            # Accountants should only see their own data (handled in else block)
             try:
                 total_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
             except Exception as e:
@@ -211,8 +211,57 @@ def get_dashboard_overview(
                 }
             }
     
+        elif current_user.role == UserRole.ACCOUNTANT:
+            # Accountant overview - only their own data (not all data)
+            try:
+                user_revenue = revenue_crud.get_by_user(db, current_user.id, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching accountant revenue entries: {str(e)}")
+                user_revenue = []
+            
+            try:
+                user_expenses = expense_crud.get_by_user(db, current_user.id, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching accountant expense entries: {str(e)}")
+                user_expenses = []
+            
+            # Filter by date range
+            user_revenue_period = [r for r in user_revenue if start_date <= r.date <= end_date]
+            user_expenses_period = [e for e in user_expenses if start_date <= e.date <= end_date]
+            
+            total_revenue = sum(float(r.amount) for r in user_revenue_period)
+            total_expenses = sum(float(e.amount) for e in user_expenses_period)
+            profit = total_revenue - total_expenses
+            
+            # Get their pending approvals
+            try:
+                user_pending = approval_crud.get_by_requester(db, current_user.id)
+                pending_count = len([p for p in user_pending if p.status.value == "pending"])
+            except Exception as e:
+                logger.error(f"Error fetching accountant pending approvals: {str(e)}")
+                pending_count = 0
+            
+            return {
+                "period": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "days": 30
+                },
+                "financials": {
+                    "total_revenue": total_revenue,
+                    "total_expenses": total_expenses,
+                    "profit": profit,
+                    "profit_margin": (profit / total_revenue * 100) if total_revenue > 0 else 0
+                },
+                "personal_stats": {
+                    "revenue_entries": len(user_revenue_period),
+                    "expense_entries": len(user_expenses_period),
+                    "pending_approvals": pending_count
+                }
+            }
+        
         else:
-            # Regular user overview - only their own data
+            # Regular user/Employee overview - only their own data
             try:
                 user_revenue = revenue_crud.get_by_user(db, current_user.id, 0, 1000)
             except Exception as e:
@@ -350,8 +399,9 @@ def get_recent_activity(
     try:
         activities = []
         
-        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT]:
-            # Admins and Accountants can see all activities
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            # Admins can see all activities
+            # Accountants should only see their own activities (handled in else block)
             # Get recent revenue entries from all users (sorted by created_at desc)
             try:
                 all_revenue = revenue_crud.get_multi(db, 0, limit * 3)

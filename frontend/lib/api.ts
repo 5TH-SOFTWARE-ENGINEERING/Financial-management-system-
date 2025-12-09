@@ -846,6 +846,14 @@ class ApiClient {
     return this.get('/notifications/unread/count');
   }
 
+  async getNotificationPreferences(): Promise<ApiResponse<any>> {
+    return this.get('/notifications/preferences');
+  }
+
+  async updateNotificationPreferences(preferences: any): Promise<ApiResponse<any>> {
+    return this.put('/notifications/preferences', preferences);
+  }
+
   // Admin endpoints
   async getAdminSystemStats(): Promise<ApiResponse<any>> {
     return this.get('/admin/system/stats');

@@ -37,3 +37,26 @@ class NotificationOut(NotificationBase):
 
     class Config:
         from_attributes = True
+
+
+# Notification Preferences Schemas
+class QuietHours(BaseModel):
+    enabled: bool = False
+    startTime: str = "22:00"
+    endTime: str = "08:00"
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    notificationPreferences: Optional[dict] = None  # {notificationType: {channel: bool}}
+    doNotDisturb: Optional[bool] = None
+    quietHours: Optional[QuietHours] = None
+
+
+class NotificationPreferencesOut(BaseModel):
+    notificationPreferences: dict
+    doNotDisturb: bool = False
+    quietHours: QuietHours = QuietHours()
+    lastUpdated: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
