@@ -16,7 +16,6 @@ import {
   TableCell 
 } from '@/components/ui/table';
 import apiClient from '@/lib/api';
-import { useUserStore } from '@/store/userStore';
 import { useAuth } from '@/lib/rbac/auth-context';
 
 // Styled components
@@ -96,8 +95,66 @@ const ButtonGroup = styled.div`
   display: flex;
   gap: ${theme.spacing.md};
   margin-top: ${theme.spacing.xl};
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
   flex-wrap: wrap;
+`;
+
+const ConfirmOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: ${theme.spacing.lg};
+  z-index: 50;
+`;
+
+const ConfirmDialog = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.lg};
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  padding: ${theme.spacing.xl};
+  max-width: 720px;
+  width: 100%;
+  border: 1px solid ${theme.colors.border};
+`;
+
+const ConfirmTitle = styled.h3`
+  margin: 0 0 ${theme.spacing.md};
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+`;
+
+const ConfirmBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.md};
+  max-height: 60vh;
+  overflow-y: auto;
+`;
+
+const ConfirmFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: ${theme.spacing.md};
+  margin-top: ${theme.spacing.lg};
+  flex-wrap: wrap;
+`;
+
+const PermissionChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  background: ${PRIMARY_COLOR}10;
+  color: ${TEXT_COLOR_DARK};
+  font-size: ${theme.typography.fontSizes.xs};
+  border: 1px solid ${PRIMARY_COLOR}30;
 `;
 
 const SelectionCard = styled.div`
@@ -349,6 +406,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmUser, setConfirmUser] = useState<UserPermissions | null>(null);
   
   // Map backend role to frontend UserType
   const mapRoleToUserType = (role: string): UserType => {
@@ -607,7 +666,17 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     );
   };
 
-  const handleSavePermissions = async () => {
+  const handleSaveClick = () => {
+    if (!selectedUser) return;
+    const selectedUserData = userPermissions.find(u => u.userId === selectedUser);
+    if (!selectedUserData) return;
+    setConfirmUser(selectedUserData);
+    setShowConfirm(true);
+    setError(null);
+    setSuccess(null);
+  };
+
+  const executeSavePermissions = async () => {
     if (!selectedUser) return;
     
     setLoading(true);
@@ -620,7 +689,6 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
         throw new Error('Selected user not found');
       }
       
-      // Save permissions to backend API
       const userId = parseInt(selectedUser, 10);
       if (isNaN(userId)) {
         throw new Error('Invalid user ID');
@@ -630,6 +698,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
       
       setSuccess('Permissions saved successfully!');
       setTimeout(() => setSuccess(null), 3000);
+      setShowConfirm(false);
+      setConfirmUser(null);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to save permissions';
       setError(errorMessage);
@@ -1035,7 +1105,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
               Cancel
             </Button>
             <Button 
-              onClick={handleSavePermissions} 
+              onClick={handleSaveClick} 
               disabled={loading || !selectedUser}
             >
               {loading ? (
@@ -1052,6 +1122,65 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             </Button>
           </ButtonGroup>
         </Card>
+      )}
+      
+      {showConfirm && confirmUser && (
+        <ConfirmOverlay>
+          <ConfirmDialog>
+            <ConfirmTitle>Review permissions before saving</ConfirmTitle>
+            <ConfirmBody>
+              <div>
+                <strong>User:</strong> {confirmUser.userName} ({confirmUser.email})
+              </div>
+              <div>
+                <strong>User Type:</strong> {confirmUser.userType.replace(/_/g, ' ')}
+              </div>
+              <div>
+                <strong>Status:</strong> {confirmUser.isActive ? 'Active' : 'Inactive'}
+              </div>
+              <div>
+                <strong>Permissions preview:</strong>
+                <div style={{ marginTop: theme.spacing.sm, display: 'flex', flexDirection: 'column', gap: theme.spacing.xs }}>
+                  {confirmUser.permissions.map((perm) => {
+                    const enabledActions = Object.entries(perm.actions || {})
+                      .filter(([, value]) => value === true)
+                      .map(([action]) => action.toLowerCase());
+                    return (
+                      <PermissionChip key={perm.resource}>
+                        {perm.resource.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}: {enabledActions.length > 0 ? enabledActions.join(', ') : 'No actions'}
+                      </PermissionChip>
+                    );
+                  })}
+                </div>
+              </div>
+            </ConfirmBody>
+            <ConfirmFooter>
+              <Button 
+                variant="secondary"
+                onClick={() => {
+                  setShowConfirm(false);
+                  setConfirmUser(null);
+                }}
+                disabled={loading}
+              >
+                Back
+              </Button>
+              <Button onClick={executeSavePermissions} disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" style={{ marginRight: theme.spacing.sm }} />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Confirm & Save
+                  </>
+                )}
+              </Button>
+            </ConfirmFooter>
+          </ConfirmDialog>
+        </ConfirmOverlay>
       )}
     </Container>
   );
