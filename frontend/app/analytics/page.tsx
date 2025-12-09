@@ -1031,7 +1031,7 @@ const AnalyticsPage: React.FC = () => {
 
                 <KPICard>
                   <KPILabel>Total Expenses</KPILabel>
-                  <KPIValue>
+                  <KPIValue style={{ color: '#ef4444' }}>
                     {formatCurrency(analyticsData.kpis?.current_period?.expenses || 0)}
                   </KPIValue>
                   {analyticsData.kpis?.growth?.expense_growth_percent !== undefined && (
