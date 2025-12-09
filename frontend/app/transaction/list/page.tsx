@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { theme } from '@/components/common/theme';
+import { useAuth } from '@/lib/rbac/auth-context';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -435,38 +436,84 @@ interface Transaction {
   sku?: string;
   buying_price?: number;
   total_cost?: number;
+  created_by_id?: number;
+  sold_by_id?: number;
 }
 
 export default function TransactionListPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
 
   useEffect(() => {
-    loadTransactions();
-  }, []);
+    if (user) {
+      loadTransactions();
+    }
+  }, [user]);
 
   const loadTransactions = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
     try {
+      const userRole = user?.role?.toLowerCase();
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
+      const isAccountant = userRole === 'accountant';
+      const isEmployee = userRole === 'employee';
+
+      // Get accessible user IDs for Finance Admin (themselves + subordinates)
+      let userIds: number[] | null = null;
+      if (isFinanceAdmin && user?.id) {
+        try {
+          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+          const subordinatesRes = await apiClient.getSubordinates(userId);
+          const subordinates = subordinatesRes?.data || [];
+          userIds = [userId, ...subordinates.map((sub: any) => {
+            const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+            return subId;
+          })];
+          setAccessibleUserIds(userIds);
+        } catch (err) {
+          console.warn('Failed to fetch subordinates, using only finance admin ID:', err);
+          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+          userIds = [userId];
+          setAccessibleUserIds(userIds);
+        }
+      } else if ((isAccountant || isEmployee) && user?.id) {
+        // Accountant and Employee can only see their own
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        userIds = [userId];
+        setAccessibleUserIds(userIds);
+      } else {
+        // Admin can see all - no filtering needed
+        setAccessibleUserIds(null);
+      }
+
       // Fetch revenues, expenses, sales, and inventory items
+      // Backend should already filter for most roles, but we'll apply additional filtering for Finance Admin
       const [transactionsResponse, salesResponse, inventoryResponse] = await Promise.all([
         apiClient.getTransactions().catch(() => ({ data: [] })),
         apiClient.getSales({ limit: 1000 }).catch(() => ({ data: [] })),
         apiClient.getInventoryItems({ limit: 1000 }).catch(() => ({ data: [] })),
       ]);
 
-      const transactions = transactionsResponse.data || [];
+      let transactions = transactionsResponse.data || [];
       
       // Transform sales to transaction format
       const salesData: any = salesResponse?.data || [];
-      const salesTransactions = (Array.isArray(salesData) ? salesData : (salesData?.data || [])).map((sale: any) => ({
+      let salesTransactions = (Array.isArray(salesData) ? salesData : (salesData?.data || [])).map((sale: any) => ({
         id: `sale-${sale.id}`,
         transaction_type: 'sale' as const,
         title: sale.item_name || `Sale #${sale.id}`,
@@ -481,11 +528,13 @@ export default function TransactionListPage() {
         quantity_sold: sale.quantity_sold,
         receipt_number: sale.receipt_number,
         customer_name: sale.customer_name,
+        sold_by_id: sale.sold_by_id || sale.soldBy || sale.sold_by,
+        created_by_id: sale.created_by_id || sale.createdBy || sale.created_by,
       }));
 
       // Transform inventory items to transaction format (treating creation as expense)
       const inventoryData: any = inventoryResponse?.data || [];
-      const inventoryTransactions = (Array.isArray(inventoryData) ? inventoryData : (inventoryData?.data || [])).map((item: any) => {
+      let inventoryTransactions = (Array.isArray(inventoryData) ? inventoryData : (inventoryData?.data || [])).map((item: any) => {
         // Calculate total cost for the initial quantity
         const totalCost = (item.total_cost || item.buying_price || 0) * (item.quantity || 0);
         return {
@@ -504,8 +553,64 @@ export default function TransactionListPage() {
           sku: item.sku,
           buying_price: item.buying_price,
           total_cost: item.total_cost,
+          created_by_id: item.created_by_id || item.createdBy || item.created_by,
         };
       });
+
+      // Apply role-based filtering for Finance Admin
+      // Note: Backend should filter for Admin, Accountant, and Employee, but Finance Admin
+      // may see all data from backend, so we filter on frontend for Finance Admin
+      if (isFinanceAdmin && userIds && userIds.length > 0) {
+        // Filter transactions by accessible user IDs
+        transactions = transactions.filter((t: any) => {
+          const createdById = t.created_by_id || t.createdBy || t.created_by;
+          if (!createdById) return false;
+          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
+          return userIds.includes(createdByIdNum);
+        });
+
+        // Filter sales by accessible user IDs
+        salesTransactions = salesTransactions.filter((s: any) => {
+          const soldById = s.sold_by_id || s.created_by_id;
+          if (!soldById) return false;
+          const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
+          return userIds.includes(soldByIdNum);
+        });
+
+        // Filter inventory by accessible user IDs
+        inventoryTransactions = inventoryTransactions.filter((i: any) => {
+          const createdById = i.created_by_id;
+          if (!createdById) return false;
+          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
+          return userIds.includes(createdByIdNum);
+        });
+      } else if (isAccountant || isEmployee) {
+        // Accountant and Employee should only see their own transactions
+        // Backend should already filter, but we apply additional filtering for safety
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        
+        transactions = transactions.filter((t: any) => {
+          const createdById = t.created_by_id || t.createdBy || t.created_by;
+          if (!createdById) return false;
+          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
+          return createdByIdNum === userId;
+        });
+
+        salesTransactions = salesTransactions.filter((s: any) => {
+          const soldById = s.sold_by_id || s.created_by_id;
+          if (!soldById) return false;
+          const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
+          return soldByIdNum === userId;
+        });
+
+        inventoryTransactions = inventoryTransactions.filter((i: any) => {
+          const createdById = i.created_by_id;
+          if (!createdById) return false;
+          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
+          return createdByIdNum === userId;
+        });
+      }
+      // Admin sees all - no filtering needed
 
       // Combine all transactions and sort by date
       const allTransactions = [...transactions, ...salesTransactions, ...inventoryTransactions].sort((a, b) => {
