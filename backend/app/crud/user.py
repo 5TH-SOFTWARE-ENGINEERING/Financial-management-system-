@@ -1,6 +1,6 @@
 # app/crud/user.py
 from typing import Optional, List
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore
 
 from ..models.user import User, UserRole
 from ..models.role import Role
