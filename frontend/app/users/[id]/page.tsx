@@ -178,7 +178,7 @@ const BadgeContainer = styled.div`
   flex-wrap: wrap;
 `;
 
-const Badge = styled.span<{ variant: 'admin' | 'manager' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
+const Badge = styled.span<{ $variant: 'admin' | 'manager' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
   padding: ${theme.spacing.xs} ${theme.spacing.md};
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.bold};
@@ -186,7 +186,7 @@ const Badge = styled.span<{ variant: 'admin' | 'manager' | 'accountant' | 'emplo
   display: inline-block;
 
   ${(p) => {
-    switch (p.variant) {
+    switch (p.$variant) {
       case 'admin':
         return 'background-color: #f3e8ff; color: #6b21a8;';
       case 'manager':
@@ -693,10 +693,10 @@ export default function UserDetailPage() {
                 <UserInfo>
                   <h3>{user.full_name}</h3>
                   <BadgeContainer>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
+                    <Badge $variant={getRoleBadgeVariant(user.role)}>
                       {getRoleDisplayName(user.role)}
                     </Badge>
-                    <Badge variant={user.is_active ? 'active' : 'inactive'}>
+                    <Badge $variant={user.is_active ? 'active' : 'inactive'}>
                       {user.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </BadgeContainer>
@@ -764,7 +764,7 @@ export default function UserDetailPage() {
                       {subordinates.map((sub) => (
                         <SubordinateItem key={sub.id}>
                           <SubordinateName>{sub.name}</SubordinateName>
-                          <Badge variant={getRoleBadgeVariant(sub.role)}>
+                          <Badge $variant={getRoleBadgeVariant(sub.role)}>
                             {getRoleDisplayName(sub.role)}
                           </Badge>
                         </SubordinateItem>
@@ -881,13 +881,13 @@ export default function UserDetailPage() {
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                   <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
-                  <Badge variant={getRoleBadgeVariant(user.role)}>
+                  <Badge $variant={getRoleBadgeVariant(user.role)}>
                     {getRoleDisplayName(user.role)}
                   </Badge>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                   <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
-                  <Badge variant={user.is_active ? 'active' : 'inactive'}>
+                  <Badge $variant={user.is_active ? 'active' : 'inactive'}>
                     {user.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>

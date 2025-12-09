@@ -482,14 +482,14 @@ const ModalActions = styled.div`
   margin-top: ${theme.spacing.xl};
 `;
 
-const Badge = styled.span<{ variant: 'success' | 'warning' | 'danger' | 'info' }>`
+const Badge = styled.span<{ $variant: 'success' | 'warning' | 'danger' | 'info' }>`
   display: inline-flex;
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
   font-size: ${theme.typography.fontSizes.xs};
   font-weight: ${theme.typography.fontWeights.bold};
   border-radius: 9999px;
   ${(p) => {
-    switch (p.variant) {
+    switch (p.$variant) {
       case 'success':
         return 'background-color: #dcfce7; color: #166534;';
       case 'warning':
@@ -1079,7 +1079,7 @@ export default function InventoryManagePage() {
                   </TableCell>
                   <TableCell>${Number(item.selling_price).toFixed(2)}</TableCell>
                   <TableCell>
-                    <Badge variant={item.quantity < 10 ? 'danger' : item.quantity < 50 ? 'warning' : 'success'}>
+                    <Badge $variant={item.quantity < 10 ? 'danger' : item.quantity < 50 ? 'warning' : 'success'}>
                       {item.quantity}
                     </Badge>
                   </TableCell>
@@ -1094,7 +1094,7 @@ export default function InventoryManagePage() {
                       : 'N/A'}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={item.is_active ? 'success' : 'danger'}>
+                    <Badge $variant={item.is_active ? 'success' : 'danger'}>
                       {item.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </TableCell>

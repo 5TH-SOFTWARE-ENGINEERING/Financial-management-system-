@@ -280,7 +280,7 @@ const UserName = styled.p`
   white-space: nowrap;
 `;
 
-const Badge = styled.span<{ variant: 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
+const Badge = styled.span<{ $variant: 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
   display: inline-flex;
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
   font-size: ${theme.typography.fontSizes.xs};
@@ -288,7 +288,7 @@ const Badge = styled.span<{ variant: 'admin' | 'finance_manager' | 'finance_admi
   border-radius: 9999px;
 
   ${(p) => {
-    switch (p.variant) {
+    switch (p.$variant) {
       case 'admin':
         return 'background-color: #f3e8ff; color: #6b21a8;';
       case 'finance_manager':
@@ -856,10 +856,10 @@ export default function UsersPage() {
                 <UserName>
                   {userItem.full_name || userItem.name || userItem.email}
                 </UserName>
-                <Badge variant={getRoleBadgeVariant(userRole)}>
+                <Badge $variant={getRoleBadgeVariant(userRole)}>
                   {getRoleDisplayName(userRole)}
                 </Badge>
-                <Badge variant={userItem.is_active !== false ? 'active' : 'inactive'}>
+                <Badge $variant={userItem.is_active !== false ? 'active' : 'inactive'}>
                   {userItem.is_active !== false ? 'Active' : 'Inactive'}
                 </Badge>
               </UserHeaderRow>
@@ -1261,13 +1261,13 @@ export default function UsersPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                       <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
-                      <Badge variant={getRoleBadgeVariant(userDetails.role || 'default')}>
+                      <Badge $variant={getRoleBadgeVariant(userDetails.role || 'default')}>
                         {getRoleDisplayName(userDetails.role || '')}
                       </Badge>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                       <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
-                      <Badge variant={userDetails.is_active !== false ? 'active' : 'inactive'}>
+                      <Badge $variant={userDetails.is_active !== false ? 'active' : 'inactive'}>
                         {userDetails.is_active !== false ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
@@ -1493,13 +1493,13 @@ export default function UsersPage() {
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                       <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
-                      <Badge variant={getRoleBadgeVariant(userDetails.role || 'default')}>
+                      <Badge $variant={getRoleBadgeVariant(userDetails.role || 'default')}>
                         {getRoleDisplayName(userDetails.role || '')}
                       </Badge>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                       <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
-                      <Badge variant={userDetails.is_active !== false ? 'active' : 'inactive'}>
+                      <Badge $variant={userDetails.is_active !== false ? 'active' : 'inactive'}>
                         {userDetails.is_active !== false ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>

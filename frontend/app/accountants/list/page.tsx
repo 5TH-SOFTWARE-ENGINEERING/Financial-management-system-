@@ -366,7 +366,7 @@ const ModalActions = styled.div`
   margin-top: ${theme.spacing.lg};
 `;
 
-const Badge = styled.span<{ variant: 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
+const Badge = styled.span<{ $variant: 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
   display: inline-flex;
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
   font-size: ${theme.typography.fontSizes.xs};
@@ -374,7 +374,7 @@ const Badge = styled.span<{ variant: 'admin' | 'finance_manager' | 'finance_admi
   border-radius: 9999px;
 
   ${(p) => {
-    switch (p.variant) {
+    switch (p.$variant) {
       case 'admin':
         return 'background-color: #f3e8ff; color: #6b21a8;';
       case 'finance_manager':
@@ -787,13 +787,13 @@ export default function AccountantListPage() {
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                   <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
-                  <Badge variant={getRoleBadgeVariant(accountantToDelete.role)}>
+                  <Badge $variant={getRoleBadgeVariant(accountantToDelete.role)}>
                     {getRoleDisplayName(accountantToDelete.role)}
                   </Badge>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                   <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
-                  <Badge variant={accountantToDelete.is_active ? 'active' : 'inactive'}>
+                  <Badge $variant={accountantToDelete.is_active ? 'active' : 'inactive'}>
                     {accountantToDelete.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
@@ -994,13 +994,13 @@ export default function AccountantListPage() {
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                   <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
-                  <Badge variant={getRoleBadgeVariant(accountantToDeactivate.role)}>
+                  <Badge $variant={getRoleBadgeVariant(accountantToDeactivate.role)}>
                     {getRoleDisplayName(accountantToDeactivate.role)}
                   </Badge>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                   <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
-                  <Badge variant={accountantToDeactivate.is_active ? 'active' : 'inactive'}>
+                  <Badge $variant={accountantToDeactivate.is_active ? 'active' : 'inactive'}>
                     {accountantToDeactivate.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>

@@ -168,14 +168,14 @@ const TableCell = styled.td`
   color: ${TEXT_COLOR_DARK};
 `;
 
-const Badge = styled.span<{ variant: 'success' | 'warning' | 'info' }>`
+const Badge = styled.span<{ $variant: 'success' | 'warning' | 'info' }>`
   display: inline-flex;
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
   font-size: ${theme.typography.fontSizes.xs};
   font-weight: ${theme.typography.fontWeights.bold};
   border-radius: 9999px;
   ${(p) => {
-    switch (p.variant) {
+    switch (p.$variant) {
       case 'success':
         return 'background-color: #dcfce7; color: #166534;';
       case 'warning':
@@ -805,7 +805,7 @@ export default function AccountingDashboard() {
                         <TableCell style={{ fontWeight: 'bold' }}>${Number(sale.total_sale).toFixed(2)}</TableCell>
                         <TableCell>{sale.customer_name || '-'}</TableCell>
                         <TableCell>
-                          <Badge variant={sale.status === 'posted' ? 'success' : 'warning'}>
+                          <Badge $variant={sale.status === 'posted' ? 'success' : 'warning'}>
                             {sale.status}
                           </Badge>
                         </TableCell>
@@ -834,12 +834,12 @@ export default function AccountingDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg }}>
               <h2 style={{ margin: 0 }}>Journal Entries</h2>
               {(userRole === 'admin' || userRole === 'super_admin') && (
-                <Badge variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
+                <Badge $variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
                   Viewing all entries
                 </Badge>
               )}
               {(userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager') && (
-                <Badge variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
+                <Badge $variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
                   Viewing team entries
                 </Badge>
               )}
