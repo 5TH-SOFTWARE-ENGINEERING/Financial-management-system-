@@ -411,13 +411,13 @@ def read_user_subordinates(
 
     is_self = current_user.id == user_id
     is_admin = current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
-    # Allow accountants to get their manager's (Finance Admin's) subordinates
-    is_accountant_viewing_manager = (
-        current_user.role == UserRole.ACCOUNTANT and 
+    # Allow accountants and employees to get their manager's (Finance Admin's) subordinates
+    is_subordinate_viewing_manager = (
+        current_user.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE] and 
         current_user.manager_id == user_id
     )
 
-    if not (is_self or is_admin or is_accountant_viewing_manager):
+    if not (is_self or is_admin or is_subordinate_viewing_manager):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     return user_crud.get_subordinates(db, user_id)
