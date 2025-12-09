@@ -213,10 +213,15 @@ const CardTitle = styled.h3`
   font-weight: ${theme.typography.fontWeights.medium};
 `;
 
-const CardValue = styled.div<{ $isNegative?: boolean }>`
+const CardValue = styled.div<{ $isNegative?: boolean; $isPositive?: boolean; $isPending?: boolean }>`
   font-size: clamp(28px, 3vw, 36px);
   font-weight: ${theme.typography.fontWeights.bold};
-  color: ${props => props.$isNegative ? '#ef4444' : TEXT_COLOR_DARK};
+  color: ${props => {
+    if (props.$isPending) return '#f59e0b'; // Yellow/Amber for pending
+    if (props.$isNegative) return '#ef4444'; // Red for expenses/negative
+    if (props.$isPositive) return '#059669'; // Green for revenue/profit
+    return TEXT_COLOR_DARK;
+  }};
   line-height: 1.1;
   transition: color ${theme.transitions.default};
   display: flex;
@@ -1001,7 +1006,9 @@ const AdminDashboard: React.FC = () => {
     onClick?: () => void,
     growth?: number,
     growthLabel?: string,
-    isNegative?: boolean
+    isNegative?: boolean,
+    isPositive?: boolean,
+    isPending?: boolean
   ) => (
     <StatsCard 
       $IconComponent={Icon} 
@@ -1010,7 +1017,7 @@ const AdminDashboard: React.FC = () => {
     >
       <CardIcon $IconComponent={Icon}><Icon /></CardIcon> 
       <CardTitle>{title}</CardTitle>
-      <CardValue $isNegative={isNegative}>
+      <CardValue $isNegative={isNegative} $isPositive={isPositive} $isPending={isPending}>
         {value}
         {clickable && <ClickableIndicator />}
       </CardValue>
@@ -1061,7 +1068,10 @@ const AdminDashboard: React.FC = () => {
                   `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                   false,
                   undefined,
-                  analyticsData?.growth?.revenue_growth_percent
+                  analyticsData?.growth?.revenue_growth_percent,
+                  undefined,
+                  false,
+                  true
                 )}
                 {createStatsCard(
                   CreditCard, 
@@ -1083,7 +1093,8 @@ const AdminDashboard: React.FC = () => {
                   undefined,
                   analyticsData?.growth?.profit_growth_percent,
                   undefined,
-                  netProfit < 0
+                  netProfit < 0,
+                  netProfit >= 0
                 )}
                 {/* Only show Pending Approvals card if user has approval permissions */}
                 {(user?.role === 'admin' || 
@@ -1097,7 +1108,12 @@ const AdminDashboard: React.FC = () => {
                     'Pending Approvals', 
                     pendingApprovals.toString(),
                     true,
-                    handlePendingApprovalsClick
+                    handlePendingApprovalsClick,
+                    undefined,
+                    undefined,
+                    false,
+                    false,
+                    true
                   )}
               </DashboardGrid>
               
