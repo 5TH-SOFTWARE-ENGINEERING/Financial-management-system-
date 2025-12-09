@@ -491,6 +491,7 @@ const AdminDashboard: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<any | null>(null);
   const [inventorySummary, setInventorySummary] = useState<any | null>(null);
   const [salesSummary, setSalesSummary] = useState<any | null>(null);
+  const [pendingSalesCount, setPendingSalesCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -514,6 +515,7 @@ const AdminDashboard: React.FC = () => {
     const loadDashboard = async () => {
       setLoading(true);
       setError(null);
+      setPendingSalesCount(0);
       try {
         // Load role-specific data
         // Backend already filters data by role:
@@ -572,34 +574,36 @@ const AdminDashboard: React.FC = () => {
         const overviewData = overviewRes.data || {};
         setOverview(overviewData);
         
-        // Get accessible user IDs for finance admins (themselves + subordinates)
-        // Finance admins should only see approvals/activities from themselves and their subordinates
+        // Get accessible user IDs for finance admins and accountants (themselves + subordinates)
+        // Finance admins and accountants should only see approvals/activities from themselves and their subordinates
         let accessibleUserIds: number[] = [];
         const isFinanceAdminRole = userRole === 'finance_admin' || userRole === 'finance_manager';
+        const isAccountantRole = userRole === 'accountant';
         
-        if (isFinanceAdminRole && user?.id) {
+        if ((isFinanceAdminRole || isAccountantRole) && user?.id) {
           try {
-            // Get subordinates - backend already filters to return only accountants and employees under this finance admin
-            const financeAdminId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-            const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
+            // Get subordinates - backend already filters to return only accountants and employees under finance admin
+            // For accountants, backend returns only employees under this accountant
+            const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+            const subordinatesRes = await apiClient.getSubordinates(userId);
             const subordinates = subordinatesRes?.data || [];
-            // Include the finance admin themselves
-            accessibleUserIds = [financeAdminId, ...subordinates.map((sub: any) => {
+            // Include the user themselves
+            accessibleUserIds = [userId, ...subordinates.map((sub: any) => {
               const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
               return subId;
             })];
             
             if (process.env.NODE_ENV === 'development') {
-              console.log('Finance Admin - Accessible User IDs:', {
-                financeAdminId: financeAdminId,
+              console.log(`${isAccountantRole ? 'Accountant' : 'Finance Admin'} - Accessible User IDs:`, {
+                userId: userId,
                 subordinatesCount: subordinates.length,
                 accessibleUserIds: accessibleUserIds
               });
             }
           } catch (err) {
-            console.warn('Failed to fetch subordinates, using only finance admin ID:', err);
-            const financeAdminId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-            accessibleUserIds = [financeAdminId];
+            console.warn(`Failed to fetch subordinates, using only ${isAccountantRole ? 'accountant' : 'finance admin'} ID:`, err);
+            const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+            accessibleUserIds = [userId];
           }
         } else if (user?.id) {
           // For other roles, they can only see their own data
@@ -621,13 +625,13 @@ const AdminDashboard: React.FC = () => {
           const workflowsRes = await apiClient.getApprovals();
           const workflows = workflowsRes?.data || [];
           
-          // Count pending workflows - filter by requester_id for finance admins
+          // Count pending workflows - filter by requester_id for finance admins and accountants
           const pendingWorkflows = workflows.filter((w: any) => {
             const status = w.status?.value || w.status || 'pending';
             const isPending = status.toString().toLowerCase() === 'pending';
             
-            // For finance admins, only count workflows they requested or from their subordinates
-            if (isPending && isFinanceAdminRole && accessibleUserIds.length > 0) {
+            // For finance admins and accountants, only count workflows they requested or from their subordinates
+            if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
               const requesterId = typeof (w.requester_id || w.requesterId) === 'string' 
                 ? parseInt(w.requester_id || w.requesterId, 10) 
                 : (w.requester_id || w.requesterId);
@@ -655,15 +659,15 @@ const AdminDashboard: React.FC = () => {
           debugInfo.expenseIdsWithWorkflow = expenseIdsWithWorkflow.size;
 
           // Fetch pending revenue entries - only count those WITHOUT workflows
-          // For finance admins, only count revenues created by themselves or their subordinates
+          // For finance admins and accountants, only count revenues created by themselves or their subordinates
           const revenuesRes = await apiClient.getRevenues({ is_approved: false });
           if (revenuesRes?.data && Array.isArray(revenuesRes.data)) {
             const pendingRevenues = revenuesRes.data.filter((r: any) => {
               // Only count if not approved AND doesn't have an existing workflow
               const isPending = !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
               
-              // For finance admins, also check if created by them or their subordinates
-              if (isPending && isFinanceAdminRole && accessibleUserIds.length > 0) {
+              // For finance admins and accountants, also check if created by them or their subordinates
+              if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
                 const createdByIdRaw = r.created_by_id || r.createdBy || r.created_by;
                 if (!createdByIdRaw) return false;
                 const createdById = typeof createdByIdRaw === 'string'
@@ -679,15 +683,15 @@ const AdminDashboard: React.FC = () => {
           }
 
           // Fetch pending expense entries - only count those WITHOUT workflows
-          // For finance admins, only count expenses created by themselves or their subordinates
+          // For finance admins and accountants, only count expenses created by themselves or their subordinates
           const expensesRes = await apiClient.getExpenses({ is_approved: false });
           if (expensesRes?.data && Array.isArray(expensesRes.data)) {
             const pendingExpenses = expensesRes.data.filter((e: any) => {
               // Only count if not approved AND doesn't have an existing workflow
               const isPending = !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
               
-              // For finance admins, also check if created by them or their subordinates
-              if (isPending && isFinanceAdminRole && accessibleUserIds.length > 0) {
+              // For finance admins and accountants, also check if created by them or their subordinates
+              if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
                 const createdByIdRaw = e.created_by_id || e.createdBy || e.created_by;
                 if (!createdByIdRaw) return false;
                 const createdById = typeof createdByIdRaw === 'string'
@@ -722,13 +726,13 @@ const AdminDashboard: React.FC = () => {
                   : []);
               
               // Filter for pending sales (status is 'pending' or 'PENDING')
-              // For finance admins, only count sales created by themselves or their subordinates
+              // For finance admins and accountants, only count sales created by themselves or their subordinates
               const pendingSales = (salesData || []).filter((s: any) => {
                 const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
                 const isPending = saleStatus === 'pending';
                 
-                // For finance admins, also check if sold by them or their subordinates
-                if (isPending && isFinanceAdminRole && accessibleUserIds.length > 0) {
+                // For finance admins and accountants, also check if sold by them or their subordinates
+                if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
                   const soldByIdRaw = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
                   const soldById = typeof soldByIdRaw === 'string' 
                     ? parseInt(soldByIdRaw, 10) 
@@ -741,6 +745,7 @@ const AdminDashboard: React.FC = () => {
               
               totalPendingCount += pendingSales.length;
               debugInfo.pendingSalesCount = pendingSales.length;
+              setPendingSalesCount(pendingSales.length);
               
               // Store for adding to recent activity
               pendingSalesForActivity = pendingSales;
@@ -755,6 +760,7 @@ const AdminDashboard: React.FC = () => {
         } catch (err) {
           console.error('Error fetching pending approvals:', err);
           // Fallback to overview count if direct fetching fails
+          // Check both team_stats (for accountants, finance admins, managers) and personal_stats (for employees)
           const overviewCount = overviewData.pending_approvals ?? 
                                overviewData.team_stats?.pending_approvals ?? 
                                overviewData.personal_stats?.pending_approvals;
@@ -769,9 +775,14 @@ const AdminDashboard: React.FC = () => {
         // Log for debugging (only in development)
         if (process.env.NODE_ENV === 'development') {
           console.log('Dashboard Overview Data:', {
+            userRole: userRole,
+            isAccountant: isAccountantRole,
+            isFinanceAdmin: isFinanceAdminRole,
+            accessibleUserIds: accessibleUserIds,
             overview: overviewData,
             financials: overviewData.financials,
             base_revenue: overviewData.financials?.total_revenue,
+            sales_summary: salesSummary,
             sales_revenue: salesSummary?.total_revenue,
             total_revenue_calculated: safeNumber(overviewData.financials?.total_revenue) + (salesSummary ? safeNumber(salesSummary?.total_revenue) : 0),
             total_expenses: overviewData.financials?.total_expenses,
@@ -1071,27 +1082,27 @@ const AdminDashboard: React.FC = () => {
                     {createStatsCard(
                       ShoppingCart,
                       'Total Sales',
-                      (salesSummary.total_sales || 0).toString(),
+                      (salesSummary?.total_sales || 0).toString(),
                       true,
                       () => router.push('/sales/accounting')
                     )}
                     {createStatsCard(
                       DollarSign,
-                      'Total Revenue',
-                      `$${Number(salesSummary.total_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      'Sales Revenue',
+                      `$${Number(salesSummary?.total_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                       false
                     )}
                     {createStatsCard(
                       Activity,
                       'Pending Sales',
-                      (salesSummary.pending_sales || 0).toString(),
+                      (salesSummary?.pending_sales || pendingSalesCount || 0).toString(),
                       true,
                       () => router.push('/sales/accounting?tab=sales&status=pending')
                     )}
                     {createStatsCard(
                       FileText,
                       'Posted Sales',
-                      (salesSummary.posted_sales || 0).toString(),
+                      (salesSummary?.posted_sales || 0).toString(),
                       false
                     )}
                   </DashboardGrid>

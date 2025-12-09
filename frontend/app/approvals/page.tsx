@@ -706,7 +706,7 @@ interface ApprovalItem {
   item_name?: string;
   quantity_sold?: number;
   receipt_number?: string;
-  sold_by_id?: number; // Track who sold the item (for sales)
+  sold_by_id?: number; 
 }
 
 export default function ApprovalsPage() {
@@ -755,11 +755,44 @@ export default function ApprovalsPage() {
       return soldById === userId;
     }
 
-    // Accountant can only approve sales from their subordinates (employees)
+    // Accountant can only approve sales from their subordinates (employees), not their own
     if (role === 'accountant') {
       if (accessibleUserIds && accessibleUserIds.length > 0) {
         // Accountant can approve sales from their subordinates (employees), but not their own
         return accessibleUserIds.includes(soldById) && soldById !== userId;
+      }
+      return false;
+    }
+
+    return false;
+  };
+
+  // Check if user can approve a specific revenue or expense entry based on role-based access control
+  const canApproveSpecificEntry = (item: ApprovalItem) => {
+    if (!user || !item.requester_id) return false;
+    const role = user.role?.toLowerCase();
+    const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+    const createdById = typeof item.requester_id === 'string' ? parseInt(item.requester_id, 10) : item.requester_id;
+
+    // Admin and Super Admin can approve all entries
+    if (role === 'admin' || role === 'super_admin') {
+      return true;
+    }
+
+    // Finance Admin/Manager can approve their own entries and their subordinates' (accountant and employee) entries
+    if (role === 'finance_admin' || role === 'finance_manager' || role === 'manager') {
+      if (accessibleUserIds && accessibleUserIds.length > 0) {
+        return accessibleUserIds.includes(createdById);
+      }
+      // If subordinates not loaded yet, allow their own entries
+      return createdById === userId;
+    }
+
+    // Accountant can only approve entries from their subordinates (employees), not their own
+    if (role === 'accountant') {
+      if (accessibleUserIds && accessibleUserIds.length > 0) {
+        // Accountant can approve entries from their subordinates (employees), but not their own
+        return accessibleUserIds.includes(createdById) && createdById !== userId;
       }
       return false;
     }
@@ -1192,6 +1225,16 @@ export default function ApprovalsPage() {
       }
     }
 
+    // For revenue and expense entries, check if user can approve this specific entry
+    if (item.type === 'revenue' || item.type === 'expense') {
+      // Check role-based access control for this specific entry
+      if (!canApproveSpecificEntry(item)) {
+        const entryType = item.type === 'revenue' ? 'revenue' : 'expense';
+        toast.error(`You do not have permission to approve this ${entryType} entry. You can only approve ${entryType} entries from your subordinates.`);
+        return;
+      }
+    }
+
     const itemKey = `${item.type}-${item.id}`;
     setProcessingId(itemKey);
     setError(null);
@@ -1576,7 +1619,11 @@ export default function ApprovalsPage() {
                         if (item.type === 'sale') {
                           return canApproveSales() && canApproveSpecificSale(item);
                         }
-                        // For other types, use canApprove()
+                        // For revenue and expense entries, check if user can approve this specific entry
+                        if (item.type === 'revenue' || item.type === 'expense') {
+                          return canApprove() && canApproveSpecificEntry(item);
+                        }
+                        // For workflows, use canApprove()
                         return canApprove();
                       })() && (
                         <>

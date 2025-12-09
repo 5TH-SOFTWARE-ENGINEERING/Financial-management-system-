@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
+import logging
 
 from ...core.database import get_db
+
+logger = logging.getLogger(__name__)
 from ...crud.approval import approval as approval_crud, approval_comment
 from ...crud.user import user as user_crud
 from ...schemas.approval import ApprovalCreate, ApprovalUpdate, ApprovalOut, ApprovalCommentCreate, ApprovalCommentOut
@@ -99,29 +102,38 @@ def create_approval(
     db: Session = Depends(get_db)
 ):
     """Create new approval workflow"""
-    # Users can create approval requests for their revenue/expense entries
-    if approval_data.revenue_entry_id:
-        from ...crud.revenue import revenue as revenue_crud
-        revenue_entry = revenue_crud.get(db, approval_data.revenue_entry_id)
-        if not revenue_entry:
-            raise HTTPException(status_code=404, detail="Revenue entry not found")
-        if revenue_entry.created_by_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
-        if revenue_entry.is_approved:
-            raise HTTPException(status_code=400, detail="Revenue entry already approved")
-    
-    if approval_data.expense_entry_id:
-        from ...crud.expense import expense as expense_crud
-        expense_entry = expense_crud.get(db, approval_data.expense_entry_id)
-        if not expense_entry:
-            raise HTTPException(status_code=404, detail="Expense entry not found")
-        if expense_entry.created_by_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
-        if expense_entry.is_approved:
-            raise HTTPException(status_code=400, detail="Expense entry already approved")
-    
-    approval = approval_crud.create(db, obj_in=approval_data, requester_id=current_user.id)
-    return approval
+    try:
+        # Users can create approval requests for their revenue/expense entries
+        if approval_data.revenue_entry_id:
+            from ...crud.revenue import revenue as revenue_crud
+            revenue_entry = revenue_crud.get(db, approval_data.revenue_entry_id)
+            if not revenue_entry:
+                raise HTTPException(status_code=404, detail="Revenue entry not found")
+            if revenue_entry.created_by_id != current_user.id:
+                raise HTTPException(status_code=403, detail="Not enough permissions")
+            if revenue_entry.is_approved:
+                raise HTTPException(status_code=400, detail="Revenue entry already approved")
+        
+        if approval_data.expense_entry_id:
+            from ...crud.expense import expense as expense_crud
+            expense_entry = expense_crud.get(db, approval_data.expense_entry_id)
+            if not expense_entry:
+                raise HTTPException(status_code=404, detail="Expense entry not found")
+            if expense_entry.created_by_id != current_user.id:
+                raise HTTPException(status_code=403, detail="Not enough permissions")
+            if expense_entry.is_approved:
+                raise HTTPException(status_code=400, detail="Expense entry already approved")
+        
+        approval = approval_crud.create(db, obj_in=approval_data, requester_id=current_user.id)
+        return approval
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in create_approval: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create approval: {str(e)}"
+        )
 
 
 @router.put("/{approval_id}", response_model=ApprovalOut)

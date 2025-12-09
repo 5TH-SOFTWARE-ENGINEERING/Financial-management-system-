@@ -212,34 +212,57 @@ def get_dashboard_overview(
             }
     
         elif current_user.role == UserRole.ACCOUNTANT:
-            # Accountant overview - only their own data (not all data)
+            # Accountant overview - includes their own data AND their subordinates' (employees) data
+            # Similar to Finance Admin but only sees employees (not other accountants)
             try:
-                user_revenue = revenue_crud.get_by_user(db, current_user.id, 0, 1000)
+                subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                subordinate_ids.append(current_user.id)  # Include themselves
             except Exception as e:
-                logger.error(f"Error fetching accountant revenue entries: {str(e)}")
-                user_revenue = []
+                logger.error(f"Error fetching user hierarchy for Accountant {current_user.id}: {str(e)}")
+                subordinate_ids = [current_user.id]  # Fallback to just themselves
+            
+            # Get all revenue and expenses for the period
+            try:
+                all_revenue = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching revenue entries for Accountant: {str(e)}")
+                all_revenue = []
             
             try:
-                user_expenses = expense_crud.get_by_user(db, current_user.id, 0, 1000)
+                all_expenses = expense_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
             except Exception as e:
-                logger.error(f"Error fetching accountant expense entries: {str(e)}")
-                user_expenses = []
+                logger.error(f"Error fetching expense entries for Accountant: {str(e)}")
+                all_expenses = []
             
-            # Filter by date range
-            user_revenue_period = [r for r in user_revenue if start_date <= r.date <= end_date]
-            user_expenses_period = [e for e in user_expenses if start_date <= e.date <= end_date]
+            # Filter for team members only (subordinates + themselves)
+            team_revenue = [r for r in all_revenue if r.created_by_id in subordinate_ids]
+            team_expenses = [e for e in all_expenses if e.created_by_id in subordinate_ids]
             
-            total_revenue = sum(float(r.amount) for r in user_revenue_period)
-            total_expenses = sum(float(e.amount) for e in user_expenses_period)
+            total_revenue = sum(float(r.amount) for r in team_revenue)
+            total_expenses = sum(float(e.amount) for e in team_expenses)
+            
+            # Include sales revenue from posted sales (sales are included in sales summary endpoint separately)
+            # The frontend will combine this with sales revenue from getSalesSummary
             profit = total_revenue - total_expenses
             
-            # Get their pending approvals
+            # Calculate revenue and expense summaries by category for team only
+            revenue_summary = {}
+            for rev in team_revenue:
+                category = rev.category or 'Uncategorized'
+                revenue_summary[category] = revenue_summary.get(category, 0) + float(rev.amount)
+            
+            expense_summary = {}
+            for exp in team_expenses:
+                category = exp.category or 'Uncategorized'
+                expense_summary[category] = expense_summary.get(category, 0) + float(exp.amount)
+            
+            # Get pending approvals for their team only (from subordinates and themselves)
             try:
-                user_pending = approval_crud.get_by_requester(db, current_user.id)
-                pending_count = len([p for p in user_pending if p.status.value == "pending"])
+                all_pending = approval_crud.get_pending(db)
+                team_pending = [p for p in all_pending if p.requester_id in subordinate_ids]
             except Exception as e:
-                logger.error(f"Error fetching accountant pending approvals: {str(e)}")
-                pending_count = 0
+                logger.error(f"Error fetching pending approvals for Accountant: {str(e)}")
+                team_pending = []
             
             return {
                 "period": {
@@ -253,10 +276,11 @@ def get_dashboard_overview(
                     "profit": profit,
                     "profit_margin": (profit / total_revenue * 100) if total_revenue > 0 else 0
                 },
-                "personal_stats": {
-                    "revenue_entries": len(user_revenue_period),
-                    "expense_entries": len(user_expenses_period),
-                    "pending_approvals": pending_count
+                "revenue_by_category": revenue_summary,
+                "expenses_by_category": expense_summary,
+                "team_stats": {
+                    "team_size": len(subordinate_ids),
+                    "pending_approvals": len(team_pending)
                 }
             }
         
@@ -327,66 +351,87 @@ def get_kpi_metrics(
     db: Session = Depends(get_db)
 ):
     """Get KPI metrics for different time periods"""
-    # Calculate date range based on period
-    end_date = datetime.utcnow()
-    
-    if period == "week":
-        start_date = end_date - timedelta(days=7)
-        prev_start = end_date - timedelta(days=14)
-        prev_end = start_date
-    elif period == "month":
-        start_date = end_date - timedelta(days=30)
-        prev_start = end_date - timedelta(days=60)
-        prev_end = start_date
-    elif period == "quarter":
-        start_date = end_date - timedelta(days=90)
-        prev_start = end_date - timedelta(days=180)
-        prev_end = start_date
-    else:  # year
-        start_date = end_date - timedelta(days=365)
-        prev_start = end_date - timedelta(days=730)
-        prev_end = start_date
-    
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    # Current period metrics
-    current_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
-    current_expenses = expense_crud.get_total_by_period(db, start_date, end_date)
-    current_profit = current_revenue - current_expenses
-    
-    # Previous period metrics for comparison
-    prev_revenue = revenue_crud.get_total_by_period(db, prev_start, prev_end)
-    prev_expenses = expense_crud.get_total_by_period(db, prev_start, prev_end)
-    prev_profit = prev_revenue - prev_expenses
-    
-    # Calculate growth percentages
-    revenue_growth = ((current_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
-    expense_growth = ((current_expenses - prev_expenses) / prev_expenses * 100) if prev_expenses > 0 else 0
-    profit_growth = ((current_profit - prev_profit) / prev_profit * 100) if prev_profit != 0 else 0
-    
-    return {
-        "period": period,
-        "current_period": {
-            "start_date": start_date,
-            "end_date": end_date,
-            "revenue": current_revenue,
-            "expenses": current_expenses,
-            "profit": current_profit
-        },
-        "previous_period": {
-            "start_date": prev_start,
-            "end_date": prev_end,
-            "revenue": prev_revenue,
-            "expenses": prev_expenses,
-            "profit": prev_profit
-        },
-        "growth": {
-            "revenue_growth_percent": revenue_growth,
-            "expense_growth_percent": expense_growth,
-            "profit_growth_percent": profit_growth
+    try:
+        # Calculate date range based on period
+        end_date = datetime.utcnow()
+        
+        if period == "week":
+            start_date = end_date - timedelta(days=7)
+            prev_start = end_date - timedelta(days=14)
+            prev_end = start_date
+        elif period == "month":
+            start_date = end_date - timedelta(days=30)
+            prev_start = end_date - timedelta(days=60)
+            prev_end = start_date
+        elif period == "quarter":
+            start_date = end_date - timedelta(days=90)
+            prev_start = end_date - timedelta(days=180)
+            prev_end = start_date
+        else:  # year
+            start_date = end_date - timedelta(days=365)
+            prev_start = end_date - timedelta(days=730)
+            prev_end = start_date
+        
+        if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+        # Current period metrics
+        try:
+            current_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
+            current_expenses = expense_crud.get_total_by_period(db, start_date, end_date)
+        except Exception as e:
+            logger.error(f"Error fetching current period metrics: {str(e)}", exc_info=True)
+            current_revenue = 0.0
+            current_expenses = 0.0
+        
+        current_profit = current_revenue - current_expenses
+        
+        # Previous period metrics for comparison
+        try:
+            prev_revenue = revenue_crud.get_total_by_period(db, prev_start, prev_end)
+            prev_expenses = expense_crud.get_total_by_period(db, prev_start, prev_end)
+        except Exception as e:
+            logger.error(f"Error fetching previous period metrics: {str(e)}", exc_info=True)
+            prev_revenue = 0.0
+            prev_expenses = 0.0
+        
+        prev_profit = prev_revenue - prev_expenses
+        
+        # Calculate growth percentages
+        revenue_growth = ((current_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
+        expense_growth = ((current_expenses - prev_expenses) / prev_expenses * 100) if prev_expenses > 0 else 0
+        profit_growth = ((current_profit - prev_profit) / prev_profit * 100) if prev_profit != 0 else 0
+        
+        return {
+            "period": period,
+            "current_period": {
+                "start_date": start_date,
+                "end_date": end_date,
+                "revenue": current_revenue,
+                "expenses": current_expenses,
+                "profit": current_profit
+            },
+            "previous_period": {
+                "start_date": prev_start,
+                "end_date": prev_end,
+                "revenue": prev_revenue,
+                "expenses": prev_expenses,
+                "profit": prev_profit
+            },
+            "growth": {
+                "revenue_growth_percent": revenue_growth,
+                "expense_growth_percent": expense_growth,
+                "profit_growth_percent": profit_growth
+            }
         }
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in get_kpi_metrics: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve KPI metrics: {str(e)}"
+        )
 
 
 @router.get("/recent-activity")

@@ -107,8 +107,16 @@ def create_sale(
     try:
         sale = sale_crud.create(db, sale_data, current_user.id)
         return _format_sale_output(sale, current_user)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in create_sale: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create sale: {str(e)}"
+        )
 
 
 @router.get("/", response_model=List[SaleOut])
@@ -203,18 +211,27 @@ def get_sale(
     db: Session = Depends(get_db)
 ):
     """Get specific sale"""
-    sale = sale_crud.get(db, sale_id)
-    if not sale:
-        raise HTTPException(status_code=404, detail="Sale not found")
-    
-    # Check permissions
-    if current_user.role == UserRole.EMPLOYEE and sale.sold_by_id != current_user.id:
+    try:
+        sale = sale_crud.get(db, sale_id)
+        if not sale:
+            raise HTTPException(status_code=404, detail="Sale not found")
+        
+        # Check permissions
+        if current_user.role == UserRole.EMPLOYEE and sale.sold_by_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only view your own sales"
+            )
+        
+        return _format_sale_output(sale, current_user)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in get_sale: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=403,
-            detail="You can only view your own sales"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve sale: {str(e)}"
         )
-    
-    return _format_sale_output(sale, current_user)
 
 
 @router.post("/{sale_id}/post", response_model=SaleOut)
@@ -233,66 +250,82 @@ def post_sale(
     - Accountant: Can approve sales from their subordinates (employees) only, not their own
     - Only POSTED sales are included in revenue and net profit calculations
     """
-    # First, get the sale to check who made it
-    sale = sale_crud.get(db, sale_id)
-    if not sale:
-        raise HTTPException(status_code=404, detail="Sale not found")
-    
-    # Get the user who made the sale
-    seller = db.query(User).filter(User.id == sale.sold_by_id).first()
-    if not seller:
-        raise HTTPException(status_code=404, detail="Seller not found")
-    
-    sold_by_id = sale.sold_by_id
-    
-    # Admin and Super Admin can approve all sales
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-        pass  # Allow all sales
-    # Finance Admin/Manager can approve their own sales and their subordinates' sales
-    elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
-        from ...crud.user import user as user_crud
-        # Get all subordinates (accountants and employees)
-        subordinates = user_crud.get_hierarchy(db, current_user.id)
-        subordinate_ids = [sub.id for sub in subordinates]
-        subordinate_ids.append(current_user.id)  # Include themselves
-        
-        if sold_by_id not in subordinate_ids:
-            raise HTTPException(
-                status_code=403,
-                detail="You can only approve sales made by yourself or your subordinates (accountants and employees)"
-            )
-    # Accountant can only approve sales from their subordinates (employees), not their own
-    elif current_user.role == UserRole.ACCOUNTANT:
-        from ...crud.user import user as user_crud
-        # Get subordinates (employees only)
-        subordinates = user_crud.get_hierarchy(db, current_user.id)
-        subordinate_ids = [sub.id for sub in subordinates]
-        
-        # Accountant cannot approve their own sales
-        if sold_by_id == current_user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="Accountants cannot approve their own sales. Only sales from employees can be approved."
-            )
-        
-        # Check if sale was made by a subordinate (employee)
-        if sold_by_id not in subordinate_ids:
-            raise HTTPException(
-                status_code=403,
-                detail="You can only approve sales made by your subordinates (employees)"
-            )
-    else:
-        # Other roles cannot approve sales
-        raise HTTPException(
-            status_code=403,
-            detail="Only accountants, finance admins, managers, or admins can post sales to ledger"
-        )
-    
     try:
+        # First, get the sale to check who made it
+        sale = sale_crud.get(db, sale_id)
+        if not sale:
+            raise HTTPException(status_code=404, detail="Sale not found")
+        
+        # Get the user who made the sale
+        seller = db.query(User).filter(User.id == sale.sold_by_id).first()
+        if not seller:
+            raise HTTPException(status_code=404, detail="Seller not found")
+        
+        sold_by_id = sale.sold_by_id
+        
+        # Admin and Super Admin can approve all sales
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            pass  # Allow all sales
+        # Finance Admin/Manager can approve their own sales and their subordinates' sales
+        elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            from ...crud.user import user as user_crud
+            try:
+                # Get all subordinates (accountants and employees)
+                subordinates = user_crud.get_hierarchy(db, current_user.id)
+                subordinate_ids = [sub.id for sub in subordinates]
+            except Exception as e:
+                logger.error(f"Error fetching subordinates for user {current_user.id}: {str(e)}", exc_info=True)
+                subordinate_ids = []
+            subordinate_ids.append(current_user.id)  # Include themselves
+            
+            if sold_by_id not in subordinate_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You can only approve sales made by yourself or your subordinates (accountants and employees)"
+                )
+        # Accountant can only approve sales from their subordinates (employees), not their own
+        elif current_user.role == UserRole.ACCOUNTANT:
+            from ...crud.user import user as user_crud
+            try:
+                # Get subordinates (employees only)
+                subordinates = user_crud.get_hierarchy(db, current_user.id)
+                subordinate_ids = [sub.id for sub in subordinates]
+            except Exception as e:
+                logger.error(f"Error fetching subordinates for accountant {current_user.id}: {str(e)}", exc_info=True)
+                subordinate_ids = []
+            
+            # Accountant cannot approve their own sales
+            if sold_by_id == current_user.id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Accountants cannot approve their own sales. Only sales from employees can be approved."
+                )
+            
+            # Check if sale was made by a subordinate (employee)
+            if sold_by_id not in subordinate_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You can only approve sales made by your subordinates (employees)"
+                )
+        else:
+            # Other roles cannot approve sales
+            raise HTTPException(
+                status_code=403,
+                detail="Only accountants, finance admins, managers, or admins can post sales to ledger"
+            )
+        
         sale = sale_crud.post_sale(db, sale_id, post_data, current_user.id)
         return _format_sale_output(sale, current_user)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in post_sale: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to post sale to ledger: {str(e)}"
+        )
 
 
 @router.post("/{sale_id}/cancel", response_model=SaleOut)
@@ -302,17 +335,25 @@ def cancel_sale(
     db: Session = Depends(get_db)
 ):
     """Cancel a sale (Finance Admin only)"""
-    if current_user.role not in [UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-        raise HTTPException(
-            status_code=403,
-            detail="Only Finance Admin can cancel sales"
-        )
-    
     try:
+        if current_user.role not in [UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            raise HTTPException(
+                status_code=403,
+                detail="Only Finance Admin can cancel sales"
+            )
+        
         sale = sale_crud.cancel_sale(db, sale_id, current_user.id)
         return _format_sale_output(sale, current_user)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in cancel_sale: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to cancel sale: {str(e)}"
+        )
 
 
 @router.get("/summary/overview", response_model=SalesSummaryOut)
@@ -349,8 +390,8 @@ def get_sales_summary(
         
         # Filter by user role:
         # - Admin/Super Admin: See all sales
-        # - Finance Admin/Manager: See only their team's sales (subordinates)
-        # - Accountant: See only their own sales
+        # - Finance Admin/Manager: See only their team's sales (subordinates + themselves)
+        # - Accountant: See sales from themselves and their subordinates (employees)
         user_ids = None
         if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
             # Get all subordinates in the hierarchy
@@ -359,8 +400,11 @@ def get_sales_summary(
             subordinate_ids.append(current_user.id)  # Include themselves
             user_ids = subordinate_ids
         elif current_user.role == UserRole.ACCOUNTANT:
-            # Accountant: See only their own sales
-            user_ids = [current_user.id]
+            # Accountant: See sales from themselves and their subordinates (employees)
+            from ...crud.user import user as user_crud
+            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+            subordinate_ids.append(current_user.id)  # Include themselves
+            user_ids = subordinate_ids
         
         summary = sale_crud.get_sales_summary(db, start_date_dt, end_date_dt, user_ids=user_ids)
         return summary

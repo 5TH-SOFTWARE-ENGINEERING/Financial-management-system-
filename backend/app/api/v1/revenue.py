@@ -112,23 +112,45 @@ def read_revenue_entry(
     db: Session = Depends(get_db)
 ):
     """Get specific revenue entry"""
-    entry = revenue_crud.get(db, id=revenue_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Revenue entry not found")
-    
-    # Check permissions
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        if current_user.role == UserRole.MANAGER:
-            # Managers can see entries of their subordinates
-            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-            if entry.created_by_id not in subordinate_ids + [current_user.id]:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-        else:
-            # Regular users can only see their own entries
-            if entry.created_by_id != current_user.id:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    return entry
+    try:
+        entry = revenue_crud.get(db, id=revenue_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Revenue entry not found")
+        
+        # Check permissions
+        if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            if current_user.role == UserRole.MANAGER:
+                # Managers can see entries of their subordinates
+                try:
+                    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                except Exception as e:
+                    logger.error(f"Error fetching subordinates for user {current_user.id}: {str(e)}", exc_info=True)
+                    subordinate_ids = []
+                if entry.created_by_id not in subordinate_ids + [current_user.id]:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+            elif current_user.role == UserRole.ACCOUNTANT:
+                # Accountants can see their own entries and their subordinates' entries
+                try:
+                    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                except Exception as e:
+                    logger.error(f"Error fetching subordinates for accountant {current_user.id}: {str(e)}", exc_info=True)
+                    subordinate_ids = []
+                if entry.created_by_id not in subordinate_ids + [current_user.id]:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+            else:
+                # Regular users can only see their own entries
+                if entry.created_by_id != current_user.id:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+        return entry
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in read_revenue_entry: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve revenue entry: {str(e)}"
+        )
 
 
 @router.post("/", response_model=RevenueOut)
@@ -138,7 +160,16 @@ def create_revenue_entry(
     db: Session = Depends(get_db)
 ):
     """Create new revenue entry"""
-    return revenue_crud.create(db, obj_in=revenue_data, created_by_id=current_user.id)
+    try:
+        return revenue_crud.create(db, obj_in=revenue_data, created_by_id=current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in create_revenue_entry: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create revenue entry: {str(e)}"
+        )
 
 
 @router.put("/{revenue_id}", response_model=RevenueOut)
@@ -183,55 +214,68 @@ def delete_revenue_entry(
     db: Session = Depends(get_db)
 ):
     """Delete revenue entry - requires password verification"""
-    # Reload current user from database to ensure we have the password hash
-    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
-    if not db_user_for_auth:
-        raise HTTPException(status_code=404, detail="Current user not found")
-    
-    # Validate that password hash exists
-    if not db_user_for_auth.hashed_password:
+    try:
+        # Reload current user from database to ensure we have the password hash
+        db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+        if not db_user_for_auth:
+            raise HTTPException(status_code=404, detail="Current user not found")
+        
+        # Validate that password hash exists
+        if not db_user_for_auth.hashed_password:
+            raise HTTPException(
+                status_code=500,
+                detail="User password hash not found. Please contact administrator."
+            )
+        
+        # Verify password before deletion
+        if not delete_request.password or not delete_request.password.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Password is required to delete a revenue entry."
+            )
+        
+        # Verify password
+        password_to_verify = delete_request.password.strip()
+        if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+            raise HTTPException(
+                status_code=403, 
+                detail="Invalid password. Please verify your password to delete this revenue entry."
+            )
+        
+        entry = revenue_crud.get(db, id=revenue_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Revenue entry not found")
+        
+        # Check permissions
+        if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            if current_user.role == UserRole.MANAGER:
+                # Managers can delete entries of their subordinates
+                try:
+                    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                except Exception as e:
+                    logger.error(f"Error fetching subordinates for user {current_user.id}: {str(e)}", exc_info=True)
+                    subordinate_ids = []
+                if entry.created_by_id not in subordinate_ids + [current_user.id]:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+            else:
+                # Regular users can only delete their own entries
+                if entry.created_by_id != current_user.id:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+        # Cannot delete approved entries unless admin or finance manager
+        if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            raise HTTPException(status_code=400, detail="Cannot delete approved entry")
+        
+        revenue_crud.delete(db, id=revenue_id)
+        return {"message": "Revenue entry deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in delete_revenue_entry: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail="User password hash not found. Please contact administrator."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete revenue entry: {str(e)}"
         )
-    
-    # Verify password before deletion
-    if not delete_request.password or not delete_request.password.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Password is required to delete a revenue entry."
-        )
-    
-    # Verify password
-    password_to_verify = delete_request.password.strip()
-    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
-        raise HTTPException(
-            status_code=403, 
-            detail="Invalid password. Please verify your password to delete this revenue entry."
-        )
-    
-    entry = revenue_crud.get(db, id=revenue_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Revenue entry not found")
-    
-    # Check permissions
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        if current_user.role == UserRole.MANAGER:
-            # Managers can delete entries of their subordinates
-            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-            if entry.created_by_id not in subordinate_ids + [current_user.id]:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-        else:
-            # Regular users can only delete their own entries
-            if entry.created_by_id != current_user.id:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    # Cannot delete approved entries unless admin or finance manager
-    if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        raise HTTPException(status_code=400, detail="Cannot delete approved entry")
-    
-    revenue_crud.delete(db, id=revenue_id)
-    return {"message": "Revenue entry deleted successfully"}
 
 
 @router.post("/{revenue_id}/approve")
@@ -248,60 +292,77 @@ def approve_revenue_entry(
     - Finance Admin/Manager: Can approve their own entries and their subordinates' (accountant and employee) entries
     - Accountant: Can approve entries from their subordinates (employees) only, not their own
     """
-    entry = revenue_crud.get(db, id=revenue_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Revenue entry not found")
-    
-    if entry.is_approved:
-        raise HTTPException(status_code=400, detail="Entry already approved")
-    
-    created_by_id = entry.created_by_id
-    
-    # Admin and Super Admin can approve all revenue entries
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-        pass  # Allow all entries
-    # Finance Admin/Manager can approve their own entries and their subordinates' entries
-    elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
-        from ...crud.user import user as user_crud
-        # Get all subordinates (accountants and employees)
-        subordinates = user_crud.get_hierarchy(db, current_user.id)
-        subordinate_ids = [sub.id for sub in subordinates]
-        subordinate_ids.append(current_user.id)  # Include themselves
+    try:
+        entry = revenue_crud.get(db, id=revenue_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Revenue entry not found")
         
-        if created_by_id not in subordinate_ids:
+        if entry.is_approved:
+            raise HTTPException(status_code=400, detail="Entry already approved")
+        
+        created_by_id = entry.created_by_id
+        
+        # Admin and Super Admin can approve all revenue entries
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            pass  # Allow all entries
+        # Finance Admin/Manager can approve their own entries and their subordinates' entries
+        elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            from ...crud.user import user as user_crud
+            try:
+                # Get all subordinates (accountants and employees)
+                subordinates = user_crud.get_hierarchy(db, current_user.id)
+                subordinate_ids = [sub.id for sub in subordinates]
+            except Exception as e:
+                logger.error(f"Error fetching subordinates for user {current_user.id}: {str(e)}", exc_info=True)
+                subordinate_ids = []
+            subordinate_ids.append(current_user.id)  # Include themselves
+            
+            if created_by_id not in subordinate_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You can only approve revenue entries created by yourself or your subordinates (accountants and employees)"
+                )
+        # Accountant can only approve entries from their subordinates (employees), not their own
+        elif current_user.role == UserRole.ACCOUNTANT:
+            from ...crud.user import user as user_crud
+            try:
+                # Get subordinates (employees only)
+                subordinates = user_crud.get_hierarchy(db, current_user.id)
+                subordinate_ids = [sub.id for sub in subordinates]
+            except Exception as e:
+                logger.error(f"Error fetching subordinates for accountant {current_user.id}: {str(e)}", exc_info=True)
+                subordinate_ids = []
+            
+            # Accountant cannot approve their own entries
+            if created_by_id == current_user.id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Accountants cannot approve their own revenue entries. Only entries from employees can be approved."
+                )
+            
+            # Check if entry was created by a subordinate (employee)
+            if created_by_id not in subordinate_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You can only approve revenue entries created by your subordinates (employees)"
+                )
+        else:
+            # Other roles cannot approve revenue entries
             raise HTTPException(
                 status_code=403,
-                detail="You can only approve revenue entries created by yourself or your subordinates (accountants and employees)"
-            )
-    # Accountant can only approve entries from their subordinates (employees), not their own
-    elif current_user.role == UserRole.ACCOUNTANT:
-        from ...crud.user import user as user_crud
-        # Get subordinates (employees only)
-        subordinates = user_crud.get_hierarchy(db, current_user.id)
-        subordinate_ids = [sub.id for sub in subordinates]
-        
-        # Accountant cannot approve their own entries
-        if created_by_id == current_user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="Accountants cannot approve their own revenue entries. Only entries from employees can be approved."
+                detail="Only accountants, finance admins, managers, or admins can approve revenue entries"
             )
         
-        # Check if entry was created by a subordinate (employee)
-        if created_by_id not in subordinate_ids:
-            raise HTTPException(
-                status_code=403,
-                detail="You can only approve revenue entries created by your subordinates (employees)"
-            )
-    else:
-        # Other roles cannot approve revenue entries
+        revenue_crud.approve(db, id=revenue_id, approved_by_id=current_user.id)
+        return {"message": "Revenue entry approved successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in approve_revenue_entry: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=403,
-            detail="Only accountants, finance admins, managers, or admins can approve revenue entries"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to approve revenue entry: {str(e)}"
         )
-    
-    revenue_crud.approve(db, id=revenue_id, approved_by_id=current_user.id)
-    return {"message": "Revenue entry approved successfully"}
 
 
 class RejectRequest(BaseModel):

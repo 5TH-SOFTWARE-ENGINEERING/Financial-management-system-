@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ign
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
+import logging
 
 from ...core.database import get_db
+
+logger = logging.getLogger(__name__)
 from ...crud.expense import expense as expense_crud
 from ...crud.user import user as user_crud
 from ...crud.approval import approval as approval_crud
@@ -81,23 +84,45 @@ def read_expense_entry(
     db: Session = Depends(get_db)
 ):
     """Get specific expense entry"""
-    entry = expense_crud.get(db, id=expense_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Expense entry not found")
-    
-    # Check permissions
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        if current_user.role == UserRole.MANAGER:
-            # Managers can see entries of their subordinates
-            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-            if entry.created_by_id not in subordinate_ids + [current_user.id]:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-        else:
-            # Regular users can only see their own entries
-            if entry.created_by_id != current_user.id:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    return entry
+    try:
+        entry = expense_crud.get(db, id=expense_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Expense entry not found")
+        
+        # Check permissions
+        if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            if current_user.role == UserRole.MANAGER:
+                # Managers can see entries of their subordinates
+                try:
+                    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                except Exception as e:
+                    logger.error(f"Error fetching subordinates for user {current_user.id}: {str(e)}", exc_info=True)
+                    subordinate_ids = []
+                if entry.created_by_id not in subordinate_ids + [current_user.id]:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+            elif current_user.role == UserRole.ACCOUNTANT:
+                # Accountants can see their own entries and their subordinates' entries
+                try:
+                    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                except Exception as e:
+                    logger.error(f"Error fetching subordinates for accountant {current_user.id}: {str(e)}", exc_info=True)
+                    subordinate_ids = []
+                if entry.created_by_id not in subordinate_ids + [current_user.id]:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+            else:
+                # Regular users can only see their own entries
+                if entry.created_by_id != current_user.id:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+        return entry
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in read_expense_entry: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve expense entry: {str(e)}"
+        )
 
 
 @router.post("/", response_model=ExpenseOut)
@@ -107,7 +132,16 @@ def create_expense_entry(
     db: Session = Depends(get_db)
 ):
     """Create new expense entry"""
-    return expense_crud.create(db, obj_in=expense_data, created_by_id=current_user.id)
+    try:
+        return expense_crud.create(db, obj_in=expense_data, created_by_id=current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in create_expense_entry: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create expense entry: {str(e)}"
+        )
 
 
 @router.put("/{expense_id}", response_model=ExpenseOut)
@@ -118,27 +152,49 @@ def update_expense_entry(
     db: Session = Depends(get_db)
 ):
     """Update expense entry"""
-    entry = expense_crud.get(db, id=expense_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Expense entry not found")
-    
-    # Check permissions
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        if current_user.role == UserRole.MANAGER:
-            # Managers can update entries of their subordinates
-            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-            if entry.created_by_id not in subordinate_ids + [current_user.id]:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-        else:
-            # Regular users can only update their own entries
-            if entry.created_by_id != current_user.id:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    # Cannot update approved entries unless admin or finance manager
-    if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        raise HTTPException(status_code=400, detail="Cannot update approved entry")
-    
-    return expense_crud.update(db, db_obj=entry, obj_in=expense_update)
+    try:
+        entry = expense_crud.get(db, id=expense_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Expense entry not found")
+        
+        # Check permissions
+        if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            if current_user.role == UserRole.MANAGER:
+                # Managers can update entries of their subordinates
+                try:
+                    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                except Exception as e:
+                    logger.error(f"Error fetching subordinates for user {current_user.id}: {str(e)}", exc_info=True)
+                    subordinate_ids = []
+                if entry.created_by_id not in subordinate_ids + [current_user.id]:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+            elif current_user.role == UserRole.ACCOUNTANT:
+                # Accountants can update their own entries and their subordinates' entries
+                try:
+                    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                except Exception as e:
+                    logger.error(f"Error fetching subordinates for accountant {current_user.id}: {str(e)}", exc_info=True)
+                    subordinate_ids = []
+                if entry.created_by_id not in subordinate_ids + [current_user.id]:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+            else:
+                # Regular users can only update their own entries
+                if entry.created_by_id != current_user.id:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+        # Cannot update approved entries unless admin or finance manager
+        if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            raise HTTPException(status_code=400, detail="Cannot update approved entry")
+        
+        return expense_crud.update(db, db_obj=entry, obj_in=expense_update)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in update_expense_entry: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update expense entry: {str(e)}"
+        )
 
 
 class DeleteExpenseRequest(BaseModel):
@@ -152,55 +208,68 @@ def delete_expense_entry(
     db: Session = Depends(get_db)
 ):
     """Delete expense entry - requires password verification"""
-    # Reload current user from database to ensure we have the password hash
-    db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
-    if not db_user_for_auth:
-        raise HTTPException(status_code=404, detail="Current user not found")
-    
-    # Validate that password hash exists
-    if not db_user_for_auth.hashed_password:
+    try:
+        # Reload current user from database to ensure we have the password hash
+        db_user_for_auth = db.query(User).filter(User.id == current_user.id).first()
+        if not db_user_for_auth:
+            raise HTTPException(status_code=404, detail="Current user not found")
+        
+        # Validate that password hash exists
+        if not db_user_for_auth.hashed_password:
+            raise HTTPException(
+                status_code=500,
+                detail="User password hash not found. Please contact administrator."
+            )
+        
+        # Verify password before deletion
+        if not delete_request.password or not delete_request.password.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Password is required to delete an expense entry."
+            )
+        
+        # Verify password
+        password_to_verify = delete_request.password.strip()
+        if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
+            raise HTTPException(
+                status_code=403, 
+                detail="Invalid password. Please verify your password to delete this expense entry."
+            )
+        
+        entry = expense_crud.get(db, id=expense_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Expense entry not found")
+        
+        # Check permissions
+        if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            if current_user.role == UserRole.MANAGER:
+                # Managers can delete entries of their subordinates
+                try:
+                    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                except Exception as e:
+                    logger.error(f"Error fetching subordinates for user {current_user.id}: {str(e)}", exc_info=True)
+                    subordinate_ids = []
+                if entry.created_by_id not in subordinate_ids + [current_user.id]:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+            else:
+                # Regular users can only delete their own entries
+                if entry.created_by_id != current_user.id:
+                    raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+        # Cannot delete approved entries unless admin or finance manager
+        if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            raise HTTPException(status_code=400, detail="Cannot delete approved entry")
+        
+        expense_crud.delete(db, id=expense_id)
+        return {"message": "Expense entry deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in delete_expense_entry: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail="User password hash not found. Please contact administrator."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete expense entry: {str(e)}"
         )
-    
-    # Verify password before deletion
-    if not delete_request.password or not delete_request.password.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Password is required to delete an expense entry."
-        )
-    
-    # Verify password
-    password_to_verify = delete_request.password.strip()
-    if not verify_password(password_to_verify, db_user_for_auth.hashed_password):
-        raise HTTPException(
-            status_code=403, 
-            detail="Invalid password. Please verify your password to delete this expense entry."
-        )
-    
-    entry = expense_crud.get(db, id=expense_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Expense entry not found")
-    
-    # Check permissions
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        if current_user.role == UserRole.MANAGER:
-            # Managers can delete entries of their subordinates
-            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-            if entry.created_by_id not in subordinate_ids + [current_user.id]:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-        else:
-            # Regular users can only delete their own entries
-            if entry.created_by_id != current_user.id:
-                raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    # Cannot delete approved entries unless admin or finance manager
-    if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        raise HTTPException(status_code=400, detail="Cannot delete approved entry")
-    
-    expense_crud.delete(db, id=expense_id)
-    return {"message": "Expense entry deleted successfully"}
 
 
 @router.post("/{expense_id}/approve")
@@ -217,60 +286,77 @@ def approve_expense_entry(
     - Finance Admin/Manager: Can approve their own entries and their subordinates' (accountant and employee) entries
     - Accountant: Can approve entries from their subordinates (employees) only, not their own
     """
-    entry = expense_crud.get(db, id=expense_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Expense entry not found")
-    
-    if entry.is_approved:
-        raise HTTPException(status_code=400, detail="Entry already approved")
-    
-    created_by_id = entry.created_by_id
-    
-    # Admin and Super Admin can approve all expense entries
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-        pass  # Allow all entries
-    # Finance Admin/Manager can approve their own entries and their subordinates' entries
-    elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
-        from ...crud.user import user as user_crud
-        # Get all subordinates (accountants and employees)
-        subordinates = user_crud.get_hierarchy(db, current_user.id)
-        subordinate_ids = [sub.id for sub in subordinates]
-        subordinate_ids.append(current_user.id)  # Include themselves
+    try:
+        entry = expense_crud.get(db, id=expense_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Expense entry not found")
         
-        if created_by_id not in subordinate_ids:
+        if entry.is_approved:
+            raise HTTPException(status_code=400, detail="Entry already approved")
+        
+        created_by_id = entry.created_by_id
+        
+        # Admin and Super Admin can approve all expense entries
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            pass  # Allow all entries
+        # Finance Admin/Manager can approve their own entries and their subordinates' entries
+        elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            from ...crud.user import user as user_crud
+            try:
+                # Get all subordinates (accountants and employees)
+                subordinates = user_crud.get_hierarchy(db, current_user.id)
+                subordinate_ids = [sub.id for sub in subordinates]
+            except Exception as e:
+                logger.error(f"Error fetching subordinates for user {current_user.id}: {str(e)}", exc_info=True)
+                subordinate_ids = []
+            subordinate_ids.append(current_user.id)  # Include themselves
+            
+            if created_by_id not in subordinate_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You can only approve expense entries created by yourself or your subordinates (accountants and employees)"
+                )
+        # Accountant can only approve entries from their subordinates (employees), not their own
+        elif current_user.role == UserRole.ACCOUNTANT:
+            from ...crud.user import user as user_crud
+            try:
+                # Get subordinates (employees only)
+                subordinates = user_crud.get_hierarchy(db, current_user.id)
+                subordinate_ids = [sub.id for sub in subordinates]
+            except Exception as e:
+                logger.error(f"Error fetching subordinates for accountant {current_user.id}: {str(e)}", exc_info=True)
+                subordinate_ids = []
+            
+            # Accountant cannot approve their own entries
+            if created_by_id == current_user.id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Accountants cannot approve their own expense entries. Only entries from employees can be approved."
+                )
+            
+            # Check if entry was created by a subordinate (employee)
+            if created_by_id not in subordinate_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You can only approve expense entries created by your subordinates (employees)"
+                )
+        else:
+            # Other roles cannot approve expense entries
             raise HTTPException(
                 status_code=403,
-                detail="You can only approve expense entries created by yourself or your subordinates (accountants and employees)"
-            )
-    # Accountant can only approve entries from their subordinates (employees), not their own
-    elif current_user.role == UserRole.ACCOUNTANT:
-        from ...crud.user import user as user_crud
-        # Get subordinates (employees only)
-        subordinates = user_crud.get_hierarchy(db, current_user.id)
-        subordinate_ids = [sub.id for sub in subordinates]
-        
-        # Accountant cannot approve their own entries
-        if created_by_id == current_user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="Accountants cannot approve their own expense entries. Only entries from employees can be approved."
+                detail="Only accountants, finance admins, managers, or admins can approve expense entries"
             )
         
-        # Check if entry was created by a subordinate (employee)
-        if created_by_id not in subordinate_ids:
-            raise HTTPException(
-                status_code=403,
-                detail="You can only approve expense entries created by your subordinates (employees)"
-            )
-    else:
-        # Other roles cannot approve expense entries
+        expense_crud.approve(db, id=expense_id, approved_by_id=current_user.id)
+        return {"message": "Expense entry approved successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in approve_expense_entry: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=403,
-            detail="Only accountants, finance admins, managers, or admins can approve expense entries"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to approve expense entry: {str(e)}"
         )
-    
-    expense_crud.approve(db, id=expense_id, approved_by_id=current_user.id)
-    return {"message": "Expense entry approved successfully"}
 
 
 class RejectRequest(BaseModel):
