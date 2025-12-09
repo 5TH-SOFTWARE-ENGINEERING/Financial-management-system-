@@ -508,7 +508,7 @@ export default function Login() {
       
       if (isNetworkError || isServerError) {
         // Database/server connection error
-        toast.error('Unable to connect to the server. Please check if the database is running and try again.');
+        toast.error('Unable to connect to the server.');
       } else if (isUserNotFound) {
         setUserNotFound(true);
       } else {
