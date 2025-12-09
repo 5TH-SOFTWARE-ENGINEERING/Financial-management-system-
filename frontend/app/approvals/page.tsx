@@ -723,14 +723,48 @@ export default function ApprovalsPage() {
            role === 'finance_manager' || role === 'accountant';
   };
 
-  // Check if user can approve/post sales (accountant, finance_manager, admin, super_admin)
+  // Check if user can approve/post sales (accountant, finance_manager, finance_admin, admin, super_admin)
   const canApproveSales = () => {
     if (!user) return false;
     const role = user.role?.toLowerCase();
     return role === 'accountant' || 
            role === 'finance_manager' || 
+           role === 'finance_admin' ||
            role === 'admin' || 
            role === 'super_admin';
+  };
+
+  // Check if user can approve a specific sale based on role-based access control
+  const canApproveSpecificSale = (sale: ApprovalItem) => {
+    if (!user || !sale.sold_by_id) return false;
+    const role = user.role?.toLowerCase();
+    const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+    const soldById = typeof sale.sold_by_id === 'string' ? parseInt(sale.sold_by_id, 10) : sale.sold_by_id;
+
+    // Admin and Super Admin can approve all sales
+    if (role === 'admin' || role === 'super_admin') {
+      return true;
+    }
+
+    // Finance Admin/Manager can approve their own sales and their subordinates' (accountant and employee) sales
+    if (role === 'finance_admin' || role === 'finance_manager' || role === 'manager') {
+      if (accessibleUserIds && accessibleUserIds.length > 0) {
+        return accessibleUserIds.includes(soldById);
+      }
+      // If subordinates not loaded yet, allow their own sales
+      return soldById === userId;
+    }
+
+    // Accountant can only approve sales from their subordinates (employees)
+    if (role === 'accountant') {
+      if (accessibleUserIds && accessibleUserIds.length > 0) {
+        // Accountant can approve sales from their subordinates (employees), but not their own
+        return accessibleUserIds.includes(soldById) && soldById !== userId;
+      }
+      return false;
+    }
+
+    return false;
   };
 
   // Check if user can cancel sales (finance_manager, admin, super_admin only)
@@ -753,19 +787,91 @@ export default function ApprovalsPage() {
   const [rejectPassword, setRejectPassword] = useState<string>('');
   const [rejectPasswordError, setRejectPasswordError] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
+  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
+
+  // Initialize accessible user IDs based on role
+  useEffect(() => {
+    if (!user) return;
+
+    const initializeAccess = async () => {
+      const userRole = user?.role?.toLowerCase() || '';
+      const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+
+      // Admin and Super Admin: See all (no filtering needed)
+      if (userRole === 'admin' || userRole === 'super_admin') {
+        setAccessibleUserIds(null);
+        return;
+      }
+
+      // Finance Admin/Manager: Get subordinates (accountants and employees)
+      if (userRole === 'finance_admin' || userRole === 'finance_manager') {
+        try {
+          const subordinatesRes = await apiClient.getSubordinates(userId);
+          const subordinates = subordinatesRes?.data || [];
+          const userIds = [
+            userId, // Include themselves
+            ...subordinates.map((sub: any) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+              return subId;
+            })
+          ];
+          setAccessibleUserIds(userIds);
+        } catch (err) {
+          console.error('Failed to fetch subordinates for Finance Admin:', err);
+          setAccessibleUserIds([userId]); // Fallback to only themselves
+        }
+        return;
+      }
+
+      // Accountant: Get subordinates (employees only)
+      if (userRole === 'accountant') {
+        try {
+          const subordinatesRes = await apiClient.getSubordinates(userId);
+          const subordinates = subordinatesRes?.data || [];
+          // Accountant can only approve sales from employees (their subordinates), not their own
+          const userIds = subordinates
+            .map((sub: any) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+              return subId;
+            })
+            .filter((id: number) => id !== userId); // Exclude themselves
+          setAccessibleUserIds(userIds.length > 0 ? userIds : []);
+        } catch (err) {
+          console.error('Failed to fetch subordinates for Accountant:', err);
+          setAccessibleUserIds([]); // No subordinates, can't approve any sales
+        }
+        return;
+      }
+
+      // Other roles: No access
+      setAccessibleUserIds([]);
+    };
+
+    initializeAccess();
+  }, [user]);
 
   useEffect(() => {
     if (user) {
-      loadApprovals();
+      // Wait for accessibleUserIds to be set before loading approvals (for non-admin roles)
+      const userRole = user?.role?.toLowerCase() || '';
+      if (userRole === 'admin' || userRole === 'super_admin') {
+        // Admin can load immediately
+        loadApprovals();
+      } else if (accessibleUserIds !== null) {
+        // For other roles, wait for accessibleUserIds to be set
+        loadApprovals();
+      }
       
       // Auto-refresh every 30 seconds to catch new approvals
       const intervalId = setInterval(() => {
-        loadApprovals();
+        if (userRole === 'admin' || userRole === 'super_admin' || accessibleUserIds !== null) {
+          loadApprovals();
+        }
       }, 30000);
       
       return () => clearInterval(intervalId);
     }
-  }, [user]);
+  }, [user, accessibleUserIds]);
 
   const loadApprovals = async () => {
     if (!user) {
@@ -885,15 +991,41 @@ export default function ApprovalsPage() {
               ? (salesResponse.data as any).data || [] 
               : []);
           
-          // Filter and map pending sales - include ALL pending sales regardless of who sold them
+          // Filter and map pending sales based on role-based access control
+          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+          
           pendingSales = (salesData || [])
             .filter((s: any) => {
               // Check status - accept 'pending' in various formats
               const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
               const isPending = saleStatus === 'pending' || saleStatus === 'PENDING';
+              if (!isPending) return false;
+
+              const soldById = s.sold_by_id ? (typeof s.sold_by_id === 'string' ? parseInt(s.sold_by_id, 10) : s.sold_by_id) : null;
               
-              // Include all pending sales, regardless of sold_by_id (employee or otherwise)
-              return isPending;
+              // Admin and Super Admin: See all pending sales
+              if (userRole === 'admin' || userRole === 'super_admin') {
+                return true;
+              }
+
+              // Finance Admin/Manager: See their own sales and their subordinates' sales
+              if (userRole === 'finance_admin' || userRole === 'finance_manager' || userRole === 'manager') {
+                if (accessibleUserIds && accessibleUserIds.length > 0) {
+                  return accessibleUserIds.includes(soldById);
+                }
+                // If subordinates not loaded yet, show only their own
+                return soldById === userId;
+              }
+
+              // Accountant: See only sales from their subordinates (employees), not their own
+              if (userRole === 'accountant') {
+                if (accessibleUserIds && accessibleUserIds.length > 0) {
+                  return accessibleUserIds.includes(soldById) && soldById !== userId;
+                }
+                return false;
+              }
+
+              return false;
             })
             .map((s: any) => {
               const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
@@ -944,10 +1076,39 @@ export default function ApprovalsPage() {
                   ? (retryResponse.data as any).data || [] 
                   : []);
               
+              // Apply same role-based filtering for retry
+              const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+              
               pendingSales = (retryData || [])
                 .filter((s: any) => {
                   const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
-                  return saleStatus === 'pending' || saleStatus === 'PENDING';
+                  const isPending = saleStatus === 'pending' || saleStatus === 'PENDING';
+                  if (!isPending) return false;
+
+                  const soldById = s.sold_by_id ? (typeof s.sold_by_id === 'string' ? parseInt(s.sold_by_id, 10) : s.sold_by_id) : null;
+                  
+                  // Admin and Super Admin: See all pending sales
+                  if (userRole === 'admin' || userRole === 'super_admin') {
+                    return true;
+                  }
+
+                  // Finance Admin/Manager: See their own sales and their subordinates' sales
+                  if (userRole === 'finance_admin' || userRole === 'finance_manager' || userRole === 'manager') {
+                    if (accessibleUserIds && accessibleUserIds.length > 0) {
+                      return accessibleUserIds.includes(soldById);
+                    }
+                    return soldById === userId;
+                  }
+
+                  // Accountant: See only sales from their subordinates (employees), not their own
+                  if (userRole === 'accountant') {
+                    if (accessibleUserIds && accessibleUserIds.length > 0) {
+                      return accessibleUserIds.includes(soldById) && soldById !== userId;
+                    }
+                    return false;
+                  }
+
+                  return false;
                 })
                 .map((s: any) => ({
                   id: s.id,
@@ -1017,10 +1178,16 @@ export default function ApprovalsPage() {
       return;
     }
 
-    // For sales, check if user can approve sales
+    // For sales, check if user can approve this specific sale
     if (item.type === 'sale') {
       if (!canApproveSales()) {
-        toast.error('Only accountants and finance managers can post sales to ledger');
+        toast.error('Only accountants, finance admins, and admins can post sales to ledger');
+        return;
+      }
+      
+      // Check role-based access control for this specific sale
+      if (!canApproveSpecificSale(item)) {
+        toast.error('You do not have permission to approve this sale. You can only approve sales from your subordinates.');
         return;
       }
     }
@@ -1405,9 +1572,9 @@ export default function ApprovalsPage() {
                     <ApprovalActions>
                       {/* Show approve/reject buttons for pending items if user can approve */}
                       {item.status === 'pending' && (() => {
-                        // For sales, check if user can approve sales
+                        // For sales, check if user can approve this specific sale
                         if (item.type === 'sale') {
-                          return canApproveSales();
+                          return canApproveSales() && canApproveSpecificSale(item);
                         }
                         // For other types, use canApprove()
                         return canApprove();
