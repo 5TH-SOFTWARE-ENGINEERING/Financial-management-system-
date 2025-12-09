@@ -26,7 +26,15 @@ class CRUDUser:
 
     def get_subordinates(self, db: Session, manager_id: int) -> List[User]:
         """Get direct subordinates of a manager"""
-        return db.query(User).filter(User.manager_id == manager_id).all()
+        # Ensure manager_id is properly typed for SQLite compatibility
+        if manager_id is None:
+            return []
+        # Use explicit integer conversion and ensure proper query execution
+        try:
+            manager_id_int = int(manager_id)
+            return list(db.query(User).filter(User.manager_id == manager_id_int).all())
+        except (ValueError, TypeError):
+            return []
 
     def get_hierarchy(self, db: Session, user_id: int) -> List[User]:
         """Get all subordinates recursively (full hierarchy)"""
