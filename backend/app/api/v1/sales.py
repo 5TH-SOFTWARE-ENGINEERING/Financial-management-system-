@@ -295,29 +295,30 @@ def post_sale(
                     status_code=403,
                     detail="You can only approve sales made by yourself or your subordinates (accountants and employees)"
                 )
-        # Accountant can only approve sales from their subordinates (employees), not their own
+        # Accountant can approve sales from Finance Admin, Manager, and Employee for revenue posting
         elif current_user.role == UserRole.ACCOUNTANT:
-            from ...crud.user import user as user_crud
-            try:
-                # Get subordinates (employees only)
-                subordinates = user_crud.get_hierarchy(db, current_user.id)
-                subordinate_ids = [sub.id for sub in subordinates]
-            except Exception as e:
-                logger.error(f"Error fetching subordinates for accountant {current_user.id}: {str(e)}", exc_info=True)
-                subordinate_ids = []
+            # Get all users with Finance Admin, Manager, or Employee roles
+            # Accountants can approve sales from these roles for revenue recording
+            finance_admins = db.query(User).filter(
+                User.role.in_([UserRole.FINANCE_ADMIN, UserRole.MANAGER])
+            ).all()
+            employees = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()
+            
+            # Combine all user IDs that accountants can approve sales from
+            allowed_user_ids = [u.id for u in finance_admins] + [u.id for u in employees]
             
             # Accountant cannot approve their own sales
             if sold_by_id == current_user.id:
                 raise HTTPException(
                     status_code=403,
-                    detail="Accountants cannot approve their own sales. Only sales from employees can be approved."
+                    detail="Accountants cannot approve their own sales. Only sales from Finance Admin, Manager, and Employee can be approved."
                 )
             
-            # Check if sale was made by a subordinate (employee)
-            if sold_by_id not in subordinate_ids:
+            # Check if sale was made by Finance Admin, Manager, or Employee
+            if sold_by_id not in allowed_user_ids:
                 raise HTTPException(
                     status_code=403,
-                    detail="You can only approve sales made by your subordinates (employees)"
+                    detail="You can only approve sales made by Finance Admin, Manager, or Employee for revenue posting."
                 )
         else:
             # Other roles cannot approve sales
