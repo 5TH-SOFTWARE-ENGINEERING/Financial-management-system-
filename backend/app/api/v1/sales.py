@@ -122,7 +122,12 @@ def get_sales(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get sales (Accountant and Finance Admin can see all, Employee sees own)"""
+    """Get sales with role-based filtering:
+    - Admin/Super Admin: See all sales
+    - Finance Admin/Manager: See only their team's sales (subordinates)
+    - Accountant: See only their own sales
+    - Employee: See only their own sales
+    """
     # Parse dates
     start_date_dt = None
     end_date_dt = None
@@ -139,15 +144,41 @@ def get_sales(
     
     # Filter by user role
     sold_by_id = None
+    user_ids = None
+    
     if current_user.role == UserRole.EMPLOYEE:
         # Employees can only see their own sales
         sold_by_id = current_user.id
+    elif current_user.role == UserRole.ACCOUNTANT:
+        # Accountants can only see their own sales
+        sold_by_id = current_user.id
+    elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+        # Finance Admin/Manager: See only their team's sales (subordinates)
+        from ...crud.user import user as user_crud
+        subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+        subordinate_ids.append(current_user.id)  # Include themselves
+        user_ids = subordinate_ids
     
-    sales = sale_crud.get_multi(
-        db, skip=skip, limit=limit, status=status,
-        sold_by_id=sold_by_id, item_id=item_id,
-        start_date=start_date_dt, end_date=end_date_dt
-    )
+    # If user_ids is set, we need to filter by multiple user IDs
+    # Fetch all matching sales and filter by user_ids in Python
+    if user_ids:
+        # Fetch all sales matching the filters (without sold_by_id restriction)
+        all_sales = sale_crud.get_multi(
+            db, skip=0, limit=10000, status=status,
+            sold_by_id=None, item_id=item_id,
+            start_date=start_date_dt, end_date=end_date_dt
+        )
+        # Filter by user_ids (subordinates + finance admin themselves)
+        sales = [s for s in all_sales if s.sold_by_id in user_ids]
+        # Apply pagination
+        sales = sales[skip:skip+limit]
+    else:
+        # For single user (Employee, Accountant) or Admin (no filter)
+        sales = sale_crud.get_multi(
+            db, skip=skip, limit=limit, status=status,
+            sold_by_id=sold_by_id, item_id=item_id,
+            start_date=start_date_dt, end_date=end_date_dt
+        )
     
     return [_format_sale_output(s, current_user) for s in sales]
 
@@ -272,8 +303,9 @@ def get_sales_summary(
                 raise HTTPException(status_code=400, detail="Invalid end_date format. Use ISO format (e.g., YYYY-MM-DDTHH:MM:SS)")
         
         # Filter by user role:
-        # - Admin/Super Admin/Accountant: See all sales
+        # - Admin/Super Admin: See all sales
         # - Finance Admin/Manager: See only their team's sales (subordinates)
+        # - Accountant: See only their own sales
         user_ids = None
         if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
             # Get all subordinates in the hierarchy
@@ -281,6 +313,9 @@ def get_sales_summary(
             subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
             subordinate_ids.append(current_user.id)  # Include themselves
             user_ids = subordinate_ids
+        elif current_user.role == UserRole.ACCOUNTANT:
+            # Accountant: See only their own sales
+            user_ids = [current_user.id]
         
         summary = sale_crud.get_sales_summary(db, start_date_dt, end_date_dt, user_ids=user_ids)
         return summary
@@ -334,11 +369,11 @@ def get_journal_entries(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get journal entries (Accountant and Finance Admin)"""
-    if current_user.role not in [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+    """Get journal entries (Accountant, Finance Admin, Manager, and Admin)"""
+    if current_user.role not in [UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         raise HTTPException(
             status_code=403,
-            detail="Only accountants and finance admins can view journal entries"
+            detail="Only accountants, finance admins, managers, and admins can view journal entries"
         )
     
     # Parse dates

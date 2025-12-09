@@ -11,6 +11,7 @@ import {
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
+import useUserStore from '@/store/userStore';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
@@ -393,7 +394,9 @@ interface Sale {
   status: 'pending' | 'posted' | 'cancelled';
   receipt_number?: string;
   customer_name?: string;
+  sold_by_id?: number;
   sold_by_name?: string;
+  posted_by_id?: number;
   posted_by_name?: string;
   posted_at?: string;
   created_at: string;
@@ -409,6 +412,7 @@ interface JournalEntry {
   credit_account: string;
   credit_amount: number;
   reference_number?: string;
+  posted_by_id?: number;
   posted_by_name?: string;
   posted_at: string;
 }
@@ -416,6 +420,7 @@ interface JournalEntry {
 export default function AccountingDashboard() {
   const router = useRouter();
   const { user } = useAuth();
+  const storeUser = useUserStore((state) => state.user);
   const [activeTab, setActiveTab] = useState<'sales' | 'journal'>('sales');
   const [sales, setSales] = useState<Sale[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
@@ -430,27 +435,93 @@ export default function AccountingDashboard() {
     reference_number: '',
     notes: '',
   });
+  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
 
   useEffect(() => {
     if (!user) {
       return; // Wait for user to load
     }
-    const hasAccess = user.role === 'accountant' || user.role === 'finance_manager' || user.role === 'finance_admin' || user.role === 'admin';
+    const userRole = user?.role?.toLowerCase() || '';
+    const hasAccess = userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'employee';
     if (!hasAccess) {
       router.push('/dashboard');
       return;
     }
-    // Only load data if user has access
-    if (hasAccess) {
+    
+    // Initialize accessible user IDs based on role (for journal entries filtering)
+    const initializeAccess = async () => {
+      console.log('Initializing access for role:', userRole, 'user ID:', user?.id);
+      if (userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager') {
+        // Finance Manager/Admin: Get subordinates (accountants and employees) for journal entries filtering
+        if (user?.id) {
+          try {
+            const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+            console.log('Fetching subordinates for Finance Manager, user ID:', userId);
+            const subordinatesRes = await apiClient.getSubordinates(userId);
+            const subordinates = subordinatesRes?.data || [];
+            console.log('Subordinates fetched:', subordinates.length, 'subordinates');
+            if (subordinates.length > 0) {
+              console.log('First subordinate sample:', subordinates[0]);
+            }
+            const userIds = [
+              userId,
+              ...subordinates.map((sub: any) => {
+                const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+                return subId;
+              })
+            ];
+            console.log('Setting accessibleUserIds to:', userIds);
+            setAccessibleUserIds(userIds);
+          } catch (err) {
+            console.error('Failed to fetch subordinates:', err);
+            const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+            console.log('Using only finance manager ID:', userId);
+            setAccessibleUserIds([userId]);
+          }
+        } else {
+          console.warn('Finance Manager has no user ID');
+        }
+      } else if (userRole === 'accountant' || userRole === 'employee') {
+        // Accountant and Employee: Only their own data (for journal entries filtering)
+        if (user?.id) {
+          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+          console.log('Setting accessibleUserIds for', userRole, 'to:', [userId]);
+          setAccessibleUserIds([userId]);
+        }
+      } else {
+        // Admin: See all (no filtering needed)
+        console.log('Admin role - no filtering needed');
+        setAccessibleUserIds(null);
+      }
+    };
+    
+    initializeAccess();
+  }, [user, router]);
+
+  // Load data when accessibleUserIds is set or when statusFilter changes
+  useEffect(() => {
+    if (!user) return;
+    
+    const userRole = user?.role?.toLowerCase() || '';
+    const hasAccess = userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'employee';
+    if (!hasAccess) return;
+    
+    // For Admin, load immediately (no need to wait for accessibleUserIds)
+    if (userRole === 'admin' || userRole === 'super_admin') {
+      loadData();
+    } else if (accessibleUserIds !== null) {
+      // For other roles, wait for accessibleUserIds to be set
       loadData();
     }
-  }, [user, router, statusFilter]);
+  }, [user, accessibleUserIds, statusFilter]);
 
   const loadData = async () => {
     // Double-check permissions before making API calls
-    if (!user || (user.role !== 'accountant' && user.role !== 'finance_manager' && user.role !== 'finance_admin' && user.role !== 'admin')) {
-      return;
-    }
+    if (!user) return;
+    
+    const userRole = user?.role?.toLowerCase() || '';
+    const hasAccess = userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'employee';
+    if (!hasAccess) return;
     
     setLoading(true);
     try {
@@ -479,6 +550,7 @@ export default function AccountingDashboard() {
       ]);
       
       // Handle API response structure - ApiResponse wraps data in .data property
+      // Backend now handles role-based filtering for sales, so we just use the response
       const salesData = Array.isArray(salesRes.data) 
         ? salesRes.data 
         : (Array.isArray((salesRes.data as any)?.data) ? (salesRes.data as any).data : []);
@@ -486,7 +558,6 @@ export default function AccountingDashboard() {
       const summaryData = summaryRes.data || (summaryRes.data as any)?.data || null;
       
       // Handle journal entries - backend returns array directly or wrapped
-      // Finance admins and admins can see ALL journal entries, including those posted by accountants
       let journalData: JournalEntry[] = [];
       if (Array.isArray(journalRes.data)) {
         journalData = journalRes.data;
@@ -503,8 +574,63 @@ export default function AccountingDashboard() {
         }
       }
       
+      console.log('Raw journal entries from API:', journalData.length);
+      if (journalData.length > 0) {
+        console.log('Sample journal entry:', {
+          id: journalData[0].id,
+          posted_by_id: journalData[0].posted_by_id,
+          posted_by_name: journalData[0].posted_by_name
+        });
+      }
+      console.log('Accessible User IDs for filtering:', accessibleUserIds);
+      
+      // Apply role-based filtering for journal entries (backend doesn't filter journal entries)
+      const userRole = user?.role?.toLowerCase() || '';
+      const isFinanceManager = userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager';
+      const isAccountant = userRole === 'accountant';
+      const isEmployee = userRole === 'employee';
+      
+      if (isFinanceManager) {
+        if (accessibleUserIds && accessibleUserIds.length > 0) {
+          // Finance Manager/Admin: Filter to only journal entries posted by themselves and their subordinates
+          const beforeCount = journalData.length;
+          journalData = journalData.filter((entry: JournalEntry) => {
+            const postedById = entry.posted_by_id;
+            if (postedById === undefined || postedById === null) {
+              console.warn('Journal entry missing posted_by_id:', entry.id, entry);
+              return false;
+            }
+            const postedByIdNum = typeof postedById === 'string' ? parseInt(postedById, 10) : postedById;
+            const isIncluded = accessibleUserIds.includes(postedByIdNum);
+            if (!isIncluded) {
+              console.log(`Journal entry ${entry.id} filtered out: posted_by_id ${postedByIdNum} not in accessibleUserIds [${accessibleUserIds.join(', ')}]`);
+            }
+            return isIncluded;
+          });
+          console.log(`Finance Manager: Filtered ${beforeCount} journal entries to ${journalData.length}`);
+        } else {
+          console.warn('Finance Manager: accessibleUserIds is not set yet, showing no entries');
+          journalData = []; // Don't show entries until accessibleUserIds is set
+        }
+      } else if ((isAccountant || isEmployee) && accessibleUserIds && accessibleUserIds.length > 0) {
+        // Accountant and Employee: Filter to only their own journal entries
+        const beforeCount = journalData.length;
+        journalData = journalData.filter((entry: JournalEntry) => {
+          const postedById = entry.posted_by_id;
+          if (postedById === undefined || postedById === null) {
+            console.warn('Journal entry missing posted_by_id:', entry.id);
+            return false;
+          }
+          const postedByIdNum = typeof postedById === 'string' ? parseInt(postedById, 10) : postedById;
+          return accessibleUserIds.includes(postedByIdNum);
+        });
+        console.log(`${isAccountant ? 'Accountant' : 'Employee'}: Filtered ${beforeCount} journal entries to ${journalData.length}`);
+      }
+      // Admin sees all journal entries - no filtering needed
+      
+      console.log('Final journal entries count:', journalData.length);
+      
       // Sort by entry date (newest first) to show most recent entries at the top
-      // Finance admins and admins can see ALL journal entries, including those posted by accountants
       journalData.sort((a, b) => {
         const dateA = new Date(a.entry_date).getTime();
         const dateB = new Date(b.entry_date).getTime();
@@ -514,11 +640,6 @@ export default function AccountingDashboard() {
       setSales(salesData as Sale[]);
       setSummary(summaryData);
       setJournalEntries(journalData);
-      
-      // Log for debugging - finance admins and admins should see all entries
-      if (user && (user.role === 'finance_admin' || user.role === 'finance_manager' || user.role === 'admin')) {
-        console.log(`Finance Admin/Admin: Loaded ${journalData.length} journal entries (all entries visible)`);
-      }
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to load data';
       toast.error(errorMessage);
@@ -559,7 +680,10 @@ export default function AccountingDashboard() {
     }
   };
 
-  if (!user || (user.role !== 'accountant' && user.role !== 'finance_manager' && user.role !== 'finance_admin' && user.role !== 'admin')) {
+  const userRole = user?.role?.toLowerCase() || '';
+  const hasAccess = userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'employee';
+  
+  if (!user || !hasAccess) {
     return null;
   }
 
@@ -573,7 +697,7 @@ export default function AccountingDashboard() {
                 <BookOpen size={32} style={{ marginRight: theme.spacing.md, display: 'inline' }} />
                 Accounting Dashboard
               </h1>
-              <p>View sales, post journal entries, and manage revenue (Accountant Access)</p>
+              <p>View sales, post journal entries, and manage revenue</p>
             </HeaderText>
           </HeaderContent>
         </HeaderContainer>
@@ -709,9 +833,14 @@ export default function AccountingDashboard() {
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg }}>
               <h2 style={{ margin: 0 }}>Journal Entries</h2>
-              {(user?.role === 'finance_admin' || user?.role === 'finance_manager' || user?.role === 'admin') && (
+              {(userRole === 'admin' || userRole === 'super_admin') && (
                 <Badge variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
                   Viewing all entries
+                </Badge>
+              )}
+              {(userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager') && (
+                <Badge variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
+                  Viewing team entries
                 </Badge>
               )}
             </div>
