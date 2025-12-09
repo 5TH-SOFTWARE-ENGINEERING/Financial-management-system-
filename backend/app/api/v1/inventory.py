@@ -341,33 +341,46 @@ def get_inventory_summary(
     - Admin/Super Admin: See all inventory
     - Finance Admin/Manager: See only inventory created by them or their subordinates
     """
-    # Allow Finance Admin, Admin, Super Admin, and Manager roles
-    allowed_roles = [
-        UserRole.FINANCE_ADMIN, 
-        UserRole.ADMIN, 
-        UserRole.SUPER_ADMIN, 
-        UserRole.MANAGER
-    ]
-    
-    if current_user.role not in allowed_roles:
-        role_value = str(current_user.role.value if hasattr(current_user.role, 'value') else current_user.role)
+    try:
+        # Allow Finance Admin, Admin, Super Admin, and Manager roles
+        allowed_roles = [
+            UserRole.FINANCE_ADMIN, 
+            UserRole.ADMIN, 
+            UserRole.SUPER_ADMIN, 
+            UserRole.MANAGER
+        ]
+        
+        if current_user.role not in allowed_roles:
+            role_value = str(current_user.role.value if hasattr(current_user.role, 'value') else current_user.role)
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access denied. Only Finance Admin, Admin, Super Admin, or Manager can view inventory summary. Your role: {role_value}"
+            )
+        
+        # Admin and Super Admin see all inventory
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            return inventory_crud.get_total_value(db)
+        
+        # Finance Admin and Manager see only their team's inventory
+        # Get all subordinates in the hierarchy
+        from ...crud.user import user as user_crud
+        subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+        subordinate_ids.append(current_user.id)  # Include themselves
+        
+        # Get inventory summary filtered by created_by_id
+        return inventory_crud.get_total_value_by_users(db, subordinate_ids)
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 403)
+        raise
+    except Exception as e:
+        # Log the error and return a 500 error
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error fetching inventory summary for user {current_user.id}: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=403,
-            detail=f"Access denied. Only Finance Admin, Admin, Super Admin, or Manager can view inventory summary. Your role: {role_value}"
+            status_code=500,
+            detail=f"Failed to fetch inventory summary: {str(e)}"
         )
-    
-    # Admin and Super Admin see all inventory
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-        return inventory_crud.get_total_value(db)
-    
-    # Finance Admin and Manager see only their team's inventory
-    # Get all subordinates in the hierarchy
-    from ...crud.user import user as user_crud
-    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-    subordinate_ids.append(current_user.id)  # Include themselves
-    
-    # Get inventory summary filtered by created_by_id
-    return inventory_crud.get_total_value_by_users(db, subordinate_ids)
 
 
 class DeleteInventoryItemRequest(BaseModel):

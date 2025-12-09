@@ -311,6 +311,16 @@ class CRUDInventory:
             func.count(InventoryItem.id).label('total_items')
         ).filter(InventoryItem.is_active == True).first()
 
+        # Handle case when no inventory items exist
+        if result is None:
+            return {
+                'total_cost_value': 0.0,
+                'total_selling_value': 0.0,
+                'total_quantity_in_stock': 0,
+                'total_items': 0,
+                'potential_profit': 0.0
+            }
+
         return {
             'total_cost_value': float(result.total_cost_value or 0),
             'total_selling_value': float(result.total_selling_value or 0),
@@ -321,6 +331,16 @@ class CRUDInventory:
     
     def get_total_value_by_users(self, db: Session, user_ids: List[int]) -> dict:
         """Get total inventory value for specific users (Finance Admin's team only)"""
+        # Handle empty user_ids list
+        if not user_ids:
+            return {
+                'total_cost_value': 0.0,
+                'total_selling_value': 0.0,
+                'total_quantity_in_stock': 0,
+                'total_items': 0,
+                'potential_profit': 0.0
+            }
+
         result = db.query(
             func.sum(InventoryItem.total_cost * InventoryItem.quantity).label('total_cost_value'),
             func.sum(InventoryItem.selling_price * InventoryItem.quantity).label('total_selling_value'),
@@ -332,6 +352,16 @@ class CRUDInventory:
                 InventoryItem.created_by_id.in_(user_ids)
             )
         ).first()
+
+        # Handle case when no inventory items exist for these users
+        if result is None:
+            return {
+                'total_cost_value': 0.0,
+                'total_selling_value': 0.0,
+                'total_quantity_in_stock': 0,
+                'total_items': 0,
+                'potential_profit': 0.0
+            }
 
         return {
             'total_cost_value': float(result.total_cost_value or 0),
