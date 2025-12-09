@@ -355,30 +355,42 @@ const ForecastCreatePage: React.FC = () => {
     try {
       setLoading(true);
       
+      // Convert date strings to ISO datetime format (YYYY-MM-DDTHH:mm:ss)
+      // Pydantic expects datetime strings in ISO format
+      // Since validation ensures start_date and end_date are required, they should always be present
+      const startDateISO = `${formData.start_date}T00:00:00`;
+      const endDateISO = `${formData.end_date}T23:59:59`;
+      const historicalStartISO = formData.historical_start_date ? `${formData.historical_start_date}T00:00:00` : undefined;
+      const historicalEndISO = formData.historical_end_date ? `${formData.historical_end_date}T23:59:59` : undefined;
+
       const forecastPayload: any = {
         name: formData.name,
         description: formData.description || undefined,
         forecast_type: formData.forecast_type,
         period_type: formData.period_type,
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-        method: formData.method,
-        method_params: {}
+        start_date: startDateISO,
+        end_date: endDateISO,
+        method: formData.method
       };
 
-      // Add method-specific parameters
+      // Add method-specific parameters only if they exist
+      const methodParams: any = {};
       if (formData.method === 'moving_average') {
-        forecastPayload.method_params.window = formData.window;
+        methodParams.window = formData.window;
       } else if (formData.method === 'linear_growth') {
-        forecastPayload.method_params.growth_rate = formData.growth_rate;
+        methodParams.growth_rate = formData.growth_rate;
+      }
+      // Only include method_params if it has values (trend method doesn't need params)
+      if (Object.keys(methodParams).length > 0) {
+        forecastPayload.method_params = methodParams;
       }
 
       // Add historical date range if provided
-      if (formData.historical_start_date) {
-        forecastPayload.historical_start_date = formData.historical_start_date;
+      if (historicalStartISO) {
+        forecastPayload.historical_start_date = historicalStartISO;
       }
-      if (formData.historical_end_date) {
-        forecastPayload.historical_end_date = formData.historical_end_date;
+      if (historicalEndISO) {
+        forecastPayload.historical_end_date = historicalEndISO;
       }
 
       await apiClient.createForecast(forecastPayload);

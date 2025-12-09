@@ -1117,7 +1117,13 @@ class ApiClient {
 
   // Forecasting
   async getForecasts(params?: { skip?: number; limit?: number }) {
-    return this.get('/budgeting/forecasts', { params });
+    // Always provide explicit defaults to match backend expectations
+    const queryParams = {
+      skip: params?.skip !== undefined && params.skip >= 0 ? params.skip : 0,
+      limit: params?.limit !== undefined && params.limit >= 1 && params.limit <= 1000 ? params.limit : 100
+    };
+    
+    return this.get('/budgeting/forecasts', { params: queryParams });
   }
 
   async createForecast(data: any) {
