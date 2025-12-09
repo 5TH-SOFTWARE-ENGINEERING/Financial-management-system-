@@ -1014,7 +1014,7 @@ const AnalyticsPage: React.FC = () => {
               <KPIPairGrid>
                 <KPICard>
                   <KPILabel>Total Revenue</KPILabel>
-                  <KPIValue>
+                  <KPIValue style={{ color: '#059669' }}>
                     {formatCurrency(analyticsData.kpis?.current_period?.revenue || 0)}
                   </KPIValue>
                   {analyticsData.kpis?.growth?.revenue_growth_percent !== undefined && (
@@ -1050,7 +1050,7 @@ const AnalyticsPage: React.FC = () => {
               <KPIPairGrid>
                 <KPICard>
                   <KPILabel>Net Profit</KPILabel>
-                  <KPIValue>
+                  <KPIValue style={{ color: analyticsData.kpis?.current_period?.profit >= 0 ? '#059669' : '#ef4444' }}>
                     {formatCurrency(analyticsData.kpis?.current_period?.profit || 0)}
                   </KPIValue>
                   {analyticsData.kpis?.growth?.profit_growth_percent !== undefined && (
@@ -1083,14 +1083,14 @@ const AnalyticsPage: React.FC = () => {
               <KPIPairGrid>
                 <KPICard>
                   <KPILabel>Avg Daily Revenue</KPILabel>
-                  <KPIValue>
+                  <KPIValue style={{ color: '#059669' }}>
                     {formatCurrency(analyticsData.kpis?.current_period?.avg_daily_revenue || 0)}
                   </KPIValue>
                 </KPICard>
 
                 <KPICard>
                   <KPILabel>Avg Daily Expenses</KPILabel>
-                  <KPIValue>
+                  <KPIValue style={{ color: '#ef4444' }}>
                     {formatCurrency(analyticsData.kpis?.current_period?.avg_daily_expenses || 0)}
                   </KPIValue>
                 </KPICard>
@@ -1172,7 +1172,7 @@ const AnalyticsPage: React.FC = () => {
 
                       <KPICard>
                         <KPILabel>Sales Revenue (Period)</KPILabel>
-                        <KPIValue>
+                        <KPIValue style={{ color: '#059669' }}>
                           {formatCurrency(analyticsData.sales.total_revenue || 0)}
                         </KPIValue>
                         <KPILabel style={{ marginTop: theme.spacing.sm }}>
