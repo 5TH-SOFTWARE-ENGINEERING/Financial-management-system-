@@ -788,10 +788,10 @@ export default function ApprovalsPage() {
       return createdById === userId;
     }
 
-    // Accountant can only approve entries from their subordinates (employees), not their own
+    // Accountant can approve entries from their Finance Admin's team (Finance Admin, employees, other accountants), but not their own
     if (role === 'accountant') {
       if (accessibleUserIds && accessibleUserIds.length > 0) {
-        // Accountant can approve entries from their subordinates (employees), but not their own
+        // Accountant can approve entries from their Finance Admin's team, but not their own
         return accessibleUserIds.includes(createdById) && createdById !== userId;
       }
       return false;
@@ -856,22 +856,74 @@ export default function ApprovalsPage() {
         return;
       }
 
-      // Accountant: Get subordinates (employees only)
+      // Accountant: Get their Finance Admin's (manager's) subordinates
       if (userRole === 'accountant') {
-        try {
-          const subordinatesRes = await apiClient.getSubordinates(userId);
-          const subordinates = subordinatesRes?.data || [];
-          // Accountant can only approve sales from employees (their subordinates), not their own
-          const userIds = subordinates
-            .map((sub: any) => {
-              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+        const accountantId = userId;
+        const storeUser = useUserStore.getState().user;
+        let managerId: number | null = null;
+        
+        // Try to get managerId from storeUser first
+        const managerIdStr = storeUser?.managerId;
+        if (managerIdStr) {
+          managerId = typeof managerIdStr === 'string' ? parseInt(managerIdStr, 10) : Number(managerIdStr);
+        } else {
+          // If not in storeUser, try to fetch current user profile from API
+          try {
+            const currentUserRes = await apiClient.getCurrentUser();
+            const currentUserData = currentUserRes?.data;
+            if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
+              managerId = typeof currentUserData.manager_id === 'string' 
+                ? parseInt(currentUserData.manager_id, 10) 
+                : Number(currentUserData.manager_id);
+            }
+          } catch (err) {
+            console.warn('Failed to fetch current user profile for manager_id:', err);
+          }
+        }
+        
+        if (managerId) {
+          try {
+            const financeAdminId = managerId;
+            
+            // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
+            const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
+            const subordinates = subordinatesRes?.data || [];
+            
+            // Include the Finance Admin themselves and all their subordinates
+            // Accountant can approve sales from Finance Admin's team (but not their own)
+            const userIds = [financeAdminId, ...subordinates.map((sub: any) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
               return subId;
-            })
-            .filter((id: number) => id !== userId); // Exclude themselves
-          setAccessibleUserIds(userIds.length > 0 ? userIds : []);
-        } catch (err) {
-          console.error('Failed to fetch subordinates for Accountant:', err);
-          setAccessibleUserIds([]); // No subordinates, can't approve any sales
+            })];
+            
+            setAccessibleUserIds(userIds);
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Accountant - Accessible User IDs (from Finance Admin):', {
+                accountantId: accountantId,
+                financeAdminId: financeAdminId,
+                subordinatesCount: subordinates.length,
+                accessibleUserIds: userIds
+              });
+            }
+          } catch (err) {
+            console.error('Failed to fetch Finance Admin subordinates for accountant:', err);
+            // Fallback: if we can't get subordinates, at least try to show data from the Finance Admin
+            const fallbackUserIds = [managerId];
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Accountant - Using fallback (Finance Admin only):', {
+                accountantId: accountantId,
+                financeAdminId: managerId,
+                accessibleUserIds: fallbackUserIds
+              });
+            }
+            setAccessibleUserIds(fallbackUserIds);
+          }
+        } else {
+          // Accountant has no manager assigned - fallback to empty array
+          console.warn('Accountant has no manager (Finance Admin) assigned - using empty array');
+          setAccessibleUserIds([]);
         }
         return;
       }
@@ -1133,7 +1185,7 @@ export default function ApprovalsPage() {
                     return soldById === userId;
                   }
 
-                  // Accountant: See only sales from their subordinates (employees), not their own
+                  // Accountant: See sales from their Finance Admin's team (Finance Admin, employees, other accountants), but not their own
                   if (userRole === 'accountant') {
                     if (accessibleUserIds && accessibleUserIds.length > 0) {
                       return accessibleUserIds.includes(soldById) && soldById !== userId;
