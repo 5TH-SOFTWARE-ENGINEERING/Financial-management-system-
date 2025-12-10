@@ -2,10 +2,19 @@
 
 import importlib.util
 import sys
+import warnings
 from pathlib import Path
 
 
 def test_hierarchy_smoke():
+    # Suppress known library deprecations (Pydantic v1 validators, SQLAlchemy legacy APIs, utcnow)
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    try:
+        from sqlalchemy.exc import LegacyAPIWarning  # type: ignore
+        warnings.filterwarnings("ignore", category=LegacyAPIWarning)
+    except Exception:
+        pass
+
     # Import the existing script (lives alongside this runner) and run main()
     script_path = Path(__file__).resolve().parent.parent / "test_hierarchy.py"
     spec = importlib.util.spec_from_file_location("test_hierarchy_module", script_path)
