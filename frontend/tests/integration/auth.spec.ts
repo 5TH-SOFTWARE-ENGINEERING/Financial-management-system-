@@ -166,18 +166,7 @@ test.describe('Authentication Flow', () => {
         let loginRequestHit = false
         const allRequests: string[] = []
         
-        // Log all network requests to debug
-        page.on('request', request => {
-            const url = request.url()
-            allRequests.push(url)
-            if (url.includes('login') || url.includes('auth')) {
-                console.log('Login-related request:', url)
-            }
-        })
-        
-        // Wait for page to be ready - use domcontentloaded instead of networkidle for better compatibility
-        await page.waitForLoadState('domcontentloaded')
-        
+        // Set up routes FIRST before any page interaction
         // Mock the login endpoint - use more flexible patterns
         const loginHandler = async (route: any) => {
             loginRequestHit = true
@@ -210,6 +199,18 @@ test.describe('Authentication Flow', () => {
         
         await page.route('**/api/v1/users/me', userHandler)
         await page.route('**/users/me', userHandler)
+        
+        // Log all network requests to debug
+        page.on('request', request => {
+            const url = request.url()
+            allRequests.push(url)
+            if (url.includes('login') || url.includes('auth')) {
+                console.log('Login-related request:', url)
+            }
+        })
+        
+        // Wait for page to be ready - use domcontentloaded instead of networkidle for better compatibility
+        await page.waitForLoadState('domcontentloaded')
         
         // Ensure form is ready
         await page.waitForSelector('input[type="text"], input[type="email"]', { state: 'visible' })
