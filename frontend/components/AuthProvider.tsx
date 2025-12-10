@@ -1,24 +1,12 @@
 'use client';
 
 import { createContext, useContext, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
-import useUserStore from '@/store/userStore';
+import useUserStore, { type StoreUser } from '@/store/userStore';
 
-// Define User type to match store (from error message)
-interface StoreUser {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'finance_manager' | 'accountant' | 'employee';
-  isActive: boolean;
-  createdAt: string;
-  managerId?: string;
-}
-
-// Define full UserState based on store
-interface UserState {
+// Define AuthContextType based on store
+interface AuthContextType {
   user: StoreUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -29,10 +17,7 @@ interface UserState {
   canViewAllData: () => boolean;
   canApproveTransactions: () => boolean;
   canSubmitTransactions: () => boolean;
-  getCurrentUser: () => Promise<void>;
 }
-
-interface AuthContextType extends Pick<UserState, 'user' | 'isAuthenticated' | 'isLoading' | 'login' | 'logout' | 'register' | 'canManageUsers' | 'canViewAllData' | 'canApproveTransactions' | 'canSubmitTransactions'> {}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
