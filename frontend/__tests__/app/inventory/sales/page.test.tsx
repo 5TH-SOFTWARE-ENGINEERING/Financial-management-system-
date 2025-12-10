@@ -19,16 +19,17 @@ jest.mock('@/lib/rbac/auth-context', () => ({
 }))
 
 // Mock Zustand store
-const mockStore = () => ({
-  user: { id: '1', role: 'admin', name: 'Admin', email: 'admin@test.com', isActive: true },
-  isAuthenticated: true,
-  accessToken: 'token',
-})
-mockStore.getState = () => mockStore()
+const mockStore = {
+  getState: () => ({
+    user: { id: '1', role: 'admin', name: 'Admin', email: 'admin@test.com', isActive: true },
+    isAuthenticated: true,
+    accessToken: 'token',
+  }),
+}
 jest.mock('@/store/userStore', () => ({
   __esModule: true,
-  default: mockStore,
-  useUserStore: mockStore,
+  default: () => mockStore.getState(),
+  useUserStore: () => mockStore.getState(),
 }))
 
 jest.mock('sonner', () => ({
