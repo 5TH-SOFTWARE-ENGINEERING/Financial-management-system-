@@ -259,7 +259,8 @@ test.describe('Authentication Flow', () => {
             responseReceived: !!response,
             responseUrl: response?.url(),
             token,
-            currentUrl
+            currentUrl,
+            recentRequests: allRequests.slice(-5)
         })
         
         // Verify login was successful - check multiple indicators
