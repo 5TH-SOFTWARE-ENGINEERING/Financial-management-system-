@@ -18,6 +18,13 @@ jest.mock('@/lib/api', () => ({
   },
 }))
 
+jest.mock('@/lib/rbac/auth-context', () => ({
+  useAuth: () => ({
+    user: { id: '1', role: 'admin', username: 'admin', email: 'admin@test.com' },
+    isAuthenticated: true,
+  }),
+}))
+
 jest.mock('sonner', () => ({
   toast: {
     success: jest.fn(),

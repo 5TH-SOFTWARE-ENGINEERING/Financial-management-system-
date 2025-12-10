@@ -128,8 +128,8 @@ describe('DashboardPage', () => {
     // Verify API methods were called with correct parameters
     expect(apiClient.getDashboardRecentActivity).toHaveBeenCalledWith(8)
     expect(apiClient.getAdvancedKPIs).toHaveBeenCalledWith({ period: 'month' })
-    expect(apiClient.getRevenues).toHaveBeenCalledWith({ limit: 1000 })
-    expect(apiClient.getExpenses).toHaveBeenCalledWith({ limit: 1000 })
+    expect(apiClient.getRevenues).toHaveBeenCalledWith(expect.objectContaining({ is_approved: false }))
+    expect(apiClient.getExpenses).toHaveBeenCalledWith(expect.objectContaining({ is_approved: false }))
   })
 
   it('handles loading state', async () => {
