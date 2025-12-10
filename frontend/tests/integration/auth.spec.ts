@@ -160,13 +160,13 @@ test.describe('Authentication Flow', () => {
         }
     })
 
-    test('should submit login form successfully', async ({ page }) => {
+    test('should submit login form successfully', async ({ page, context }) => {
         // Wait for inputs to be available (already handled by beforeEach)
         
         let loginRequestHit = false
         const allRequests: string[] = []
         
-        // Set up routes FIRST before any page interaction
+        // Set up routes FIRST - before any interaction
         // Mock the login endpoint - use more flexible patterns
         const loginHandler = async (route: any) => {
             loginRequestHit = true
@@ -200,7 +200,7 @@ test.describe('Authentication Flow', () => {
         await page.route('**/api/v1/users/me', userHandler)
         await page.route('**/users/me', userHandler)
         
-        // Log all network requests to debug
+        // Log all network requests to debug - set up early
         page.on('request', request => {
             const url = request.url()
             allRequests.push(url)
@@ -209,13 +209,13 @@ test.describe('Authentication Flow', () => {
             }
         })
         
-        // Wait for page to be ready - use domcontentloaded instead of networkidle for better compatibility
-        await page.waitForLoadState('domcontentloaded')
-        
-        // Ensure form is ready
+        // Ensure form is ready and interactive
         await page.waitForSelector('input[type="text"], input[type="email"]', { state: 'visible' })
         await page.waitForSelector('input[type="password"]', { state: 'visible' })
         await page.waitForSelector('button[type="submit"]', { state: 'visible' })
+        
+        // Wait a moment to ensure routes are fully registered
+        await page.waitForTimeout(200)
         
         // Fill in the form
         await page.getByPlaceholder(/enter your email or username/i).fill('test@example.com')
