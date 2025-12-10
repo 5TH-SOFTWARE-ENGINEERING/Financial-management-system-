@@ -175,8 +175,8 @@ test.describe('Authentication Flow', () => {
             }
         })
         
-        // Wait for page to be fully loaded before setting up routes
-        await page.waitForLoadState('networkidle')
+        // Wait for page to be ready - use domcontentloaded instead of networkidle for better compatibility
+        await page.waitForLoadState('domcontentloaded')
         
         // Mock the login endpoint - use more flexible patterns
         const loginHandler = async (route: any) => {
