@@ -209,32 +209,56 @@ test.describe('Authentication Flow', () => {
             }
         })
         
+        // Intercept navigation to prevent GET form submissions
+        let navigationIntercepted = false
+        page.on('framenavigated', (frame) => {
+            if (frame === page.mainFrame()) {
+                const url = frame.url()
+                // If navigating to login with query params, it's a GET form submission
+                if (url.includes('/auth/login?') && url.includes('identifier=')) {
+                    navigationIntercepted = true
+                    console.log('Navigation intercepted - GET form submission detected:', url)
+                }
+            }
+        })
+        
         // Ensure form is ready and interactive
         await page.waitForSelector('input[type="text"], input[type="email"]', { state: 'visible' })
         await page.waitForSelector('input[type="password"]', { state: 'visible' })
         await page.waitForSelector('button[type="submit"]', { state: 'visible' })
         
+        // Wait for form to be fully interactive - ensure JavaScript handlers are attached
+        await page.waitForFunction(() => {
+            const form = document.querySelector('form')
+            const button = document.querySelector('button[type="submit"]') as HTMLButtonElement
+            return form !== null && button !== null && !button.disabled
+        }, { timeout: 5000 })
+        
         // Wait a moment to ensure routes are fully registered
-        await page.waitForTimeout(200)
+        await page.waitForTimeout(300)
         
         // Fill in the form
         await page.getByPlaceholder(/enter your email or username/i).fill('test@example.com')
         await page.getByPlaceholder(/enter your password/i).fill('password123')
         
-        // Wait a moment to ensure routes are fully registered
-        await page.waitForTimeout(100)
+        // Wait a moment after filling to ensure form state is updated
+        await page.waitForTimeout(200)
         
         // Click sign in button and wait for API response
-        const [response] = await Promise.all([
+        // Use Promise.allSettled to handle both response and potential navigation
+        const [responseResult, clickResult] = await Promise.allSettled([
             page.waitForResponse(
                 response => {
                     const url = response.url()
                     return (url.includes('/auth/login-json') || url.includes('login-json')) && response.status() === 200
                 },
                 { timeout: 15000 }
-            ).catch(() => null),
+            ),
             page.getByRole('button', { name: /sign in/i }).click()
         ])
+        
+        // Extract response from result
+        const response = responseResult.status === 'fulfilled' ? responseResult.value : null
         
         // Wait for response to complete
         if (response) {
@@ -264,8 +288,14 @@ test.describe('Authentication Flow', () => {
             responseUrl: response?.url(),
             token,
             currentUrl,
+            navigationIntercepted,
             recentRequests: allRequests.slice(-5)
         })
+        
+        // If navigation was intercepted, it means form submitted as GET - this is a test failure
+        if (navigationIntercepted) {
+            throw new Error('Form submitted as GET request instead of API call. This indicates the form is not using JavaScript/AJAX submission.')
+        }
         
         // Verify login was successful
         // If we have a response or route was hit, login API call succeeded
