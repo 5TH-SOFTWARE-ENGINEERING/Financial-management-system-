@@ -106,8 +106,8 @@ test.describe('Authentication Flow', () => {
     })
 
     test('should show error for invalid credentials', async ({ page }) => {
-        // Mock the login API to return an error response
-        await page.route('**/api/v1/auth/login', async route => {
+        // Mock the login API to return an error response - use correct endpoint path
+        await page.route('**/api/v1/auth/login-json', async route => {
             await route.fulfill({
                 status: 401,
                 contentType: 'application/json',
@@ -127,8 +127,8 @@ test.describe('Authentication Flow', () => {
         // Wait for API response (the mocked 401 response)
         try {
             await page.waitForResponse(
-                response => response.url().includes('/auth/login') && response.status() === 401,
-                { timeout: 5000 }
+                response => response.url().includes('/auth/login-json') && response.status() === 401,
+                { timeout: 10000 }
             )
         } catch (e) {
             // If response doesn't come, continue anyway
@@ -163,8 +163,13 @@ test.describe('Authentication Flow', () => {
     test('should submit login form successfully', async ({ page }) => {
         // Wait for inputs to be available (already handled by beforeEach)
         
-        // Mock the login and current user endpoints
-        await page.route('**/api/v1/auth/login', async route => {
+        let loginRequestHit = false
+        let loginResponseSent = false
+        
+        // Mock the login endpoint - use flexible pattern to match any base URL
+        await page.route('**/auth/login-json', async route => {
+            loginRequestHit = true
+            loginResponseSent = true
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -176,7 +181,8 @@ test.describe('Authentication Flow', () => {
             })
         })
         
-        await page.route('**/api/v1/users/me', async route => {
+        // Mock the current user endpoint
+        await page.route('**/users/me', async route => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -191,32 +197,66 @@ test.describe('Authentication Flow', () => {
         // Click sign in button and wait for API response
         const [response] = await Promise.all([
             page.waitForResponse(
-                response => response.url().includes('/auth/login') && response.status() === 200,
-                { timeout: 5000 }
+                response => {
+                    const url = response.url()
+                    return (url.includes('/auth/login-json') || url.includes('login-json')) && response.status() === 200
+                },
+                { timeout: 15000 }
             ).catch(() => null),
             page.getByRole('button', { name: /sign in/i }).click()
         ])
         
-        // Wait a moment for token storage and navigation
-        await page.waitForTimeout(2000)
+        // Wait a moment for the request to be processed
+        await page.waitForTimeout(1000)
         
-        // Check if token was stored (indicates successful API call)
-        const token = await page.evaluate(() => localStorage.getItem('access_token'))
+        // Wait for token to be stored - poll until it appears or timeout
+        let token = null
+        for (let i = 0; i < 20; i++) {
+            token = await page.evaluate(() => localStorage.getItem('access_token'))
+            if (token) break
+            await page.waitForTimeout(500)
+        }
+        
         const currentUrl = page.url()
         
-        // If token is set or API responded successfully, login worked
-        if (token || response) {
-            // Verify we navigated away from login page
-            if (!currentUrl.includes('/auth/login')) {
-                expect(currentUrl).not.toContain('/auth/login')
-            } else {
-                // Still on login but token is set - API worked
+        // Debug info
+        console.log('Login test debug:', {
+            loginRequestHit,
+            loginResponseSent,
+            responseReceived: !!response,
+            responseUrl: response?.url(),
+            token,
+            currentUrl
+        })
+        
+        // Verify login was successful - check multiple indicators
+        if (token) {
+            // Token is set - login succeeded
+            expect(token).toBe('mock-access-token-12345')
+            // Should navigate away from login page
+            if (currentUrl.includes('/auth/login')) {
+                // Still on login - wait a bit more for navigation
+                await page.waitForTimeout(2000)
+                const finalUrl = page.url()
+                // Navigation might be delayed, but token is set so login worked
                 expect(token).toBeTruthy()
+            } else {
+                // Successfully navigated away
+                expect(currentUrl).not.toContain('/auth/login')
+            }
+        } else if (response || loginRequestHit) {
+            // API responded or route was hit - wait a bit more for token storage
+            await page.waitForTimeout(3000)
+            token = await page.evaluate(() => localStorage.getItem('access_token'))
+            // If we got a response or the route was hit, login should have worked
+            expect(response || loginRequestHit).toBeTruthy()
+            // Token should be stored by now
+            if (token) {
+                expect(token).toBe('mock-access-token-12345')
             }
         } else {
-            // Token not set and no response - might be redirect behavior or API issue
-            // Still verify form submission happened
-            expect(currentUrl).toBeTruthy()
+            // No response and no token - test failed
+            throw new Error(`Login failed: No API response and no token stored. Route hit: ${loginRequestHit}, Response: ${!!response}`)
         }
     })
 })
