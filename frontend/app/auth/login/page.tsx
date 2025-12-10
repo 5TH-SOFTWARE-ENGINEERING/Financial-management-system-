@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/rbac';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast, Toaster } from 'sonner';
 import { LoginSchema, type LoginInput } from '@/lib/validation';
+import useUserStore from '@/store/userStore';
 
 const theme = {
   colors: { primary: '#ff7e5f' },
@@ -475,14 +476,41 @@ export default function Login() {
     try {
       const loginSuccess = await login(data.identifier, data.password);
       
-      // Only redirect if login was successful AND user is authenticated
-      if (loginSuccess && isAuthenticated) {
-      toast.success('Login successful!');
-      router.push('/dashboard');
-      } else {
-        // Login returned false or user is not authenticated
-        toast.error('Login failed. Please check your credentials and try again.');
+      // The login function already verifies authentication internally
+      // If it returns true, the user is authenticated and we can redirect
+      if (loginSuccess) {
+        // Give a small delay to ensure state has propagated to React components
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Verify authentication state directly from store as a double-check
+        const storeState = useUserStore.getState();
+        if (storeState.isAuthenticated && storeState.user) {
+          toast.success('Login successful!');
+          router.push('/dashboard');
+          return;
+        }
+        
+        // If store state check fails, wait a bit more and retry
+        // This handles potential race conditions with Zustand state updates
+        await new Promise(resolve => setTimeout(resolve, 200));
+        const retryState = useUserStore.getState();
+        if (retryState.isAuthenticated && retryState.user) {
+          toast.success('Login successful!');
+          router.push('/dashboard');
+          return;
+        }
+        
+        // If loginSuccess is true but store state doesn't match after retries,
+        // still redirect since login function already verified authentication
+        // This prevents false error messages when login actually succeeded
+        console.warn('Login succeeded but store state not immediately updated, redirecting anyway');
+        toast.success('Login successful!');
+        router.push('/dashboard');
+        return;
       }
+      
+      // If login returned false, this indicates a real login failure
+      toast.error('Login failed. Please check your credentials and try again.');
     } catch (error: any) {
       console.error('Login error:', error);
       
@@ -500,19 +528,28 @@ export default function Login() {
       
       // Check if error is 401 (user not found) or contains "Incorrect username or password"
       const errorStatus = error?.response?.status;
-      const errorDetail = error?.response?.data?.detail || error?.message || '';
+      const errorDetail = error?.response?.data?.detail || 
+                         error?.response?.data?.error || 
+                         error?.message || 
+                         '';
+      const errorDetailLower = errorDetail.toLowerCase();
       const isUserNotFound = errorStatus === 401 || 
-                            errorDetail.toLowerCase().includes('incorrect username') ||
-                            errorDetail.toLowerCase().includes('incorrect password') ||
-                            errorDetail.toLowerCase().includes('user not found');
+                            errorStatus === 404 ||
+                            errorDetailLower.includes('incorrect username') ||
+                            errorDetailLower.includes('incorrect password') ||
+                            errorDetailLower.includes('user not found') ||
+                            errorDetailLower.includes('invalid credentials') ||
+                            errorDetailLower.includes('authentication failed');
       
       if (isNetworkError || isServerError) {
         // Database/server connection error
-        toast.error('Unable to connect to the server.');
+        toast.error('Unable to connect to the server. try again later.');
       } else if (isUserNotFound) {
         setUserNotFound(true);
       } else {
-        toast.error(errorDetail || 'Login failed. Please try again.');
+        // Show specific error message if available, otherwise generic message
+        const errorMessage = errorDetail || 'Login failed. Please check your credentials and try again.';
+        toast.error(errorMessage);
       }
     } finally {
       setIsLoading(false);
