@@ -1,6 +1,13 @@
 # test_hierarchy.py
 import sys
 import os
+import pytest #type: ignore
+
+# This is a standalone integration harness. To avoid pytest collecting it
+# directly (it requires its own setup/teardown), we mark it skipped. Run via
+# tests/test_hierarchy_runner.py instead.
+pytestmark = pytest.mark.skip(reason="Integration script; run via tests/test_hierarchy_runner.py")
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi.testclient import TestClient #type: ignore

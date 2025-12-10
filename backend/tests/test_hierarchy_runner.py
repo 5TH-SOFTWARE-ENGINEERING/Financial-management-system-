@@ -7,7 +7,7 @@ from pathlib import Path
 
 def test_hierarchy_smoke():
     # Import the existing script (lives alongside this runner) and run main()
-    script_path = Path(__file__).resolve().parent / "test_hierarchy.py"
+    script_path = Path(__file__).resolve().parent.parent / "test_hierarchy.py"
     spec = importlib.util.spec_from_file_location("test_hierarchy_module", script_path)
     module = importlib.util.module_from_spec(spec)
     sys.modules["test_hierarchy_module"] = module
