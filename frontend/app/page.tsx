@@ -1,17 +1,13 @@
 //app/page.tsx
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
-import { motion, useInView } from 'framer-motion';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Sphere, MeshDistortMaterial, Points, PointMaterial } from '@react-three/drei';
-import type { Mesh } from 'three';
 
 // === THEME ===
 const theme = {
@@ -180,7 +176,7 @@ const HeroSection = styled.section`
   }
 `;
 
-const Title = styled(motion.h1)`
+const Title = styled.h1`
   font-size: 3rem;
   font-weight: 700;
   color: white;
@@ -193,7 +189,7 @@ const Title = styled(motion.h1)`
   }
 `;
 
-const Subtitle = styled(motion.p)`
+const Subtitle = styled.p`
   font-size: 1.2rem;
   color:rgb(99, 135, 189);
   max-width: 700px;
@@ -265,7 +261,7 @@ const RegularFeaturesGrid = styled.div`
   margin-top: 2rem;
 `;
 
-const Card = styled(motion.div)`
+const Card = styled.div`
   background-color: ${theme.colors.card};
   border-radius: ${theme.radius};
   padding: 1.5rem;
@@ -428,184 +424,10 @@ const TeamImage = styled(Image)`
   box-shadow: ${theme.shadows.lg};
 `;
 
-const Word = styled(motion.span)`
-  display: inline-block;
-`;
-
-// 3D Solar System Components
-function Sun() {
-  const meshRef = useRef<Mesh>(null!);
-  const coronaRef = useRef<Mesh>(null!);
-  
-  useFrame((state) => {
-    if (meshRef.current) {
-      // Realistic slow rotation
-      meshRef.current.rotation.y += 0.001;
-      meshRef.current.rotation.x += 0.0005;
-      
-      // Subtle pulsing like real sun
-      const time = state.clock.elapsedTime;
-      const scale = 1 + Math.sin(time * 0.8) * 0.08 + Math.cos(time * 1.2) * 0.05;
-      meshRef.current.scale.setScalar(scale);
-    }
-    
-    if (coronaRef.current) {
-      // Corona rotation
-      coronaRef.current.rotation.y += 0.0008;
-      coronaRef.current.rotation.x += 0.0004;
-      
-      // Corona pulsing
-      const time = state.clock.elapsedTime;
-      const coronaScale = 1.15 + Math.sin(time * 0.6) * 0.1;
-      coronaRef.current.scale.setScalar(coronaScale);
-    }
-  });
-  
-  return (
-    <group>
-      {/* Corona/Outer glow */}
-      <Sphere ref={coronaRef} args={[2.1, 64, 64]} position={[0, 0, 0]}>
-        <meshBasicMaterial 
-          color="#ff6b35"
-          transparent
-          opacity={0.3}
-          side={2}
-        />
-      </Sphere>
-      
-      {/* Main sun body */}
-      <Sphere ref={meshRef} args={[1.8, 64, 64]} position={[0, 0, 0]}>
-        <MeshDistortMaterial 
-          color="#ff8c00"
-          distort={0.5} 
-          speed={4} 
-          roughness={0.2}
-          emissive="#ff6b35"
-          emissiveIntensity={1.2}
-          metalness={0.1}
-        />
-      </Sphere>
-      
-      {/* Inner core glow */}
-      <Sphere args={[1.5, 64, 64]} position={[0, 0, 0]}>
-        <meshBasicMaterial 
-          color="#ffd700"
-          transparent
-          opacity={0.7}
-        />
-      </Sphere>
-    </group>
-  );
-}
-
-interface PlanetProps {
-  radius: number;
-  speed: number;
-  size: number;
-  color: string;
-  angle: number;
-  tilt?: number;
-}
-
-function Planet({ radius, speed, size, color, angle, tilt = 0 }: PlanetProps) {
-  const meshRef = useRef<Mesh>(null!);
-  const orbitRef = useRef<Mesh>(null!);
-  
-  useFrame((state) => {
-    if (orbitRef.current && meshRef.current) {
-      const time = state.clock.elapsedTime;
-      const orbitAngle = angle + time * speed;
-      
-      // Calculate orbital position
-      const x = Math.cos(orbitAngle) * radius;
-      const z = Math.sin(orbitAngle) * radius;
-      const y = Math.sin(time * speed * 0.5) * tilt;
-      
-      orbitRef.current.position.set(x, y, z);
-      
-      // Rotate planet on its own axis
-      meshRef.current.rotation.y += speed * 0.5;
-    }
-  });
-  
-  return (
-    <mesh ref={orbitRef}>
-      <Sphere ref={meshRef} args={[size, 32, 32]} position={[0, 0, 0]}>
-        <MeshDistortMaterial 
-          color={color} 
-          distort={0.2} 
-          speed={2} 
-          roughness={0.3}
-          emissive={color}
-          emissiveIntensity={0.2}
-        />
-      </Sphere>
-    </mesh>
-  );
-}
-
-// Orbital ring visualization
-function OrbitalRing({ radius, color }: { radius: number; color: string }) {
-  return (
-    <mesh rotation={[Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[radius - 0.05, radius + 0.05, 64]} />
-      <meshBasicMaterial 
-        color={color} 
-        transparent 
-        opacity={0.2} 
-        side={2}
-      />
-    </mesh>
-  );
-}
-
-// Solar System Component
-function SolarSystem() {
-  const planets = [
-    { radius: 2.5, speed: 0.3, size: 0.3, color: '#3b82f6', angle: 0, tilt: 0.1 }, // Blue planet
-    { radius: 3.5, speed: 0.2, size: 0.4, color: '#8b5cf6', angle: Math.PI / 2, tilt: 0.15 }, // Purple planet
-    { radius: 4.5, speed: 0.15, size: 0.35, color: '#10b981', angle: Math.PI, tilt: 0.12 }, // Green planet
-    { radius: 5.5, speed: 0.1, size: 0.5, color: '#f59e0b', angle: Math.PI * 1.5, tilt: 0.2 }, // Orange planet
-    { radius: 6.5, speed: 0.08, size: 0.25, color: '#ef4444', angle: Math.PI / 4, tilt: 0.08 }, // Red planet
-  ];
-  
-  return (
-    <>
-      <ambientLight intensity={0.3} />
-      {/* Main sunlight - warm white/yellow */}
-      <pointLight position={[0, 0, 0]} intensity={2.5} color="#ffd700" distance={20} decay={2} />
-      <pointLight position={[0, 0, 0]} intensity={1.8} color="#ff8c00" distance={15} decay={2} />
-      {/* Accent lights for atmosphere */}
-      <pointLight position={[5, 5, 5]} intensity={0.4} color="#3b82f6" />
-      <pointLight position={[-5, -5, -5]} intensity={0.4} color="#8b5cf6" />
-      {/* Directional light simulating sunlight */}
-      <directionalLight position={[0, 5, 5]} intensity={0.8} color="#ffd700" />
-      
-      <Sun />
-      
-      {planets.map((planet, index) => (
-        <group key={index}>
-          <OrbitalRing radius={planet.radius} color={planet.color} />
-          <Planet {...planet} />
-        </group>
-      ))}
-      
-      <OrbitControls 
-        enableZoom={false} 
-        autoRotate 
-        autoRotateSpeed={0.5}
-        minPolarAngle={Math.PI / 3}
-        maxPolarAngle={Math.PI / 1.5}
-      />
-    </>
-  );
-}
 
 export default function Home() {
   const [openModal, setOpenModal] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const featuresRef = useRef(null);
-  const featuresInView = useInView(featuresRef, { once: true, margin: '-100px' });
 
   const modals = {
     growth: {
@@ -655,45 +477,22 @@ export default function Home() {
     feature.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const wordVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { delay: i * 0.1 },
-    }),
-  };
-
   return (
     <Wrapper>
       <Header />
 
       <HeroSection>
         <GradientBackground />
-        <Canvas
-          camera={{ position: [0, 8, 12], fov: 50 }}
-          style={{ position: 'absolute', inset: 0, zIndex: 1 }}
-        >
-          <SolarSystem />
-        </Canvas>
 
         <div style={{ zIndex: 10 }}>
-          <Title initial="hidden" animate="visible">
-            {['Enterprise', 'Financial', 'Management', 'Platform'].map((word, i) => (
-              <Word key={i} variants={wordVariants} custom={i} initial="hidden" animate="visible">
-                {word}{' '}
-              </Word>
-            ))}
+          <Title>
+            Enterprise Financial Management Platform
           </Title>
-          <Subtitle initial="hidden" animate="visible">
+          <Subtitle>
             Transform your financial operations with intelligent automation, real-time analytics, and enterprise-grade security. 
             Manage revenue, control expenses, optimize budgets, and ensure compliance—all in one powerful platform designed for modern finance teams.
           </Subtitle>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-          >
+          <div>
             <Link href="/auth/login">
               <Button 
                 size="lg" 
@@ -713,10 +512,7 @@ export default function Home() {
                 Start Free Trial
               </Button>
             </Link>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.6 }}
+            <p
               style={{ 
                 marginTop: '1rem', 
                 fontSize: '0.9rem', 
@@ -724,16 +520,13 @@ export default function Home() {
               }}
             >
               No credit card required • 14-day free trial • Cancel anytime
-            </motion.p>
-          </motion.div>
+            </p>
+          </div>
         </div>
       </HeroSection>
 
-      <FeatureSection ref={featuresRef}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={featuresInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
+      <FeatureSection>
+        <div
           style={{ textAlign: 'center', marginBottom: '1rem' }}
         >
           <h2 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '0.5rem', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
@@ -742,7 +535,7 @@ export default function Home() {
           <p style={{ fontSize: '1.1rem', color: '#9ca3af', maxWidth: '700px', margin: '0 auto' }}>
             Everything you need to manage finances, control costs, and drive business growth
           </p>
-        </motion.div>
+        </div>
 
         <ParallelFeaturesContainer>
           {filteredFeatures
@@ -751,7 +544,6 @@ export default function Home() {
               <Card
                 key={feature.id}
                 onClick={() => setOpenModal(feature.id)}
-                whileHover={{ scale: 1.03 }}
                 style={{ minHeight: '280px', display: 'flex', flexDirection: 'column' }}
               >
                 <h3 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '0.75rem', lineHeight: '1.3' }}>
@@ -769,7 +561,6 @@ export default function Home() {
             <Card
               key={feature.id}
               onClick={() => setOpenModal(feature.id)}
-              whileHover={{ scale: 1.03 }}
             >
               <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>
                 {feature.title}
@@ -781,11 +572,7 @@ export default function Home() {
       </FeatureSection>
 
       <TeamSection>
-        <motion.h2 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+        <h2 
           style={{ 
             fontSize: '2.5rem', 
             fontWeight: 700, 
@@ -797,12 +584,8 @@ export default function Home() {
           }}
         >
           Trusted by Finance Professionals Worldwide
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+        </h2>
+        <p
           style={{ 
             fontSize: '1.1rem', 
             color: '#9ca3af', 
@@ -812,7 +595,7 @@ export default function Home() {
           }}
         >
           Built by a global team of finance experts, accountants, and software engineers dedicated to transforming how businesses manage their finances.
-        </motion.p>
+        </p>
         <TeamImage
           src="/images/team-photo.png"
           alt="Team"
@@ -820,11 +603,7 @@ export default function Home() {
           height={400}
           style={{ objectFit: 'cover', marginBottom: '1rem' }}
         />
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+        <p
           style={{ 
             fontSize: '1rem', 
             color: '#d1d5db',
@@ -835,7 +614,7 @@ export default function Home() {
         >
           Our platform powers financial operations for businesses of all sizes—from startups to Fortune 500 companies. 
           We combine deep financial expertise with cutting-edge technology to deliver solutions that drive real business value.
-        </motion.p>
+        </p>
       </TeamSection>
 
       <Footer />
