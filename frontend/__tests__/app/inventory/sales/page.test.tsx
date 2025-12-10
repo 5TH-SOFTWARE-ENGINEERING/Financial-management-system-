@@ -3,11 +3,13 @@ import { render, screen, waitFor } from '@testing-library/react'
 import InventorySalesPage from '@/app/inventory/sales/page'
 
 // Generic API mock that returns resolved empty data for any method
-const mockApiClient = new Proxy({}, { get: () => jest.fn().mockResolvedValue({ data: [] }) })
-jest.mock('@/lib/api', () => ({
-  __esModule: true,
-  default: mockApiClient,
-}))
+jest.mock('@/lib/api', () => {
+  const mockApiClient = new Proxy({}, { get: () => jest.fn().mockResolvedValue({ data: [] }) })
+  return {
+    __esModule: true,
+    default: mockApiClient,
+  }
+})
 
 jest.mock('@/lib/rbac/auth-context', () => ({
   useAuth: () => ({
