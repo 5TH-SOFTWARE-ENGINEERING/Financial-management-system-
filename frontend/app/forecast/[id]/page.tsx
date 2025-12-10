@@ -5,7 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/rbac/auth-context';
 import {
   LineChart, ArrowLeft, Calendar, TrendingUp, TrendingDown,
-  BarChart3, Activity, FileText, AlertCircle
+  BarChart3, Activity, FileText, AlertCircle, Edit, Download,
+  FileSpreadsheet, Target, GitBranch, RefreshCw
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -13,6 +14,20 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import {
+  LineChart as RechartsLineChart,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Line
+} from 'recharts';
+import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const PRIMARY_LIGHT = '#e8f5e9';
@@ -36,7 +51,7 @@ const PageContainer = styled.div`
 const ContentContainer = styled.div`
   flex: 1;
   width: 100%;
-  max-width: 980px;
+  max-width: 1400px;
   margin-left: auto;
   margin-right: 0;
   padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
@@ -144,6 +159,108 @@ const ForecastDataCard = styled.div`
   gap: ${theme.spacing.md};
 `;
 
+const ChartContainer = styled.div`
+  width: 100%;
+  height: 400px;
+  margin: ${theme.spacing.md} 0;
+  padding: ${theme.spacing.md};
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.sm};
+`;
+
+const ActionButtonsContainer = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  flex-wrap: wrap;
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const TabContainer = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  border-bottom: 2px solid ${theme.colors.border};
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const Tab = styled.button<{ $active?: boolean }>`
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  background: none;
+  border: none;
+  border-bottom: 2px solid ${props => props.$active ? PRIMARY_COLOR : 'transparent'};
+  color: ${props => props.$active ? PRIMARY_COLOR : TEXT_COLOR_MUTED};
+  font-weight: ${props => props.$active ? theme.typography.fontWeights.bold : theme.typography.fontWeights.medium};
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    color: ${PRIMARY_COLOR};
+  }
+`;
+
+const ComparisonCard = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  padding: ${theme.spacing.xl};
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const MetricCard = styled.div`
+  background: ${PRIMARY_LIGHT};
+  border-radius: ${theme.borderRadius.sm};
+  padding: ${theme.spacing.md};
+  text-align: center;
+  
+  h4 {
+    margin: 0 0 ${theme.spacing.xs} 0;
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
+  }
+  
+  p {
+    margin: 0;
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+  }
+`;
+
+const StyledSelect = styled.select`
+  padding: 8px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #ffffff;
+  color: #111827;
+  cursor: pointer;
+  
+  &:focus {
+    border-color: #3b82f6;
+    outline: none;
+  }
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  margin-bottom: ${theme.spacing.md};
+  
+  label {
+    display: block;
+    font-size: ${theme.typography.fontSizes.sm};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0;
+  }
+`;
+
 const ForecastTable = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -220,6 +337,13 @@ const ForecastDetailPage: React.FC = () => {
   const { user } = useAuth();
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'comparison' | 'budget' | 'accuracy' | 'scenarios'>('overview');
+  const [actualsData, setActualsData] = useState<any[]>([]);
+  const [loadingActuals, setLoadingActuals] = useState(false);
+  const [selectedBudget, setSelectedBudget] = useState<number | null>(null);
+  const [budgets, setBudgets] = useState<any[]>([]);
+  const [accuracyMetrics, setAccuracyMetrics] = useState<any>(null);
+  const [scenarios, setScenarios] = useState<any[]>([]);
 
   const forecastId = params?.id ? parseInt(params.id as string) : null;
 
@@ -274,6 +398,194 @@ const ForecastDetailPage: React.FC = () => {
       default: return <Activity size={20} />;
     }
   };
+
+  const loadActuals = async () => {
+    if (!forecast) return;
+    
+    try {
+      setLoadingActuals(true);
+      const startDate = new Date(forecast.start_date).toISOString();
+      const endDate = new Date(forecast.end_date).toISOString();
+      
+      let actuals: any[] = [];
+      
+      if (forecast.forecast_type === 'revenue' || forecast.forecast_type === 'all') {
+        try {
+          const revenueResponse = await apiClient.request({
+            method: 'GET',
+            url: '/revenue',
+            params: { start_date: startDate, end_date: endDate, limit: 1000 }
+          });
+          if (revenueResponse.data) {
+            actuals = actuals.concat((Array.isArray(revenueResponse.data) ? revenueResponse.data : []).map((r: any) => ({
+              date: r.date || r.created_at,
+              value: r.amount || 0,
+              type: 'revenue'
+            })));
+          }
+        } catch (e) {
+          console.error('Error loading revenue:', e);
+        }
+      }
+      
+      if (forecast.forecast_type === 'expense' || forecast.forecast_type === 'all') {
+        try {
+          const expenseResponse = await apiClient.request({
+            method: 'GET',
+            url: '/expenses',
+            params: { start_date: startDate, end_date: endDate, limit: 1000 }
+          });
+          if (expenseResponse.data) {
+            actuals = actuals.concat((Array.isArray(expenseResponse.data) ? expenseResponse.data : []).map((e: any) => ({
+              date: e.date || e.created_at,
+              value: e.amount || 0,
+              type: 'expense'
+            })));
+          }
+        } catch (e) {
+          console.error('Error loading expenses:', e);
+        }
+      }
+      
+      setActualsData(actuals);
+      if (actuals.length === 0) {
+        toast.info('No actual data found for the selected period');
+      }
+    } catch (error: any) {
+      console.error('Failed to load actuals:', error);
+      toast.error('Failed to load actual data');
+    } finally {
+      setLoadingActuals(false);
+    }
+  };
+
+  const loadBudgets = async () => {
+    try {
+      const response = await apiClient.getBudgets({ limit: 100 });
+      if (response.data) {
+        setBudgets(Array.isArray(response.data) ? response.data : []);
+      }
+    } catch (error: any) {
+      console.error('Failed to load budgets:', error);
+    }
+  };
+
+  const calculateAccuracy = () => {
+    if (!forecast || !actualsData.length) return null;
+    
+    const forecastData = forecast.forecast_data || [];
+    const comparisons = forecastData.map((f: any) => {
+      const actual = actualsData.find((a: any) => {
+        const forecastDate = new Date(f.date).toISOString().split('T')[0];
+        const actualDate = new Date(a.date).toISOString().split('T')[0];
+        return forecastDate === actualDate;
+      });
+      
+      if (!actual) return null;
+      
+      const forecastValue = f.forecasted_value || 0;
+      const actualValue = actual.value || 0;
+      const error = Math.abs(forecastValue - actualValue);
+      const percentError = forecastValue > 0 ? (error / forecastValue) * 100 : 0;
+      
+      return {
+        date: f.date,
+        forecast: forecastValue,
+        actual: actualValue,
+        error,
+        percentError
+      };
+    }).filter(Boolean);
+    
+    if (comparisons.length === 0) return null;
+    
+    const avgError = comparisons.reduce((sum: number, c: any) => sum + c.error, 0) / comparisons.length;
+    const avgPercentError = comparisons.reduce((sum: number, c: any) => sum + c.percentError, 0) / comparisons.length;
+    const mape = avgPercentError; // Mean Absolute Percentage Error
+    const accuracy = Math.max(0, 100 - mape);
+    
+    return {
+      comparisons,
+      avgError,
+      avgPercentError,
+      mape,
+      accuracy,
+      totalComparisons: comparisons.length
+    };
+  };
+
+  const exportToPDF = () => {
+    if (!forecast) return;
+    
+    const doc = new jsPDF();
+    const forecastData = forecast.forecast_data || [];
+    
+    doc.setFontSize(18);
+    doc.text(forecast.name, 14, 20);
+    
+    doc.setFontSize(12);
+    let yPos = 35;
+    doc.text(`Type: ${forecast.forecast_type}`, 14, yPos);
+    yPos += 7;
+    doc.text(`Method: ${forecast.method}`, 14, yPos);
+    yPos += 7;
+    doc.text(`Period: ${formatDate(forecast.start_date)} - ${formatDate(forecast.end_date)}`, 14, yPos);
+    yPos += 15;
+    
+    // Table headers
+    doc.setFontSize(10);
+    doc.text('Period', 14, yPos);
+    doc.text('Date', 60, yPos);
+    doc.text('Forecasted Value', 120, yPos);
+    yPos += 7;
+    
+    // Table data
+    forecastData.forEach((item: any) => {
+      if (yPos > 280) {
+        doc.addPage();
+        yPos = 20;
+      }
+      doc.text(item.period || '-', 14, yPos);
+      doc.text(item.date ? formatDate(item.date) : '-', 60, yPos);
+      doc.text(formatCurrency(item.forecasted_value || 0), 120, yPos);
+      yPos += 7;
+    });
+    
+    doc.save(`${forecast.name.replace(/\s+/g, '_')}_forecast.pdf`);
+    toast.success('PDF exported successfully');
+  };
+
+  const exportToExcel = () => {
+    if (!forecast) return;
+    
+    const forecastData = forecast.forecast_data || [];
+    const worksheet = XLSX.utils.json_to_sheet(
+      forecastData.map((item: any) => ({
+        Period: item.period || '-',
+        Date: item.date ? formatDate(item.date) : '-',
+        'Forecasted Value': item.forecasted_value || 0
+      }))
+    );
+    
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Forecast Data');
+    
+    XLSX.writeFile(workbook, `${forecast.name.replace(/\s+/g, '_')}_forecast.xlsx`);
+    toast.success('Excel file exported successfully');
+  };
+
+  useEffect(() => {
+    if (forecast && activeTab === 'comparison') {
+      loadActuals();
+    }
+    if (activeTab === 'budget') {
+      loadBudgets();
+    }
+    if (forecast && activeTab === 'accuracy') {
+      const metrics = calculateAccuracy();
+      setAccuracyMetrics(metrics);
+    }
+  }, [forecast, activeTab]);
 
   if (loading) {
     return (
@@ -339,9 +651,58 @@ const ForecastDetailPage: React.FC = () => {
                   )}
                 </div>
               </div>
+              <ActionButtonsContainer>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/forecast/${forecastId}/edit`)}
+                  style={{ background: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}
+                >
+                  <Edit size={16} />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={exportToPDF}
+                  style={{ background: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}
+                >
+                  <Download size={16} />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={exportToExcel}
+                  style={{ background: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}
+                >
+                  <FileSpreadsheet size={16} />
+                  Excel
+                </Button>
+              </ActionButtonsContainer>
             </HeaderContent>
           </HeaderContainer>
 
+          <TabContainer>
+            <Tab $active={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>
+              Overview
+            </Tab>
+            <Tab $active={activeTab === 'charts'} onClick={() => setActiveTab('charts')}>
+              Charts
+            </Tab>
+            <Tab $active={activeTab === 'comparison'} onClick={() => setActiveTab('comparison')}>
+              Actual vs Forecast
+            </Tab>
+            <Tab $active={activeTab === 'budget'} onClick={() => setActiveTab('budget')}>
+              Budget Integration
+            </Tab>
+            <Tab $active={activeTab === 'accuracy'} onClick={() => setActiveTab('accuracy')}>
+              Accuracy Tracking
+            </Tab>
+            <Tab $active={activeTab === 'scenarios'} onClick={() => setActiveTab('scenarios')}>
+              Scenarios
+            </Tab>
+          </TabContainer>
+
+          {activeTab === 'overview' && (
+            <>
           <InfoCard>
             <h3 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>Forecast Information</h3>
             <InfoRow>
@@ -444,6 +805,246 @@ const ForecastDetailPage: React.FC = () => {
               </>
             )}
           </ForecastDataCard>
+          </>
+          )}
+
+          {activeTab === 'charts' && (
+            <ForecastDataCard>
+              <h3 style={{ marginTop: 0, marginBottom: theme.spacing.lg, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>Forecast Visualization</h3>
+              {forecastDataArray.length > 0 ? (
+                <>
+                  <ChartContainer>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsLineChart data={forecastDataArray.map((item: any) => ({
+                        period: item.period || '-',
+                        date: item.date ? new Date(item.date).toLocaleDateString() : '-',
+                        value: item.forecasted_value || 0
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="period" />
+                        <YAxis />
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                        <Legend />
+                        <Line type="monotone" dataKey="value" stroke={PRIMARY_COLOR} strokeWidth={2} name="Forecasted Value" />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                  <ChartContainer>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={forecastDataArray.map((item: any) => ({
+                        period: item.period || '-',
+                        date: item.date ? new Date(item.date).toLocaleDateString() : '-',
+                        value: item.forecasted_value || 0
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="period" />
+                        <YAxis />
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                        <Legend />
+                        <Bar dataKey="value" fill={PRIMARY_COLOR} name="Forecasted Value" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                  <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                  <p>No forecast data available for visualization.</p>
+                </div>
+              )}
+            </ForecastDataCard>
+          )}
+
+          {activeTab === 'comparison' && (
+            <ComparisonCard>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+                <h3 style={{ margin: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>Actual vs Forecast Comparison</h3>
+                <Button variant="outline" onClick={loadActuals} disabled={loadingActuals}>
+                  <RefreshCw size={16} />
+                  {loadingActuals ? 'Loading...' : 'Refresh Actuals'}
+                </Button>
+              </div>
+              {loadingActuals ? (
+                <div style={{ textAlign: 'center', padding: theme.spacing.xl }}>
+                  <Spinner style={{ margin: '0 auto' }} />
+                  <p>Loading actual data...</p>
+                </div>
+              ) : actualsData.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                  <AlertCircle size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                  <p>No actual data available for comparison. Click "Refresh Actuals" to load data.</p>
+                </div>
+              ) : (
+                <>
+                  <ChartContainer>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsLineChart data={forecastDataArray.map((item: any) => {
+                        const actual = actualsData.find((a: any) => {
+                          const forecastDate = new Date(item.date).toISOString().split('T')[0];
+                          const actualDate = new Date(a.date).toISOString().split('T')[0];
+                          return forecastDate === actualDate;
+                        });
+                        return {
+                          period: item.period || '-',
+                          date: item.date ? new Date(item.date).toLocaleDateString() : '-',
+                          forecast: item.forecasted_value || 0,
+                          actual: actual?.value || null
+                        };
+                      }).filter((d: any) => d.actual !== null)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="period" />
+                        <YAxis />
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                        <Legend />
+                        <Line type="monotone" dataKey="forecast" stroke={PRIMARY_COLOR} strokeWidth={2} name="Forecast" />
+                        <Line type="monotone" dataKey="actual" stroke="#ef4444" strokeWidth={2} name="Actual" />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                  <ForecastTable>
+                    <thead>
+                      <tr>
+                        <th>Period</th>
+                        <th>Date</th>
+                        <th>Forecasted</th>
+                        <th>Actual</th>
+                        <th>Variance</th>
+                        <th>% Variance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {forecastDataArray.map((item: any, index: number) => {
+                        const actual = actualsData.find((a: any) => {
+                          const forecastDate = new Date(item.date).toISOString().split('T')[0];
+                          const actualDate = new Date(a.date).toISOString().split('T')[0];
+                          return forecastDate === actualDate;
+                        });
+                        const forecastValue = item.forecasted_value || 0;
+                        const actualValue = actual?.value ?? null;
+                        const variance = actualValue !== null ? forecastValue - actualValue : null;
+                        const percentVariance = actualValue !== null && forecastValue > 0 && variance !== null ? ((variance / forecastValue) * 100) : null;
+                        
+                        return actualValue !== null ? (
+                          <tr key={index}>
+                            <td>{item.period || '-'}</td>
+                            <td>{item.date ? formatDate(item.date) : '-'}</td>
+                            <td>{formatCurrency(forecastValue)}</td>
+                            <td>{formatCurrency(actualValue)}</td>
+                            <td style={{ color: variance !== null && variance < 0 ? '#ef4444' : '#10b981' }}>
+                              {variance !== null ? formatCurrency(variance) : '-'}
+                            </td>
+                            <td style={{ color: percentVariance !== null && percentVariance < 0 ? '#ef4444' : '#10b981' }}>
+                              {percentVariance !== null ? `${percentVariance.toFixed(2)}%` : '-'}
+                            </td>
+                          </tr>
+                        ) : null;
+                      })}
+                    </tbody>
+                  </ForecastTable>
+                </>
+              )}
+            </ComparisonCard>
+          )}
+
+          {activeTab === 'budget' && (
+            <ComparisonCard>
+              <h3 style={{ marginTop: 0, marginBottom: theme.spacing.lg, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>Budget Integration</h3>
+              <FormGroup>
+                <label>Select Budget to Compare</label>
+                <StyledSelect
+                  value={selectedBudget || ''}
+                  onChange={(e) => setSelectedBudget(e.target.value ? parseInt(e.target.value) : null)}
+                >
+                  <option value="">-- Select a Budget --</option>
+                  {budgets.map((budget: any) => (
+                    <option key={budget.id} value={budget.id}>
+                      {budget.name} ({formatDate(budget.start_date)} - {formatDate(budget.end_date)})
+                    </option>
+                  ))}
+                </StyledSelect>
+              </FormGroup>
+              {selectedBudget && (
+                <div style={{ marginTop: theme.spacing.lg, padding: theme.spacing.md, background: PRIMARY_LIGHT, borderRadius: theme.borderRadius.sm }}>
+                  <p style={{ margin: 0, color: TEXT_COLOR_MUTED }}>
+                    Budget integration allows you to compare forecasted values with budgeted amounts.
+                    Select a budget above to see the comparison.
+                  </p>
+                </div>
+              )}
+            </ComparisonCard>
+          )}
+
+          {activeTab === 'accuracy' && (
+            <ComparisonCard>
+              <h3 style={{ marginTop: 0, marginBottom: theme.spacing.lg, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>Forecast Accuracy Metrics</h3>
+              {accuracyMetrics ? (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
+                    <MetricCard>
+                      <h4>Accuracy Score</h4>
+                      <p>{accuracyMetrics.accuracy.toFixed(2)}%</p>
+                    </MetricCard>
+                    <MetricCard>
+                      <h4>Mean Absolute % Error</h4>
+                      <p>{accuracyMetrics.mape.toFixed(2)}%</p>
+                    </MetricCard>
+                    <MetricCard>
+                      <h4>Average Error</h4>
+                      <p>{formatCurrency(accuracyMetrics.avgError)}</p>
+                    </MetricCard>
+                    <MetricCard>
+                      <h4>Data Points</h4>
+                      <p>{accuracyMetrics.totalComparisons}</p>
+                    </MetricCard>
+                  </div>
+                  <ForecastTable>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Forecast</th>
+                        <th>Actual</th>
+                        <th>Error</th>
+                        <th>% Error</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accuracyMetrics.comparisons.map((comp: any, index: number) => (
+                        <tr key={index}>
+                          <td>{formatDate(comp.date)}</td>
+                          <td>{formatCurrency(comp.forecast)}</td>
+                          <td>{formatCurrency(comp.actual)}</td>
+                          <td>{formatCurrency(comp.error)}</td>
+                          <td>{comp.percentError.toFixed(2)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </ForecastTable>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                  <AlertCircle size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                  <p>No accuracy data available. Load actual data in the "Actual vs Forecast" tab first.</p>
+                </div>
+              )}
+            </ComparisonCard>
+          )}
+
+          {activeTab === 'scenarios' && (
+            <ComparisonCard>
+              <h3 style={{ marginTop: 0, marginBottom: theme.spacing.lg, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>Forecast Scenarios</h3>
+              <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                <GitBranch size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                <p>Create different forecast scenarios to compare "what-if" situations.</p>
+                <Button
+                  onClick={() => router.push(`/forecast/create?scenario=${forecastId}`)}
+                  style={{ marginTop: theme.spacing.md }}
+                >
+                  <GitBranch size={16} />
+                  Create Scenario
+                </Button>
+              </div>
+            </ComparisonCard>
+          )}
         </ContentContainer>
       </PageContainer>
     </Layout>

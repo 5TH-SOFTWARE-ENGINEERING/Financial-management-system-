@@ -710,6 +710,17 @@ const ForecastListPage: React.FC = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
+                          router.push(`/forecast/${forecast.id}/edit`);
+                        }}
+                      >
+                        <Edit size={14} />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           handleDeleteClick(forecast.id);
                         }}
                         style={{ color: '#ef4444', borderColor: '#ef4444' }}

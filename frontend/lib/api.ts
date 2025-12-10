@@ -1146,6 +1146,27 @@ class ApiClient {
     return this.get(`/budgeting/forecasts/${id}`);
   }
 
+  /**
+   * Update a forecast
+   * @param id - Forecast ID
+   * @param data - Forecast update data (name, description, and optionally forecast_data)
+   */
+  async updateForecast(
+    id: number,
+    data: {
+      name?: string;
+      description?: string;
+      forecast_data?: Array<{
+        period?: string;
+        date?: string;
+        forecasted_value?: number;
+        method?: string;
+      }>;
+    }
+  ) {
+    return this.put(`/budgeting/forecasts/${id}`, data);
+  }
+
   async deleteForecast(id: number, password: string) {
     return this.post(`/budgeting/forecasts/${id}/delete`, { password });
   }

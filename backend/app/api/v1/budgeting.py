@@ -582,6 +582,42 @@ def get_forecast(
     return forecast_obj
 
 
+@router.put("/forecasts/{forecast_id}", response_model=ForecastOut)
+def update_forecast(
+    forecast_id: int,
+    forecast_data: ForecastUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update a forecast"""
+    forecast_obj = forecast.get(db, forecast_id)
+    if not forecast_obj:
+        raise HTTPException(status_code=404, detail="Forecast not found")
+    
+    # Check permissions
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+        if forecast_obj.created_by_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Prepare update data
+    update_dict = forecast_data.dict(exclude_unset=True)
+    
+    # If forecast_data is provided, serialize it
+    if "forecast_data" in update_dict and update_dict["forecast_data"]:
+        update_dict["forecast_data"] = json.dumps(update_dict["forecast_data"])
+    
+    # Update the forecast
+    updated_forecast = forecast.update(db, forecast_id, update_dict)
+    
+    # Parse JSON strings back to dicts for response
+    if updated_forecast.method_params and isinstance(updated_forecast.method_params, str):
+        updated_forecast.method_params = json.loads(updated_forecast.method_params)
+    if updated_forecast.forecast_data and isinstance(updated_forecast.forecast_data, str):
+        updated_forecast.forecast_data = json.loads(updated_forecast.forecast_data)
+    
+    return updated_forecast
+
+
 @router.delete("/forecasts/{forecast_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_forecast(
     forecast_id: int,
