@@ -576,6 +576,13 @@ export default function Login() {
     );
   }
 
+  // Prevent native navigation and route through react-hook-form to avoid GET submissions
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleSubmit(onSubmit)();
+  };
+
   return (
     <LoginContainer>
       <Toaster position="top-right" />
@@ -587,7 +594,7 @@ export default function Login() {
       </Link>
         <Subtitle>Welcome back! Please sign in below</Subtitle>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleFormSubmit} noValidate method="post" action="#">
           <FormGroup>
             <Label>Email</Label>
             <Input
