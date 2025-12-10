@@ -3,7 +3,7 @@ Quick API Test to verify the Finance Management System endpoints are working
 This script tests basic functionality without running the full hierarchy test suite
 """
 
-import requests
+import requests #type: ignore
 import json
 
 def test_api_endpoints():

@@ -643,3 +643,4 @@ docker-compose down
 **Status**: ✅ Production Ready
 
 All core features are fully functional and tested. The API is ready for deployment and use.
+python -m pytest tests/test_hierarchy_runner.py
