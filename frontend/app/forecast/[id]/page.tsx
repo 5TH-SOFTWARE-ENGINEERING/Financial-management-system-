@@ -486,7 +486,22 @@ const ForecastDetailPage: React.FC = () => {
       const forecastValue = f.forecasted_value || 0;
       const actualValue = actual.value || 0;
       const error = Math.abs(forecastValue - actualValue);
-      const percentError = forecastValue > 0 ? (error / forecastValue) * 100 : 0;
+      
+      // Calculate percent error properly handling zero forecasts
+      // If forecast is 0 and actual is non-zero, use actual as denominator
+      // If both are 0, error is 0%
+      // Otherwise, use standard MAPE calculation
+      let percentError: number;
+      if (forecastValue === 0 && actualValue === 0) {
+        percentError = 0; // Perfect match when both are zero
+      } else if (forecastValue === 0 && actualValue !== 0) {
+        // When forecast is 0 but actual is not, error is 100% (or could be considered infinite)
+        // Using actual as denominator gives meaningful percentage
+        percentError = (error / Math.abs(actualValue)) * 100;
+      } else {
+        // Standard MAPE calculation
+        percentError = (error / Math.abs(forecastValue)) * 100;
+      }
       
       return {
         date: f.date,

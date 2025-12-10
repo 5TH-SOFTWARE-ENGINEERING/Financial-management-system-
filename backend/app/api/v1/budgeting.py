@@ -594,8 +594,8 @@ def update_forecast(
     if not forecast_obj:
         raise HTTPException(status_code=404, detail="Forecast not found")
     
-    # Check permissions
-    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+    # Check permissions - must match get_forecast permissions to prevent escalation
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
         if forecast_obj.created_by_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not enough permissions")
     
