@@ -164,12 +164,13 @@ test.describe('Authentication Flow', () => {
         // Wait for inputs to be available (already handled by beforeEach)
         
         let loginRequestHit = false
-        let loginResponseSent = false
         
-        // Mock the login endpoint - match the full path including /api/v1/
-        await page.route('**/api/v1/auth/login-json', async route => {
+        // Mock the login endpoint using function matcher for more reliable matching
+        await page.route(route => {
+            const url = route.request().url()
+            return url.includes('login-json') || url.includes('/auth/login-json')
+        }, async route => {
             loginRequestHit = true
-            loginResponseSent = true
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -181,33 +182,11 @@ test.describe('Authentication Flow', () => {
             })
         })
         
-        // Also try matching without /api/v1/ in case base URL is different
-        await page.route('**/auth/login-json', async route => {
-            if (!loginRequestHit) {
-                loginRequestHit = true
-                loginResponseSent = true
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        access_token: 'mock-access-token-12345',
-                        token_type: 'bearer',
-                        user: { id: 1, email: 'test@example.com', role: 'admin', full_name: 'Test User', username: 'testuser', is_active: true },
-                    }),
-                })
-            }
-        })
-        
-        // Mock the current user endpoint
-        await page.route('**/api/v1/users/me', async route => {
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({ id: 1, email: 'test@example.com', role: 'admin', full_name: 'Test User', username: 'testuser', is_active: true }),
-            })
-        })
-        
-        await page.route('**/users/me', async route => {
+        // Mock the current user endpoint using function matcher
+        await page.route(route => {
+            const url = route.request().url()
+            return url.includes('/users/me') || url.includes('users/me')
+        }, async route => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -247,7 +226,6 @@ test.describe('Authentication Flow', () => {
         // Debug info
         console.log('Login test debug:', {
             loginRequestHit,
-            loginResponseSent,
             responseReceived: !!response,
             responseUrl: response?.url(),
             token,
@@ -262,7 +240,6 @@ test.describe('Authentication Flow', () => {
             if (currentUrl.includes('/auth/login')) {
                 // Still on login - wait a bit more for navigation
                 await page.waitForTimeout(2000)
-                const finalUrl = page.url()
                 // Navigation might be delayed, but token is set so login worked
                 expect(token).toBeTruthy()
             } else {
