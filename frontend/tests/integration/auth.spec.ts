@@ -175,10 +175,14 @@ test.describe('Authentication Flow', () => {
             }
         })
         
-        // Mock the login endpoint - use both patterns to ensure matching
-        await page.route('**/api/v1/auth/login-json', async route => {
+        // Wait for page to be fully loaded before setting up routes
+        await page.waitForLoadState('networkidle')
+        
+        // Mock the login endpoint - use more flexible patterns
+        const loginHandler = async (route: any) => {
             loginRequestHit = true
-            console.log('Route matched: /api/v1/auth/login-json')
+            const url = route.request().url()
+            console.log('Route matched:', url)
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -188,45 +192,36 @@ test.describe('Authentication Flow', () => {
                     user: { id: 1, email: 'test@example.com', role: 'admin', full_name: 'Test User', username: 'testuser', is_active: true },
                 }),
             })
-        })
+        }
         
-        // Also match without /api/v1/ prefix
-        await page.route('**/auth/login-json', async route => {
-            if (!loginRequestHit) {
-                loginRequestHit = true
-                console.log('Route matched: /auth/login-json')
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        access_token: 'mock-access-token-12345',
-                        token_type: 'bearer',
-                        user: { id: 1, email: 'test@example.com', role: 'admin', full_name: 'Test User', username: 'testuser', is_active: true },
-                    }),
-                })
-            }
-        })
+        // Set up routes with multiple patterns to ensure matching
+        await page.route('**/api/v1/auth/login-json', loginHandler)
+        await page.route('**/auth/login-json', loginHandler)
+        await page.route(/.*login-json.*/, loginHandler)
         
         // Mock the current user endpoint
-        await page.route('**/api/v1/users/me', async route => {
+        const userHandler = async (route: any) => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({ id: 1, email: 'test@example.com', role: 'admin', full_name: 'Test User', username: 'testuser', is_active: true }),
             })
-        })
+        }
         
-        await page.route('**/users/me', async route => {
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({ id: 1, email: 'test@example.com', role: 'admin', full_name: 'Test User', username: 'testuser', is_active: true }),
-            })
-        })
+        await page.route('**/api/v1/users/me', userHandler)
+        await page.route('**/users/me', userHandler)
+        
+        // Ensure form is ready
+        await page.waitForSelector('input[type="text"], input[type="email"]', { state: 'visible' })
+        await page.waitForSelector('input[type="password"]', { state: 'visible' })
+        await page.waitForSelector('button[type="submit"]', { state: 'visible' })
         
         // Fill in the form
         await page.getByPlaceholder(/enter your email or username/i).fill('test@example.com')
         await page.getByPlaceholder(/enter your password/i).fill('password123')
+        
+        // Wait a moment to ensure routes are fully registered
+        await page.waitForTimeout(100)
         
         // Click sign in button and wait for API response
         const [response] = await Promise.all([
@@ -240,15 +235,23 @@ test.describe('Authentication Flow', () => {
             page.getByRole('button', { name: /sign in/i }).click()
         ])
         
-        // Wait a moment for the request to be processed
-        await page.waitForTimeout(1000)
+        // Wait for response to complete
+        if (response) {
+            await response.finished().catch(() => {})
+        }
         
-        // Wait for token to be stored - poll until it appears or timeout
+        // Wait for token to be stored - reduce polling to avoid timeout
         let token = null
-        for (let i = 0; i < 20; i++) {
+        const maxAttempts = 8
+        for (let i = 0; i < maxAttempts; i++) {
             token = await page.evaluate(() => localStorage.getItem('access_token'))
-            if (token) break
-            await page.waitForTimeout(500)
+            if (token) {
+                break
+            }
+            // Use shorter timeout to avoid test timeout
+            if (i < maxAttempts - 1) {
+                await page.waitForTimeout(200)
+            }
         }
         
         const currentUrl = page.url()
@@ -263,33 +266,27 @@ test.describe('Authentication Flow', () => {
             recentRequests: allRequests.slice(-5)
         })
         
-        // Verify login was successful - check multiple indicators
-        if (token) {
-            // Token is set - login succeeded
-            expect(token).toBe('mock-access-token-12345')
-            // Should navigate away from login page
-            if (currentUrl.includes('/auth/login')) {
-                // Still on login - wait a bit more for navigation
-                await page.waitForTimeout(2000)
-                // Navigation might be delayed, but token is set so login worked
-                expect(token).toBeTruthy()
-            } else {
-                // Successfully navigated away
-                expect(currentUrl).not.toContain('/auth/login')
-            }
-        } else if (response || loginRequestHit) {
-            // API responded or route was hit - wait a bit more for token storage
-            await page.waitForTimeout(3000)
-            token = await page.evaluate(() => localStorage.getItem('access_token'))
-            // If we got a response or the route was hit, login should have worked
-            expect(response || loginRequestHit).toBeTruthy()
-            // Token should be stored by now
-            if (token) {
-                expect(token).toBe('mock-access-token-12345')
-            }
+        // Verify login was successful
+        // If we have a response or route was hit, login API call succeeded
+        expect(response || loginRequestHit).toBeTruthy()
+        
+        // Token should be stored after successful login
+        expect(token).toBeTruthy()
+        expect(token).toBe('mock-access-token-12345')
+        
+        // Verify navigation - should redirect away from login page
+        // Wait a bit for navigation to complete (reduced wait time)
+        await page.waitForTimeout(500)
+        const finalUrl = page.url()
+        
+        // If still on login page, that's okay - token is set which means login succeeded
+        // Navigation might be handled differently in the app
+        if (finalUrl.includes('/auth/login')) {
+            // Still on login but token is set - login worked, navigation might be delayed
+            expect(token).toBeTruthy()
         } else {
-            // No response and no token - test failed
-            throw new Error(`Login failed: No API response and no token stored. Route hit: ${loginRequestHit}, Response: ${!!response}`)
+            // Successfully navigated away from login
+            expect(finalUrl).not.toContain('/auth/login')
         }
     })
 })
