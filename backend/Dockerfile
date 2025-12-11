@@ -29,7 +29,8 @@ RUN mkdir -p app/core app/models app/schemas app/crud app/api/v1 app/api/endpoin
 # Copy application code
 COPY app/ ./app/
 COPY alembic.ini .
-COPY alembic/ ./alembic/
+# Note: If you have an alembic/ directory with migrations, uncomment the line below
+# COPY alembic/ ./alembic/
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser \
