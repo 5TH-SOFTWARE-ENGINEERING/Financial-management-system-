@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import styled from 'styled-components';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -12,6 +12,9 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -320,7 +323,7 @@ interface BudgetItem {
 
 interface ScenarioCreatePageProps {}
 
-const ScenarioCreatePage: React.FC<ScenarioCreatePageProps> = () => {
+const ScenarioCreatePageInner: React.FC<ScenarioCreatePageProps> = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const budgetIdParam = searchParams?.get('budget_id');
@@ -603,5 +606,24 @@ const ScenarioCreatePage: React.FC<ScenarioCreatePageProps> = () => {
   );
 };
 
-export default ScenarioCreatePage;
+const ScenarioCreatePageFallback = () => (
+  <Layout>
+    <PageContainer>
+      <ContentContainer>
+        <LoadingContainer>
+          <Spinner />
+          <p>Loading budget...</p>
+        </LoadingContainer>
+      </ContentContainer>
+    </PageContainer>
+  </Layout>
+);
+
+export default function ScenarioCreatePage() {
+  return (
+    <Suspense fallback={<ScenarioCreatePageFallback />}>
+      <ScenarioCreatePageInner />
+    </Suspense>
+  );
+}
 
