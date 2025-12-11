@@ -36,6 +36,7 @@ export interface Theme {
     };
   };
   shadows: {
+    sm: string;
     md: string;
   };
   transitions: {
@@ -79,6 +80,7 @@ export const theme: Theme = {
     },
   },
   shadows: {
+    sm: "0 1px 3px rgba(0,0,0,0.1)",
     md: "0 4px 8px rgba(0,0,0,0.1)",
   },
   transitions: {
