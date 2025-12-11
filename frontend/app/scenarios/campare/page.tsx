@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import styled from 'styled-components';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -220,7 +220,7 @@ interface ComparisonResult {
   scenarios: Scenario[];
 }
 
-const CompareScenariosPage: React.FC = () => {
+const CompareScenariosPageInner: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const budgetIdParam = searchParams?.get('budget_id');
@@ -497,5 +497,24 @@ const CompareScenariosPage: React.FC = () => {
   );
 };
 
-export default CompareScenariosPage;
+const CompareScenariosFallback = () => (
+  <Layout>
+    <PageContainer>
+      <ContentContainer>
+        <LoadingContainer>
+          <Spinner />
+          <p>Loading scenarios...</p>
+        </LoadingContainer>
+      </ContentContainer>
+    </PageContainer>
+  </Layout>
+);
+
+export default function CompareScenariosPage() {
+  return (
+    <Suspense fallback={<CompareScenariosFallback />}>
+      <CompareScenariosPageInner />
+    </Suspense>
+  );
+}
 

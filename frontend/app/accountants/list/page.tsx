@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout';
@@ -395,7 +395,7 @@ const Badge = styled.span<{ $variant: 'admin' | 'finance_manager' | 'finance_adm
   }}
 `;
 
-export default function AccountantListPage() {
+function AccountantListPageInner() {
   const router = useRouter();
   const [accountants, setAccountants] = useState<Accountant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1062,5 +1062,26 @@ export default function AccountantListPage() {
         </ModalOverlay>
       )}
     </Layout>
+  );
+}
+
+const AccountantListPageFallback = () => (
+  <Layout>
+    <PageContainer>
+      <ContentContainer>
+        <LoadingContainer>
+          <Spinner />
+          <p>Loading accountants...</p>
+        </LoadingContainer>
+      </ContentContainer>
+    </PageContainer>
+  </Layout>
+);
+
+export default function AccountantListPage() {
+  return (
+    <Suspense fallback={<AccountantListPageFallback />}>
+      <AccountantListPageInner />
+    </Suspense>
   );
 }
