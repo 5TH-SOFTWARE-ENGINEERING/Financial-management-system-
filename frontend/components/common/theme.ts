@@ -22,6 +22,7 @@ export interface Theme {
     xxl: string;
   };
   typography: {
+    fontFamily: string;
     fontSizes: {
       sm: string;
       md: string;
@@ -63,6 +64,7 @@ export const theme: Theme = {
     xxl: "64px",
   },
   typography: {
+    fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
     fontSizes: {
       sm: "12px",
       md: "14px",
