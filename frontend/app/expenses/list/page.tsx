@@ -280,14 +280,22 @@ const TableBody = styled.tbody`
   }
 `;
 
-const StatusBadge = styled.span<{ $approved: boolean }>`
+const StatusBadge = styled.span<{ $status: 'approved' | 'pending' | 'rejected' }>`
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
   border-radius: ${theme.borderRadius.sm};
   font-size: ${theme.typography.fontSizes.xs};
   font-weight: ${theme.typography.fontWeights.medium};
-  background: ${props => props.$approved ? 'rgba(16, 185, 129, 0.12)' : 'rgba(251, 191, 36, 0.12)'};
-  color: ${props => props.$approved ? '#065f46' : '#92400e'};
   margin-right: ${theme.spacing.sm};
+  background: ${props => {
+    if (props.$status === 'approved') return 'rgba(16, 185, 129, 0.12)';
+    if (props.$status === 'rejected') return 'rgba(239, 68, 68, 0.12)';
+    return 'rgba(251, 191, 36, 0.12)';
+  }};
+  color: ${props => {
+    if (props.$status === 'approved') return '#065f46';
+    if (props.$status === 'rejected') return '#991b1b';
+    return '#92400e';
+  }};
 `;
 
 const RecurringBadge = styled.span`
@@ -550,6 +558,7 @@ interface Expense {
   created_by_id: number;
   created_at: string;
   updated_at?: string | null;
+  approval_status?: 'pending' | 'approved' | 'rejected';
 }
 
 export default function ExpenseListPage() {
@@ -572,6 +581,13 @@ export default function ExpenseListPage() {
   const [deletePassword, setDeletePassword] = useState<string>('');
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const getStatus = (expense: Expense) =>
+    expense.approval_status || (expense.is_approved ? 'approved' : 'pending');
+  const normalizeExpenses = (items: any[]): Expense[] =>
+    (items || []).map((exp: any) => ({
+      ...exp,
+      approval_status: exp?.approval_status || (exp?.is_approved ? 'approved' : 'pending')
+    }));
   
   const canApprove = () => {
     if (canApproveTransactions()) return true;
@@ -590,7 +606,7 @@ export default function ExpenseListPage() {
     
     try {
       const response = await apiClient.getExpenses();
-      setExpenses(response.data || []);
+      setExpenses(normalizeExpenses(response.data));
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to load expenses';
       setError(errorMessage);
@@ -646,7 +662,13 @@ export default function ExpenseListPage() {
     try {
       await apiClient.approveItem(id, 'expense');
       toast.success('Expense approved successfully');
-      loadExpenses();
+      setExpenses(prev =>
+        prev.map(exp =>
+          exp.id === id
+            ? { ...exp, is_approved: true, approval_status: 'approved' }
+            : exp
+        )
+      );
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to approve expense';
       toast.error(errorMessage);
@@ -679,7 +701,11 @@ export default function ExpenseListPage() {
       setShowRejectModal(null);
       setRejectionReason('');
       setRejectPassword('');
-      loadExpenses();
+      setExpenses(prev =>
+        prev.map(exp =>
+          exp.id === id ? { ...exp, approval_status: 'rejected', is_approved: false } : exp
+        )
+      );
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to reject expense';
       setRejectPasswordError(errorMessage);
@@ -716,9 +742,11 @@ export default function ExpenseListPage() {
       expense.vendor?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = categoryFilter === 'all' || expense.category === categoryFilter;
+    const status = getStatus(expense);
     const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'approved' && expense.is_approved) ||
-      (statusFilter === 'pending' && !expense.is_approved);
+      (statusFilter === 'approved' && status === 'approved') ||
+      (statusFilter === 'pending' && status === 'pending') ||
+      (statusFilter === 'rejected' && status === 'rejected');
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
@@ -791,6 +819,7 @@ export default function ExpenseListPage() {
                 <option value="all">All Statuses</option>
                 <option value="approved">Approved</option>
                 <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
               </Select>
             </FiltersGrid>
           </FiltersContainer>
@@ -831,7 +860,10 @@ export default function ExpenseListPage() {
                     </tr>
                   </TableHeader>
                   <TableBody>
-                    {filteredExpenses.map((expense) => (
+                    {filteredExpenses.map((expense) => {
+                      const status = getStatus(expense);
+                      const isPending = status === 'pending';
+                      return (
                       <tr key={expense.id}>
                         <td style={{ whiteSpace: 'nowrap' }}>
                           <ExpenseTitle>
@@ -850,8 +882,12 @@ export default function ExpenseListPage() {
                         <td style={{ whiteSpace: 'nowrap' }}>{expense.vendor || 'N/A'}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{formatDate(expense.date)}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>
-                          <StatusBadge $approved={expense.is_approved}>
-                            {expense.is_approved ? 'Approved' : 'Pending'}
+                          <StatusBadge $status={status}>
+                            {status === 'approved'
+                              ? 'Approved'
+                              : status === 'rejected'
+                              ? 'Rejected'
+                              : 'Pending'}
                           </StatusBadge>
                           {expense.is_recurring && (
                             <RecurringBadge>Recurring</RecurringBadge>
@@ -864,7 +900,7 @@ export default function ExpenseListPage() {
                                 <Edit />
                               </ActionButton>
                             </Link>
-                            {!expense.is_approved && canApprove() && (
+                            {isPending && !expense.is_approved && canApprove() && (
                               <>
                                 <ActionButton
                                   $variant="primary"
@@ -910,7 +946,8 @@ export default function ExpenseListPage() {
                           </ActionButtons>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -1085,9 +1122,18 @@ export default function ExpenseListPage() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                           <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
-                          <StatusBadge $approved={expenseToDelete.is_approved}>
-                            {expenseToDelete.is_approved ? 'Approved' : 'Pending'}
-                          </StatusBadge>
+                          {(() => {
+                            const status = getStatus(expenseToDelete as Expense);
+                            return (
+                              <StatusBadge $status={status}>
+                                {status === 'approved'
+                                  ? 'Approved'
+                                  : status === 'rejected'
+                                  ? 'Rejected'
+                                  : 'Pending'}
+                              </StatusBadge>
+                            );
+                          })()}
                           {expenseToDelete.is_recurring && (
                             <RecurringBadge>Recurring</RecurringBadge>
                           )}
