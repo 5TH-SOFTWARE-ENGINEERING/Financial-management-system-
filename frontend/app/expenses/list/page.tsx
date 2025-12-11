@@ -26,6 +26,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
