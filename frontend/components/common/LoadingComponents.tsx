@@ -64,7 +64,7 @@ const DotsContainer = styled.div`
 const Dot = styled.div<{ delay?: string }>`
   width: 10px;
   height: 10px;
-  margin: 0 ${theme.spacing.xxs};
+  margin: 0 ${theme.spacing.xs};
   background-color: ${theme.colors.primary};
   border-radius: 50%;
   animation: ${fade} 1.4s infinite ease-in-out;
@@ -149,7 +149,7 @@ const BounceContainer = styled.div`
 const BounceDot = styled.div<{ delay?: string }>`
   width: 12px;
   height: 12px;
-  margin: 0 ${theme.spacing.xxs};
+  margin: 0 ${theme.spacing.xs};
   background-color: ${theme.colors.primary};
   border-radius: 50%;
   animation: ${bounce} 1.4s infinite;
