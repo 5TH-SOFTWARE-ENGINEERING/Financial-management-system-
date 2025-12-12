@@ -52,6 +52,8 @@ __snapshots__/
 
 # Logs
 logs/
+!app/settings/logs/
+!app/settings/logs/**
 *.log
 npm-debug.log*
 yarn-debug.log*
