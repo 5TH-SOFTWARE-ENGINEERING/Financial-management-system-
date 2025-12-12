@@ -4,7 +4,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import styled from "styled-components";
-import { motion } from "framer-motion";
 
 
 const HeaderWrapper = styled.header`
@@ -38,7 +37,7 @@ const LeftGroup = styled.a`
 `;
 
 
-const Title = styled(motion.span)`
+const Title = styled.span`
   font-weight: bold;
   font-size: 1.25rem;
   color: white;
@@ -53,7 +52,7 @@ const Title = styled(motion.span)`
 
 
 
-const LoginButton = styled(motion.button)`
+const LoginButton = styled.button`
   padding: 8px 16px;
   border-radius: 8px;
   background: transparent;
@@ -77,32 +76,23 @@ export default function Header() {
     <HeaderWrapper>
       <Container>
         <LeftGroup href="/">
-          <motion.div
-            initial={{ rotate: -15, opacity: 0, scale: 0.8 }}
-            animate={{ rotate: 0, opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 120, damping: 10 }}
-            whileHover={{ rotate: 10, scale: 1.1 }}
-          >
+          <div>
             <Image
               src="/log.png"
               alt="Financial Management System"
               width={40}
               height={40}
             />
-          </motion.div>
+          </div>
 
-          <Title
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-          >
+          <Title>
             Financial Management System
           </Title>
         </LeftGroup>
 
         {/* Styled Login Button */}
         <Link href="/auth/login">
-          <LoginButton whileHover={{ scale: 1.05 }}>
+          <LoginButton>
             Login
           </LoginButton>
         </Link>
