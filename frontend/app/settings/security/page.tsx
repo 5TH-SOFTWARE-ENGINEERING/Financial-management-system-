@@ -8,6 +8,8 @@ import { Save, Lock, Shield, Key, AlertTriangle, Eye, EyeOff, CheckCircle, Alert
 import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
