@@ -544,3 +544,86 @@ Example tests for components, utilities, and pages
 Mock data for testing
 Integration test examples
 All tests are ready to use. See TESTING.md for detailed documentation on writing and running tests.
+
+
+1. Budgets
+Purpose: Plan and track financial targets for revenue, expenses, and profit.
+Features:
+Create budgets manually or from templates (monthly, quarterly, yearly)
+Budget items: revenue/expense items with categories and amounts
+Monthly breakdowns: distribute amounts across months
+Status tracking: Draft → Approved → Archived
+Department/project filtering
+Budget validation: ensures totals are correct
+Role-based access: Admins/Finance Managers can create; others view their own
+Key Operations:
+Create, edit, delete budgets
+Add/edit/delete budget items
+Calculate totals (revenue, expenses, profit)
+Template-based creation
+2. Scenarios
+Purpose: Model "what-if" outcomes by adjusting budget assumptions.
+Features:
+Scenario types:
+Best case: optimistic adjustments
+Worst case: pessimistic adjustments
+Most likely: realistic adjustments
+Custom: user-defined adjustments
+Adjustments:
+Multiplier: e.g., 1.2x (20% increase)
+Fixed amount: override with a specific value
+Comparison: side-by-side comparison of multiple scenarios
+Impact analysis: shows revenue/expense/profit changes vs. base budget
+Key Operations:
+Create scenarios from existing budgets
+Apply adjustments to budget items
+Compare scenarios
+View scenario totals and changes
+3. Variance Analysis
+Purpose: Compare budgeted vs. actual performance to identify deviations.
+Features:
+Variance calculation:
+Revenue variance: actual vs. budgeted revenue
+Expense variance: actual vs. budgeted expenses
+Profit variance: actual vs. budgeted profit
+Percentage variance: shows variance as a percentage
+Period-based: calculate variance for any time period
+Historical tracking: stores variance calculations for trend analysis
+Proration: automatically prorates budget amounts for partial periods
+Key Operations:
+Calculate variance for a period
+View variance history
+Variance summary: overview of all variances
+Identify over/under budget items
+4. Forecasting
+Purpose: Predict future financial performance using historical data.
+Features:
+Forecasting methods:
+Moving average: averages last N periods
+Linear growth: applies a fixed growth rate
+Trend analysis: linear regression on historical data
+Manual: user-entered forecasts
+Forecast types:
+Revenue forecasts
+Expense forecasts
+Profit forecasts
+Combined forecasts
+Period types: monthly, quarterly, yearly
+Historical data integration: uses past revenue/expense data
+Method parameters: customizable (window size, growth rate, etc.)
+Key Operations:
+Create forecasts with different methods
+View forecast data in charts/tables
+Edit/delete forecasts
+Compare forecasts with actuals
+How They Work Together
+Budget → Base plan for the period
+Scenarios → Model different outcomes from the budget
+Forecast → Predict future performance from historical data
+Variance → Compare actuals to budget to measure performance
+Example workflow:
+Create a budget for Q1 2024
+Create scenarios (best/worst case)
+Generate forecasts using historical data
+At quarter end, calculate variance to see actual vs. budget
+Use insights to improve next quarter's budget
