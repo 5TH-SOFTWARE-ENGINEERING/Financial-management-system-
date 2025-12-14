@@ -88,6 +88,15 @@ const CollapseButton = styled.button`
     }
 `;
 
+const StickyHeader = styled.div`
+    position: sticky;
+    top: 0;
+    background: ${theme.colors.background};
+    z-index: 10;
+    padding-top: ${theme.spacing.sm};
+    margin-top: ${theme.spacing.sm};
+`;
+
 const Logo = styled.div<{ $collapsed: boolean }>`
     height: 70px;
     display: flex;
@@ -389,13 +398,15 @@ const Sidebar: React.FC = () => {
     
     return (
         <SidebarContainer $collapsed={collapsed}> 
-        <CollapseButton onClick={() => setCollapsed(!collapsed)}>
-            <Menu size={22} />
-        </CollapseButton>
+        <StickyHeader>
+            <CollapseButton onClick={() => setCollapsed(!collapsed)}>
+                <Menu size={22} />
+            </CollapseButton>
 
-        <Logo $collapsed={collapsed}> 
-        {!collapsed ? 'Finance': null}
-        </Logo>
+            <Logo $collapsed={collapsed}> 
+            {!collapsed ? 'Finance': null}
+            </Logo>
+        </StickyHeader>
         <SectionTitle $collapsed={collapsed}>Main</SectionTitle>
 
         <ComponentGate componentId={ComponentId.SIDEBAR_DASHBOARD}>
