@@ -25,7 +25,7 @@ const SidebarContainer = styled.div<SidebarContainerProps>`
     height: 100vh;
     background: ${theme.colors.background};
     border-right: 1px solid ${theme.colors.border};
-    padding: ${theme.spacing.sm} 0;
+    padding: 0;
     position: fixed;
     left: 0;
     top: 0;
@@ -93,17 +93,17 @@ const StickyHeader = styled.div`
     top: 0;
     background: ${theme.colors.background};
     z-index: 10;
-    padding-top: ${theme.spacing.sm};
-    margin-top: ${theme.spacing.sm};
+    padding: ${theme.spacing.md} ${theme.spacing.md} ${theme.spacing.sm};
+    margin: 0;
 `;
 
 const Logo = styled.div<{ $collapsed: boolean }>`
-    height: 70px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: ${props => (props.$collapsed ? 'center' : 'flex-start')}; 
-    padding: 0 ${props => (props.$collapsed ? theme.spacing.sm : theme.spacing.lg)};
-    margin-bottom: ${theme.spacing.sm};
+    padding: ${theme.spacing.sm} ${props => (props.$collapsed ? theme.spacing.md : theme.spacing.xl)};
+    margin-bottom: ${theme.spacing.md};
     font-size: ${theme.typography.fontSizes.xxl};
     font-weight: ${theme.typography.fontWeights.bold};
     color: ${theme.colors.primary};
@@ -122,17 +122,38 @@ const Logo = styled.div<{ $collapsed: boolean }>`
     }
 `;
 
-const SectionTitle = styled.h3<{$collapsed: boolean}>`
+const SectionTitle = styled.h3<{$collapsed: boolean; $isOpen?: boolean; $isAccountSection?: boolean}>`
     font-size: ${theme.typography.fontSizes.xs};
     text-transform: uppercase;
     letter-spacing: 1.5px;
     color: ${theme.colors.textSecondary};
-    padding: ${theme.spacing.md} ${theme.spacing.xl};
-    margin: ${theme.spacing.xl} 0 ${theme.spacing.md};
+    padding: ${props => props.$isAccountSection ? `${theme.spacing.md} ${theme.spacing.xl} ${theme.spacing.sm}` : `${theme.spacing.lg} ${theme.spacing.xl} ${theme.spacing.sm}`};
+    margin: 0;
     opacity: ${props => (props.$collapsed ? 0 : 1)};
-    pointer-events: none;
+    pointer-events: ${props => (props.$collapsed ? 'none' : 'auto')};
     transition: opacity ${theme.transitions.default};
     font-weight: ${theme.typography.fontWeights.medium};
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: ${props => (props.$collapsed ? 'default' : 'pointer')};
+    user-select: none;
+
+    &:hover {
+        color: ${props => (props.$collapsed ? theme.colors.textSecondary : theme.colors.primary)};
+    }
+`;
+
+const SectionContent = styled.div<{$isOpen: boolean; $collapsed: boolean}>`
+    display: ${props => (props.$isOpen ? 'block' : 'none')};
+    opacity: ${props => (props.$isOpen ? 1 : 0)};
+    transition: opacity ${theme.transitions.default};
+    padding-bottom: ${theme.spacing.md};
+`;
+
+const AccountSectionContent = styled(SectionContent)`
+    padding-top: ${theme.spacing.xs};
+    padding-bottom: ${theme.spacing.md};
 `;
 
 // Icon color mapping for different icon types
@@ -254,14 +275,14 @@ const ChevronIcon = styled.div<{ $open?: boolean }>`
 const NavItem = styled(Link)<{ $active?: boolean; $collapsed?: boolean }>`
     display: flex;
     align-items: center;
-    padding: ${theme.spacing.md} ${props => (props.$collapsed ? theme.spacing.lg : theme.spacing.xl)};
+    padding: ${theme.spacing.sm} ${props => (props.$collapsed ? theme.spacing.md : theme.spacing.xl)};
     color: ${props => (props.$active ? theme.colors.primary : theme.colors.textSecondary)};
     text-decoration: none;
     border-left: 3px solid ${props => (props.$active ? theme.colors.primary : 'transparent')};
     transition: all ${theme.transitions.default};
     justify-content: ${props => (props.$collapsed ? 'center' : 'flex-start')};
     position: relative;
-    margin: 2px ${theme.spacing.sm};
+    margin: ${theme.spacing.xs} ${theme.spacing.sm};
     border-radius: ${theme.borderRadius.sm};
     font-weight: ${props => (props.$active ? theme.typography.fontWeights.medium : 400)};
 
@@ -286,13 +307,13 @@ const DropdownHeader = styled.div<{ $open?: boolean; $collapsed?: boolean; $acti
     display: flex;
     align-items: center;
     justify-content: ${props => (props.$collapsed ? 'center' : 'space-between')}; 
-    padding: ${theme.spacing.md} ${props => (props.$collapsed ? theme.spacing.lg : theme.spacing.xl)};
+    padding: ${theme.spacing.sm} ${props => (props.$collapsed ? theme.spacing.md : theme.spacing.xl)};
     color: ${props => (props.$active ? theme.colors.primary : theme.colors.textSecondary)};
     cursor: pointer;
     border-left: 3px solid ${props => (props.$active ? theme.colors.primary : 'transparent')};
     transition: all ${theme.transitions.default};
     position: relative;
-    margin: 2px ${theme.spacing.sm};
+    margin: ${theme.spacing.xs} ${theme.spacing.sm};
     border-radius: ${theme.borderRadius.sm};
     font-weight: ${props => (props.$active ? theme.typography.fontWeights.medium : 400)};
     gap: ${props => (props.$collapsed ? theme.spacing.xs : '0')};
@@ -360,11 +381,12 @@ const SubMenu = styled.div<{$collapsed: boolean}>`
 const AccountSection = styled.div<{$collapsed: boolean}>`
     margin-top: auto;
     padding-top: ${theme.spacing.xl};
+    padding-bottom: ${theme.spacing.md};
     border-top: 1px solid ${theme.colors.border};
-    margin-left: ${theme.spacing.sm};
-    margin-right: ${theme.spacing.sm};
-    padding-left: ${props => (props.$collapsed ? theme.spacing.sm : 0)};
-    padding-right: ${props => (props.$collapsed ? theme.spacing.sm : 0)};
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
 `;
 
 const Sidebar: React.FC = () => {
@@ -374,6 +396,9 @@ const Sidebar: React.FC = () => {
 
     const [collapsed, setCollapsed] = useState(false);
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+    const [mainSectionOpen, setMainSectionOpen] = useState(true);
+    const [adminSectionOpen, setAdminSectionOpen] = useState(true);
+    const [userSectionOpen, setUserSectionOpen] = useState(true);
 
     const toggleSection = (key: string) => {
         if (collapsed) setCollapsed(false);
@@ -407,8 +432,20 @@ const Sidebar: React.FC = () => {
             {!collapsed ? 'Finance': null}
             </Logo>
         </StickyHeader>
-        <SectionTitle $collapsed={collapsed}>Main</SectionTitle>
+        <SectionTitle 
+            $collapsed={collapsed} 
+            $isOpen={mainSectionOpen}
+            onClick={() => !collapsed && setMainSectionOpen(!mainSectionOpen)}
+        >
+            Main
+            {!collapsed && (
+                <ChevronIcon $open={mainSectionOpen}>
+                    <ChevronDown />
+                </ChevronIcon>
+            )}
+        </SectionTitle>
 
+        <SectionContent $isOpen={mainSectionOpen} $collapsed={collapsed}>
         <ComponentGate componentId={ComponentId.SIDEBAR_DASHBOARD}>
            <NavItem href="/dashboard" $active={pathname === '/dashboard'} $collapsed={collapsed}> 
             <NavIcon $active={pathname === '/dashboard'} $collapsed={collapsed} $iconType="home">
@@ -790,6 +827,7 @@ const Sidebar: React.FC = () => {
                 </>
             </ComponentGate>
         )}
+        </SectionContent>
 
         {/* ==============================================
             ADMINISTRATION SECTION 🛡️
@@ -797,7 +835,20 @@ const Sidebar: React.FC = () => {
         */}
         {(isAdmin || isFinanceAdmin) && (
             <>
-                <SectionTitle $collapsed={collapsed}>Admin</SectionTitle>
+                <SectionTitle 
+                    $collapsed={collapsed} 
+                    $isOpen={adminSectionOpen}
+                    onClick={() => !collapsed && setAdminSectionOpen(!adminSectionOpen)}
+                >
+                    Admin
+                    {!collapsed && (
+                        <ChevronIcon $open={adminSectionOpen}>
+                            <ChevronDown />
+                        </ChevronIcon>
+                    )}
+                </SectionTitle>
+
+                <SectionContent $isOpen={adminSectionOpen} $collapsed={collapsed}>
 
                 {/* 1. Finance Managers (Create, List) */}
                 {isAdmin && ( // Only show the main dropdown if Admin
@@ -962,12 +1013,27 @@ const Sidebar: React.FC = () => {
                         {!collapsed && 'Permissions'}
                     </NavItem>
                 </ComponentGate>
+                </SectionContent>
             </>
         )}
 
         {/* ========== ACCOUNT SECTION (Bottom) 👤 ========== */}
         <AccountSection $collapsed={collapsed}>
-            <SectionTitle $collapsed={collapsed}>user</SectionTitle>
+            <SectionTitle 
+                $collapsed={collapsed} 
+                $isOpen={userSectionOpen}
+                $isAccountSection={true}
+                onClick={() => !collapsed && setUserSectionOpen(!userSectionOpen)}
+            >
+                user
+                {!collapsed && (
+                    <ChevronIcon $open={userSectionOpen}>
+                        <ChevronDown />
+                    </ChevronIcon>
+                )}
+            </SectionTitle>
+
+            <AccountSectionContent $isOpen={userSectionOpen} $collapsed={collapsed}>
 
             <ComponentGate componentId={ComponentId.SIDEBAR_PROFILE}>
                 <NavItem href="/profile" $active={pathname === '/profile'} $collapsed={collapsed}>
@@ -986,6 +1052,7 @@ const Sidebar: React.FC = () => {
                     {!collapsed && 'Settings'}
                 </NavItem>
             </ComponentGate>
+            </AccountSectionContent>
         </AccountSection>
       </SidebarContainer>
     );
