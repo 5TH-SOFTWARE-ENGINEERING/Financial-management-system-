@@ -8,7 +8,7 @@ import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List, Calculator,
     DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3, Package, ShoppingCart, BookOpen,
-    Key,
+    Key, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -99,7 +99,7 @@ const StickyHeader = styled.div`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 4px;
+    gap: 1px;
 `;
 
 const Logo = styled.div<{ $collapsed: boolean }>`
@@ -432,7 +432,7 @@ const Sidebar: React.FC = () => {
         <SidebarContainer $collapsed={collapsed}> 
         <StickyHeader>
             <CollapseButton onClick={() => setCollapsed(!collapsed)}>
-                <Menu size={22} />
+                {collapsed ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
             </CollapseButton>
 
             <Logo $collapsed={collapsed}> 
