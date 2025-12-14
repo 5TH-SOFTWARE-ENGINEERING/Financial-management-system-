@@ -57,9 +57,7 @@ const SidebarContainer = styled.div<SidebarContainerProps>`
 `;
 
 const CollapseButton = styled.button`
-    position: absolute;
-    top: ${theme.spacing.md};
-    right: ${theme.spacing.md};
+    position: relative;
     background: transparent;
     border: none;
     color: ${theme.colors.textSecondary};
@@ -71,6 +69,9 @@ const CollapseButton = styled.button`
     align-items: center;
     justify-content: center;
     z-index: 10;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
 
     &:hover {
         background: ${theme.colors.backgroundSecondary};
@@ -95,6 +96,10 @@ const StickyHeader = styled.div`
     z-index: 10;
     padding: ${theme.spacing.md} ${theme.spacing.md} ${theme.spacing.sm};
     margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
 `;
 
 const Logo = styled.div<{ $collapsed: boolean }>`
@@ -102,13 +107,15 @@ const Logo = styled.div<{ $collapsed: boolean }>`
     display: flex;
     align-items: center;
     justify-content: ${props => (props.$collapsed ? 'center' : 'flex-start')}; 
-    padding: ${theme.spacing.sm} ${props => (props.$collapsed ? theme.spacing.md : theme.spacing.xl)};
+    padding: ${theme.spacing.sm} ${props => (props.$collapsed ? theme.spacing.sm : theme.spacing.lg)};
     margin-bottom: ${theme.spacing.md};
+    flex: 1;
     font-size: ${theme.typography.fontSizes.xxl};
     font-weight: ${theme.typography.fontWeights.bold};
     color: ${theme.colors.primary};
-    transition: padding ${theme.transitions.default};
+    transition: all ${theme.transitions.default};
     position: relative;
+    min-width: 0;
 
     &::after {
         content: '';
