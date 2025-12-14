@@ -439,6 +439,14 @@ def create_scenario(
     })
     
     new_scenario = budget_scenario.create(db, scenario_dict)
+    
+    # Parse adjustments JSON string to dictionary for response
+    if new_scenario.adjustments and isinstance(new_scenario.adjustments, str):
+        try:
+            new_scenario.adjustments = json.loads(new_scenario.adjustments)
+        except (json.JSONDecodeError, TypeError):
+            new_scenario.adjustments = None
+    
     return new_scenario
 
 
@@ -454,6 +462,15 @@ def get_scenarios(
         raise HTTPException(status_code=404, detail="Budget not found")
     
     scenarios = budget_scenario.get_by_budget(db, budget_id)
+    
+    # Parse adjustments JSON string to dictionary for each scenario
+    for scenario in scenarios:
+        if scenario.adjustments and isinstance(scenario.adjustments, str):
+            try:
+                scenario.adjustments = json.loads(scenario.adjustments)
+            except (json.JSONDecodeError, TypeError):
+                scenario.adjustments = None
+    
     return scenarios
 
 

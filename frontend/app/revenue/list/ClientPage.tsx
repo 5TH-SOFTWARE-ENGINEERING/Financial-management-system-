@@ -194,7 +194,7 @@ const SearchContainer = styled.div`
 `;
 
 const SearchInput = styled.input`
-  width: 100%;
+  width: 85%;
   padding: ${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} 40px;
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};

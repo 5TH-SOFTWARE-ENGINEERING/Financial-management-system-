@@ -12,7 +12,8 @@ const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   fallback: ['system-ui', 'arial'],
-  adjustFontFallback: false,
+  adjustFontFallback: true,
+  preload: false,
 });
 
 const LayoutContainer = styled.div`

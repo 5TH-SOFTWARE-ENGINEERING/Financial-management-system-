@@ -483,7 +483,7 @@ const ScenarioCreatePageInner: React.FC<ScenarioCreatePageProps> = () => {
               </h2>
 
               <FormGroup>
-                <label>Scenario Name *</label>
+                <label>Scenario Name </label>
                 <StyledInput
                   type="text"
                   value={formData.name}
