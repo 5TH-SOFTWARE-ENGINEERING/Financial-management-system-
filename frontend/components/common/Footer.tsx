@@ -1,6 +1,5 @@
 // components/common/Footer.tsx
 "use client";
-
 import Link from "next/link";
 import styled from "styled-components";
 
@@ -8,7 +7,6 @@ const FooterWrapper = styled.footer`
   border-top: 1px solid rgb(51, 52, 53);
   background-color:rgb(51, 49, 49);
   color: #6b7280;
-
   .dark & {
     border-color: #27272a;
     background-color: #000;

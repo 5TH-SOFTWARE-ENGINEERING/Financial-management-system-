@@ -5,17 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styled from 'styled-components';
 import {
-  Search,
-  Plus,
-  Bell,
-  FileSpreadsheet,
-  Globe,
-  User, 
-  Users,
-  LogOut,
-  Settings,
-  HelpCircle,
-  Menu,
+  Search,Plus,Bell,FileSpreadsheet,Globe,User,Users,LogOut,Settings,HelpCircle,Menu,
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -29,11 +19,8 @@ import { debounce } from '@/lib/utils';
 const PRIMARY_ACCENT = '#06b6d4'; 
 const PRIMARY_HOVER = '#0891b2';
 const DANGER_COLOR = '#ef4444';
-
-// Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
     if (active) {
-        // Active state colors (brighter)
         const activeColors: Record<string, string> = {
             'search': '#3b82f6',           // Blue
             'plus': '#22c55e',              // Green
@@ -48,7 +35,6 @@ const getIconColor = (iconType: string, active: boolean = false): string => {
         };
         return activeColors[iconType] || PRIMARY_ACCENT;
     } else {
-        // Inactive state colors (muted but colorful)
         const inactiveColors: Record<string, string> = {
             'search': '#60a5fa',            // Light Blue
             'plus': '#4ade80',               // Light Green
@@ -141,8 +127,6 @@ const ActionsContainer = styled.div`
   align-items: center;
   gap: ${theme.spacing.sm};
 `;
-
-// Icon styled components - declared before use
 const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
@@ -183,7 +167,6 @@ const NavIcon = styled.div<{ $iconType?: string; $active?: boolean; $size?: numb
     transform: scale(1.15);
   }
 `;
-
 const ButtonIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
@@ -198,7 +181,6 @@ const ButtonIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
     transition: all ${theme.transitions.default};
   }
 `;
-
 const DropdownIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
@@ -219,7 +201,6 @@ const DropdownIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
     transform: scale(1.1);
   }
 `;
-
 const AddButton = styled.button`
   display: flex;
   align-items: center;
@@ -712,7 +693,6 @@ export default function Navbar() {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      // Don't close if clicking on the dropdown menu itself or signout
       const target = e.target as HTMLElement;
       const isSignOutClick = target?.closest('[data-signout]');
       const isDropdownClick = target?.closest('[data-dropdown-menu]');
@@ -723,7 +703,6 @@ export default function Navbar() {
         setIsDropdownOpen(false);
       }
       
-      // Close notification panel if clicking outside
       const isNotificationArea = isNotificationClick || isNotificationBadgeClick || 
         (notificationPanelRef.current && notificationPanelRef.current.contains(target as Node)) ||
         (notificationBadgeRef.current && notificationBadgeRef.current.contains(target as Node));
@@ -736,7 +715,6 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handler);
   }, [isNotificationPanelOpen]);
 
-  // Load unread notification count and detect new notifications
   useEffect(() => {
     let retryCount = 0;
     const MAX_RETRIES = 3;
@@ -747,23 +725,14 @@ export default function Navbar() {
         const response = await apiClient.getUnreadCount();
         const newCount = response.data?.unread_count || 0;
         const oldCount = previousUnreadCountRef.current;
-        
-        // If count increased, fetch latest notifications to show popup
         if (newCount > oldCount) {
           try {
-            // Fetch latest notifications to get the new one
             const notifResponse = await apiClient.getNotifications(true); // Get latest unread
             const latestNotifs = notifResponse.data || [];
-            
-            // Find new notifications (not in our last known set)
             const newNotifs = latestNotifs.filter((n: Notification) => !lastNotificationIdsRef.current.has(n.id));
             
-            // Show toast for each new notification
             newNotifs.forEach((notification: Notification) => {
-              // Add to known notifications set
               lastNotificationIdsRef.current.add(notification.id);
-              
-              // Show toast notification
               const toastId = toast.info(notification.title || notification.message, {
                 description: notification.message,
                 duration: 5000,
@@ -779,13 +748,10 @@ export default function Navbar() {
                 }
               });
             });
-            
-            // Update last known notification IDs
             if (latestNotifs.length > 0) {
               lastNotificationIdsRef.current = new Set(latestNotifs.map((n: Notification) => n.id));
             }
           } catch (notifErr) {
-            // If fetching notifications fails, just show a generic toast
             if (newCount > oldCount) {
               const toastId = toast.info('You have new notifications', {
                 description: `${newCount - oldCount} new notification${newCount - oldCount > 1 ? 's' : ''}`,
@@ -801,27 +767,20 @@ export default function Navbar() {
             }
           }
         }
-        
         previousUnreadCountRef.current = newCount;
         setUnreadCount(newCount);
-        retryCount = 0; // Reset retry count on success
+        retryCount = 0; 
       } catch (err: any) {
-        // Only log errors if it's not a network/connection error
-        // Network errors are expected when backend is down, so we suppress them
         const isNetworkError = err.code === 'ERR_NETWORK' || 
                                err.message === 'Network Error' ||
                                err.message?.includes('ERR_CONNECTION_REFUSED') ||
                                !err.response;
         
         if (!isNetworkError) {
-          // Only log non-network errors (e.g., 401, 403, 500)
           console.error('Failed to load unread count:', err);
         }
-        
-        // If backend is down, set count to 0 and stop retrying aggressively
         if (isNetworkError && retryCount >= MAX_RETRIES) {
           setUnreadCount(0);
-          // Increase interval to 60 seconds if backend is down
           if (intervalId) {
             clearInterval(intervalId);
             intervalId = setInterval(loadUnreadCount, 60000);
@@ -832,33 +791,24 @@ export default function Navbar() {
     };
 
     if (user) {
-      // Initial load - fetch notifications to populate lastNotificationIds
       const initializeNotifications = async () => {
         try {
           const notifResponse = await apiClient.getNotifications(true);
           const initialNotifs = notifResponse.data || [];
           if (initialNotifs.length > 0) {
             lastNotificationIdsRef.current = new Set(initialNotifs.map((n: Notification) => n.id));
-            // Set the initial unread count to prevent false positives on first load
             previousUnreadCountRef.current = initialNotifs.length;
           } else {
-            // Even if no notifications, set count to 0 to prevent false positives
             previousUnreadCountRef.current = 0;
           }
         } catch (err) {
-          // If initialization fails, set count to 0 to prevent false positives
-          // The first loadUnreadCount() call will then properly initialize the state
           previousUnreadCountRef.current = 0;
           lastNotificationIdsRef.current = new Set();
         }
       };
-      
-      // Initialize notifications first, then start loading unread count
-      // This prevents race condition where existing notifications are treated as new
       const initAndStart = async () => {
         await initializeNotifications();
         loadUnreadCount();
-        // Refresh every 30 seconds (or 60 seconds if backend is down)
         intervalId = setInterval(loadUnreadCount, 30000);
       };
       
@@ -869,21 +819,13 @@ export default function Navbar() {
       };
     }
   }, [user, router]);
-
-  // Load language preference from localStorage
   useEffect(() => {
     const savedLanguage = localStorage.getItem('language') || 'ENG';
     setLanguage(savedLanguage);
   }, []);
-
-  // Extract query parameter value for stable dependency
   const queryParam = searchParams?.get('q') || '';
-
-  // Sync search input with URL query parameter when on search page
-  // Only sync when URL changes, not when local search state changes
   useEffect(() => {
     if (pathname === '/search') {
-      // Only update if different to avoid unnecessary re-renders
       setSearch(prev => {
         if (prev !== queryParam) {
           return queryParam;
@@ -891,22 +833,16 @@ export default function Navbar() {
         return prev;
       });
     } else {
-      // Clear search when leaving search page (only if it's not already empty)
       setSearch(prev => prev ? '' : prev);
     }
   }, [pathname, queryParam]);
-
-  // Create debounced search navigation function
   const navigateToSearch = useCallback((searchQuery: string) => {
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     } else if (pathname === '/search') {
-      // If on search page and query is empty, stay on search page but clear query
       router.push('/search');
     }
   }, [router, pathname]);
-
-  // Create debounced function with useRef to maintain stability
   const debouncedSearchRef = useRef<ReturnType<typeof debounce> | null>(null);
   
   useEffect(() => {
@@ -918,18 +854,14 @@ export default function Navbar() {
       }
     };
   }, [navigateToSearch]);
-
-  // Load notifications when panel opens
   useEffect(() => {
     const loadNotifications = async () => {
       if (isNotificationPanelOpen && user) {
         setLoadingNotifications(true);
         try {
-          const response = await apiClient.getNotifications(false); // Get all notifications, not just unread
+          const response = await apiClient.getNotifications(false); 
           const notifs = response.data || [];
           setNotifications(notifs);
-          
-          // Update unread count based on loaded notifications
           const unreadCountFromList = notifs.filter((n: Notification) => !n.is_read).length;
           setUnreadCount(unreadCountFromList);
         } catch (err: any) {
@@ -942,20 +874,16 @@ export default function Navbar() {
     };
 
     loadNotifications();
-
-    // Refresh notifications every 10 seconds when panel is open
     let intervalId: NodeJS.Timeout | null = null;
     if (isNotificationPanelOpen && user) {
       intervalId = setInterval(loadNotifications, 10000);
     }
-
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [isNotificationPanelOpen, user]);
 
   const handleAddClick = () => {
-    // Context-aware routing based on current path
     if (pathname?.includes('/expenses')) {
       router.push('/expenses/items');
     } else if (pathname?.includes('/revenue')) {
@@ -971,7 +899,6 @@ export default function Navbar() {
     } else if (pathname?.includes('/department')) {
       router.push('/department/create');
     } else {
-      // Default to expenses items
       router.push('/expenses/items');
     }
   };
@@ -982,7 +909,7 @@ export default function Navbar() {
 
   const handleNotificationsClick = () => {
     setIsNotificationPanelOpen(!isNotificationPanelOpen);
-    setIsDropdownOpen(false); // Close user dropdown if open
+    setIsDropdownOpen(false); 
   };
 
   const handleViewAllNotifications = () => {
@@ -994,11 +921,9 @@ export default function Navbar() {
     if (!notification.is_read) {
       try {
         await apiClient.markNotificationAsRead(notification.id);
-        // Update local state
         setNotifications(prev => prev.map(n => 
           n.id === notification.id ? { ...n, is_read: true } : n
         ));
-        // Update unread count
         setUnreadCount(prev => Math.max(0, prev - 1));
       } catch (err) {
         console.error('Failed to mark notification as read:', err);
@@ -1027,7 +952,6 @@ export default function Navbar() {
     const newLanguage = language === 'EN' ? 'AR' : 'EN';
     setLanguage(newLanguage);
     localStorage.setItem('language', newLanguage);
-    // Could trigger a language change event here
   };
 
   const handleProfileClick = () => {
@@ -1053,31 +977,21 @@ export default function Navbar() {
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // Close dropdown immediately
     setIsDropdownOpen(false);
-    
-    // Show loading toast
     toast.loading('Signing out...', { id: 'signout' });
     
     try {
-      // First, call backend logout API to invalidate session
       try {
         await apiClient.logout();
       } catch (apiErr: any) {
-        // Continue with logout even if API call fails
       }
-      
-      // Then clear store state (which also calls logout but we already did it)
       try {
         const store = useUserStore.getState();
         if (store.logout) {
-          // Call store logout to clear state (it will try API again but that's ok)
           await store.logout();
         }
       } catch (storeErr) {
         console.error('Store logout error:', storeErr);
-        // Manually clear store state if logout fails - use the store's internal setter
         useUserStore.setState({
           user: null,
           isAuthenticated: false,
@@ -1087,8 +1001,6 @@ export default function Navbar() {
           error: null,
         });
       }
-      
-      // Try auth context logout
       if (logout) {
         try {
           await logout();
@@ -1096,33 +1008,23 @@ export default function Navbar() {
           console.error('Auth context logout error:', authErr);
         }
       }
-      
-      // Clear localStorage
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('language');
       }
-      
-      // Show success
       toast.success('Signed out successfully', { id: 'signout' });
-      
-      // Redirect after a short delay to show success message
       setTimeout(() => {
         window.location.href = '/';
       }, 500);
       
     } catch (error) {
       console.error('Sign out error:', error);
-      
-      // Even if everything fails, clear local storage and redirect
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('language');
       }
-      
-      // Clear store state
       try {
         useUserStore.setState({
           user: null,
@@ -1137,8 +1039,6 @@ export default function Navbar() {
       }
       
       toast.success('Signed out', { id: 'signout' });
-      
-      // Redirect to home page
       setTimeout(() => {
         window.location.href = '/';
       }, 500);
@@ -1146,16 +1046,13 @@ export default function Navbar() {
   };
   
   const handleSignOutMouseDown = (e: React.MouseEvent) => {
-    // Prevent dropdown from closing when clicking sign out
     e.preventDefault();
     e.stopPropagation();
-    // Execute signout immediately on mousedown
     handleSignOut(e);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Immediately navigate on form submit (Enter key)
     if (search.trim()) {
       router.push(`/search?q=${encodeURIComponent(search.trim())}`);
     }
@@ -1164,28 +1061,21 @@ export default function Navbar() {
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearch(value);
-    
-    // Trigger debounced navigation
     if (value.trim()) {
       if (debouncedSearchRef.current) {
         debouncedSearchRef.current(value);
       }
     } else {
-      // Clear search immediately if input is empty
       if (pathname === '/search') {
         router.push('/search');
       }
     }
   }, [router, pathname]);
-
-  // Get user data from either auth context or store
   const currentUser = storeUser || user;
   const userName = (currentUser as any)?.name || (currentUser as any)?.username || (currentUser as any)?.email || 'User';
   const initials = userName
     ? userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2)
     : '?';
-  
-  // Get role display name
   const getRoleDisplayName = (role?: string) => {
     const roleMap: Record<string, string> = {
       admin: 'Administrator',
@@ -1323,11 +1213,9 @@ export default function Navbar() {
           data-dropdown-menu="true"
           $isOpen={isDropdownOpen}
           onClick={(e) => {
-            // Prevent clicks inside dropdown from closing it
             e.stopPropagation();
           }}
           onMouseDown={(e) => {
-            // Prevent mousedown from closing dropdown
             e.stopPropagation();
           }}
         >
@@ -1375,7 +1263,6 @@ export default function Navbar() {
             data-signout="true"
             onMouseDown={handleSignOutMouseDown}
             onClick={(e) => {
-              // Prevent default and stop propagation
               e.preventDefault();
               e.stopPropagation();
             }}

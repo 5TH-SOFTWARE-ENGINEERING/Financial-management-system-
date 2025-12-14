@@ -47,47 +47,40 @@ const TableBodyRow = styled.tr`
     border-bottom: 1px solid ${theme.colors.border};
   }
 `;
-
 const TableBodyCell = styled.td`
   padding: 12px 16px;
   color: ${theme.colors.textSecondary};
 `;
-
 export const Table: React.FC<React.HTMLAttributes<HTMLTableElement>> = ({
   children,
   ...props
 }) => {
   return <TableContainer {...props}>{children}</TableContainer>;
 };
-
 export const TableHeader: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = ({
   children,
   ...props
 }) => {
   return <TableHeaderContainer {...props}>{children}</TableHeaderContainer>;
 };
-
 export const TableBody: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = ({
   children,
   ...props
 }) => {
   return <TableBodyContainer {...props}>{children}</TableBodyContainer>;
 };
-
 export const TableRow: React.FC<React.HTMLAttributes<HTMLTableRowElement>> = ({
   children,
   ...props
 }) => {
   return <TableBodyRow {...props}>{children}</TableBodyRow>;
 };
-
 export const TableHead: React.FC<React.ThHTMLAttributes<HTMLTableCellElement>> = ({
   children,
   ...props
 }) => {
   return <TableHeaderCell {...props}>{children}</TableHeaderCell>;
 };
-
 export const TableCell: React.FC<React.TdHTMLAttributes<HTMLTableCellElement>> = ({
   children,
   ...props

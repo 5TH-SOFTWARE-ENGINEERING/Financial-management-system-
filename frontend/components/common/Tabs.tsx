@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import styled from 'styled-components';
 import { theme } from '@/components/common/theme';
@@ -9,16 +8,13 @@ interface TabsProps {
   value: string;
   onValueChange: (value: string) => void;
 }
-
 interface TabsListProps {
   children: React.ReactNode;
 }
-
 interface TabsTriggerProps {
   children: React.ReactNode;
   value: string;
 }
-
 interface TabsContentProps {
   children: React.ReactNode;
   value: string;

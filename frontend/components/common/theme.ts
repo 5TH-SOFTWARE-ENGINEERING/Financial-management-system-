@@ -1,5 +1,4 @@
 // theme.ts
-
 export interface Theme {
   colors: {
     background: string;
