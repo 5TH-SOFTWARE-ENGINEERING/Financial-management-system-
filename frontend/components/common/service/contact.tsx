@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import styled from "styled-components";
+import apiClient from "@/lib/api";
 
 const PageWrapper = styled.div`
   min-height: 100vh;
@@ -198,10 +199,23 @@ export default function Contact() {
     }
     setSubmitting(true);
 
-    // Simulate network delay & success
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSubmitting(false);
-    setSubmitted(true);
+    try {
+      await apiClient.submitContact({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        message: form.message.trim(),
+      });
+      setSubmitted(true);
+    } catch (err: any) {
+      const backendMessage =
+        err?.response?.data?.detail ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Unable to send your message. Please try again.";
+      setError(String(backendMessage));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

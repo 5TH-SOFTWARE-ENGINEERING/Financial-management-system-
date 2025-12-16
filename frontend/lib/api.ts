@@ -1339,6 +1339,15 @@ class ApiClient {
     return this.get('/sales/journal-entries/list', { params });
   }
 
+  /**
+   * Submit a contact/support message
+   * You can override the endpoint path with NEXT_PUBLIC_CONTACT_ENDPOINT (e.g. "/support/contact")
+   */
+  async submitContact(payload: { name: string; email: string; message: string }) {
+    const contactPath = process.env.NEXT_PUBLIC_CONTACT_ENDPOINT || '/contact';
+    return this.post(contactPath, payload);
+  }
+
   // Generic request method
   async request<T = any>(config: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.request<T>(config);
