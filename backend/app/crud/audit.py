@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from sqlalchemy import and_, desc # type: ignore[import-untyped]
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from ..models.audit import AuditLog, AuditAction
 
 
@@ -55,7 +55,7 @@ class CRUDAuditLog:
 
     def cleanup_old(self, db: Session, days: int = 365) -> int:
         """Delete audit logs older than specified days and return count of deleted records"""
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         old_logs = db.query(AuditLog).filter(AuditLog.created_at < cutoff_date).all()
         
         count = len(old_logs)
