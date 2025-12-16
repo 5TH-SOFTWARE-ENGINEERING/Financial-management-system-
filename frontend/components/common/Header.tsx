@@ -78,6 +78,29 @@ const Actions = styled.div`
   gap: 0.5rem;
 `;
 
+const MobileNav = styled.nav`
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+
+  @media (min-width: 640px) {
+    display: none;
+  }
+`;
+
+const MobileNavLink = styled(Link)`
+  color: #e5e7eb;
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  transition: color 0.18s ease;
+
+  &:hover {
+    color: #c7d2fe;
+  }
+`;
+
 const LoginButton = styled(Link)`
   padding: 9px 18px;
   border-radius: 999px;
@@ -119,6 +142,12 @@ export default function Header() {
         </BrandLink>
 
         <Actions>
+          <MobileNav>
+            <MobileNavLink href="/features">Features</MobileNavLink>
+            <MobileNavLink href="/pricing">Pricing</MobileNavLink>
+            <MobileNavLink href="/docs">Docs</MobileNavLink>
+            <MobileNavLink href="/service/contact">Contact</MobileNavLink>
+          </MobileNav>
           <LoginButton href="/auth/login">Login</LoginButton>
         </Actions>
       </Container>
