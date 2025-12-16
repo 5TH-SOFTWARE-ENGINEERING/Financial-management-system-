@@ -82,21 +82,21 @@ const PlansGrid = styled.div`
   }
 `;
 
-const PlanCard = styled.div<{ featured?: boolean }>`
+const PlanCard = styled.div<{ $featured?: boolean }>`
   flex: 1;
-  background: ${({ featured }) =>
-    featured
+  background: ${({ $featured }) =>
+    $featured
       ? "linear-gradient(110deg, #383e70 80%, #6d5afd 150%)"
       : "#171b26"};
   border-radius: 15px;
-  border: ${({ featured }) =>
-    featured ? "2.5px solid #818cf8" : "1.5px solid #262e45"};
-  box-shadow: ${({ featured }) =>
-    featured
+  border: ${({ $featured }) =>
+    $featured ? "2.5px solid #818cf8" : "1.5px solid #262e45"};
+  box-shadow: ${({ $featured }) =>
+    $featured
       ? "0 8px 40px 0 rgba(129, 140, 248, 0.23)"
       : "0 6px 32px rgba(30, 41, 59, 0.12)"};
   padding: 2.1rem 1.5rem 2.3rem;
-  color: ${({ featured }) => (featured ? "#e0e7ff" : "#cbd5e1")};
+  color: ${({ $featured }) => ($featured ? "#e0e7ff" : "#cbd5e1")};
   position: relative;
   display: flex;
   flex-direction: column;
@@ -230,7 +230,7 @@ export default function Pricing() {
             </FeaturesList>
             <ActionButton href="/auth/register">Get Started Free</ActionButton>
           </PlanCard>
-          <PlanCard featured>
+          <PlanCard $featured>
             <PlanName>Pro</PlanName>
             <Price>$15<span style={{ fontSize: "1.1rem", fontWeight: 500 }}>/mo</span></Price>
             <Subtext>For growing businesses</Subtext>
