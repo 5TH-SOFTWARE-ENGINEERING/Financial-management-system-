@@ -45,6 +45,33 @@ const Intro = styled.p`
   max-width: 640px;
 `;
 
+const HomeButton = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0.35rem 0 1.3rem;
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.32);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(59, 130, 246, 0.45);
+    opacity: 0.95;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 const PlansGrid = styled.div`
   display: flex;
   flex-direction: column;
@@ -185,6 +212,7 @@ export default function Pricing() {
     <PageWrapper>
       <Container>
         <Title>Pricing</Title>
+        <HomeButton href="/">← Back to Home</HomeButton>
         <Intro>
           Transparent, simple pricing. All plans include core accounting, up-to-date reporting, and premium customer support.
         </Intro>

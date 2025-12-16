@@ -143,9 +143,9 @@ export default function Header() {
 
         <Actions>
           <MobileNav>
-            <MobileNavLink href="/features">Features</MobileNavLink>
-            <MobileNavLink href="/pricing">Pricing</MobileNavLink>
-            <MobileNavLink href="/docs">Docs</MobileNavLink>
+            <MobileNavLink href="/service/feature">Features</MobileNavLink>
+            <MobileNavLink href="/service/price">Pricing</MobileNavLink>
+            <MobileNavLink href="/service/docs">Docs</MobileNavLink>
             <MobileNavLink href="/service/contact">Contact</MobileNavLink>
           </MobileNav>
           <LoginButton href="/auth/login">Login</LoginButton>
