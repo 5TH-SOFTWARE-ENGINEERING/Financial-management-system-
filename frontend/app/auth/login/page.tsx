@@ -499,18 +499,13 @@ const BackButton = styled.button`
 `;
 
 export default function Login() {
-  // Real auth context - no mock data
   const { login, error: authError, isLoading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  
-  // Component state management
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [userNotFound, setUserNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
-  // Load saved credentials if "remember me" was checked previously
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedRememberMe = localStorage.getItem('rememberMe');
@@ -518,15 +513,10 @@ export default function Login() {
       
       if (savedRememberMe === 'true' && savedIdentifier) {
         setRememberMe(true);
-        // Note: We don't auto-fill for security, but could if needed
       }
     }
   }, []);
-  
-  // Redirect if already authenticated (but only if we're not currently handling a login attempt)
   useEffect(() => {
-    // Only redirect if user is authenticated AND not currently loading/login attempting
-    // This prevents redirects during failed login attempts
     if (isAuthenticated && !authLoading && !isLoading && !userNotFound) {
       router.push('/dashboard');
     }
@@ -541,18 +531,14 @@ export default function Login() {
   });
 
   const onSubmit = async (data: LoginInput) => {
-    // Reset states
     setIsLoading(true);
     setUserNotFound(false);
     setErrorMessage(null);
     
     try {
-      // Real login API call - no mock data
       const loginSuccess = await login(data.identifier, data.password);
       
-      // SUCCESS STATE HANDLING
       if (loginSuccess === true) {
-        // Save remember me preference to localStorage
         if (rememberMe && typeof window !== 'undefined') {
           localStorage.setItem('rememberMe', 'true');
           localStorage.setItem('savedIdentifier', data.identifier);
@@ -560,42 +546,31 @@ export default function Login() {
           localStorage.removeItem('rememberMe');
           localStorage.removeItem('savedIdentifier');
         }
-        
-        // Verify authentication state from store
         const storeState = useUserStore.getState();
         if (storeState.isAuthenticated && storeState.user) {
-          toast.success('Login successful! Redirecting...');
+          toast.success('Login successful! You are now logged in.');
           router.push('/dashboard');
           return;
         }
-        
-        // Retry verification after short delay (handles race conditions)
         await new Promise(resolve => setTimeout(resolve, 200));
         const retryState = useUserStore.getState();
         if (retryState.isAuthenticated && retryState.user) {
-          toast.success('Login successful! Redirecting...');
+          toast.success('Login successful! You are now logged in.');
           router.push('/dashboard');
           return;
         }
-        
-        // Final verification attempt
         await new Promise(resolve => setTimeout(resolve, 300));
         const finalState = useUserStore.getState();
         if (finalState.isAuthenticated && finalState.user) {
-          toast.success('Login successful! Redirecting...');
+          toast.success('Login successful! You are now logged in.');
           router.push('/dashboard');
           return;
         }
-        
-        // Success flag but state not updated - treat as error
         setErrorMessage('Login verification failed. Please try again.');
         toast.error('Login verification failed. Please try again.');
         setIsLoading(false);
         return;
       }
-      
-      // FAILURE STATE: Login returned false
-      // Show toast notification and not found page with "Incorrect username or password" message
       toast.error('Incorrect username or password', {
         duration: 4000,
       });
@@ -604,7 +579,6 @@ export default function Login() {
       return;
       
     } catch (error: any) {
-      // ERROR STATE HANDLING - Real error from API
       const errorResponse = error?.response;
       const errorStatus = errorResponse?.status;
       const errorData = errorResponse?.data;
@@ -612,8 +586,6 @@ export default function Login() {
       const errorCode = error?.code;
       const errorMessage = String(error?.message || '').toLowerCase();
       const errorDetailLower = String(errorDetail).toLowerCase();
-      
-      // Classify error types
       const isNetworkError = !errorResponse || 
                             errorCode === 'ECONNREFUSED' ||
                             errorCode === 'ERR_NETWORK' ||
@@ -643,19 +615,15 @@ export default function Login() {
                              errorDetailLower.includes('locked') ||
                              errorDetailLower.includes('disabled')
                            );
-      
-      // Handle errors based on type
       if (isNetworkError) {
-        // NETWORK ERROR STATE
-        const msg = 'Network connection error. Please check your internet connection and try again.';
+        const msg = 'Unable to connect to the server. Please try again later.';
         setErrorMessage(msg);
         toast.error(msg);
         setIsLoading(false);
         return;
       }
-      
+      // Network connection error. Please check your internet connection and try again.
       if (isServerError) {
-        // SERVER ERROR STATE
         const msg = 'Server error. Please try again in a few moments.';
         setErrorMessage(msg);
         toast.error(msg);
@@ -664,7 +632,6 @@ export default function Login() {
       }
       
       if (isRateLimitError) {
-        // RATE LIMIT ERROR STATE
         const msg = 'Too many login attempts. Please wait a few minutes before trying again.';
         setErrorMessage(msg);
         toast.error(msg);
@@ -673,7 +640,6 @@ export default function Login() {
       }
       
       if (isAccountError) {
-        // ACCOUNT STATUS ERROR STATE
         const msg = errorDetailLower.includes('inactive')
           ? 'Your account is inactive. Please contact your administrator.'
           : 'Your account is locked. Please contact your administrator.';
@@ -684,8 +650,6 @@ export default function Login() {
       }
       
       if (isAuthError || errorStatus === 401 || errorStatus === 403 || errorStatus === 404) {
-        // AUTHENTICATION ERROR STATE - Show toast and not found page with "Incorrect username or password"
-        // NO redirect - user stays on login page
         toast.error('Incorrect username or password', {
           duration: 4000,
         });
@@ -693,9 +657,6 @@ export default function Login() {
         setIsLoading(false);
         return;
       }
-      
-      // DEFAULT: Any other error (non-network/server) - show toast and not found page
-      // This handles any authentication-related failures
       toast.error('Incorrect username or password', {
         duration: 4000,
       });
@@ -703,14 +664,9 @@ export default function Login() {
       setIsLoading(false);
       
     } finally {
-      // Always reset loading state
       setIsLoading(false);
     }
   };
-
-  // Show 404 not found page if user not found
-  // NO redirect happens - user stays on login page but sees not found message
-  // Clicking "Back to Login" returns to the login form without any navigation
   if (userNotFound) {
     return (
       <NotFoundContainer>
@@ -730,8 +686,6 @@ export default function Login() {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              // Simply reset the state - NO redirect to home page
-              // User stays on the same login page and can try again
               setUserNotFound(false);
               setErrorMessage(null);
             }}
@@ -742,15 +696,11 @@ export default function Login() {
       </NotFoundContainer>
     );
   }
-
-  // Prevent native navigation and route through react-hook-form to avoid GET submissions
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     e.stopPropagation();
     handleSubmit(onSubmit)();
   };
-
-  // Show loading state if auth is loading (initial check)
   if (authLoading) {
     return (
       <LoginContainer>
@@ -776,13 +726,9 @@ export default function Login() {
           </Title>
         </Link>
         <Subtitle>Welcome back! Please sign in below</Subtitle>
-
-        {/* Display error message if exists */}
         {errorMessage && (
           <ErrorMessage>{errorMessage}</ErrorMessage>
         )}
-
-        {/* Loading overlay */}
         <LoadingOverlay $isLoading={isLoading}>
           <div style={{ textAlign: 'center' }}>
             <SpinningLoader>
