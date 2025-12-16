@@ -597,7 +597,7 @@ export default function Home() {
           Built by a global team of finance experts, accountants, and software engineers dedicated to transforming how businesses manage their finances.
         </p>
         <TeamImage
-          src="/images/team-photo.png"
+          src="/images/team1.png"
           alt="Team"
           width={800}
           height={400}
