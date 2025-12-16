@@ -18,33 +18,10 @@ jest.mock('next/link', () => {
   }
 })
 
-// Mock framer-motion to filter out non-DOM props like whileHover
-jest.mock('framer-motion', () => {
-  const createMockElement = (elementName: string, defaultRole?: string) => {
-    return ({ children, whileHover, initial, animate, transition, ...props }: any) => {
-      const Element = elementName as any
-      const domProps: any = { ...props }
-      if (defaultRole) domProps.role = defaultRole
-      return <Element {...domProps}>{children}</Element>
-    }
-  }
-
-  return {
-    motion: {
-      span: createMockElement('span'),
-      button: createMockElement('button'),
-      div: createMockElement('div'),
-      header: createMockElement('header', 'banner'),
-      a: createMockElement('a'),
-    },
-  }
-})
-
 describe('Header Component', () => {
   it('renders header element', () => {
-    // The rendered element will now be the mock <header role="banner"> provided by motion.header mock
-    render(<Header />)
-    const header = screen.getByRole('banner')
+    const { container } = render(<Header />)
+    const header = container.querySelector('header')
     expect(header).toBeInTheDocument()
   })
 
