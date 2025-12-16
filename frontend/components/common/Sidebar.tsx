@@ -70,8 +70,9 @@ const CollapseButton = styled.button`
     justify-content: center;
     z-index: 10;
     flex-shrink: 0;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
+    margin: 0;
 
     &:hover {
         background: ${theme.colors.backgroundSecondary};
@@ -94,21 +95,24 @@ const StickyHeader = styled.div`
     top: 0;
     background: ${theme.colors.background};
     z-index: 10;
-    padding: ${theme.spacing.md} ${theme.spacing.md} ${theme.spacing.sm};
+    padding: ${theme.spacing.md} ${theme.spacing.md};
     margin: 0;
+    margin-bottom: ${theme.spacing.xs};
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0px;
+    gap: ${theme.spacing.sm};
+    border-bottom: 1px solid ${theme.colors.border};
 `;
 
 const Logo = styled.div<{ $collapsed: boolean }>`
-    height: 56px;
+    height: auto;
+    min-height: 40px;
     display: flex;
     align-items: center;
     justify-content: ${props => (props.$collapsed ? 'center' : 'flex-start')}; 
-    padding: ${theme.spacing.sm} ${props => (props.$collapsed ? theme.spacing.sm : theme.spacing.lg)};
-    margin-bottom: ${theme.spacing.md};
+    padding: 0;
+    margin: 0;
     flex: 1;
     font-size: ${theme.typography.fontSizes.xxl};
     font-weight: ${theme.typography.fontWeights.bold};
@@ -116,17 +120,6 @@ const Logo = styled.div<{ $collapsed: boolean }>`
     transition: all ${theme.transitions.default};
     position: relative;
     min-width: 0;
-
-    &::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: ${props => (props.$collapsed ? theme.spacing.sm : theme.spacing.lg)};
-        right: ${props => (props.$collapsed ? theme.spacing.sm : theme.spacing.lg)};
-        height: 1px;
-        background: ${theme.colors.border};
-        opacity: 0.5;
-    }
 `;
 
 const SectionTitle = styled.h3<{$collapsed: boolean; $isOpen?: boolean; $isAccountSection?: boolean}>`
@@ -136,6 +129,7 @@ const SectionTitle = styled.h3<{$collapsed: boolean; $isOpen?: boolean; $isAccou
     color: ${theme.colors.textSecondary};
     padding: ${props => props.$isAccountSection ? `${theme.spacing.md} ${theme.spacing.xl} ${theme.spacing.sm}` : `${theme.spacing.lg} ${theme.spacing.xl} ${theme.spacing.sm}`};
     margin: 0;
+    margin-top: ${props => props.$isAccountSection ? '0' : theme.spacing.md};
     opacity: ${props => (props.$collapsed ? 0 : 1)};
     pointer-events: ${props => (props.$collapsed ? 'none' : 'auto')};
     transition: opacity ${theme.transitions.default};
@@ -155,12 +149,14 @@ const SectionContent = styled.div<{$isOpen: boolean; $collapsed: boolean}>`
     display: ${props => (props.$isOpen ? 'block' : 'none')};
     opacity: ${props => (props.$isOpen ? 1 : 0)};
     transition: opacity ${theme.transitions.default};
-    padding-bottom: ${theme.spacing.md};
+    padding-bottom: ${theme.spacing.sm};
+    margin-bottom: ${theme.spacing.sm};
 `;
 
 const AccountSectionContent = styled(SectionContent)`
     padding-top: ${theme.spacing.xs};
-    padding-bottom: ${theme.spacing.md};
+    padding-bottom: ${theme.spacing.sm};
+    margin-bottom: ${theme.spacing.md};
 `;
 
 // Icon color mapping for different icon types
@@ -289,7 +285,7 @@ const NavItem = styled(Link)<{ $active?: boolean; $collapsed?: boolean }>`
     transition: all ${theme.transitions.default};
     justify-content: ${props => (props.$collapsed ? 'center' : 'flex-start')};
     position: relative;
-    margin: ${theme.spacing.xs} ${theme.spacing.sm};
+    margin: ${theme.spacing.xs} ${theme.spacing.md};
     border-radius: ${theme.borderRadius.sm};
     font-weight: ${props => (props.$active ? theme.typography.fontWeights.medium : 400)};
 
@@ -320,7 +316,7 @@ const DropdownHeader = styled.div<{ $open?: boolean; $collapsed?: boolean; $acti
     border-left: 3px solid ${props => (props.$active ? theme.colors.primary : 'transparent')};
     transition: all ${theme.transitions.default};
     position: relative;
-    margin: ${theme.spacing.xs} ${theme.spacing.sm};
+    margin: ${theme.spacing.xs} ${theme.spacing.md};
     border-radius: ${theme.borderRadius.sm};
     font-weight: ${props => (props.$active ? theme.typography.fontWeights.medium : 400)};
     gap: ${props => (props.$collapsed ? theme.spacing.xs : '0')};
@@ -347,10 +343,12 @@ const DropdownHeader = styled.div<{ $open?: boolean; $collapsed?: boolean; $acti
 `;
 
 const SubMenu = styled.div<{$collapsed: boolean}>`
-    margin-left: ${props => (props.$collapsed ? 0 : '20px')}; 
+    margin-left: ${props => (props.$collapsed ? 0 : '24px')}; 
     border-left: ${props => (props.$collapsed ? 'none' : `2px solid ${theme.colors.border}`)};
-    padding-left: ${props => (props.$collapsed ? 0 : theme.spacing.xs)};
-    margin-top: ${props => (props.$collapsed ? theme.spacing.xs : theme.spacing.sm)};
+    padding-left: ${props => (props.$collapsed ? 0 : theme.spacing.sm)};
+    margin-top: ${props => (props.$collapsed ? theme.spacing.xs : theme.spacing.xs)};
+    margin-bottom: ${theme.spacing.xs};
+    padding-bottom: ${theme.spacing.xs};
     animation: ${props => (!props.$collapsed ? 'slideDown 0.2s ease-out' : 'none')};
 
     @keyframes slideDown {
@@ -366,10 +364,12 @@ const SubMenu = styled.div<{$collapsed: boolean}>`
 
     /* Correct NavItem padding inside SubMenu */
     ${NavItem} {
-        padding-left: ${props => (props.$collapsed ? theme.spacing.lg : `calc(${theme.spacing.xl} + 8px)`)};
+        padding-left: ${props => (props.$collapsed ? theme.spacing.lg : `calc(${theme.spacing.xl} + 4px)`)};
         border-left: none;
         margin-left: ${props => (props.$collapsed ? theme.spacing.sm : '0')};
-        margin-right: ${props => (props.$collapsed ? theme.spacing.sm : '0')};
+        margin-right: ${props => (props.$collapsed ? theme.spacing.sm : theme.spacing.md)};
+        margin-top: ${theme.spacing.xs};
+        margin-bottom: ${theme.spacing.xs};
         font-size: ${theme.typography.fontSizes.sm};
 
         &::before {
@@ -387,9 +387,9 @@ const SubMenu = styled.div<{$collapsed: boolean}>`
 
 const AccountSection = styled.div<{$collapsed: boolean}>`
     margin-top: auto;
-    padding-top: ${theme.spacing.xl};
+    padding-top: ${theme.spacing.lg};
     padding-bottom: ${theme.spacing.md};
-    border-top: 1px solid ${theme.colors.border};
+    border-top: 2px solid ${theme.colors.border};
     margin-left: 0;
     margin-right: 0;
     padding-left: 0;
