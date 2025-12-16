@@ -76,15 +76,26 @@ class ApiClient {
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
+        const requestUrl = originalRequest?.url || '';
         
-        // Handle 401 Unauthorized - redirect to home page (not login, as per user preference)
+        // Handle 401 Unauthorized - but DON'T redirect on login endpoint
+        // The login page handles its own error states and redirects
         if (error.response?.status === 401 && !originalRequest?._retry) {
           originalRequest._retry = true;
           if (typeof window !== 'undefined') {
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
-            // Redirect to home page instead of login page
-            window.location.href = '/';
+            
+            // Only redirect if NOT on the login endpoint
+            // Login endpoint errors should be handled by the login page component
+            const isLoginEndpoint = requestUrl.includes('/auth/login-json') || 
+                                   requestUrl.includes('/auth/login');
+            
+            if (!isLoginEndpoint && !window.location.pathname.includes('/auth/login')) {
+              // Redirect to home page for other 401 errors (not login-related)
+              window.location.href = '/';
+            }
+            // For login endpoint 401s, let the error propagate to the component
           }
         }
         

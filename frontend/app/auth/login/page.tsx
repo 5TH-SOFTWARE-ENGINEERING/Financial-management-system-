@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/lib/rbac';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -335,6 +335,12 @@ const SignInButton = styled.button`
   cursor: pointer;
   transition: all ${theme.transitions.default};
   box-shadow: 0 2px 8px rgba(255, 126, 95, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.spacing.sm};
+  position: relative;
+  min-height: 44px;
 
   &:hover:not(:disabled) {
     background: linear-gradient(135deg, #feb47b 0%, ${theme.colors.primary} 100%);
@@ -352,6 +358,44 @@ const SignInButton = styled.button`
     box-shadow: none;
     opacity: 0.6;
   }
+`;
+
+const SpinningLoader = styled.div`
+  display: inline-flex;
+  animation: spin 1s linear infinite;
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const LoadingOverlay = styled.div<{ $isLoading: boolean }>`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: ${props => props.$isLoading ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  border-radius: ${theme.borderRadius.lg};
+  z-index: 10;
+  backdrop-filter: blur(2px);
+`;
+
+const LoadingText = styled.div`
+  color: #ffffff;
+  font-size: ${theme.typography.fontSizes.md};
+  margin-top: ${theme.spacing.md};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
 `;
 const ForgotPassword = styled.a`
   text-align: right;
@@ -455,12 +499,38 @@ const BackButton = styled.button`
 `;
 
 export default function Login() {
+  // Real auth context - no mock data
   const { login, error: authError, isLoading: authLoading, isAuthenticated } = useAuth();
+  const router = useRouter();
+  
+  // Component state management
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [userNotFound, setUserNotFound] = useState(false);
-  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Load saved credentials if "remember me" was checked previously
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedRememberMe = localStorage.getItem('rememberMe');
+      const savedIdentifier = localStorage.getItem('savedIdentifier');
+      
+      if (savedRememberMe === 'true' && savedIdentifier) {
+        setRememberMe(true);
+        // Note: We don't auto-fill for security, but could if needed
+      }
+    }
+  }, []);
+  
+  // Redirect if already authenticated (but only if we're not currently handling a login attempt)
+  useEffect(() => {
+    // Only redirect if user is authenticated AND not currently loading/login attempting
+    // This prevents redirects during failed login attempts
+    if (isAuthenticated && !authLoading && !isLoading && !userNotFound) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, authLoading, isLoading, userNotFound, router]);
 
   const {
     register,
@@ -471,104 +541,201 @@ export default function Login() {
   });
 
   const onSubmit = async (data: LoginInput) => {
+    // Reset states
     setIsLoading(true);
     setUserNotFound(false);
+    setErrorMessage(null);
+    
     try {
+      // Real login API call - no mock data
       const loginSuccess = await login(data.identifier, data.password);
       
-      // The login function already verifies authentication internally
-      // If it returns true, the user is authenticated and we can redirect
-      if (loginSuccess) {
-        // Give a small delay to ensure state has propagated to React components
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // SUCCESS STATE HANDLING
+      if (loginSuccess === true) {
+        // Save remember me preference to localStorage
+        if (rememberMe && typeof window !== 'undefined') {
+          localStorage.setItem('rememberMe', 'true');
+          localStorage.setItem('savedIdentifier', data.identifier);
+        } else if (typeof window !== 'undefined') {
+          localStorage.removeItem('rememberMe');
+          localStorage.removeItem('savedIdentifier');
+        }
         
-        // Verify authentication state directly from store as a double-check
+        // Verify authentication state from store
         const storeState = useUserStore.getState();
         if (storeState.isAuthenticated && storeState.user) {
-          toast.success('Login successful!');
+          toast.success('Login successful! Redirecting...');
           router.push('/dashboard');
           return;
         }
         
-        // If store state check fails, wait a bit more and retry
-        // This handles potential race conditions with Zustand state updates
+        // Retry verification after short delay (handles race conditions)
         await new Promise(resolve => setTimeout(resolve, 200));
         const retryState = useUserStore.getState();
         if (retryState.isAuthenticated && retryState.user) {
-          toast.success('Login successful!');
+          toast.success('Login successful! Redirecting...');
           router.push('/dashboard');
           return;
         }
         
-        // If loginSuccess is true but store state doesn't match after retries,
-        // still redirect since login function already verified authentication
-        // This prevents false error messages when login actually succeeded
-        console.warn('Login succeeded but store state not immediately updated, redirecting anyway');
-        toast.success('Login successful!');
-        router.push('/dashboard');
+        // Final verification attempt
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const finalState = useUserStore.getState();
+        if (finalState.isAuthenticated && finalState.user) {
+          toast.success('Login successful! Redirecting...');
+          router.push('/dashboard');
+          return;
+        }
+        
+        // Success flag but state not updated - treat as error
+        setErrorMessage('Login verification failed. Please try again.');
+        toast.error('Login verification failed. Please try again.');
+        setIsLoading(false);
         return;
       }
       
-      // If login returned false, this indicates a real login failure
-      toast.error('Login failed. Please check your credentials and try again.');
+      // FAILURE STATE: Login returned false
+      // Show toast notification and not found page with "Incorrect username or password" message
+      toast.error('Incorrect username or password', {
+        duration: 4000,
+      });
+      setUserNotFound(true);
+      setIsLoading(false);
+      return;
+      
     } catch (error: any) {
-      console.error('Login error:', error);
+      // ERROR STATE HANDLING - Real error from API
+      const errorResponse = error?.response;
+      const errorStatus = errorResponse?.status;
+      const errorData = errorResponse?.data;
+      const errorDetail = errorData?.detail || errorData?.error || error?.message || '';
+      const errorCode = error?.code;
+      const errorMessage = String(error?.message || '').toLowerCase();
+      const errorDetailLower = String(errorDetail).toLowerCase();
       
-      // Check for network/database connection errors
-      const isNetworkError = !error?.response || 
-                            error?.code === 'ECONNREFUSED' ||
-                            error?.code === 'ERR_NETWORK' ||
-                            error?.message?.includes('Network Error') ||
-                            error?.message?.includes('Failed to fetch');
+      // Classify error types
+      const isNetworkError = !errorResponse || 
+                            errorCode === 'ECONNREFUSED' ||
+                            errorCode === 'ERR_NETWORK' ||
+                            errorCode === 'ECONNABORTED' ||
+                            errorCode === 'ETIMEDOUT' ||
+                            errorMessage.includes('network error') ||
+                            errorMessage.includes('failed to fetch') ||
+                            errorMessage.includes('timeout');
       
-      // Check if error is 500 (server/database error)
-      const isServerError = error?.response?.status === 500 ||
-                           error?.response?.status === 503 ||
-                           error?.response?.status === 502;
+      const isServerError = errorStatus >= 500 && errorStatus < 600;
       
-      // Check if error is 401 (user not found) or contains "Incorrect username or password"
-      const errorStatus = error?.response?.status;
-      const errorDetail = error?.response?.data?.detail || 
-                         error?.response?.data?.error || 
-                         error?.message || 
-                         '';
-      const errorDetailLower = errorDetail.toLowerCase();
-      const isUserNotFound = errorStatus === 401 || 
-                            errorStatus === 404 ||
-                            errorDetailLower.includes('incorrect username') ||
-                            errorDetailLower.includes('incorrect password') ||
-                            errorDetailLower.includes('user not found') ||
-                            errorDetailLower.includes('invalid credentials') ||
-                            errorDetailLower.includes('authentication failed');
+      const isAuthError = errorStatus === 401 || 
+                         errorStatus === 403 || 
+                         errorStatus === 404 ||
+                         errorDetailLower.includes('incorrect username') ||
+                         errorDetailLower.includes('incorrect password') ||
+                         errorDetailLower.includes('invalid credentials') ||
+                         errorDetailLower.includes('authentication failed') ||
+                         errorDetailLower.includes('unauthorized') ||
+                         errorDetailLower.includes('forbidden') ||
+                         errorDetailLower.includes('user not found');
       
-      if (isNetworkError || isServerError) {
-        // Database/server connection error
-        toast.error('Unable to connect to the server. try again later.');
-      } else if (isUserNotFound) {
-        setUserNotFound(true);
-      } else {
-        // Show specific error message if available, otherwise generic message
-        const errorMessage = errorDetail || 'Login failed. Please check your credentials and try again.';
-        toast.error(errorMessage);
+      const isRateLimitError = errorStatus === 429;
+      
+      const isAccountError = errorStatus === 400 && (
+                             errorDetailLower.includes('inactive') ||
+                             errorDetailLower.includes('locked') ||
+                             errorDetailLower.includes('disabled')
+                           );
+      
+      // Handle errors based on type
+      if (isNetworkError) {
+        // NETWORK ERROR STATE
+        const msg = 'Network connection error. Please check your internet connection and try again.';
+        setErrorMessage(msg);
+        toast.error(msg);
+        setIsLoading(false);
+        return;
       }
+      
+      if (isServerError) {
+        // SERVER ERROR STATE
+        const msg = 'Server error. Please try again in a few moments.';
+        setErrorMessage(msg);
+        toast.error(msg);
+        setIsLoading(false);
+        return;
+      }
+      
+      if (isRateLimitError) {
+        // RATE LIMIT ERROR STATE
+        const msg = 'Too many login attempts. Please wait a few minutes before trying again.';
+        setErrorMessage(msg);
+        toast.error(msg);
+        setIsLoading(false);
+        return;
+      }
+      
+      if (isAccountError) {
+        // ACCOUNT STATUS ERROR STATE
+        const msg = errorDetailLower.includes('inactive')
+          ? 'Your account is inactive. Please contact your administrator.'
+          : 'Your account is locked. Please contact your administrator.';
+        setErrorMessage(msg);
+        toast.error(msg);
+        setIsLoading(false);
+        return;
+      }
+      
+      if (isAuthError || errorStatus === 401 || errorStatus === 403 || errorStatus === 404) {
+        // AUTHENTICATION ERROR STATE - Show toast and not found page with "Incorrect username or password"
+        // NO redirect - user stays on login page
+        toast.error('Incorrect username or password', {
+          duration: 4000,
+        });
+        setUserNotFound(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      // DEFAULT: Any other error (non-network/server) - show toast and not found page
+      // This handles any authentication-related failures
+      toast.error('Incorrect username or password', {
+        duration: 4000,
+      });
+      setUserNotFound(true);
+      setIsLoading(false);
+      
     } finally {
+      // Always reset loading state
       setIsLoading(false);
     }
   };
 
-  // Show 404 page if user not found
+  // Show 404 not found page if user not found
+  // NO redirect happens - user stays on login page but sees not found message
+  // Clicking "Back to Login" returns to the login form without any navigation
   if (userNotFound) {
     return (
       <NotFoundContainer>
         <NotFoundCard>
           <NotFoundTitle>404</NotFoundTitle>
-          <NotFoundSubtitle>User Not Found</NotFoundSubtitle>
+          <NotFoundSubtitle>Login Failed</NotFoundSubtitle>
           <NotFoundMessage>
-            The user account you're trying to access doesn't exist in our system.
+            <strong>Incorrect username or password.</strong>
             <br />
-            Please check your email/username and password, or contact your administrator.
+            <br />
+            The credentials you entered do not match our records.
+            <br />
+            Please check your email/username and password, or contact your administrator if you need assistance.
           </NotFoundMessage>
-          <BackButton onClick={() => setUserNotFound(false)}>
+          <BackButton 
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Simply reset the state - NO redirect to home page
+              // User stays on the same login page and can try again
+              setUserNotFound(false);
+              setErrorMessage(null);
+            }}
+          >
             Back to Login
           </BackButton>
         </NotFoundCard>
@@ -583,45 +750,96 @@ export default function Login() {
     handleSubmit(onSubmit)();
   };
 
+  // Show loading state if auth is loading (initial check)
+  if (authLoading) {
+    return (
+      <LoginContainer>
+        <LoginCard>
+        <LoadingText>
+          <SpinningLoader>
+            <Loader2 size={24} />
+          </SpinningLoader>
+          Checking authentication...
+        </LoadingText>
+        </LoginCard>
+      </LoginContainer>
+    );
+  }
+
   return (
     <LoginContainer>
       <Toaster position="top-right" />
       <LoginCard>
-      <Link href="/" className="no-underline">
-       <Title className="cursor-pointer hover:text-blue-600 transition-colors duration-300">
-       Login to Your Account
-       </Title>
-      </Link>
+        <Link href="/" className="no-underline">
+          <Title className="cursor-pointer hover:text-blue-600 transition-colors duration-300">
+            Login to Your Account
+          </Title>
+        </Link>
         <Subtitle>Welcome back! Please sign in below</Subtitle>
+
+        {/* Display error message if exists */}
+        {errorMessage && (
+          <ErrorMessage>{errorMessage}</ErrorMessage>
+        )}
+
+        {/* Loading overlay */}
+        <LoadingOverlay $isLoading={isLoading}>
+          <div style={{ textAlign: 'center' }}>
+            <SpinningLoader>
+              <Loader2 size={48} color="#ffffff" />
+            </SpinningLoader>
+            <LoadingText>Signing in...</LoadingText>
+          </div>
+        </LoadingOverlay>
 
         <form onSubmit={handleFormSubmit} noValidate method="post" action="#">
           <FormGroup>
-            <Label>Email</Label>
+            <Label htmlFor="identifier">Email or Username</Label>
             <Input
               {...register('identifier')}
+              id="identifier"
               type="text"
-              placeholder="Enter your Email or Username "
+              placeholder="Enter your Email or Username"
               disabled={isLoading}
+              autoComplete="username email"
+              aria-invalid={!!errors.identifier}
+              aria-describedby={errors.identifier ? 'identifier-error' : undefined}
             />
-            {errors.identifier && <ErrorMessage>{errors.identifier.message}</ErrorMessage>}
+            {errors.identifier && (
+              <ErrorMessage id="identifier-error" role="alert">
+                {errors.identifier.message}
+              </ErrorMessage>
+            )}
           </FormGroup>
+
           <FormGroup>
-            <Label>Password</Label>
+            <Label htmlFor="password">Password</Label>
             <PasswordContainer>
               <Input
                 {...register('password')}
+                id="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Enter your password"
                 disabled={isLoading}
+                autoComplete="current-password"
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? 'password-error' : undefined}
               />
-              <EyeIconButton type="button" onClick={() => setShowPassword(!showPassword)}>
+              <EyeIconButton 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
                 <PasswordIcon $iconType={showPassword ? 'eyeOff' : 'eye'} $active={true} $size={20}>
                   {showPassword ? <EyeOff /> : <Eye />}
                 </PasswordIcon>
               </EyeIconButton>
             </PasswordContainer>
             {errors.password && (
-              <ErrorMessage>{errors.password.message}</ErrorMessage>
+              <ErrorMessage id="password-error" role="alert">
+                {errors.password.message}
+              </ErrorMessage>
             )}
           </FormGroup>
 
@@ -632,16 +850,38 @@ export default function Login() {
                 id="remember"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={isLoading}
               />
               <CheckboxLabel htmlFor="remember">Remember me</CheckboxLabel>
             </CheckboxWrapper>
-            <ForgotPassword onClick={() => router.push('/auth/reset-password')}>
+            <ForgotPassword 
+              href="/auth/reset-password"
+              onClick={(e) => {
+                e.preventDefault();
+                if (!isLoading) {
+                  router.push('/auth/reset-password');
+                }
+              }}
+            >
               Forgot password?
             </ForgotPassword>
           </CheckboxContainer>
 
-          <SignInButton type="submit" disabled={isLoading}>
-            {isLoading ? 'Signing in...' : 'Sign In'}
+          <SignInButton 
+            type="submit" 
+            disabled={isLoading || authLoading}
+            aria-busy={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <SpinningLoader>
+                  <Loader2 size={20} />
+                </SpinningLoader>
+                Signing in...
+              </>
+            ) : (
+              'Sign In'
+            )}
           </SignInButton>
         </form>
       </LoginCard>
