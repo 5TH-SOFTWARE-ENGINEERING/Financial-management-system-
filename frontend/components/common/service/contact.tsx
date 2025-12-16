@@ -1,127 +1,169 @@
 "use client";
 import React, { useState } from "react";
+import Link from "next/link";
+import styled from "styled-components";
 
-const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div
-    style={{
-      maxWidth: 800,
-      margin: "0 auto",
-      padding: "2rem 1rem",
-      color: "#d1d5db",
-      background: "#23272f",
-      borderRadius: "0.75rem",
-      boxShadow: "0 2px 16px rgba(36,37,39,.15)",
-    }}
-  >
-    {children}
-  </div>
-);
+const PageWrapper = styled.div`
+  min-height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle at 12% 18%, rgba(129, 140, 248, 0.16), transparent 32%),
+    radial-gradient(circle at 82% 10%, rgba(59, 130, 246, 0.18), transparent 28%),
+    #0f172a;
+  padding: 2.5rem 1rem 3.25rem;
+  display: flex;
+  justify-content: center;
+`;
 
-const Title: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h1
-    style={{
-      fontSize: "2.3rem",
-      fontWeight: 700,
-      marginBottom: "1.1rem",
-      background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-      WebkitBackgroundClip: "text",
-      WebkitTextFillColor: "transparent",
-      backgroundClip: "text",
-      lineHeight: 1.2,
-      letterSpacing: "-0.01em",
-    }}
-  >
-    {children}
-  </h1>
-);
+const Container = styled.div`
+  width: 100%;
+  max-width: 920px;
+  padding: 2rem 1.5rem;
+  color: #d1d5db;
+  background: linear-gradient(180deg, rgba(35, 39, 47, 0.95), rgba(18, 22, 30, 0.98));
+  border: 1px solid rgba(129, 140, 248, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.32);
+`;
 
-const Label: React.FC<React.LabelHTMLAttributes<HTMLLabelElement>> = ({
-  children,
-  ...props
-}) => (
-  <label
-    {...props}
-    style={{
-      display: "block",
-      color: "#a5b4fc",
-      fontWeight: 500,
-      marginBottom: "0.3rem",
-      letterSpacing: "-0.01em",
-    }}
-  >
-    {children}
-  </label>
-);
+const Title = styled.h1`
+  font-size: 2.3rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+`;
 
-const Input = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->((props, ref) => (
-  <input
-    ref={ref}
-    {...props}
-    style={{
-      width: "100%",
-      padding: "0.5rem 0.7rem",
-      borderRadius: "0.5rem",
-      border: "1px solid #555",
-      background: "#13151b",
-      color: "#d1d5db",
-      marginBottom: "1rem",
-      fontSize: "1rem",
-      outline: "none",
-    }}
-  />
-));
-Input.displayName = "Input";
+const Intro = styled.p`
+  color: #a1a1aa;
+  font-size: 1.05rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.65;
+`;
 
-const TextArea = React.forwardRef<
-  HTMLTextAreaElement,
-  React.TextareaHTMLAttributes<HTMLTextAreaElement>
->((props, ref) => (
-  <textarea
-    ref={ref}
-    {...props}
-    style={{
-      width: "100%",
-      minHeight: "100px",
-      padding: "0.6rem 0.7rem",
-      borderRadius: "0.5rem",
-      border: "1px solid #555",
-      background: "#13151b",
-      color: "#d1d5db",
-      fontSize: "1rem",
-      marginBottom: "1rem",
-      outline: "none",
-      resize: "vertical",
-    }}
-  />
-));
-TextArea.displayName = "TextArea";
+const Label = styled.label`
+  display: block;
+  color: #a5b4fc;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.01em;
+`;
 
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({
-  children,
-  ...props
-}) => (
-  <button
-    {...props}
-    style={{
-      background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-      color: "#fff",
-      fontWeight: 600,
-      border: "none",
-      borderRadius: "0.5rem",
-      padding: "0.7rem 2.2rem",
-      fontSize: "1rem",
-      boxShadow: "0 1px 8px rgba(59,130,246,0.21)",
-      cursor: "pointer",
-      transition: "all 0.16s",
-      marginTop: "0.2rem",
-    }}
-  >
-    {children}
-  </button>
-);
+const Input = styled.input`
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #3b3f4c;
+  background: #0f1118;
+  color: #e5e7eb;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+
+  &:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  }
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  min-height: 120px;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #3b3f4c;
+  background: #0f1118;
+  color: #e5e7eb;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+
+  &:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  }
+`;
+
+const Button = styled.button`
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 999px;
+  padding: 0.75rem 1.8rem;
+  font-size: 1rem;
+  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.28);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(59, 130, 246, 0.38);
+    opacity: 0.95;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+`;
+
+const ErrorText = styled.div`
+  color: #f87171;
+  margin-bottom: 1rem;
+  font-size: 0.97rem;
+  font-weight: 500;
+`;
+
+const SuccessCard = styled.div`
+  background: #223156;
+  padding: 1.5rem 1rem;
+  border-radius: 12px;
+  margin-top: 2rem;
+  text-align: center;
+  color: #a5b4fc;
+  font-size: 1.08rem;
+  border: 1.5px solid #373e61;
+  box-shadow: 0 10px 28px rgba(55, 62, 97, 0.35);
+`;
+
+const HomeButton = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0 1.4rem;
+  padding: 0.65rem 1.5rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(59, 130, 246, 0.45);
+    opacity: 0.95;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
 
 export default function Contact() {
   const [form, setForm] = useState({
@@ -163,90 +205,74 @@ export default function Contact() {
   };
 
   return (
-    <Container>
-      <Title>Contact Us</Title>
+    <PageWrapper>
+      <Container>
+        <Title>Contact Us</Title>
+        <HomeButton href="/">← Back to Home</HomeButton>
 
-      <p style={{ color: "#a1a1aa", fontSize: "1.05rem", marginBottom: "1.7rem" }}>
-        Have questions, feedback, or need support? Fill out the form below and our team will get back to you within 1–2 business days.
-        <br />
-        <span style={{ fontSize: "0.97rem", color: "#818cf8" }}>
-          Or email us directly at <a href="mailto:support@finmgmt.co" style={{ color: "#818cf8", textDecoration: "underline" }}>support@finmgmt.co</a>
-        </span>
-      </p>
+        <Intro>
+          Have questions, feedback, or need support? Fill out the form below and our team will get back to you within 1–2 business days.
+          <br />
+          <span style={{ fontSize: "0.97rem", color: "#818cf8" }}>
+            Or email us directly at{" "}
+            <a href="mailto:support@finmgmt.co" style={{ color: "#818cf8", textDecoration: "underline" }}>
+              support@finmgmt.co
+            </a>
+          </span>
+        </Intro>
 
-      {!submitted ? (
-        <form onSubmit={handleSubmit} noValidate>
-          <div style={{ marginBottom: "1rm" }}>
-            <Label htmlFor="name">Name</Label>
-            <Input
-              required
-              type="text"
-              id="name"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Enter your name"
-              autoComplete="name"
-            />
-          </div>
-          <div style={{ marginBottom: "1rm" }}>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              required
-              type="email"
-              id="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              autoComplete="email"
-            />
-          </div>
-          <div style={{ marginBottom: "1rm" }}>
-            <Label htmlFor="message">Message</Label>
-            <TextArea
-              required
-              id="message"
-              name="message"
-              value={form.message}
-              onChange={handleChange}
-              placeholder="How can we help you?"
-            />
-          </div>
-          {error && (
-            <div
-              style={{
-                color: "#f87171",
-                marginBottom: "1rem",
-                fontSize: "0.97rem",
-                fontWeight: 500,
-              }}
-            >
-              {error}
+        {!submitted ? (
+          <form onSubmit={handleSubmit} noValidate>
+            <div style={{ marginBottom: "0.8rem" }}>
+              <Label htmlFor="name">Name</Label>
+              <Input
+                required
+                type="text"
+                id="name"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Enter your name"
+                autoComplete="name"
+              />
             </div>
-          )}
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Sending..." : "Send Message"}
-          </Button>
-        </form>
-      ) : (
-        <div
-          style={{
-            background: "#223156",
-            padding: "1.5rem 1rem",
-            borderRadius: "0.75rem",
-            marginTop: "2rem",
-            textAlign: "center",
-            color: "#a5b4fc",
-            fontSize: "1.11rem",
-            border: "1.5px solid #373e61",
-          }}
-        >
-          <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>🎉</div>
-          Thank you for reaching out!<br />
-          Our team has received your message and will be in touch soon.
-        </div>
-      )}
-    </Container>
+            <div style={{ marginBottom: "0.8rem" }}>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                required
+                type="email"
+                id="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+            </div>
+            <div style={{ marginBottom: "0.8rem" }}>
+              <Label htmlFor="message">Message</Label>
+              <TextArea
+                required
+                id="message"
+                name="message"
+                value={form.message}
+                onChange={handleChange}
+                placeholder="How can we help you?"
+              />
+            </div>
+            {error && <ErrorText>{error}</ErrorText>}
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Sending..." : "Send Message"}
+            </Button>
+          </form>
+        ) : (
+          <SuccessCard>
+            <div style={{ fontSize: "2rem", marginBottom: "0.7rem" }}>🎉</div>
+            Thank you for reaching out!<br />
+            Our team has received your message and will be in touch soon.
+          </SuccessCard>
+        )}
+      </Container>
+    </PageWrapper>
   );
 }
