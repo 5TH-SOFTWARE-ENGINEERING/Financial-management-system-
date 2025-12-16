@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Enum
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Enum # type: ignore[import-untyped]
+from sqlalchemy.orm import relationship # type: ignore[import-untyped]
+from sqlalchemy.sql import func # type: ignore[import-untyped]
 import enum
 
 from ..core.database import Base

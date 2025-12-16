@@ -1,11 +1,11 @@
 # app/api/v1/auth.py
 from datetime import timedelta, datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from jose import JWTError, jwt
+from fastapi import APIRouter, Depends, HTTPException, status, Request # type: ignore[import-untyped]
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer # type: ignore[import-untyped]
+from pydantic import BaseModel # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from jose import JWTError, jwt # type: ignore[import-untyped]
 import logging
 
 from ...core.database import get_db
@@ -15,7 +15,7 @@ from ...models.user import User, UserRole
 from ...crud import login_history as login_history_crud
 from ...utils.user_agent import get_device_info, get_location_from_ip
 
-import pyotp
+import pyotp # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 

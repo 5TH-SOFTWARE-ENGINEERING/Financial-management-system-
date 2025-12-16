@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator # type: ignore[import-untyped]
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal

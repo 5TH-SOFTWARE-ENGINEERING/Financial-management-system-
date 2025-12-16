@@ -1,7 +1,7 @@
 # app/models/login_history.py
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text # type: ignore[import-untyped]
+from sqlalchemy.sql import func # type: ignore[import-untyped]
+from sqlalchemy.orm import relationship # type: ignore[import-untyped]
 
 from ..core.database import Base
 

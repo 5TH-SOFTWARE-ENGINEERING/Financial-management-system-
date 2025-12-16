@@ -1,7 +1,7 @@
 # app/services/variance.py
 from typing import Dict, Optional, List
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 
 from ..models.budget import Budget, BudgetItem, BudgetVariance
 from ..models.revenue import RevenueEntry

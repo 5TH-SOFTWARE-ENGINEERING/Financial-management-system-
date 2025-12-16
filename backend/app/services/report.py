@@ -2,8 +2,8 @@ import os
 import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
-from sqlalchemy.orm import Session
-from sqlalchemy import func, text
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import func, text # type: ignore[import-untyped]
 
 from ..crud.report import report as report_crud
 from ..crud.revenue import revenue as revenue_crud

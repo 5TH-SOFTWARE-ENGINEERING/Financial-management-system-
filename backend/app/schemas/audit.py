@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore[import-untyped]
 from typing import Optional
 from datetime import datetime
 from ..models.audit import AuditAction

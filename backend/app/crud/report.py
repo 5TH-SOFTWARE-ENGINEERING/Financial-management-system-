@@ -1,7 +1,7 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import and_, or_, desc # type: ignore[import-untyped]
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from ..models.report import Report, ReportType, ReportStatus
 from ..schemas.report import ReportCreate, ReportUpdate
 
@@ -26,7 +26,7 @@ class CRUDReport:
         return db.query(Report).filter(Report.is_public == True).offset(skip).limit(limit).all()
 
     def get_recent(self, db: Session, days: int = 30, skip: int = 0, limit: int = 100) -> List[Report]:
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         return db.query(Report).filter(
             Report.created_at >= cutoff_date
         ).order_by(desc(Report.created_at)).offset(skip).limit(limit).all()

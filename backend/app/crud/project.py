@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import Optional, List
 from datetime import datetime
 

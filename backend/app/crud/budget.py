@@ -1,6 +1,6 @@
 # app/crud/budget.py
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import and_, or_, func # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
 

@@ -1,5 +1,5 @@
 # app/schemas/user.py
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator # type: ignore[import-untyped]
 from typing import Optional
 from datetime import datetime
 

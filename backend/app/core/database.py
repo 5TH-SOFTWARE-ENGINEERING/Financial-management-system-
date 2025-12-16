@@ -1,7 +1,7 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import create_engine # type: ignore[import-untyped]
+from sqlalchemy.ext.declarative import declarative_base # type: ignore[import-untyped]
+from sqlalchemy.orm import sessionmaker # type: ignore[import-untyped]
+from sqlalchemy.pool import StaticPool # type: ignore[import-untyped]
 
 from .config import settings
 

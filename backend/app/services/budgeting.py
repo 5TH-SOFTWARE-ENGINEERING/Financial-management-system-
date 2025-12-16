@@ -2,8 +2,8 @@
 import json
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import func # type: ignore[import-untyped]
 
 from ..models.budget import Budget, BudgetItem, BudgetScenario, BudgetStatus, BudgetType
 from ..models.revenue import RevenueEntry

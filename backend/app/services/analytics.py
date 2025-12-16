@@ -3,8 +3,8 @@ Advanced Analytics Service
 Provides real-time insights, KPIs, trends, and predictive analysis
 """
 
-from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, extract
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import func, and_, extract # type: ignore[import-untyped]
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal

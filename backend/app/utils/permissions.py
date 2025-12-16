@@ -1,7 +1,7 @@
 from functools import wraps
 from typing import Callable, List, Union
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import HTTPException, status # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 
 from ..models.user import User, UserRole
 from ..services.hierarchy import HierarchyService

@@ -1,6 +1,6 @@
 # app/models/role.py
-from sqlalchemy import Column, Integer, String, JSON, DateTime
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, JSON, DateTime # type: ignore[import-untyped]
+from sqlalchemy.sql import func # type: ignore[import-untyped]
 from ..core.database import Base
 
 class Role(Base):

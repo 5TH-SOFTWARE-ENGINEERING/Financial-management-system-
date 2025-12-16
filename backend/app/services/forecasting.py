@@ -3,7 +3,7 @@ import json
 import statistics
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 
 from ..models.budget import Forecast
 from ..models.revenue import RevenueEntry

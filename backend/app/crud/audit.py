@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, desc
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import and_, desc # type: ignore[import-untyped]
 from typing import Optional, List
 from datetime import datetime
 from ..models.audit import AuditLog, AuditAction

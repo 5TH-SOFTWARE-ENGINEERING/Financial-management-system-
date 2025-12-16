@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 
 from ..crud.approval import approval as approval_crud
 from ..crud.user import user as user_crud

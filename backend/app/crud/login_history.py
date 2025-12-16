@@ -1,7 +1,7 @@
 # app/crud/login_history.py
 from typing import List, Optional
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import desc # type: ignore[import-untyped]
 from datetime import datetime
 
 from ..models.login_history import LoginHistory

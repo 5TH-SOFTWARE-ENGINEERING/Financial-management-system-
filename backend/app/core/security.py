@@ -1,11 +1,11 @@
 # app/core/security.py
 from datetime import datetime, timedelta
 from typing import Optional, Union
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from fastapi import HTTPException, status
+from jose import JWTError, jwt # type: ignore[import-untyped]
+from passlib.context import CryptContext # type: ignore[import-untyped]
+from fastapi import HTTPException, status # type: ignore[import-untyped]
 import secrets
-import pyotp
+import pyotp # type: ignore[import-untyped]
 
 from .config import settings
 

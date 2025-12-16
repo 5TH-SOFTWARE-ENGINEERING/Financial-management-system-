@@ -1,11 +1,11 @@
 import os
 import json
 import zipfile
-import boto3
+import boto3 # type: ignore[import-untyped]
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import logging
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text # type: ignore[import-untyped]
 
 from ..core.config import settings
 from ..core.database import get_db

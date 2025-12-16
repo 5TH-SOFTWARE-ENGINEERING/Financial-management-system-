@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status # type: ignore[import-untyped]
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore[import-untyped]
 
 from ...core.database import get_db
 from ...models.user import User, UserRole

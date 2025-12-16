@@ -1,9 +1,9 @@
 # app/models/project.py
-from sqlalchemy import (
+from sqlalchemy import ( # type: ignore[import-untyped]
     Column, Integer, String, Float, DateTime, Text, Boolean, JSON
 )
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship # type: ignore[import-untyped]
+from sqlalchemy.sql import func # type: ignore[import-untyped]
 
 from ..core.database import Base
 

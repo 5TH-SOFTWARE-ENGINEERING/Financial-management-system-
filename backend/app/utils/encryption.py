@@ -3,7 +3,7 @@
 Encryption utilities for sensitive financial data.
 Uses Fernet symmetric encryption for cost-related fields.
 """
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet # type: ignore[import-untyped]
 from ..core.config import settings
 import base64
 import hashlib

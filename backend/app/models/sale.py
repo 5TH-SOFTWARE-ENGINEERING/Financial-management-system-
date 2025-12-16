@@ -1,7 +1,7 @@
 # app/models/sale.py
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Enum as SAEnum
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Enum as SAEnum # type: ignore[import-untyped]
+from sqlalchemy.orm import relationship # type: ignore[import-untyped]
+from sqlalchemy.sql import func # type: ignore[import-untyped]
 import enum
 from ..core.database import Base
 

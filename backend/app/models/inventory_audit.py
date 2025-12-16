@@ -1,7 +1,7 @@
 # app/models/inventory_audit.py
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, JSON
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, JSON # type: ignore[import-untyped]
+from sqlalchemy.orm import relationship # type: ignore[import-untyped]
+from sqlalchemy.sql import func # type: ignore[import-untyped]
 import enum
 from ..core.database import Base
 

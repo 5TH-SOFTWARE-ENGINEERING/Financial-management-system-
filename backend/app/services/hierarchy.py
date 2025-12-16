@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
 
 from ..crud.user import user as user_crud
 from ..models.user import User, UserRole

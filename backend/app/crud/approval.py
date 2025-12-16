@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import and_, or_ # type: ignore[import-untyped]
 from typing import Optional, List
 from datetime import datetime
 from ..models.approval import ApprovalWorkflow, ApprovalComment, ApprovalStatus, ApprovalType

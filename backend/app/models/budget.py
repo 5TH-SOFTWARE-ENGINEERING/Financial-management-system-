@@ -1,10 +1,10 @@
 # app/models/budget.py
-from sqlalchemy import (
+from sqlalchemy import ( # type: ignore[import-untyped]
     Column, Integer, String, Float, DateTime,
     ForeignKey, Text, Boolean, Enum as SAEnum
 )
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship # type: ignore[import-untyped]
+from sqlalchemy.sql import func # type: ignore[import-untyped]
 import enum
 from datetime import datetime
 

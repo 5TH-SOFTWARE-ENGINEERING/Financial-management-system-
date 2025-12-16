@@ -1,5 +1,5 @@
 # app/schemas/sale.py
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator # type: ignore[import-untyped]
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
