@@ -166,6 +166,33 @@ const HomeButton = styled(Link)`
   }
 `;
 
+const MailtoButton = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-left: 0.75rem;
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  background: rgba(129, 140, 248, 0.14);
+  color: #cbd5ff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(129, 140, 248, 0.28);
+    opacity: 0.95;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 export default function Contact() {
   const [form, setForm] = useState({
     name: "",
@@ -184,7 +211,6 @@ export default function Contact() {
     setError(null);
   };
 
-  // Mock submit handler (replace with actual API in production)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -210,9 +236,16 @@ export default function Contact() {
       const backendMessage =
         err?.response?.data?.detail ||
         err?.response?.data?.error ||
-        err?.message ||
-        "Unable to send your message. Please try again.";
-      setError(String(backendMessage));
+        err?.message;
+
+      // Friendly fallback when endpoint is missing (404) or unreachable
+      if (err?.response?.status === 404) {
+        setError(
+          "Contact endpoint not available. Please email us directly at support@finmgmt.co."
+        );
+      } else {
+        setError(String(backendMessage || "Unable to send your message. Please try again."));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -223,6 +256,7 @@ export default function Contact() {
       <Container>
         <Title>Contact Us</Title>
         <HomeButton href="/">← Back to Home</HomeButton>
+        <MailtoButton href="mailto:support@finmgmt.co">Email support@finmgmt.co</MailtoButton>
 
         <Intro>
           Have questions, feedback, or need support? Fill out the form below and our team will get back to you within 1–2 business days.
