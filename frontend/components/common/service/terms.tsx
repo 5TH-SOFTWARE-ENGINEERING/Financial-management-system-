@@ -1,17 +1,30 @@
 "use client";
+import Link from "next/link";
 import styled from "styled-components";
 
+const PageWrapper = styled.div`
+  min-height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle at 18% 18%, rgba(129, 140, 248, 0.16), transparent 32%),
+    radial-gradient(circle at 84% 6%, rgba(59, 130, 246, 0.18), transparent 26%),
+    #0f172a;
+  padding: 2.5rem 1rem 3.25rem;
+  display: flex;
+  justify-content: center;
+`;
+
 const Container = styled.div`
-  max-width: 820px;
-  margin: 3rem auto 2rem auto;
-  padding: 2rem 1.5rem;
-  background: rgba(28, 32, 43, 0.95);
-  border-radius: 20px;
-  box-shadow: 0 6px 30px 0 rgba(86, 87, 119, 0.09);
+  width: 100%;
+  max-width: 960px;
+  padding: 2.25rem 1.75rem;
+  background: linear-gradient(180deg, rgba(35, 39, 47, 0.95), rgba(18, 22, 30, 0.98));
+  border: 1px solid rgba(129, 140, 248, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.32);
   color: #e5e7eb;
 
   @media (max-width: 600px) {
-    padding: 1rem 0.75rem;
+    padding: 1.4rem 1rem;
     border-radius: 14px;
   }
 `;
@@ -19,7 +32,7 @@ const Container = styled.div`
 const Heading = styled.h1`
   font-size: 2.4rem;
   font-weight: 800;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   background: linear-gradient(135deg,#3b82f6,#8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -29,7 +42,7 @@ const Heading = styled.h1`
 const SectionTitle = styled.h2`
   font-size: 1.3rem;
   font-weight: 700;
-  margin: 2.3rem 0 1rem 0;
+  margin: 2rem 0 0.9rem 0;
   color: #a5b4fc;
 `;
 
@@ -56,10 +69,39 @@ const ListItem = styled.li`
   line-height: 1.7;
 `;
 
+const HomeButton = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0 1.4rem;
+  padding: 0.65rem 1.5rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(59, 130, 246, 0.45);
+    opacity: 0.95;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 export default function TermsPage() {
   return (
-    <Container>
-      <Heading>Terms of Service</Heading>
+    <PageWrapper>
+      <Container>
+        <Heading>Terms of Service</Heading>
+        <HomeButton href="/">← Back to Home</HomeButton>
       <Paragraph>
         These Terms of Service (&quot;Terms&quot;) govern your use of Financial Management System, including all related features, content, and services. By accessing or using the platform, you agree to comply with these Terms. If you do not agree, please do not use the platform.
       </Paragraph>
@@ -135,6 +177,7 @@ export default function TermsPage() {
       <Paragraph style={{marginTop:"2rem", color:"#6b7280", fontSize: "0.97rem", textAlign:"right"}}>
         Last updated: June 2024
       </Paragraph>
-    </Container>
+      </Container>
+    </PageWrapper>
   );
 }
