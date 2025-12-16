@@ -509,7 +509,7 @@ export default function Home() {
                   boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
                 }}
               >
-                Start Free Trial
+                Start Now
               </Button>
             </Link>
             <p
@@ -519,7 +519,7 @@ export default function Home() {
                 color: '#9ca3af' 
               }}
             >
-              No credit card required • 14-day free trial • Cancel anytime
+              Unlock all features instantly. No payment details required
             </p>
           </div>
         </div>

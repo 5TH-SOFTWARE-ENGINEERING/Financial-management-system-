@@ -720,7 +720,7 @@ export default function Login() {
     <LoginContainer>
       <Toaster position="top-right" />
       <LoginCard>
-        <Link href="/" className="no-underline">
+        <Link href="/" style={{ textDecoration: 'none' }}>
           <Title className="cursor-pointer hover:text-blue-600 transition-colors duration-300">
             Login to Your Account
           </Title>
