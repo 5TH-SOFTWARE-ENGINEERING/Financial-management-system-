@@ -504,8 +504,11 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [userNotFound, setUserNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasExplicitLogin, setHasExplicitLogin] = useState(false);
+  
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedRememberMe = localStorage.getItem('rememberMe');
@@ -516,11 +519,18 @@ export default function Login() {
       }
     }
   }, []);
+
   useEffect(() => {
-    if (isAuthenticated && !authLoading && !isLoading && !userNotFound) {
+    setHydrated(true);
+  }, []);
+
+  // Only redirect if user explicitly logged in on this page
+  // Don't redirect for automatic authentication (token restoration)
+  useEffect(() => {
+    if (hydrated && isAuthenticated && !authLoading && !isLoading && !userNotFound && hasExplicitLogin) {
       router.push('/dashboard');
     }
-  }, [isAuthenticated, authLoading, isLoading, userNotFound, router]);
+  }, [hydrated, isAuthenticated, authLoading, isLoading, userNotFound, hasExplicitLogin, router]);
 
   const {
     register,
@@ -534,11 +544,13 @@ export default function Login() {
     setIsLoading(true);
     setUserNotFound(false);
     setErrorMessage(null);
+    setHasExplicitLogin(true); // Mark that user explicitly attempted login
     
     try {
       const loginSuccess = await login(data.identifier, data.password);
       
       if (loginSuccess === true) {
+        setHasExplicitLogin(true); // Ensure flag is set on successful login
         if (rememberMe && typeof window !== 'undefined') {
           localStorage.setItem('rememberMe', 'true');
           localStorage.setItem('savedIdentifier', data.identifier);
