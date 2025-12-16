@@ -6,7 +6,7 @@ Provides real-time insights, KPIs, trends, and predictive analysis
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
 from typing import List, Dict, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from collections import defaultdict
 import statistics
@@ -19,6 +19,17 @@ from ..models.user import UserRole
 
 class AnalyticsService:
     """Advanced analytics and KPI calculations"""
+
+    @staticmethod
+    def _normalize_date_for_comparison(date: datetime, reference_date: datetime) -> datetime:
+        """Normalize a date to match the timezone awareness of a reference date"""
+        if reference_date.tzinfo is not None and date.tzinfo is None:
+            # If reference is timezone-aware but date is naive, assume UTC
+            return date.replace(tzinfo=timezone.utc)
+        elif reference_date.tzinfo is None and date.tzinfo is not None:
+            # If reference is naive but date is aware, make date naive
+            return date.replace(tzinfo=None)
+        return date
 
     @staticmethod
     def get_time_series_data(
@@ -60,8 +71,17 @@ class AnalyticsService:
             all_revenue = revenue_crud.get_by_user(db, user_id, 0, 10000)
             all_expenses = expense_crud.get_by_user(db, user_id, 0, 10000)
             # Filter by date range AND approved status
-            all_revenue = [r for r in all_revenue if start_date <= r.date <= end_date and r.is_approved == True]
-            all_expenses = [e for e in all_expenses if start_date <= e.date <= end_date and e.is_approved == True]
+            # Normalize dates for comparison to handle timezone-aware/naive mismatches
+            all_revenue = [
+                r for r in all_revenue 
+                if start_date <= AnalyticsService._normalize_date_for_comparison(r.date, start_date) <= end_date 
+                and r.is_approved == True
+            ]
+            all_expenses = [
+                e for e in all_expenses 
+                if start_date <= AnalyticsService._normalize_date_for_comparison(e.date, start_date) <= end_date 
+                and e.is_approved == True
+            ]
 
         # Group by interval - ONLY from approved entries
         for entry in all_revenue:
@@ -133,19 +153,22 @@ class AnalyticsService:
 
     @staticmethod
     def _next_interval(date: datetime, interval: str) -> datetime:
-        """Get next interval date"""
+        """Get next interval date - preserves timezone awareness"""
         if interval == "day":
             return date + timedelta(days=1)
         elif interval == "week":
             return date + timedelta(weeks=1)
         elif interval == "month":
             if date.month == 12:
-                return datetime(date.year + 1, 1, date.day)
-            return datetime(date.year, date.month + 1, date.day)
+                # Use replace to preserve timezone awareness automatically
+                return date.replace(year=date.year + 1, month=1)
+            else:
+                return date.replace(month=date.month + 1)
         elif interval == "quarter":
             return date + timedelta(days=90)
         elif interval == "year":
-            return datetime(date.year + 1, date.month, date.day)
+            # Use replace to preserve timezone awareness automatically
+            return date.replace(year=date.year + 1)
         return date + timedelta(days=1)
 
     @staticmethod
@@ -187,10 +210,26 @@ class AnalyticsService:
             all_expenses_prev = expense_crud.get_by_user(db, user_id, 0, 10000)
             
             # Filter by date range AND approved status
-            current_revenue = sum(float(r.amount) for r in all_revenue_curr if start_date <= r.date <= end_date and r.is_approved == True)
-            current_expenses = sum(float(e.amount) for e in all_expenses_curr if start_date <= e.date <= end_date and e.is_approved == True)
-            prev_revenue = sum(float(r.amount) for r in all_revenue_prev if prev_start_date <= r.date <= prev_end_date and r.is_approved == True)
-            prev_expenses = sum(float(e.amount) for e in all_expenses_prev if prev_start_date <= e.date <= prev_end_date and e.is_approved == True)
+            current_revenue = sum(
+                float(r.amount) for r in all_revenue_curr 
+                if start_date <= AnalyticsService._normalize_date_for_comparison(r.date, start_date) <= end_date 
+                and r.is_approved == True
+            )
+            current_expenses = sum(
+                float(e.amount) for e in all_expenses_curr 
+                if start_date <= AnalyticsService._normalize_date_for_comparison(e.date, start_date) <= end_date 
+                and e.is_approved == True
+            )
+            prev_revenue = sum(
+                float(r.amount) for r in all_revenue_prev 
+                if prev_start_date <= AnalyticsService._normalize_date_for_comparison(r.date, prev_start_date) <= prev_end_date 
+                and r.is_approved == True
+            )
+            prev_expenses = sum(
+                float(e.amount) for e in all_expenses_prev 
+                if prev_start_date <= AnalyticsService._normalize_date_for_comparison(e.date, prev_start_date) <= prev_end_date 
+                and e.is_approved == True
+            )
 
         current_profit = current_revenue - current_expenses
         prev_profit = prev_revenue - prev_expenses
@@ -376,8 +415,16 @@ class AnalyticsService:
             all_revenue = revenue_crud.get_by_user(db, user_id, 0, 10000)
             all_expenses = expense_crud.get_by_user(db, user_id, 0, 10000)
             # Filter by date range AND approved status
-            user_revenue = [r for r in all_revenue if start_date <= r.date <= end_date and r.is_approved == True]
-            user_expenses = [e for e in all_expenses if start_date <= e.date <= end_date and e.is_approved == True]
+            user_revenue = [
+                r for r in all_revenue 
+                if start_date <= AnalyticsService._normalize_date_for_comparison(r.date, start_date) <= end_date 
+                and r.is_approved == True
+            ]
+            user_expenses = [
+                e for e in all_expenses 
+                if start_date <= AnalyticsService._normalize_date_for_comparison(e.date, start_date) <= end_date 
+                and e.is_approved == True
+            ]
             
             revenue_by_cat = defaultdict(lambda: {"total": 0, "count": 0})
             expense_by_cat = defaultdict(lambda: {"total": 0, "count": 0})
