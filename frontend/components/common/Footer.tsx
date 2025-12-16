@@ -4,20 +4,23 @@ import Link from "next/link";
 import styled from "styled-components";
 
 const FooterWrapper = styled.footer`
-  border-top: 1px solid rgb(51, 52, 53);
-  background-color:rgb(51, 49, 49);
-  color: #6b7280;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at 20% 10%, rgba(129, 140, 248, 0.08), transparent 30%),
+    radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.1), transparent 26%),
+    #0b1220;
+  color: #a1a1aa;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.25);
+
   .dark & {
-    border-color: #27272a;
-    background-color: #000;
-    color: #a1a1aa;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: #05070f;
   }
 `;
 
 const FooterContainer = styled.div`
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem 1.25rem;
+  padding: 1.75rem 1.25rem;
 
   display: flex;
   flex-direction: column;
@@ -32,8 +35,9 @@ const FooterContainer = styled.div`
 `;
 
 const CopyText = styled.p`
-  font-size: 0.875rem;
+  font-size: 0.92rem;
   text-align: center;
+  color: #cbd5e1;
 
   @media (min-width: 640px) {
     text-align: left;
@@ -43,18 +47,38 @@ const CopyText = styled.p`
 const Nav = styled.nav`
   display: flex;
   flex-wrap: wrap;
-  gap: 1.5rem;
-  font-size: 0.875rem;
+  gap: 1.15rem;
+  font-size: 0.92rem;
 `;
 
 const NavLink = styled(Link)`
   text-decoration: none;
-  color: inherit;
-  transition: opacity 0.2s ease;
+  color: #cbd5e1;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 0.25rem 0;
+  position: relative;
+  transition: color 0.18s ease, opacity 0.18s ease;
+
+  &:after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s ease;
+  }
 
   &:hover {
-    opacity: 0.7;
-    text-decoration: underline;
+    color: #e5e7eb;
+  }
+
+  &:hover:after {
+    transform: scaleX(1);
   }
 `;
 
