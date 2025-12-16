@@ -1,11 +1,12 @@
 //components/common/Navbar.tsx
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import styled from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import {
-  Search,Plus,Bell,FileSpreadsheet,Globe,User,Users,LogOut,Settings,HelpCircle,Menu,
+  Search, Plus, Bell, FileSpreadsheet, Globe, User, Users, LogOut, Settings, HelpCircle, Menu,
+  X, Clock, TrendingUp, Activity, Zap, Command, ChevronRight, Star, History, Sparkles
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -19,33 +20,56 @@ import { debounce } from '@/lib/utils';
 const PRIMARY_ACCENT = '#06b6d4'; 
 const PRIMARY_HOVER = '#0891b2';
 const DANGER_COLOR = '#ef4444';
+
+// Animations
+const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+`;
+
+const slideDown = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const shimmer = keyframes`
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+`;
+
 const getIconColor = (iconType: string, active: boolean = false): string => {
     if (active) {
         const activeColors: Record<string, string> = {
-            'search': '#3b82f6',           // Blue
-            'plus': '#22c55e',              // Green
-            'bell': '#f59e0b',              // Amber
-            'file-spreadsheet': '#8b5cf6',  // Purple
-            'globe': '#06b6d4',             // Cyan
-            'user': '#6366f1',              // Indigo
-            'users': '#ec4899',             // Pink
-            'settings': '#64748b',           // Slate
-            'help-circle': '#14b8a6',       // Teal
-            'log-out': '#ef4444',           // Red
+            'search': '#3b82f6',
+            'plus': '#22c55e',
+            'bell': '#f59e0b',
+            'file-spreadsheet': '#8b5cf6',
+            'globe': '#06b6d4',
+            'user': '#6366f1',
+            'users': '#ec4899',
+            'settings': '#64748b',
+            'help-circle': '#14b8a6',
+            'log-out': '#ef4444',
         };
         return activeColors[iconType] || PRIMARY_ACCENT;
     } else {
         const inactiveColors: Record<string, string> = {
-            'search': '#60a5fa',            // Light Blue
-            'plus': '#4ade80',               // Light Green
-            'bell': '#fbbf24',               // Light Amber
-            'file-spreadsheet': '#a78bfa',  // Light Purple
-            'globe': '#22d3ee',             // Light Cyan
-            'user': '#818cf8',               // Light Indigo
-            'users': '#f472b6',             // Light Pink
-            'settings': '#94a3b8',          // Light Slate
-            'help-circle': '#2dd4bf',       // Light Teal
-            'log-out': '#f87171',           // Light Red
+            'search': '#60a5fa',
+            'plus': '#4ade80',
+            'bell': '#fbbf24',
+            'file-spreadsheet': '#a78bfa',
+            'globe': '#22d3ee',
+            'user': '#818cf8',
+            'users': '#f472b6',
+            'settings': '#94a3b8',
+            'help-circle': '#2dd4bf',
+            'log-out': '#f87171',
         };
         return inactiveColors[iconType] || theme.colors.textSecondary;
     }
@@ -59,60 +83,64 @@ const HeaderContainer = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: ${theme.spacing.sm} ${theme.spacing.lg};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
   background: ${theme.colors.background};
   border-bottom: 1px solid ${theme.colors.border};
-  height: 64px;
+  height: 70px;
   width: calc(100% - 280px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: width ${theme.transitions.default};
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
 `;
 
 const SearchContainer = styled.div`
   position: relative;
   flex: 1;
-  max-width: 480px;
-  margin: 0 ${theme.spacing.md};
+  max-width: 500px;
+  margin: 0 ${theme.spacing.lg};
 `;
 
 const SearchInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  padding-left: 40px;
-  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  padding-left: 48px;
+  padding-right: 40px;
+  border: 2px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   background: ${theme.colors.backgroundSecondary};
   font-size: ${theme.typography.fontSizes.sm};
   color: ${theme.colors.textSecondary};
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 
   &:focus {
     outline: none;
     border-color: ${PRIMARY_ACCENT};
     background: ${theme.colors.background};
-    box-shadow: 0 0 0 3px ${PRIMARY_ACCENT}15;
+    box-shadow: 0 0 0 4px ${PRIMARY_ACCENT}15, 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
   }
 
   &::placeholder {
     color: ${theme.colors.textSecondary};
-    opacity: 0.6;
+    opacity: 0.5;
   }
 `;
 
 const SearchIcon = styled.div<{ $active?: boolean }>`
   position: absolute;
-  left: 12px;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
   color: ${props => props.$active ? getIconColor('search', true) : getIconColor('search', false)};
   opacity: ${props => props.$active ? 1 : 0.6};
   pointer-events: none;
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
   svg {
-    width: 16px;
-    height: 16px;
-    transition: all ${theme.transitions.default};
+    width: 18px;
+    height: 18px;
+    transition: all 0.2s;
   }
   
   ${SearchInput}:focus ~ & {
@@ -122,24 +150,140 @@ const SearchIcon = styled.div<{ $active?: boolean }>`
   }
 `;
 
+const KeyboardHint = styled.div`
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: ${theme.colors.backgroundSecondary};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: 11px;
+  color: ${theme.colors.textSecondary};
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 0.2s;
+
+  ${SearchInput}:focus ~ & {
+    opacity: 0;
+  }
+
+  kbd {
+    background: ${theme.colors.background};
+    border: 1px solid ${theme.colors.border};
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: monospace;
+    font-size: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const SearchSuggestions = styled.div<{ $isOpen: boolean }>`
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: ${theme.colors.background};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 400px;
+  overflow-y: auto;
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
+  transform: ${props => props.$isOpen ? 'translateY(0)' : 'translateY(-8px)'};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  ${props => props.$isOpen && css`
+    animation: ${slideDown} 0.2s ease-out;
+  `}
+`;
+
+const SuggestionSection = styled.div`
+  padding: ${theme.spacing.sm} 0;
+  border-bottom: 1px solid ${theme.colors.border};
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  h4 {
+    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    font-size: ${theme.typography.fontSizes.xs};
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: ${theme.colors.textSecondary};
+    opacity: 0.7;
+    margin: 0;
+    font-weight: ${theme.typography.fontWeights.bold};
+  }
+`;
+
+const SuggestionItem = styled.div<{ $active?: boolean; $isRecent?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.md};
+  cursor: pointer;
+  transition: all 0.15s;
+  background: ${props => props.$active ? theme.colors.backgroundSecondary : 'transparent'};
+  border-left: 3px solid ${props => props.$active ? PRIMARY_ACCENT : 'transparent'};
+
+  &:hover {
+    background: ${theme.colors.backgroundSecondary};
+    padding-left: ${theme.spacing.lg};
+    border-left-color: ${PRIMARY_ACCENT};
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    color: ${props => props.$isRecent ? getIconColor('clock', false) : getIconColor('search', false)};
+    flex-shrink: 0;
+  }
+
+  span {
+    flex: 1;
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${theme.colors.textSecondary};
+  }
+
+  kbd {
+    background: ${theme.colors.backgroundSecondary};
+    border: 1px solid ${theme.colors.border};
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: monospace;
+    font-size: 10px;
+    color: ${theme.colors.textSecondary};
+    opacity: 0.6;
+  }
+`;
+
 const ActionsContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${theme.spacing.md};
 `;
+
 const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
   color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : theme.colors.textSecondary};
   opacity: ${props => props.$active ? 1 : 0.8};
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
   svg {
     width: 20px;
     height: 20px;
     stroke-width: 1.5px;
-    transition: all ${theme.transitions.default};
+    transition: all 0.2s;
   }
 
   &:hover {
@@ -154,12 +298,12 @@ const NavIcon = styled.div<{ $iconType?: string; $active?: boolean; $size?: numb
   justify-content: center;
   color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : theme.colors.textSecondary};
   opacity: ${props => props.$active ? 1 : 0.8};
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
   svg {
     width: ${props => props.$size ? `${props.$size}px` : '18px'};
     height: ${props => props.$size ? `${props.$size}px` : '18px'};
-    transition: all ${theme.transitions.default};
+    transition: all 0.2s;
   }
 
   &:hover {
@@ -167,32 +311,34 @@ const NavIcon = styled.div<{ $iconType?: string; $active?: boolean; $size?: numb
     transform: scale(1.15);
   }
 `;
+
 const ButtonIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
   color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : 'white'};
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s;
   
   svg {
     width: 18px;
     height: 18px;
     stroke-width: 2.5;
-    transition: all ${theme.transitions.default};
+    transition: all 0.2s;
   }
 `;
+
 const DropdownIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
   color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : theme.colors.textSecondary};
   opacity: ${props => props.$active ? 1 : 0.8};
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s;
   
   svg {
     width: 16px;
     height: 16px;
-    transition: all ${theme.transitions.default};
+    transition: all 0.2s;
     flex-shrink: 0;
   }
 
@@ -201,54 +347,73 @@ const DropdownIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
     transform: scale(1.1);
   }
 `;
+
 const AddButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: ${theme.borderRadius.md};
-  background: ${getIconColor('plus', true)};
+  background: linear-gradient(135deg, ${getIconColor('plus', true)} 0%, #16a34a 100%);
   color: white;
   cursor: pointer;
-  transition: all ${theme.transitions.default};
-  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 8px rgba(34, 197, 94, 0.25);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+  }
 
   &:hover {
-    background: ${getIconColor('plus', true)};
+    background: linear-gradient(135deg, #16a34a 0%, ${getIconColor('plus', true)} 100%);
     filter: brightness(1.1);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35);
+    
+    &::before {
+      left: 100%;
+    }
     
     svg {
-      transform: scale(1.1);
+      transform: scale(1.15) rotate(90deg);
     }
   }
 
   &:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 `;
 
-const IconButton = styled.button<{ $iconType?: string }>`
+const IconButton = styled.button<{ $iconType?: string; $hasBadge?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: ${theme.borderRadius.md};
   background: transparent;
   color: ${props => props.$iconType ? getIconColor(props.$iconType, false) : theme.colors.textSecondary};
   cursor: pointer;
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 
   &:hover {
     background: ${theme.colors.backgroundSecondary};
     color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : PRIMARY_ACCENT};
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     
     svg {
       opacity: 1;
@@ -277,54 +442,38 @@ const NotificationBadge = styled.div`
     position: absolute;
     top: -6px;
     right: -6px;
-    background: ${DANGER_COLOR};
+    background: linear-gradient(135deg, ${DANGER_COLOR} 0%, #dc2626 100%);
     color: white;
     font-size: 10px;
     font-weight: ${theme.typography.fontWeights.bold};
-    min-width: 18px;
-    height: 18px;
-    padding: 0 4px;
-    border-radius: 9px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 2px solid ${theme.colors.background};
-    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.05);
-    }
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    animation: ${pulse} 2s ease-in-out infinite;
+    z-index: 1;
   }
 `;
 
-const MenuButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: ${theme.colors.textSecondary};
-  border-radius: ${theme.borderRadius.sm};
-  transition: all ${theme.transitions.default};
-
-  &:hover {
-    background: ${theme.colors.backgroundSecondary};
-    color: ${theme.colors.textSecondary};
-  }
-
-  svg {
-    width: 24px;
-    height: 24px;
-  }
+const ActivityIndicator = styled.div<{ $isActive: boolean }>`
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: ${props => props.$isActive ? '#22c55e' : '#94a3b8'};
+  border: 2px solid ${theme.colors.background};
+  box-shadow: 0 0 0 2px ${props => props.$isActive ? '#22c55e' : 'transparent'};
+  ${props => props.$isActive && css`
+    animation: ${pulse} 2s infinite;
+  `}
+  z-index: 2;
 `;
 
 const LanguageSelector = styled.div`
@@ -334,13 +483,14 @@ const LanguageSelector = styled.div`
   cursor: pointer;
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   border-radius: ${theme.borderRadius.md};
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
 
   &:hover {
     background: ${theme.colors.backgroundSecondary};
     border-color: ${theme.colors.border};
     transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     
     span {
       color: ${PRIMARY_ACCENT};
@@ -348,6 +498,7 @@ const LanguageSelector = styled.div`
     ${IconWrapper} { 
       svg {
         color: ${PRIMARY_ACCENT};
+        transform: scale(1.1);
       }
     }
   }
@@ -356,7 +507,7 @@ const LanguageSelector = styled.div`
     font-size: ${theme.typography.fontSizes.sm};
     font-weight: ${theme.typography.fontWeights.medium};
     color: ${theme.colors.textSecondary};
-    transition: color ${theme.transitions.default};
+    transition: color 0.2s;
   }
 `;
 
@@ -368,18 +519,19 @@ const UserProfileContainer = styled.div`
   cursor: pointer;
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   border-radius: ${theme.borderRadius.md};
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
 
   &:hover {
     background: ${theme.colors.backgroundSecondary};
     border-color: ${theme.colors.border};
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
 `;
 
 const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, ${PRIMARY_ACCENT} 0%, ${PRIMARY_HOVER} 100%);
   display: flex;
@@ -388,8 +540,9 @@ const UserAvatar = styled.div`
   color: white;
   font-weight: ${theme.typography.fontWeights.bold};
   font-size: ${theme.typography.fontSizes.sm};
-  box-shadow: 0 2px 4px rgba(6, 182, 212, 0.2);
-  transition: transform ${theme.transitions.default};
+  box-shadow: 0 4px 8px rgba(6, 182, 212, 0.25);
+  transition: transform 0.2s;
+  position: relative;
   
   ${UserProfileContainer}:hover & {
     transform: scale(1.05);
@@ -415,36 +568,27 @@ const UserRole = styled.span`
   opacity: 0.7;
   line-height: 1.2;
 `;
+
 const DropdownMenu = styled.div<{ $isOpen: boolean }>`
   position: absolute;
   top: calc(100% + ${theme.spacing.sm});
   right: 0;
-  width: 240px;
+  width: 260px;
   background: ${theme.colors.background};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   opacity: ${props => (props.$isOpen ? 1 : 0)};
   visibility: ${props => (props.$isOpen ? 'visible' : 'hidden')};
   transform: ${props => (props.$isOpen ? 'translateY(0)' : 'translateY(-8px)')};
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  backdrop-filter: blur(10px);
   
-  ${props => props.$isOpen && `
-    animation: slideDown 0.2s ease-out;
+  ${props => props.$isOpen && css`
+    animation: ${slideDown} 0.2s ease-out;
   `}
-  
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 `;
 
 const DropdownItem = styled.div`
@@ -453,7 +597,7 @@ const DropdownItem = styled.div`
   gap: ${theme.spacing.md};
   padding: ${theme.spacing.md} ${theme.spacing.lg};
   color: ${theme.colors.textSecondary};
-  transition: all ${theme.transitions.default};
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   font-size: ${theme.typography.fontSizes.sm};
   position: relative;
@@ -480,7 +624,7 @@ const DropdownItem = styled.div`
 
 const SignOutItem = styled(DropdownItem)`
   color: ${DANGER_COLOR};
-  border-top: 1px solid ${theme.colors.border};
+  border-top: 2px solid ${theme.colors.border};
   margin-top: ${theme.spacing.xs};
   
   &:hover {
@@ -503,35 +647,25 @@ const NotificationPanel = styled.div<{ $isOpen: boolean }>`
   position: absolute;
   top: calc(100% + ${theme.spacing.sm});
   right: 0;
-  width: 380px;
-  max-height: 500px;
+  width: 420px;
+  max-height: 600px;
   background: ${theme.colors.background};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   opacity: ${props => (props.$isOpen ? 1 : 0)};
   visibility: ${props => (props.$isOpen ? 'visible' : 'hidden')};
   transform: ${props => (props.$isOpen ? 'translateY(0)' : 'translateY(-8px)')};
-  transition: all ${theme.transitions.default};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(10px);
   
-  ${props => props.$isOpen && `
-    animation: slideDown 0.2s ease-out;
+  ${props => props.$isOpen && css`
+    animation: ${slideDown} 0.2s ease-out;
   `}
-  
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 `;
 
 const NotificationPanelHeader = styled.div`
@@ -540,7 +674,7 @@ const NotificationPanelHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: ${theme.colors.backgroundSecondary};
+  background: linear-gradient(135deg, ${theme.colors.backgroundSecondary} 0%, ${theme.colors.background} 100%);
   
   h3 {
     font-size: ${theme.typography.fontSizes.md};
@@ -553,26 +687,30 @@ const NotificationPanelHeader = styled.div`
     font-size: ${theme.typography.fontSizes.sm};
     color: ${PRIMARY_ACCENT};
     font-weight: ${theme.typography.fontWeights.medium};
+    padding: 4px 12px;
+    background: ${PRIMARY_ACCENT}15;
+    border-radius: ${theme.borderRadius.sm};
   }
 `;
 
 const NotificationPanelBody = styled.div`
   flex: 1;
   overflow-y: auto;
-  max-height: 400px;
+  max-height: 500px;
 `;
 
 const NotificationItem = styled.div<{ $isRead: boolean }>`
   padding: ${theme.spacing.md} ${theme.spacing.lg};
   border-bottom: 1px solid ${theme.colors.border};
   cursor: pointer;
-  transition: all ${theme.transitions.default};
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   background: ${props => props.$isRead ? theme.colors.background : 'rgba(6, 182, 212, 0.05)'};
   position: relative;
   
   &:hover {
     background: ${theme.colors.backgroundSecondary};
     padding-left: ${theme.spacing.xl};
+    transform: translateX(4px);
   }
   
   &:last-child {
@@ -586,8 +724,9 @@ const NotificationItem = styled.div<{ $isRead: boolean }>`
       left: 0;
       top: 0;
       bottom: 0;
-      width: 3px;
+      width: 4px;
       background: ${PRIMARY_ACCENT};
+      border-radius: 0 2px 2px 0;
     }
   `}
 `;
@@ -604,7 +743,7 @@ const NotificationText = styled.div<{ $isRead?: boolean }>`
     font-size: ${theme.typography.fontSizes.sm};
     color: ${theme.colors.textSecondary};
     margin: 0 0 ${theme.spacing.xs};
-    line-height: 1.4;
+    line-height: 1.5;
     font-weight: ${props => props.$isRead ? theme.typography.fontWeights.medium : theme.typography.fontWeights.bold};
   }
   
@@ -616,7 +755,7 @@ const NotificationText = styled.div<{ $isRead?: boolean }>`
 `;
 
 const NotificationPanelFooter = styled.div`
-  padding: ${theme.spacing.sm} ${theme.spacing.lg};
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
   border-top: 1px solid ${theme.colors.border};
   background: ${theme.colors.backgroundSecondary};
   display: flex;
@@ -624,19 +763,21 @@ const NotificationPanelFooter = styled.div`
 `;
 
 const ViewAllButton = styled.button`
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  padding: ${theme.spacing.sm} ${theme.spacing.lg};
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
   color: ${PRIMARY_ACCENT};
   background: transparent;
-  border: none;
+  border: 1px solid ${PRIMARY_ACCENT};
   cursor: pointer;
-  border-radius: ${theme.borderRadius.sm};
-  transition: all ${theme.transitions.default};
+  border-radius: ${theme.borderRadius.md};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
   &:hover {
-    background: ${PRIMARY_ACCENT}10;
-    color: ${PRIMARY_HOVER};
+    background: ${PRIMARY_ACCENT};
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px ${PRIMARY_ACCENT}30;
   }
 `;
 
@@ -662,6 +803,7 @@ const LoadingNotifications = styled.div`
     margin: 0;
   }
 `;
+
 interface Notification {
   id: number;
   message: string;
@@ -676,13 +818,18 @@ export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [language, setLanguage] = useState('EN');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isOnline, setIsOnline] = useState(true);
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationPanelRef = useRef<HTMLDivElement>(null);
   const notificationBadgeRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const previousUnreadCountRef = useRef<number>(0);
   const lastNotificationIdsRef = useRef<Set<number>>(new Set());
   const { user, logout } = useAuth();
@@ -691,6 +838,68 @@ export default function Navbar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Online/Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    setIsOnline(navigator.onLine);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Load recent searches
+  useEffect(() => {
+    const stored = localStorage.getItem('recent_searches');
+    if (stored) {
+      try {
+        setRecentSearches(JSON.parse(stored).slice(0, 5));
+      } catch (e) {
+        setRecentSearches([]);
+      }
+    }
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setSearchFocused(true);
+      }
+      if (e.key === 'Escape') {
+        if (isDropdownOpen) setIsDropdownOpen(false);
+        if (isNotificationPanelOpen) setIsNotificationPanelOpen(false);
+        if (searchFocused) {
+          setSearchFocused(false);
+          searchInputRef.current?.blur();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDropdownOpen, isNotificationPanelOpen, searchFocused]);
+
+  // Search suggestions
+  useEffect(() => {
+    if (search.trim().length > 2) {
+      const suggestions = [
+        'revenue', 'expense', 'budget', 'forecast', 'scenario',
+        'variance', 'report', 'transaction', 'user', 'project'
+      ].filter(s => s.toLowerCase().includes(search.toLowerCase()));
+      setSearchSuggestions(suggestions.slice(0, 5));
+    } else {
+      setSearchSuggestions([]);
+    }
+  }, [search]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -698,6 +907,7 @@ export default function Navbar() {
       const isDropdownClick = target?.closest('[data-dropdown-menu]');
       const isNotificationClick = target?.closest('[data-notification-panel]');
       const isNotificationBadgeClick = target?.closest('[data-notification-badge]');
+      const isSearchClick = target?.closest('[data-search-container]');
       
       if (dropdownRef.current && !dropdownRef.current.contains(target as Node) && !isSignOutClick && !isDropdownClick) {
         setIsDropdownOpen(false);
@@ -710,10 +920,14 @@ export default function Navbar() {
       if (!isNotificationArea && isNotificationPanelOpen) {
         setIsNotificationPanelOpen(false);
       }
+
+      if (!isSearchClick && searchFocused) {
+        setSearchFocused(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [isNotificationPanelOpen]);
+  }, [isNotificationPanelOpen, searchFocused]);
 
   useEffect(() => {
     let retryCount = 0;
@@ -721,13 +935,15 @@ export default function Navbar() {
     let intervalId: NodeJS.Timeout | null = null;
     
     const loadUnreadCount = async () => {
+      if (!isOnline) return;
+      
       try {
         const response = await apiClient.getUnreadCount();
         const newCount = response.data?.unread_count || 0;
         const oldCount = previousUnreadCountRef.current;
         if (newCount > oldCount) {
           try {
-            const notifResponse = await apiClient.getNotifications(true); // Get latest unread
+            const notifResponse = await apiClient.getNotifications(true);
             const latestNotifs = notifResponse.data || [];
             const newNotifs = latestNotifs.filter((n: Notification) => !lastNotificationIdsRef.current.has(n.id));
             
@@ -790,7 +1006,7 @@ export default function Navbar() {
       }
     };
 
-    if (user) {
+    if (user && isOnline) {
       const initializeNotifications = async () => {
         try {
           const notifResponse = await apiClient.getNotifications(true);
@@ -809,7 +1025,7 @@ export default function Navbar() {
       const initAndStart = async () => {
         await initializeNotifications();
         loadUnreadCount();
-        intervalId = setInterval(loadUnreadCount, 30000);
+        intervalId = setInterval(loadUnreadCount, 20000); // Poll every 20 seconds
       };
       
       initAndStart();
@@ -818,11 +1034,13 @@ export default function Navbar() {
         if (intervalId) clearInterval(intervalId);
       };
     }
-  }, [user, router]);
+  }, [user, router, isOnline]);
+
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('language') || 'ENG';
+    const savedLanguage = localStorage.getItem('language') || 'EN';
     setLanguage(savedLanguage);
   }, []);
+
   const queryParam = searchParams?.get('q') || '';
   useEffect(() => {
     if (pathname === '/search') {
@@ -836,13 +1054,20 @@ export default function Navbar() {
       setSearch(prev => prev ? '' : prev);
     }
   }, [pathname, queryParam]);
+
   const navigateToSearch = useCallback((searchQuery: string) => {
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setRecentSearches(prev => {
+        const updated = [searchQuery.trim(), ...prev.filter(s => s !== searchQuery.trim())].slice(0, 5);
+        localStorage.setItem('recent_searches', JSON.stringify(updated));
+        return updated;
+      });
     } else if (pathname === '/search') {
       router.push('/search');
     }
   }, [router, pathname]);
+
   const debouncedSearchRef = useRef<ReturnType<typeof debounce> | null>(null);
   
   useEffect(() => {
@@ -854,9 +1079,10 @@ export default function Navbar() {
       }
     };
   }, [navigateToSearch]);
+
   useEffect(() => {
     const loadNotifications = async () => {
-      if (isNotificationPanelOpen && user) {
+      if (isNotificationPanelOpen && user && isOnline) {
         setLoadingNotifications(true);
         try {
           const response = await apiClient.getNotifications(false); 
@@ -875,13 +1101,13 @@ export default function Navbar() {
 
     loadNotifications();
     let intervalId: NodeJS.Timeout | null = null;
-    if (isNotificationPanelOpen && user) {
+    if (isNotificationPanelOpen && user && isOnline) {
       intervalId = setInterval(loadNotifications, 10000);
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isNotificationPanelOpen, user]);
+  }, [isNotificationPanelOpen, user, isOnline]);
 
   const handleAddClick = () => {
     if (pathname?.includes('/expenses')) {
@@ -1012,6 +1238,7 @@ export default function Navbar() {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('language');
+        localStorage.removeItem('recent_searches');
       }
       toast.success('Signed out successfully', { id: 'signout' });
       setTimeout(() => {
@@ -1024,6 +1251,7 @@ export default function Navbar() {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('language');
+        localStorage.removeItem('recent_searches');
       }
       try {
         useUserStore.setState({
@@ -1054,7 +1282,8 @@ export default function Navbar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (search.trim()) {
-      router.push(`/search?q=${encodeURIComponent(search.trim())}`);
+      navigateToSearch(search);
+      setSearchFocused(false);
     }
   };
 
@@ -1070,7 +1299,16 @@ export default function Navbar() {
         router.push('/search');
       }
     }
-  }, [router, pathname]);
+  }, [router, pathname, navigateToSearch]);
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearch(suggestion);
+    navigateToSearch(suggestion);
+    setSearchFocused(false);
+  };
+
+  const showSuggestions = searchFocused && (searchSuggestions.length > 0 || recentSearches.length > 0);
+
   const currentUser = storeUser || user;
   const userName = (currentUser as any)?.name || (currentUser as any)?.username || (currentUser as any)?.email || 'User';
   const initials = userName
@@ -1092,35 +1330,69 @@ export default function Navbar() {
 
   return (
     <HeaderContainer>
-      <MenuButton
-        onClick={() => {
-          console.log('Toggle sidebar');
-        }}
-        style={{ display: 'none' }} 
-      >
-        <Menu />
-      </MenuButton>
-      <SearchContainer>
-        <form onSubmit={handleSearch} style={{ width: '100%' }}>
-          <SearchIcon $active={search.length > 0}>
-            <Search size={16} />
+      <SearchContainer data-search-container>
+        <form onSubmit={handleSearch} style={{ width: '100%', position: 'relative' }}>
+          <SearchIcon $active={search.length > 0 || searchFocused}>
+            <Search size={18} />
           </SearchIcon>
           <SearchInput
-            placeholder="Search..."
+            ref={searchInputRef}
+            placeholder="Search... (Ctrl/Cmd + K)"
             value={search}
             onChange={handleSearchChange}
+            onFocus={() => setSearchFocused(true)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handleSearch(e);
               }
             }}
           />
+          <KeyboardHint>
+            <kbd>{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</kbd>
+            <span>+</span>
+            <kbd>K</kbd>
+          </KeyboardHint>
+          {showSuggestions && (
+            <SearchSuggestions $isOpen={showSuggestions}>
+              {searchSuggestions.length > 0 && (
+                <SuggestionSection>
+                  <h4>Suggestions</h4>
+                  {searchSuggestions.map((suggestion, idx) => (
+                    <SuggestionItem
+                      key={idx}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      $active={false}
+                    >
+                      <Search size={16} />
+                      <span>{suggestion}</span>
+                    </SuggestionItem>
+                  ))}
+                </SuggestionSection>
+              )}
+              {recentSearches.length > 0 && (
+                <SuggestionSection>
+                  <h4>Recent Searches</h4>
+                  {recentSearches.map((recent, idx) => (
+                    <SuggestionItem
+                      key={idx}
+                      onClick={() => handleSuggestionClick(recent)}
+                      $active={false}
+                      $isRecent={true}
+                    >
+                      <Clock size={16} />
+                      <span>{recent}</span>
+                    </SuggestionItem>
+                  ))}
+                </SuggestionSection>
+              )}
+            </SearchSuggestions>
+          )}
         </form>
       </SearchContainer>
 
       <ActionsContainer>
         <ComponentGate componentId={ComponentId.EXPENSE_CREATE}>
-          <AddButton onClick={handleAddClick} title="Add new item">
+          <AddButton onClick={handleAddClick} title="Add new item (Ctrl/Cmd + N)">
             <ButtonIcon $iconType="plus">
               <Plus />
             </ButtonIcon>
@@ -1138,6 +1410,7 @@ export default function Navbar() {
               {unreadCount > 0 && (
                 <span>{unreadCount > 99 ? '99+' : unreadCount}</span>
               )}
+              <ActivityIndicator $isActive={isOnline} />
             </NotificationBadge>
             <div ref={notificationPanelRef}>
               <NotificationPanel
@@ -1203,7 +1476,10 @@ export default function Navbar() {
           <span>{language}</span>
         </LanguageSelector>
         <UserProfileContainer ref={dropdownRef} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-          <UserAvatar>{initials}</UserAvatar>
+          <UserAvatar>
+            {initials}
+            <ActivityIndicator $isActive={isOnline} />
+          </UserAvatar>
           <UserInfo>
             <UserName>{userName}</UserName>
             <UserRole>{displayRole}</UserRole>
