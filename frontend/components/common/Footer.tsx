@@ -65,11 +65,11 @@ export default function Footer() {
         <CopyText>© 2025 Financial Management System. All rights reserved.</CopyText>
 
         <Nav>
-          <NavLink href="/service/about">About</NavLink>
           <NavLink href="/service/privacy">Privacy</NavLink>
           <NavLink href="/service/terms">Terms</NavLink>
           <NavLink href="/service/contact">Contact</NavLink>
           <NavLink href="/service/support">Support</NavLink>
+          <NavLink href="/service/about">About</NavLink>
         </Nav>
       </FooterContainer>
     </FooterWrapper>
