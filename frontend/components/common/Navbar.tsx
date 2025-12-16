@@ -86,7 +86,7 @@ const HeaderContainer = styled.header`
   padding: ${theme.spacing.md} ${theme.spacing.lg};
   background: ${theme.colors.background};
   border-bottom: 1px solid ${theme.colors.border};
-  height: 70px;
+  height: 46px;
   width: calc(100% - 280px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
