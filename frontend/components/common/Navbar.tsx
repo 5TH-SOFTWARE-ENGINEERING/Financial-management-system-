@@ -96,7 +96,7 @@ const HeaderContainer = styled.header`
 const SearchContainer = styled.div`
   position: relative;
   flex: 1;
-  max-width: 450px;
+  max-width: 440px;
   margin: 0 ${theme.spacing.lg};
 `;
 
@@ -271,7 +271,7 @@ const ActionsContainer = styled.div`
   gap: ${theme.spacing.md};
 `;
 
-const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean }>`
+const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -280,8 +280,8 @@ const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean }>`
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
   svg {
-    width: 20px;
-    height: 20px;
+    width: ${props => props.$size ? `${props.$size}px` : '20px'};
+    height: ${props => props.$size ? `${props.$size}px` : '20px'};
     stroke-width: 1.5px;
     transition: all 0.2s;
   }
@@ -1404,7 +1404,7 @@ export default function Navbar() {
               data-notification-badge="true"
               onClick={handleNotificationsClick}
             >
-              <IconWrapper $iconType="bell" $active={unreadCount > 0}>
+              <IconWrapper $iconType="bell" $active={unreadCount > 0} $size={30}>
                 <Bell />
               </IconWrapper>
               {unreadCount > 0 && (
