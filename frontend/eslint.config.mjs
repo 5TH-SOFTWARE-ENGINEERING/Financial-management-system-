@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Coverage files (migrated from .eslintignore):
+    "coverage",
+    "coverage/**",
+    "coverage/lcov-report",
   ]),
 ]);
 
