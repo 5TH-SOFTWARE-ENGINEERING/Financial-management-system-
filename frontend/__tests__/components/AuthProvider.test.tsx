@@ -1,10 +1,12 @@
+import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { AuthProvider, useAuth } from '@/components/AuthProvider'
 import useUserStore from '@/store/userStore'
-import apiClient from '@/lib/api'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-// Mock dependencies
+// --------------------
+// Mocks
+// --------------------
 jest.mock('@/store/userStore')
 jest.mock('@/lib/api')
 jest.mock('next/navigation', () => ({
@@ -16,33 +18,94 @@ jest.mock('next/navigation', () => ({
 
 const mockUseUserStore = useUserStore as jest.MockedFunction<typeof useUserStore>
 
-const TestComponent = () => {
-  const auth = useAuth()
-  return (
-    <div>
-      <div data-testid="isAuthenticated">{auth.isAuthenticated ? 'true' : 'false'}</div>
-      <div data-testid="isLoading">{auth.isLoading ? 'true' : 'false'}</div>
-      <div data-testid="user">{auth.user ? auth.user.email : 'null'}</div>
-    </div>
-  )
+// --------------------
+// Types
+// --------------------
+type User = {
+  id: string
+  name: string
+  email: string
+  role: 'admin' | 'user'
+  isActive: boolean
+  createdAt?: string
 }
+
+type UserStore = {
+  user: User | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  login: jest.Mock
+  logout: jest.Mock
+  register: jest.Mock
+  canManageUsers: () => boolean
+  canViewAllData: () => boolean
+  canApproveTransactions: () => boolean
+  canSubmitTransactions: () => boolean
+  getCurrentUser: jest.Mock
+}
+
+// --------------------
+// Helpers
+// --------------------
+const createMockUserStore = (
+  overrides?: Partial<UserStore>
+): UserStore => ({
+  user: null,
+  isAuthenticated: false,
+  isLoading: false,
+  login: jest.fn(),
+  logout: jest.fn(),
+  register: jest.fn(),
+  canManageUsers: () => false,
+  canViewAllData: () => false,
+  canApproveTransactions: () => false,
+  canSubmitTransactions: () => false,
+  getCurrentUser: jest.fn(),
+  ...overrides,
+})
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: {
-        retry: false,
-      },
+      queries: { retry: false },
     },
   })
 
-  return ({ children }: { children: React.ReactNode }) => (
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>{children}</AuthProvider>
     </QueryClientProvider>
   )
+
+  Wrapper.displayName = 'AuthProviderTestWrapper'
+  return Wrapper
 }
 
+// --------------------
+// Test Components
+// --------------------
+const TestComponent = () => {
+  const auth = useAuth()
+
+  return (
+    <div>
+      <div data-testid="isAuthenticated">
+        {auth.isAuthenticated ? 'true' : 'false'}
+      </div>
+      <div data-testid="isLoading">
+        {auth.isLoading ? 'true' : 'false'}
+      </div>
+      <div data-testid="user">
+        {auth.user ? auth.user.email : 'null'}
+      </div>
+    </div>
+  )
+}
+TestComponent.displayName = 'TestComponent'
+
+// --------------------
+// Tests
+// --------------------
 describe('AuthProvider Component', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -50,19 +113,7 @@ describe('AuthProvider Component', () => {
   })
 
   it('provides auth context to children', () => {
-    mockUseUserStore.mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      register: jest.fn(),
-      canManageUsers: jest.fn(() => false),
-      canViewAllData: jest.fn(() => false),
-      canApproveTransactions: jest.fn(() => false),
-      canSubmitTransactions: jest.fn(() => false),
-      getCurrentUser: jest.fn(),
-    } as any)
+    mockUseUserStore.mockReturnValue(createMockUserStore())
 
     render(<TestComponent />, { wrapper: createWrapper() })
 
@@ -71,28 +122,21 @@ describe('AuthProvider Component', () => {
   })
 
   it('provides user data when authenticated', () => {
-    const mockUser = {
+    const mockUser: User = {
       id: '1',
       name: 'Test User',
       email: 'test@example.com',
-      role: 'admin' as const,
+      role: 'admin',
       isActive: true,
       createdAt: '2024-01-01',
     }
 
-    mockUseUserStore.mockReturnValue({
-      user: mockUser,
-      isAuthenticated: true,
-      isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      register: jest.fn(),
-      canManageUsers: jest.fn(() => true),
-      canViewAllData: jest.fn(() => true),
-      canApproveTransactions: jest.fn(() => true),
-      canSubmitTransactions: jest.fn(() => true),
-      getCurrentUser: jest.fn(),
-    } as any)
+    mockUseUserStore.mockReturnValue(
+      createMockUserStore({
+        user: mockUser,
+        isAuthenticated: true,
+      })
+    )
 
     render(<TestComponent />, { wrapper: createWrapper() })
 
@@ -102,82 +146,66 @@ describe('AuthProvider Component', () => {
 
   it('calls getCurrentUser when token exists and user is null', async () => {
     localStorage.setItem('access_token', 'test-token')
-    const mockGetCurrentUser = jest.fn().mockResolvedValue(undefined)
+    const getCurrentUser = jest.fn().mockResolvedValue(undefined)
 
-    mockUseUserStore.mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      register: jest.fn(),
-      canManageUsers: jest.fn(() => false),
-      canViewAllData: jest.fn(() => false),
-      canApproveTransactions: jest.fn(() => false),
-      canSubmitTransactions: jest.fn(() => false),
-      getCurrentUser: mockGetCurrentUser,
-    } as any)
+    mockUseUserStore.mockReturnValue(
+      createMockUserStore({
+        getCurrentUser,
+      })
+    )
 
     render(<TestComponent />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(mockGetCurrentUser).toHaveBeenCalled()
+      expect(getCurrentUser).toHaveBeenCalled()
     })
   })
 
   it('does not call getCurrentUser when user already exists', () => {
     localStorage.setItem('access_token', 'test-token')
-    const mockGetCurrentUser = jest.fn()
+    const getCurrentUser = jest.fn()
 
-    mockUseUserStore.mockReturnValue({
-      user: {
-        id: '1',
-        name: 'Test User',
-        email: 'test@example.com',
-        role: 'admin' as const,
-        isActive: true,
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      register: jest.fn(),
-      canManageUsers: jest.fn(() => false),
-      canViewAllData: jest.fn(() => false),
-      canApproveTransactions: jest.fn(() => false),
-      canSubmitTransactions: jest.fn(() => false),
-      getCurrentUser: mockGetCurrentUser,
-    } as any)
+    mockUseUserStore.mockReturnValue(
+      createMockUserStore({
+        user: {
+          id: '1',
+          name: 'Existing User',
+          email: 'existing@example.com',
+          role: 'admin',
+          isActive: true,
+        },
+        isAuthenticated: true,
+        getCurrentUser,
+      })
+    )
 
     render(<TestComponent />, { wrapper: createWrapper() })
 
-    expect(mockGetCurrentUser).not.toHaveBeenCalled()
+    expect(getCurrentUser).not.toHaveBeenCalled()
   })
 
   it('provides permission methods', () => {
-    mockUseUserStore.mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      register: jest.fn(),
-      canManageUsers: jest.fn(() => true),
-      canViewAllData: jest.fn(() => true),
-      canApproveTransactions: jest.fn(() => true),
-      canSubmitTransactions: jest.fn(() => true),
-      getCurrentUser: jest.fn(),
-    } as any)
+    mockUseUserStore.mockReturnValue(
+      createMockUserStore({
+        canManageUsers: () => true,
+        canViewAllData: () => true,
+      })
+    )
 
     const PermissionTest = () => {
       const auth = useAuth()
       return (
         <div>
-          <div data-testid="canManage">{auth.canManageUsers() ? 'true' : 'false'}</div>
-          <div data-testid="canView">{auth.canViewAllData() ? 'true' : 'false'}</div>
+          <div data-testid="canManage">
+            {auth.canManageUsers() ? 'true' : 'false'}
+          </div>
+          <div data-testid="canView">
+            {auth.canViewAllData() ? 'true' : 'false'}
+          </div>
         </div>
       )
     }
+    PermissionTest.displayName = 'PermissionTest'
 
     render(<PermissionTest />, { wrapper: createWrapper() })
 
@@ -188,19 +216,20 @@ describe('AuthProvider Component', () => {
 
 describe('useAuth Hook', () => {
   it('throws error when used outside AuthProvider', () => {
-    // Suppress console.error for this test
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {})
 
-    const TestComponent = () => {
+    const HookTest = () => {
       useAuth()
       return null
     }
+    HookTest.displayName = 'HookTest'
 
     expect(() => {
-      render(<TestComponent />)
+      render(<HookTest />)
     }).toThrow('useAuth must be used within an AuthProvider')
 
     consoleSpy.mockRestore()
   })
 })
-

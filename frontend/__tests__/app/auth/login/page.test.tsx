@@ -1,8 +1,10 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import LoginPage from '@/app/auth/login/page'
 
-// Mock dependencies
+// --------------------
+// Router mock
+// --------------------
 const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -10,6 +12,9 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
+// --------------------
+// Auth mock
+// --------------------
 jest.mock('@/lib/rbac', () => ({
   useAuth: () => ({
     login: jest.fn(),
@@ -18,6 +23,9 @@ jest.mock('@/lib/rbac', () => ({
   }),
 }))
 
+// --------------------
+// Toast mock
+// --------------------
 jest.mock('sonner', () => ({
   toast: {
     success: jest.fn(),
@@ -26,12 +34,25 @@ jest.mock('sonner', () => ({
   Toaster: () => null,
 }))
 
+// --------------------
+// next/link mock (FIXED)
+// --------------------
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
-    return <a href={href}>{children}</a>
-  }
+  const LinkMock = ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode
+    href: string
+  }) => <a href={href}>{children}</a>
+
+  LinkMock.displayName = 'NextLinkMock'
+  return LinkMock
 })
 
+// --------------------
+// Tests
+// --------------------
 describe('LoginPage', () => {
   beforeEach(() => {
     mockPush.mockClear()
@@ -39,8 +60,6 @@ describe('LoginPage', () => {
 
   it('renders login page', () => {
     render(<LoginPage />)
-    // Check if the login form structure is rendered
     expect(document.body).toBeTruthy()
   })
 })
-

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import GeneralSettingsPage from '@/app/settings/general/page'
 
 // Mock dependencies
@@ -25,8 +25,7 @@ jest.mock('sonner', () => ({
 describe('GeneralSettingsPage', () => {
   it('renders page component', () => {
     render(<GeneralSettingsPage />)
-    // Page should render without crashing
+
     expect(document.body).toBeTruthy()
   })
 })
-

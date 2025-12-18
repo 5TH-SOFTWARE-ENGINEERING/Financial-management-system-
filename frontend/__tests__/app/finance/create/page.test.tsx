@@ -2,7 +2,9 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import FinanceCreatePage from '@/app/finance/create/page'
 
-// Mock dependencies
+// --------------------
+// Router mock
+// --------------------
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -10,6 +12,9 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
+// --------------------
+// User store mock
+// --------------------
 jest.mock('@/store/userStore', () => ({
   useUserStore: () => ({
     user: { id: '1', role: 'admin' },
@@ -17,6 +22,9 @@ jest.mock('@/store/userStore', () => ({
   }),
 }))
 
+// --------------------
+// API mock
+// --------------------
 jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
@@ -25,6 +33,9 @@ jest.mock('@/lib/api', () => ({
   },
 }))
 
+// --------------------
+// Toast mock
+// --------------------
 jest.mock('sonner', () => ({
   toast: {
     success: jest.fn(),
@@ -32,37 +43,56 @@ jest.mock('sonner', () => ({
   },
 }))
 
+// --------------------
+// Sidebar mock (already named)
+// --------------------
 jest.mock('@/components/common/Sidebar', () => {
-  return function MockSidebar() {
+  function MockSidebar() {
     return <div data-testid="sidebar">Sidebar</div>
   }
+  MockSidebar.displayName = 'MockSidebar'
+  return MockSidebar
 })
 
+// --------------------
+// Navbar mock (already named)
+// --------------------
 jest.mock('@/components/common/Navbar', () => {
-  return function MockNavbar() {
+  function MockNavbar() {
     return <div data-testid="navbar">Navbar</div>
   }
+  MockNavbar.displayName = 'MockNavbar'
+  return MockNavbar
 })
 
+// --------------------
+// next/link mock (FIXED)
+// --------------------
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
-    return <a href={href}>{children}</a>
-  }
+  const LinkMock = ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode
+    href: string
+  }) => <a href={href}>{children}</a>
+
+  LinkMock.displayName = 'NextLinkMock'
+  return LinkMock
 })
 
+// --------------------
+// Tests
+// --------------------
 describe('FinanceCreatePage', () => {
   it('renders page component', () => {
     render(<FinanceCreatePage />)
-    // Check if sidebar and navbar are rendered
     expect(screen.getByTestId('sidebar')).toBeInTheDocument()
     expect(screen.getByTestId('navbar')).toBeInTheDocument()
   })
 
   it('renders create finance manager form', () => {
     render(<FinanceCreatePage />)
-    // Check for form elements (may need to adjust based on actual structure)
-    // At minimum, verify the page structure is present
     expect(screen.getByTestId('sidebar')).toBeInTheDocument()
   })
 })
-

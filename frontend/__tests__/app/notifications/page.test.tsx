@@ -4,7 +4,9 @@ import NotificationsPage from '@/app/notifications/page'
 import { AuthProvider } from '@/lib/rbac/auth-context'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-// Mock dependencies
+// --------------------
+// Router mock
+// --------------------
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -12,6 +14,9 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
+// --------------------
+// User store mock
+// --------------------
 jest.mock('@/store/userStore', () => {
   const mockUser = {
     id: '1',
@@ -20,7 +25,7 @@ jest.mock('@/store/userStore', () => {
     role: 'admin' as const,
     isActive: true,
   }
-  
+
   return {
     __esModule: true,
     default: jest.fn(() => ({
@@ -44,6 +49,9 @@ jest.mock('@/store/userStore', () => {
   }
 })
 
+// --------------------
+// API mock
+// --------------------
 jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
@@ -56,6 +64,9 @@ jest.mock('@/lib/api', () => ({
   },
 }))
 
+// --------------------
+// Toast mock
+// --------------------
 jest.mock('sonner', () => ({
   toast: {
     success: jest.fn(),
@@ -63,28 +74,42 @@ jest.mock('sonner', () => ({
   },
 }))
 
+// --------------------
+// Layout mock (FIXED)
+// --------------------
 jest.mock('@/components/layout', () => {
-  return function MockLayout({ children }: { children: React.ReactNode }) {
-    return <div data-testid="layout">{children}</div>
-  }
+  const MockLayout = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="layout">{children}</div>
+  )
+  MockLayout.displayName = 'MockLayout'
+  return MockLayout
 })
 
+// --------------------
+// Wrapper (FIXED)
+// --------------------
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
     },
   })
-  return ({ children }: { children: React.ReactNode }) => (
+
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>{children}</AuthProvider>
     </QueryClientProvider>
   )
+
+  Wrapper.displayName = 'NotificationsPageTestWrapper'
+  return Wrapper
 }
 
+// --------------------
+// Tests
+// --------------------
 describe('NotificationsPage', () => {
   beforeEach(() => {
-    // Mock localStorage
     Object.defineProperty(window, 'localStorage', {
       value: {
         getItem: jest.fn(() => null),
@@ -98,14 +123,11 @@ describe('NotificationsPage', () => {
 
   it('renders page component', async () => {
     render(<NotificationsPage />, { wrapper: createWrapper() })
-    
-    // Wait for the heading to appear, which indicates loading is complete
+
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Notifications/i })).toBeInTheDocument()
     }, { timeout: 5000 })
-    
-    // Verify layout is present
+
     expect(screen.getByTestId('layout')).toBeInTheDocument()
   })
 })
-

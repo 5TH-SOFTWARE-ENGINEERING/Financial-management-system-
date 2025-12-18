@@ -2,11 +2,19 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import Footer from '@/components/common/Footer'
 
-// Mock next/link
+// Mock next/link WITH display name
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
-    return <a href={href}>{children}</a>
-  }
+  const Link = ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode
+    href: string
+  }) => <a href={href}>{children}</a>
+
+  Link.displayName = 'NextLinkMock'
+
+  return Link
 })
 
 describe('Footer Component', () => {
@@ -18,7 +26,9 @@ describe('Footer Component', () => {
 
   it('displays copyright text', () => {
     render(<Footer />)
-    expect(screen.getByText(/© 2025 Financial Management System/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/© 2025 Financial Management System/i)
+    ).toBeInTheDocument()
   })
 
   it('renders navigation links', () => {
@@ -39,4 +49,3 @@ describe('Footer Component', () => {
     expect(screen.getByText('Support').closest('a')).toHaveAttribute('href', '/support')
   })
 })
-

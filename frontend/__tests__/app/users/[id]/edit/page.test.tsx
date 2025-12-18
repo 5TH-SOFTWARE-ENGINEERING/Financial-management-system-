@@ -3,7 +3,9 @@ import { render, screen, waitFor, act } from '@testing-library/react'
 import EditUserPage from '@/app/users/[id]/edit/page'
 import apiClient from '@/lib/api'
 
-// Mock dependencies
+// --------------------
+// Router mocks
+// --------------------
 const mockPush = jest.fn()
 
 jest.mock('next/navigation', () => ({
@@ -16,6 +18,9 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
+// --------------------
+// User store mock
+// --------------------
 jest.mock('@/store/userStore', () => ({
   useUserStore: () => ({
     user: { id: '1', role: 'admin' },
@@ -26,23 +31,20 @@ jest.mock('@/store/userStore', () => ({
   }),
 }))
 
+// --------------------
+// API mock
+// --------------------
 jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
-    getUser: jest.fn().mockResolvedValue({
-      data: {
-        id: 1,
-        full_name: 'Test User',
-        email: 'test@test.com',
-        username: 'testuser',
-        role: 'admin',
-        is_active: true,
-      },
-    }),
+    getUser: jest.fn(),
     updateUser: jest.fn(),
   },
 }))
 
+// --------------------
+// Toast mock
+// --------------------
 jest.mock('sonner', () => ({
   toast: {
     success: jest.fn(),
@@ -50,18 +52,37 @@ jest.mock('sonner', () => ({
   },
 }))
 
+// --------------------
+// Layout mock (FIXED)
+// --------------------
 jest.mock('@/components/layout', () => {
-  return function MockLayout({ children }: { children: React.ReactNode }) {
-    return <div data-testid="layout">{children}</div>
-  }
+  const MockLayout = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="layout">{children}</div>
+  )
+
+  MockLayout.displayName = 'MockLayout'
+  return MockLayout
 })
 
+// --------------------
+// next/link mock (FIXED)
+// --------------------
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
-    return <a href={href}>{children}</a>
-  }
+  const Link = ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode
+    href: string
+  }) => <a href={href}>{children}</a>
+
+  Link.displayName = 'NextLinkMock'
+  return Link
 })
 
+// --------------------
+// Tests
+// --------------------
 describe('EditUserPage', () => {
   const mockGetUser = apiClient.getUser as jest.Mock
 
@@ -84,27 +105,23 @@ describe('EditUserPage', () => {
     await act(async () => {
       render(<EditUserPage />)
     })
-    
+
     expect(screen.getByTestId('layout')).toBeInTheDocument()
-    
-    // Wait for async user loading to complete
+
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalled()
-    }, { timeout: 3000 })
+    })
   })
 
   it('shows loading state initially', async () => {
     await act(async () => {
       render(<EditUserPage />)
     })
-    
-    // Component should render
+
     expect(document.body).toBeTruthy()
-    
-    // Wait for async operations to complete
+
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalled()
-    }, { timeout: 3000 })
+    })
   })
 })
-

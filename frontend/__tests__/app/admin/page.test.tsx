@@ -18,8 +18,7 @@ const mockGetAdminSystemStats = jest.fn()
 jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
-    getAdminSystemStats: (...args: any[]) =>
-      mockGetAdminSystemStats(...args),
+    getAdminSystemStats: (...args: unknown[]) => mockGetAdminSystemStats(...args),
   },
 }))
 
@@ -34,7 +33,8 @@ jest.mock('@/store/userStore', () => ({
 }))
 
 jest.mock('@/lib/utils', () => ({
-  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+  cn: (...args: (string | boolean | undefined | null)[]) =>
+    args.filter(Boolean).join(' '),
 }))
 
 // ---- Test Suite ----
@@ -67,9 +67,8 @@ describe('AdminPage', () => {
   })
 
   it('shows backend error message when API fails', async () => {
-    // Suppress expected console.error from error handling
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
-    
+
     mockGetAdminSystemStats.mockRejectedValue({
       response: { status: 500, data: { detail: 'Server failed' } },
     })
@@ -79,8 +78,7 @@ describe('AdminPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/Server failed/i)).toBeInTheDocument()
     })
-    
-    // Restore console.error
+
     consoleErrorSpy.mockRestore()
   })
 

@@ -4,7 +4,9 @@ import SettingsPage from '@/app/settings/page'
 import { AuthProvider } from '@/lib/rbac/auth-context'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-// Mock dependencies
+// --------------------
+// Navigation mock
+// --------------------
 jest.mock('next/navigation', () => ({
   usePathname: () => '/settings',
   useRouter: () => ({
@@ -14,23 +16,53 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
-jest.mock('@/lib/rbac', () => ({
-  ComponentGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  ComponentId: 'settings',
-}))
+// --------------------
+// RBAC mock (FIXED)
+// --------------------
+jest.mock('@/lib/rbac', () => {
+  const ComponentGate = ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  )
 
+  ComponentGate.displayName = 'ComponentGateMock'
+
+  return {
+    ComponentGate,
+    ComponentId: 'settings',
+  }
+})
+
+// --------------------
+// Layout mock (FIXED)
+// --------------------
 jest.mock('@/components/layout', () => {
-  return function MockLayout({ children }: { children: React.ReactNode }) {
-    return <div data-testid="layout">{children}</div>
-  }
+  const MockLayout = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="layout">{children}</div>
+  )
+
+  MockLayout.displayName = 'MockLayout'
+  return MockLayout
 })
 
+// --------------------
+// next/link mock (FIXED)
+// --------------------
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
-    return <a href={href}>{children}</a>
-  }
+  const Link = ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode
+    href: string
+  }) => <a href={href}>{children}</a>
+
+  Link.displayName = 'NextLinkMock'
+  return Link
 })
 
+// --------------------
+// User store mock
+// --------------------
 jest.mock('@/store/userStore', () => {
   const mockUser = {
     id: '1',
@@ -39,7 +71,7 @@ jest.mock('@/store/userStore', () => {
     role: 'admin' as const,
     isActive: true,
   }
-  
+
   return {
     __esModule: true,
     default: jest.fn(() => ({
@@ -54,6 +86,9 @@ jest.mock('@/store/userStore', () => {
   }
 })
 
+// --------------------
+// API mock
+// --------------------
 jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
@@ -83,22 +118,31 @@ jest.mock('@/lib/api', () => ({
   },
 }))
 
+// --------------------
+// Test wrapper (FIXED)
+// --------------------
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
     },
   })
-  return ({ children }: { children: React.ReactNode }) => (
+
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>{children}</AuthProvider>
     </QueryClientProvider>
   )
+
+  Wrapper.displayName = 'SettingsPageTestWrapper'
+  return Wrapper
 }
 
+// --------------------
+// Tests
+// --------------------
 describe('SettingsPage', () => {
   beforeEach(() => {
-    // Mock localStorage
     Object.defineProperty(window, 'localStorage', {
       value: {
         getItem: jest.fn(() => null),
@@ -111,23 +155,24 @@ describe('SettingsPage', () => {
   })
 
   it('renders page component', async () => {
-    // Suppress act() warnings for async state updates
-    const consoleError = jest.spyOn(console, 'error').mockImplementation((message) => {
-      if (typeof message === 'string' && message.includes('not wrapped in act')) {
-        return
-      }
-      // Log other errors
-      console.error(message)
-    })
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation((message) => {
+        if (
+          typeof message === 'string' &&
+          message.includes('not wrapped in act')
+        ) {
+          return
+        }
+        console.error(message)
+      })
 
     render(<SettingsPage />, { wrapper: createWrapper() })
-    
-    // Wait for async operations to complete
+
     await waitFor(() => {
       expect(screen.getByTestId('layout')).toBeInTheDocument()
-    }, { timeout: 3000 })
+    })
 
     consoleError.mockRestore()
   })
 })
-

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import ProtectedLayout from '@/app/(protected)/layout'
 
 // Mock dependencies
@@ -22,15 +22,15 @@ jest.mock('@/lib/rbac/auth-context', () => ({
 }))
 
 jest.mock('@/components/common/Navbar', () => {
-  return function MockNavbar() {
-    return <div data-testid="navbar">Navbar</div>
-  }
+  const MockNavbar = () => <div data-testid="navbar">Navbar</div>
+  MockNavbar.displayName = 'MockNavbar'
+  return MockNavbar
 })
 
 jest.mock('@/components/common/Sidebar', () => {
-  return function MockSidebar() {
-    return <div data-testid="sidebar">Sidebar</div>
-  }
+  const MockSidebar = () => <div data-testid="sidebar">Sidebar</div>
+  MockSidebar.displayName = 'MockSidebar'
+  return MockSidebar
 })
 
 describe('ProtectedLayout', () => {
@@ -59,4 +59,3 @@ describe('ProtectedLayout', () => {
     expect(screen.getByText('Test Content')).toBeInTheDocument()
   })
 })
-

@@ -2,13 +2,18 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import EmployeesCreatePage from '@/app/employees/create/page'
 
-// Mock dependencies
+// --------------------
+// Router mock
+// --------------------
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
   }),
 }))
 
+// --------------------
+// User store mock
+// --------------------
 jest.mock('@/store/userStore', () => ({
   useUserStore: () => ({
     user: { id: '1', role: 'admin' },
@@ -16,6 +21,9 @@ jest.mock('@/store/userStore', () => ({
   }),
 }))
 
+// --------------------
+// API mock
+// --------------------
 jest.mock('@/lib/api', () => ({
   __esModule: true,
   default: {
@@ -24,6 +32,9 @@ jest.mock('@/lib/api', () => ({
   },
 }))
 
+// --------------------
+// Toast mock
+// --------------------
 jest.mock('sonner', () => ({
   toast: {
     success: jest.fn(),
@@ -31,24 +42,47 @@ jest.mock('sonner', () => ({
   },
 }))
 
+// --------------------
+// Navbar mock (FIXED)
+// --------------------
 jest.mock('@/components/common/Navbar', () => {
-  return function MockNavbar() {
+  function MockNavbar() {
     return <div data-testid="navbar">Navbar</div>
   }
+  MockNavbar.displayName = 'MockNavbar'
+  return MockNavbar
 })
 
+// --------------------
+// Sidebar mock (FIXED)
+// --------------------
 jest.mock('@/components/common/Sidebar', () => {
-  return function MockSidebar() {
+  function MockSidebar() {
     return <div data-testid="sidebar">Sidebar</div>
   }
+  MockSidebar.displayName = 'MockSidebar'
+  return MockSidebar
 })
 
+// --------------------
+// next/link mock (FIXED)
+// --------------------
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
-    return <a href={href}>{children}</a>
-  }
+  const LinkMock = ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode
+    href: string
+  }) => <a href={href}>{children}</a>
+
+  LinkMock.displayName = 'NextLinkMock'
+  return LinkMock
 })
 
+// --------------------
+// Tests
+// --------------------
 describe('EmployeesCreatePage', () => {
   it('renders page component', () => {
     render(<EmployeesCreatePage />)
@@ -56,4 +90,3 @@ describe('EmployeesCreatePage', () => {
     expect(screen.getByTestId('sidebar')).toBeInTheDocument()
   })
 })
-
