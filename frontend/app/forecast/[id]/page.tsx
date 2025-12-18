@@ -1,12 +1,11 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  LineChart, ArrowLeft, Calendar, TrendingUp, TrendingDown,
+  LineChart, ArrowLeft, TrendingUp, TrendingDown,
   BarChart3, Activity, FileText, AlertCircle, Edit, Download,
-  FileSpreadsheet, Target, GitBranch, RefreshCw
+  FileSpreadsheet, GitBranch, RefreshCw
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -315,6 +314,17 @@ const Spinner = styled.div`
   }
 `;
 
+type ForecastMethod = 'moving_average' | 'linear_growth' | 'trend' | string;
+
+type MethodParams = Record<string, unknown>;
+
+interface ForecastDataPoint {
+  period?: string;
+  date?: string;
+  forecasted_value?: number;
+  method?: ForecastMethod;
+}
+
 interface Forecast {
   id: number;
   name: string;
@@ -323,60 +333,87 @@ interface Forecast {
   period_type: string;
   start_date: string;
   end_date: string;
-  method: string;
-  method_params?: any;
+  method: ForecastMethod;
+  method_params?: MethodParams;
   historical_start_date?: string;
   historical_end_date?: string;
-  forecast_data?: any[];
+  forecast_data?: ForecastDataPoint[];
   created_at: string;
+}
+
+interface ActualDataPoint {
+  date: string;
+  value: number;
+  type: 'revenue' | 'expense' | 'all' | string;
+}
+
+interface BudgetSummary {
+  id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+interface AccuracyComparison {
+  date: string;
+  forecast: number;
+  actual: number;
+  error: number;
+  percentError: number;
+}
+
+interface AccuracyMetrics {
+  comparisons: AccuracyComparison[];
+  avgError: number;
+  avgPercentError: number;
+  mape: number;
+  accuracy: number;
+  totalComparisons: number;
 }
 
 const ForecastDetailPage: React.FC = () => {
   const router = useRouter();
   const params = useParams();
-  const { user } = useAuth();
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'comparison' | 'budget' | 'accuracy' | 'scenarios'>('overview');
-  const [actualsData, setActualsData] = useState<any[]>([]);
+  const [actualsData, setActualsData] = useState<ActualDataPoint[]>([]);
   const [loadingActuals, setLoadingActuals] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<number | null>(null);
-  const [budgets, setBudgets] = useState<any[]>([]);
-  const [accuracyMetrics, setAccuracyMetrics] = useState<any>(null);
-  const [scenarios, setScenarios] = useState<any[]>([]);
+  const [budgets, setBudgets] = useState<BudgetSummary[]>([]);
+  const [accuracyMetrics, setAccuracyMetrics] = useState<AccuracyMetrics | null>(null);
 
   const forecastId = params?.id ? parseInt(params.id as string) : null;
 
-  useEffect(() => {
-    if (forecastId) {
-      loadForecast();
-    }
-  }, [forecastId]);
-
-  const loadForecast = async () => {
+  const loadForecast = useCallback(async () => {
     if (!forecastId) return;
     
     try {
       setLoading(true);
       const response = await apiClient.getForecast(forecastId);
-      const forecastData = response.data as any;
+      const forecastData = response.data as Forecast;
       
       // Parse JSON fields if they're strings
       if (typeof forecastData.forecast_data === 'string') {
-        forecastData.forecast_data = JSON.parse(forecastData.forecast_data);
+        forecastData.forecast_data = JSON.parse(forecastData.forecast_data) as ForecastDataPoint[];
       }
       if (typeof forecastData.method_params === 'string') {
-        forecastData.method_params = JSON.parse(forecastData.method_params);
+        forecastData.method_params = JSON.parse(forecastData.method_params) as MethodParams;
       }
       
       setForecast(forecastData);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load forecast');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load forecast';
+      toast.error(message);
       router.push('/forecast/list');
     } finally {
       setLoading(false);
     }
-  };
+  }, [forecastId, router]);
+
+  useEffect(() => {
+    loadForecast();
+  }, [loadForecast]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -399,7 +436,7 @@ const ForecastDetailPage: React.FC = () => {
     }
   };
 
-  const loadActuals = async () => {
+  const loadActuals = useCallback(async () => {
     if (!forecast) return;
     
     try {
@@ -407,7 +444,7 @@ const ForecastDetailPage: React.FC = () => {
       const startDate = new Date(forecast.start_date).toISOString();
       const endDate = new Date(forecast.end_date).toISOString();
       
-      let actuals: any[] = [];
+      const actuals: ActualDataPoint[] = [];
       
       if (forecast.forecast_type === 'revenue' || forecast.forecast_type === 'all') {
         try {
@@ -417,11 +454,14 @@ const ForecastDetailPage: React.FC = () => {
             params: { start_date: startDate, end_date: endDate, limit: 1000 }
           });
           if (revenueResponse.data) {
-            actuals = actuals.concat((Array.isArray(revenueResponse.data) ? revenueResponse.data : []).map((r: any) => ({
-              date: r.date || r.created_at,
-              value: r.amount || 0,
+            const revenueData = Array.isArray(revenueResponse.data) ? revenueResponse.data : [];
+            actuals.push(
+              ...revenueData.map((r: Record<string, unknown>): ActualDataPoint => ({
+                date: (typeof r.date === 'string' ? r.date : typeof r.created_at === 'string' ? r.created_at : new Date().toISOString()),
+                value: typeof r.amount === 'number' ? r.amount : 0,
               type: 'revenue'
-            })));
+              }))
+            );
           }
         } catch (e) {
           console.error('Error loading revenue:', e);
@@ -436,11 +476,14 @@ const ForecastDetailPage: React.FC = () => {
             params: { start_date: startDate, end_date: endDate, limit: 1000 }
           });
           if (expenseResponse.data) {
-            actuals = actuals.concat((Array.isArray(expenseResponse.data) ? expenseResponse.data : []).map((e: any) => ({
-              date: e.date || e.created_at,
-              value: e.amount || 0,
+            const expenseData = Array.isArray(expenseResponse.data) ? expenseResponse.data : [];
+            actuals.push(
+              ...expenseData.map((expense: Record<string, unknown>): ActualDataPoint => ({
+                date: (typeof expense.date === 'string' ? expense.date : typeof expense.created_at === 'string' ? expense.created_at : new Date().toISOString()),
+                value: typeof expense.amount === 'number' ? expense.amount : 0,
               type: 'expense'
-            })));
+              }))
+            );
           }
         } catch (e) {
           console.error('Error loading expenses:', e);
@@ -451,55 +494,52 @@ const ForecastDetailPage: React.FC = () => {
       if (actuals.length === 0) {
         toast.info('No actual data found for the selected period');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load actuals:', error);
       toast.error('Failed to load actual data');
     } finally {
       setLoadingActuals(false);
     }
-  };
+  }, [forecast]);
 
-  const loadBudgets = async () => {
+  const loadBudgets = useCallback(async () => {
     try {
       const response = await apiClient.getBudgets({ limit: 100 });
       if (response.data) {
-        setBudgets(Array.isArray(response.data) ? response.data : []);
+        const parsedBudgets = Array.isArray(response.data)
+          ? response.data
+          : [];
+        setBudgets(parsedBudgets as BudgetSummary[]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load budgets:', error);
     }
-  };
+  }, []);
 
-  const calculateAccuracy = () => {
+  const calculateAccuracy = useCallback((): AccuracyMetrics | null => {
     if (!forecast || !actualsData.length) return null;
     
     const forecastData = forecast.forecast_data || [];
-    const comparisons = forecastData.map((f: any) => {
-      const actual = actualsData.find((a: any) => {
-        const forecastDate = new Date(f.date).toISOString().split('T')[0];
+    const comparisons = forecastData.map((f): AccuracyComparison | null => {
+      if (!f.date) return null;
+      const actual = actualsData.find((a) => {
+        const forecastDate = new Date(f.date as string).toISOString().split('T')[0];
         const actualDate = new Date(a.date).toISOString().split('T')[0];
         return forecastDate === actualDate;
       });
       
       if (!actual) return null;
       
-      const forecastValue = f.forecasted_value || 0;
-      const actualValue = actual.value || 0;
+      const forecastValue = f.forecasted_value ?? 0;
+      const actualValue = actual.value ?? 0;
       const error = Math.abs(forecastValue - actualValue);
       
-      // Calculate percent error properly handling zero forecasts
-      // If forecast is 0 and actual is non-zero, use actual as denominator
-      // If both are 0, error is 0%
-      // Otherwise, use standard MAPE calculation
       let percentError: number;
       if (forecastValue === 0 && actualValue === 0) {
-        percentError = 0; // Perfect match when both are zero
+        percentError = 0;
       } else if (forecastValue === 0 && actualValue !== 0) {
-        // When forecast is 0 but actual is not, error is 100% (or could be considered infinite)
-        // Using actual as denominator gives meaningful percentage
         percentError = (error / Math.abs(actualValue)) * 100;
       } else {
-        // Standard MAPE calculation
         percentError = (error / Math.abs(forecastValue)) * 100;
       }
       
@@ -510,13 +550,13 @@ const ForecastDetailPage: React.FC = () => {
         error,
         percentError
       };
-    }).filter(Boolean);
+    }).filter((comp): comp is AccuracyComparison => Boolean(comp));
     
     if (comparisons.length === 0) return null;
     
-    const avgError = comparisons.reduce((sum: number, c: any) => sum + c.error, 0) / comparisons.length;
-    const avgPercentError = comparisons.reduce((sum: number, c: any) => sum + c.percentError, 0) / comparisons.length;
-    const mape = avgPercentError; // Mean Absolute Percentage Error
+    const avgError = comparisons.reduce((sum, c) => sum + c.error, 0) / comparisons.length;
+    const avgPercentError = comparisons.reduce((sum, c) => sum + c.percentError, 0) / comparisons.length;
+    const mape = avgPercentError;
     const accuracy = Math.max(0, 100 - mape);
     
     return {
@@ -527,13 +567,13 @@ const ForecastDetailPage: React.FC = () => {
       accuracy,
       totalComparisons: comparisons.length
     };
-  };
+  }, [actualsData, forecast]);
 
   const exportToPDF = () => {
     if (!forecast) return;
     
     const doc = new jsPDF();
-    const forecastData = forecast.forecast_data || [];
+    const forecastData = forecast.forecast_data ?? [];
     
     doc.setFontSize(18);
     doc.text(forecast.name, 14, 20);
@@ -555,7 +595,7 @@ const ForecastDetailPage: React.FC = () => {
     yPos += 7;
     
     // Table data
-    forecastData.forEach((item: any) => {
+    forecastData.forEach((item: ForecastDataPoint) => {
       if (yPos > 280) {
         doc.addPage();
         yPos = 20;
@@ -573,9 +613,9 @@ const ForecastDetailPage: React.FC = () => {
   const exportToExcel = () => {
     if (!forecast) return;
     
-    const forecastData = forecast.forecast_data || [];
+    const forecastData = forecast.forecast_data ?? [];
     const worksheet = XLSX.utils.json_to_sheet(
-      forecastData.map((item: any) => ({
+      forecastData.map((item: ForecastDataPoint) => ({
         Period: item.period || '-',
         Date: item.date ? formatDate(item.date) : '-',
         'Forecasted Value': item.forecasted_value || 0
@@ -600,7 +640,14 @@ const ForecastDetailPage: React.FC = () => {
       const metrics = calculateAccuracy();
       setAccuracyMetrics(metrics);
     }
-  }, [forecast, activeTab]);
+  }, [activeTab, calculateAccuracy, forecast, loadActuals, loadBudgets]);
+
+  const forecastDataArray = useMemo<ForecastDataPoint[]>(() => {
+    if (forecast && Array.isArray(forecast.forecast_data)) {
+      return forecast.forecast_data;
+    }
+    return [];
+  }, [forecast]);
 
   if (loading) {
     return (
@@ -634,10 +681,6 @@ const ForecastDetailPage: React.FC = () => {
       </Layout>
     );
   }
-
-  const forecastDataArray = forecast.forecast_data && Array.isArray(forecast.forecast_data) 
-    ? forecast.forecast_data 
-    : [];
 
   return (
     <Layout>
@@ -785,7 +828,7 @@ const ForecastDetailPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {forecastDataArray.map((item: any, index: number) => (
+                    {forecastDataArray.map((item: ForecastDataPoint, index: number) => (
                       <tr key={index}>
                         <td>{item.period || '-'}</td>
                         <td>{item.date ? formatDate(item.date) : '-'}</td>
@@ -806,11 +849,11 @@ const ForecastDetailPage: React.FC = () => {
                 
                 <div style={{ marginTop: theme.spacing.lg, padding: theme.spacing.md, background: PRIMARY_LIGHT, borderRadius: theme.borderRadius.sm }}>
                   <strong>Total Forecast: </strong>
-                  {formatCurrency(forecastDataArray.reduce((sum: number, item: any) => sum + (item.forecasted_value || 0), 0))}
+                  {formatCurrency(forecastDataArray.reduce((sum: number, item: ForecastDataPoint) => sum + (item.forecasted_value || 0), 0))}
                   <br />
                   <strong>Average per Period: </strong>
                   {formatCurrency(forecastDataArray.length > 0 
-                    ? forecastDataArray.reduce((sum: number, item: any) => sum + (item.forecasted_value || 0), 0) / forecastDataArray.length
+                    ? forecastDataArray.reduce((sum: number, item: ForecastDataPoint) => sum + (item.forecasted_value || 0), 0) / forecastDataArray.length
                     : 0
                   )}
                   <br />
@@ -830,7 +873,7 @@ const ForecastDetailPage: React.FC = () => {
                 <>
                   <ChartContainer>
                     <ResponsiveContainer width="100%" height="100%">
-                      <RechartsLineChart data={forecastDataArray.map((item: any) => ({
+                      <RechartsLineChart data={forecastDataArray.map((item: ForecastDataPoint) => ({
                         period: item.period || '-',
                         date: item.date ? new Date(item.date).toLocaleDateString() : '-',
                         value: item.forecasted_value || 0
@@ -846,7 +889,7 @@ const ForecastDetailPage: React.FC = () => {
                   </ChartContainer>
                   <ChartContainer>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={forecastDataArray.map((item: any) => ({
+                      <BarChart data={forecastDataArray.map((item: ForecastDataPoint) => ({
                         period: item.period || '-',
                         date: item.date ? new Date(item.date).toLocaleDateString() : '-',
                         value: item.forecasted_value || 0
@@ -887,25 +930,27 @@ const ForecastDetailPage: React.FC = () => {
               ) : actualsData.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
                   <AlertCircle size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                  <p>No actual data available for comparison. Click "Refresh Actuals" to load data.</p>
+                  <p>No actual data available for comparison. Click &quot;Refresh Actuals&quot; to load data.</p>
                 </div>
               ) : (
                 <>
                   <ChartContainer>
                     <ResponsiveContainer width="100%" height="100%">
-                      <RechartsLineChart data={forecastDataArray.map((item: any) => {
-                        const actual = actualsData.find((a: any) => {
-                          const forecastDate = new Date(item.date).toISOString().split('T')[0];
+                      <RechartsLineChart data={forecastDataArray.map((item: ForecastDataPoint) => {
+                        if (!item.date) return null;
+                        const actual = actualsData.find((a: ActualDataPoint) => {
+                          const forecastDate = new Date(item.date as string).toISOString().split('T')[0];
                           const actualDate = new Date(a.date).toISOString().split('T')[0];
                           return forecastDate === actualDate;
                         });
+                        if (!actual) return null;
                         return {
                           period: item.period || '-',
                           date: item.date ? new Date(item.date).toLocaleDateString() : '-',
                           forecast: item.forecasted_value || 0,
-                          actual: actual?.value || null
+                          actual: actual.value
                         };
-                      }).filter((d: any) => d.actual !== null)}>
+                      }).filter((d): d is { period: string; date: string | '-'; forecast: number; actual: number } => d !== null)}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="period" />
                         <YAxis />
@@ -928,9 +973,10 @@ const ForecastDetailPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {forecastDataArray.map((item: any, index: number) => {
-                        const actual = actualsData.find((a: any) => {
-                          const forecastDate = new Date(item.date).toISOString().split('T')[0];
+                      {forecastDataArray.map((item: ForecastDataPoint, index: number) => {
+                        if (!item.date) return null;
+                        const actual = actualsData.find((a: ActualDataPoint) => {
+                          const forecastDate = new Date(item.date as string).toISOString().split('T')[0];
                           const actualDate = new Date(a.date).toISOString().split('T')[0];
                           return forecastDate === actualDate;
                         });
@@ -953,7 +999,7 @@ const ForecastDetailPage: React.FC = () => {
                             </td>
                           </tr>
                         ) : null;
-                      })}
+                      }).filter(Boolean)}
                     </tbody>
                   </ForecastTable>
                 </>
@@ -971,7 +1017,7 @@ const ForecastDetailPage: React.FC = () => {
                   onChange={(e) => setSelectedBudget(e.target.value ? parseInt(e.target.value) : null)}
                 >
                   <option value="">-- Select a Budget --</option>
-                  {budgets.map((budget: any) => (
+                  {budgets.map((budget: BudgetSummary) => (
                     <option key={budget.id} value={budget.id}>
                       {budget.name} ({formatDate(budget.start_date)} - {formatDate(budget.end_date)})
                     </option>
@@ -1023,7 +1069,7 @@ const ForecastDetailPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {accuracyMetrics.comparisons.map((comp: any, index: number) => (
+                      {accuracyMetrics.comparisons.map((comp: AccuracyComparison, index: number) => (
                         <tr key={index}>
                           <td>{formatDate(comp.date)}</td>
                           <td>{formatCurrency(comp.forecast)}</td>
@@ -1038,7 +1084,7 @@ const ForecastDetailPage: React.FC = () => {
               ) : (
                 <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
                   <AlertCircle size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                  <p>No accuracy data available. Load actual data in the "Actual vs Forecast" tab first.</p>
+                  <p>No accuracy data available. Load actual data in the &quot;Actual vs Forecast&quot; tab first.</p>
                 </div>
               )}
             </ComparisonCard>
@@ -1049,7 +1095,7 @@ const ForecastDetailPage: React.FC = () => {
               <h3 style={{ marginTop: 0, marginBottom: theme.spacing.lg, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>Forecast Scenarios</h3>
               <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
                 <GitBranch size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                <p>Create different forecast scenarios to compare "what-if" situations.</p>
+                <p>Create different forecast scenarios to compare &quot;what-if&quot; situations.</p>
                 <Button
                   onClick={() => router.push(`/forecast/create?scenario=${forecastId}`)}
                   style={{ marginTop: theme.spacing.md }}

@@ -522,7 +522,7 @@ export default function GeneralSettingsPage() {
         setSettings(prev => ({ ...prev, theme: themeToApply }));
       }
     });
-  }, []); // Run once on mount
+  }, [settings.theme]); // Run once on mount
 
   // Apply theme when it changes
   useEffect(() => {

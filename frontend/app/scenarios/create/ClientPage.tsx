@@ -1,10 +1,9 @@
 'use client';
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  Target, ArrowLeft, Save, X, AlertCircle, TrendingUp, TrendingDown
+  Target, ArrowLeft, Save, X, AlertCircle
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -14,6 +13,18 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
+
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
 export const revalidate = 0;
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -321,9 +332,7 @@ interface BudgetItem {
   amount: number;
 }
 
-interface ScenarioCreatePageProps {}
-
-const ScenarioCreatePageInner: React.FC<ScenarioCreatePageProps> = () => {
+const ScenarioCreatePageInner: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const budgetIdParam = searchParams?.get('budget_id');
@@ -338,22 +347,13 @@ const ScenarioCreatePageInner: React.FC<ScenarioCreatePageProps> = () => {
     adjustments: {} as Record<string, { amount_multiplier?: number; amount?: number }>
   });
 
-  useEffect(() => {
-    if (budgetIdParam) {
-      loadBudget();
-    } else {
-      toast.error('Budget ID is required');
-      router.push('/scenarios/list');
-    }
-  }, [budgetIdParam]);
-
-  const loadBudget = async () => {
+  const loadBudget = useCallback(async () => {
     if (!budgetIdParam) return;
-    
+
     try {
       setLoading(true);
       const response = await apiClient.getBudget(parseInt(budgetIdParam));
-      const budgetData = response.data as any;
+      const budgetData = response.data as Budget;
       setBudget(budgetData);
       
       // Initialize adjustments with multiplier 1.0 for all items
@@ -364,13 +364,23 @@ const ScenarioCreatePageInner: React.FC<ScenarioCreatePageProps> = () => {
         });
       }
       setFormData(prev => ({ ...prev, adjustments }));
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budget');
+    } catch (error: unknown) {
+      const err = error as ErrorWithDetails;
+      toast.error(err.message || 'Failed to load budget');
       router.push('/scenarios/list');
     } finally {
       setLoading(false);
     }
-  };
+  }, [budgetIdParam, router]);
+
+  useEffect(() => {
+    if (budgetIdParam) {
+      loadBudget();
+    } else {
+      toast.error('Budget ID is required');
+      router.push('/scenarios/list');
+    }
+  }, [budgetIdParam, loadBudget, router]);
 
   const handleAdjustmentChange = (itemId: number, field: 'amount_multiplier' | 'amount', value: number) => {
     setFormData(prev => ({
@@ -404,8 +414,9 @@ const ScenarioCreatePageInner: React.FC<ScenarioCreatePageProps> = () => {
       await apiClient.createScenario(parseInt(budgetIdParam), formData);
       toast.success('Scenario created successfully!');
       router.push(`/scenarios/list?budget_id=${budgetIdParam}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create scenario');
+    } catch (error: unknown) {
+      const err = error as ErrorWithDetails;
+      toast.error(err.message || 'Failed to create scenario');
     } finally {
       setSaving(false);
     }

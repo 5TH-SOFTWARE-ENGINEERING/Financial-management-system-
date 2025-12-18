@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import styled from 'styled-components';
 import {
@@ -261,12 +261,6 @@ const Spinner = styled.div`
   }
 `;
 
-const CommentsSection = styled.div`
-  margin-top: ${theme.spacing.lg};
-  padding-top: ${theme.spacing.lg};
-  border-top: 1px solid ${theme.colors.border};
-`;
-
 const CommentList = styled.div`
   display: flex;
   flex-direction: column;
@@ -491,18 +485,7 @@ export default function ApprovalDetailPage() {
     return role === 'admin' || role === 'super_admin' || role === 'manager' || role === 'finance_manager';
   };
 
-  useEffect(() => {
-    if (approvalId) {
-      loadApproval();
-      loadComments();
-    }
-    // Load all users for name resolution
-    if (allUsers.length === 0) {
-      fetchAllUsers();
-    }
-  }, [approvalId]);
-
-  const loadApproval = async () => {
+  const loadApproval = useCallback(async () => {
     if (!approvalId) return;
 
     setLoading(true);
@@ -510,27 +493,43 @@ export default function ApprovalDetailPage() {
 
     try {
       const response = await apiClient.getApproval(approvalId);
-      setApproval(response.data);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load approval details';
+      setApproval(response.data as ApprovalDetail);
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (err as { message?: string }).message ||
+        'Failed to load approval details';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [approvalId]);
 
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     if (!approvalId) return;
 
     try {
       const response = await apiClient.getApprovalComments(approvalId);
-      setComments(response.data || []);
-    } catch (err: any) {
+      setComments(Array.isArray(response.data) ? (response.data as Comment[]) : []);
+    } catch {
       // Silently fail - comments are optional
       setComments([]);
     }
-  };
+  }, [approvalId]);
+
+  useEffect(() => {
+    if (approvalId) {
+      loadApproval();
+      loadComments();
+    }
+    if (allUsers.length === 0) {
+      fetchAllUsers();
+    }
+  }, [approvalId, loadApproval, loadComments, allUsers.length, fetchAllUsers]);
 
   const handleApprove = async () => {
     if (!approvalId || !canApprove()) {
@@ -546,8 +545,14 @@ export default function ApprovalDetailPage() {
       toast.success('Approval workflow approved successfully');
       await loadApproval();
       await loadComments();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to approve workflow';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (err as { message?: string }).message ||
+        'Failed to approve workflow';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -588,8 +593,14 @@ export default function ApprovalDetailPage() {
       setRejectPassword('');
       await loadApproval();
       await loadComments();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to reject workflow';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (err as { message?: string }).message ||
+        'Failed to reject workflow';
       setRejectPasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -609,8 +620,14 @@ export default function ApprovalDetailPage() {
       toast.success('Comment added successfully');
       setCommentText('');
       await loadComments();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to add comment';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (err as { message?: string }).message ||
+        'Failed to add comment';
       toast.error(errorMessage);
     } finally {
       setSubmittingComment(false);
@@ -621,20 +638,15 @@ export default function ApprovalDetailPage() {
     if (!allUsers || allUsers.length === 0) {
       return `User #${userId}`;
     }
+
     const userIdStr = userId.toString();
-    const foundUser = allUsers.find((u: any) => 
-      u.id === userId || 
-      u.id?.toString() === userIdStr ||
-      parseInt(u.id) === userId
-    );
+    const foundUser = allUsers.find((u) => u.id === userIdStr);
+
     if (!foundUser) {
       return `User #${userId}`;
     }
-    // StoreUser uses 'name' field, but API might return 'full_name'
-    return (foundUser as any).name || 
-           (foundUser as any).full_name || 
-           (foundUser as any).email || 
-           `User #${userId}`;
+
+    return foundUser.name || foundUser.email || `User #${userId}`;
   };
 
   const formatDate = (dateString?: string) => {

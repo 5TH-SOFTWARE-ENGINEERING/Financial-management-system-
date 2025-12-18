@@ -1,10 +1,8 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  BarChart3, ArrowLeft, TrendingUp, TrendingDown, AlertCircle,
+  BarChart3, ArrowLeft, TrendingDown,
   Filter, RefreshCw, TrendingUp as TrendingUpIcon
 } from 'lucide-react';
 import Layout from '@/components/layout';
@@ -231,17 +229,43 @@ interface VarianceSummary {
 }
 
 const VarianceSummaryPage: React.FC = () => {
-  const router = useRouter();
-  const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [selectedBudgetId, setSelectedBudgetId] = useState<string>('');
   const [summary, setSummary] = useState<VarianceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingSummary, setLoadingSummary] = useState(false);
 
+  const loadBudgets = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.getBudgets();
+      setBudgets(Array.isArray(response.data) ? response.data : []);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load budgets';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadSummary = useCallback(async () => {
+    if (!selectedBudgetId) return;
+    
+    try {
+      setLoadingSummary(true);
+      const response = await apiClient.getVarianceSummary(parseInt(selectedBudgetId));
+      setSummary(Array.isArray(response.data) ? response.data : []);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load variance summary';
+      toast.error(message);
+    } finally {
+      setLoadingSummary(false);
+    }
+  }, [selectedBudgetId]);
+
   useEffect(() => {
     loadBudgets();
-  }, []);
+  }, [loadBudgets]);
 
   useEffect(() => {
     if (selectedBudgetId) {
@@ -249,33 +273,7 @@ const VarianceSummaryPage: React.FC = () => {
     } else {
       setSummary([]);
     }
-  }, [selectedBudgetId]);
-
-  const loadBudgets = async () => {
-    try {
-      setLoading(true);
-      const response = await apiClient.getBudgets();
-      setBudgets(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budgets');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadSummary = async () => {
-    if (!selectedBudgetId) return;
-    
-    try {
-      setLoadingSummary(true);
-      const response = await apiClient.getVarianceSummary(parseInt(selectedBudgetId));
-      setSummary(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load variance summary');
-    } finally {
-      setLoadingSummary(false);
-    }
-  };
+  }, [selectedBudgetId, loadSummary]);
 
   const formatCurrency = (value: number) => {
     return `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

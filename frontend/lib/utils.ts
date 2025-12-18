@@ -124,7 +124,7 @@ export function toTitleCase(str: string) {
 /**
  * Debounce a function call
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -149,11 +149,11 @@ export function sleep(ms: number): Promise<void> {
 /**
  * Check if a value is empty (null, undefined, empty string, empty array, empty object)
  */
-export function isEmpty(value: any): boolean {
+export function isEmpty(value: unknown): boolean {
   if (value == null) return true
   if (typeof value === 'string' && value.trim() === '') return true
   if (Array.isArray(value) && value.length === 0) return true
-  if (typeof value === 'object' && Object.keys(value).length === 0) return true
+  if (typeof value === 'object' && Object.keys(value as Record<string, unknown>).length === 0) return true
   return false
 }
 

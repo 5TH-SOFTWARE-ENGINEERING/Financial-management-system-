@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { theme } from '@/components/common/theme';
 import { useRouter } from 'next/navigation';
-import { Resource, Action, UserType } from '@/lib/rbac/models';
-import { PermissionGate } from '@/lib/rbac/permission-gate';
+import { UserType } from '@/lib/rbac/models';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { Button } from '@/components/ui/button';
 import { 
@@ -16,10 +15,10 @@ import {
   TableHead, 
   TableCell 
 } from '@/components/common/Table';
-import { Search, Filter, Save, Check, User } from 'lucide-react';
 import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import { toast } from 'sonner';
+import { Filter } from 'lucide-react';
 
 // Styled components
 const Container = styled.div`
@@ -77,13 +76,6 @@ const FilterLabel = styled.label`
   }
 `;
 
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-  justify-content: flex-end;
-`;
-
 const RoleChip = styled.div`
   background-color: ${theme.colors.primary}15;
   color: ${theme.colors.primary};
@@ -133,35 +125,42 @@ const UserRolesPage: React.FC = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { allUsers, fetchAllUsers } = useUserStore();
+  const { fetchAllUsers } = useUserStore();
   
   // Load users from API
-  useEffect(() => {
-    loadUsers();
-  }, []);
-  
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       await fetchAllUsers();
       
       const response = await apiClient.getUsers();
-      const userList = (response.data || []).map((user: any) => ({
-        id: user.id.toString(),
-        name: user.full_name || user.username || user.email,
-        email: user.email,
-        userType: mapRoleToUserType(user.role),
-        role: user.role || 'employee'
-      }));
+      const userList = (response.data || []).map((user: unknown) => {
+        const u = user as Record<string, unknown>;
+        const id = u.id !== undefined ? String(u.id) : 'unknown';
+        const name = (u.full_name as string) || (u.username as string) || (u.email as string) || 'Unknown';
+        const email = (u.email as string) || 'N/A';
+        const role = (u.role as string) || 'employee';
+        return {
+          id,
+          name,
+          email,
+          userType: mapRoleToUserType(role),
+          role,
+        };
+      });
       
       setUsers(userList);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error('Failed to load users');
       console.error('Error loading users:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchAllUsers]);
+  
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
   
   // Filter users by search term and user type
   const filteredUsers = users.filter(user => {

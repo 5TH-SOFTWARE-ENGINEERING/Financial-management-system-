@@ -126,7 +126,7 @@ export default function Docs() {
         <HomeButton href="/">← Back to Home</HomeButton>
         <Intro>
           Welcome to the documentation for the Financial Management System.<br/> 
-          Here you'll find guides, API references, and useful resources to help you get started.
+          Here you&apos;ll find guides, API references, and useful resources to help you get started.
         </Intro>
 
         <SectionTitle>Getting Started</SectionTitle>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
 import Navbar from '@/components/common/Navbar';
 import Sidebar from '@/components/common/Sidebar';
@@ -61,7 +61,6 @@ interface ProtectedLayoutProps {
 export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const { isAuthenticated, isLoading, user, refreshUser } = useAuth();
   const router = useRouter();
-  const [isRedirecting, setIsRedirecting] = useState(false);
   
   // Fetch user data on mount if authenticated but user is null
   useEffect(() => {
@@ -74,27 +73,25 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   }, [isAuthenticated, isLoading, user, refreshUser, router]);
   
   useEffect(() => {
-    // If not loading and not authenticated, redirect to login
-    if (!isLoading && !isAuthenticated && !isRedirecting) {
-      setIsRedirecting(true);
+    if (!isLoading && !isAuthenticated) {
       router.push('/auth/login');
     }
-  }, [isLoading, isAuthenticated, router, isRedirecting]);
+  }, [isLoading, isAuthenticated, router]);
+
+  const shouldRedirect = !isLoading && !isAuthenticated;
   
   // While checking authentication status, show a proper loading state
-  if (isLoading || isRedirecting) {
+  if (isLoading) {
     return (
       <LoadingContainer>
         <LoadingSpinner />
-        <LoadingText>
-          {isRedirecting ? 'Redirecting to login...' : 'Loading...'}
-        </LoadingText>
+        <LoadingText>Loading...</LoadingText>
       </LoadingContainer>
     );
   }
   
   // If not authenticated, don't render children yet (will redirect in useEffect)
-  if (!isAuthenticated) {
+  if (shouldRedirect) {
     return (
       <LoadingContainer>
         <LoadingSpinner />

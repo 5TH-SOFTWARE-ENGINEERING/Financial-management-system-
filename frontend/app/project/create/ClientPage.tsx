@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CreateProjectSchema, type CreateProjectInput } from '@/lib/validation';
+import { z } from 'zod';
+import { CreateProjectSchema } from '@/lib/validation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -191,39 +192,45 @@ const CheckboxItem = styled.div`
 export default function CreateProjectPage() {
   const router = useRouter();
   const { allUsers } = useUserStore();
-  const [departments, setDepartments] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+
+  const CreateProjectFormSchema = CreateProjectSchema.extend({
+    startDate: z.string().min(1, 'Start date is required'),
+    endDate: z.string().optional(),
+  });
+
+  type ProjectFormValues = z.infer<typeof CreateProjectFormSchema>;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
-  } = useForm<any>({
-    resolver: zodResolver(CreateProjectSchema),
+  } = useForm<ProjectFormValues>({
+    resolver: zodResolver(CreateProjectFormSchema),
     defaultValues: {
       assignedUsers: [],
     },
   });
 
-  useEffect(() => {
-    loadDepartments();
-  }, []);
-
-  const loadDepartments = async () => {
+  const loadDepartments = useCallback(async () => {
     try {
       const response = await apiClient.getDepartments();
-      setDepartments(response.data || []);
-    } catch (err: any) {
+      setDepartments((response.data as Array<{ id: number; name: string }>) || []);
+    } catch (err: unknown) {
       console.error('Failed to load departments:', err);
     }
-  };
+  }, []);
 
-  const onSubmit = async (data: any) => {
+  useEffect(() => {
+    loadDepartments();
+  }, [loadDepartments]);
+
+  const onSubmit = async (data: ProjectFormValues) => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -254,8 +261,12 @@ export default function CreateProjectPage() {
       setTimeout(() => {
         router.push('/project/list');
       }, 2000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to create project';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (err instanceof Error ? err.message : 'Failed to create project');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -400,7 +411,7 @@ export default function CreateProjectPage() {
                         disabled={loading}
                       />
                       <label htmlFor={`user-${user.id}`}>
-                        {(user as any).full_name || user.email} ({user.role})
+                        {user.name || user.email} ({user.role})
                       </label>
                     </CheckboxItem>
                   ))

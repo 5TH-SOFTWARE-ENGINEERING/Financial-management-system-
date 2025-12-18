@@ -1,7 +1,5 @@
 import { render, screen } from '@testing-library/react'
 import { Layout } from '@/components/layout'
-import Navbar from '@/components/common/Navbar'
-import Sidebar from '@/components/common/Sidebar'
 
 // Mock child components
 jest.mock('@/components/common/Navbar', () => {

@@ -2,9 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  Calculator, ArrowLeft, Calendar, Building2, AlertCircle, CheckCircle
+  Calculator, ArrowLeft
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -312,7 +311,6 @@ interface VarianceResult {
 
 const CalculateVariancePage: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
@@ -332,8 +330,9 @@ const CalculateVariancePage: React.FC = () => {
       setLoading(true);
       const response = await apiClient.getBudgets();
       setBudgets(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budgets');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load budgets';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -361,8 +360,9 @@ const CalculateVariancePage: React.FC = () => {
       );
       setVarianceResult(response.data as VarianceResult);
       toast.success('Variance calculated successfully!');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to calculate variance');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to calculate variance';
+      toast.error(message);
     } finally {
       setCalculating(false);
     }

@@ -1,13 +1,12 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  BarChart3, TrendingUp, TrendingDown, DollarSign, 
-  CreditCard, Activity, Calendar, Download, RefreshCw,
-  AlertCircle, ArrowUpRight, ArrowDownRight, PieChart,
-  LineChart, Target, Package, ShoppingCart
+  BarChart3, TrendingUp, TrendingDown,
+  Activity, Calendar, RefreshCw,
+  AlertCircle, ArrowUpRight, ArrowDownRight,
+  Package, ShoppingCart
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -173,18 +172,6 @@ const KPICard = styled.div<{ $growth?: number }>`
   }
 `;
 
-const KPIGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: ${theme.spacing.xl};
-  margin-bottom: ${theme.spacing.xl};
-  
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: ${theme.spacing.lg};
-  }
-`;
-
 const KPIPairGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -260,76 +247,6 @@ const ChartTitle = styled.h3`
   gap: ${theme.spacing.sm};
   padding-bottom: ${theme.spacing.md};
   border-bottom: 1px solid ${theme.colors.border};
-`;
-
-const SimpleBarChart = styled.div`
-  display: flex;
-  align-items: flex-end;
-  gap: ${theme.spacing.sm};
-  height: 350px;
-  padding: ${theme.spacing.xl} 0;
-  flex: 1;
-`;
-
-const BarGroup = styled.div`
-  flex: 1;
-  display: flex;
-  gap: 4px;
-  align-items: flex-end;
-  justify-content: center;
-  min-width: 0;
-`;
-
-const Bar = styled.div<{ $height: number; $color: string; $max: number }>`
-  flex: 1;
-  background: ${props => props.$color};
-  height: ${props => `${(props.$height / props.$max) * 100}%`};
-  min-height: 4px;
-  border-radius: ${theme.borderRadius.sm} ${theme.borderRadius.sm} 0 0;
-  position: relative;
-  transition: all ${theme.transitions.default};
-  
-  &:hover {
-    opacity: 0.8;
-    transform: scaleY(1.05);
-    z-index: 10;
-  }
-  
-  &::after {
-    content: '${props => `$${props.$height.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}';
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: ${theme.typography.fontSizes.xs};
-    color: ${TEXT_COLOR_DARK};
-    white-space: nowrap;
-    margin-bottom: ${theme.spacing.xs};
-    opacity: 0;
-    transition: opacity ${theme.transitions.default};
-    background: ${theme.colors.background};
-    padding: 2px 4px;
-    border-radius: ${theme.borderRadius.sm};
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 20;
-  }
-  
-  &:hover::after {
-    opacity: 1;
-  }
-`;
-
-const ChartLabels = styled.div`
-  display: flex;
-  gap: ${theme.spacing.xs};
-  margin-top: ${theme.spacing.sm};
-`;
-
-const ChartLabel = styled.div`
-  flex: 1;
-  text-align: center;
-  font-size: ${theme.typography.fontSizes.xs};
-  color: ${TEXT_COLOR_MUTED};
 `;
 
 const ChartLegend = styled.div`
@@ -425,71 +342,6 @@ const ChartTooltip = styled.div`
   
   &.visible {
     opacity: 1;
-  }
-`;
-
-const TrendCard = styled.div<{ $trend: 'increasing' | 'decreasing' | 'stable' }>`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  box-shadow: ${CardShadow};
-  padding: ${theme.spacing.xl};
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  min-height: 400px;
-  justify-content: center;
-  transition: all ${theme.transitions.default};
-  position: relative;
-  overflow: hidden;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: ${props => {
-      if (props.$trend === 'increasing') return '#059669';
-      if (props.$trend === 'decreasing') return '#ef4444';
-      return TEXT_COLOR_MUTED;
-    }};
-  }
-  
-  &:hover {
-    box-shadow: ${CardShadowHover};
-    transform: translateY(-2px);
-  }
-  
-  h4 {
-    font-size: clamp(${theme.typography.fontSizes.lg}, 1.5vw, 22px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    color: ${TEXT_COLOR_DARK};
-    margin: ${theme.spacing.lg} 0 ${theme.spacing.xl};
-  }
-  
-  p {
-    font-size: ${theme.typography.fontSizes.sm};
-    color: ${TEXT_COLOR_MUTED};
-    margin: ${theme.spacing.sm} 0;
-    font-weight: ${theme.typography.fontWeights.medium};
-  }
-  
-  .trend-indicator {
-    font-size: ${theme.typography.fontSizes.lg};
-    margin: ${theme.spacing.xl} 0;
-    transition: transform ${theme.transitions.default};
-    color: ${props => {
-      if (props.$trend === 'increasing') return '#059669';
-      if (props.$trend === 'decreasing') return '#ef4444';
-      return TEXT_COLOR_MUTED;
-    }};
-  }
-  
-  &:hover .trend-indicator {
-    transform: scale(1.1);
   }
 `;
 
@@ -591,28 +443,95 @@ const TwoColumnGrid = styled.div`
   }
 `;
 
-interface AnalyticsData {
-  kpis: any;
-  time_series: any;
-  category_breakdown: any;
-  trends: any;
-  inventory?: {
+type NumericRecord = Record<string, number | undefined>;
+
+type KPIValues = {
+  revenue?: number;
+  expenses?: number;
+  profit?: number;
+  profit_margin?: number;
+  expense_ratio?: number;
+  avg_daily_revenue?: number;
+  avg_daily_expenses?: number;
+  avg_daily_profit?: number;
+  inventory_turnover?: number;
+  sales_per_employee?: number;
+} & NumericRecord;
+
+type KPIGrowth = {
+  revenue_growth_percent?: number;
+  expense_growth_percent?: number;
+  profit_growth_percent?: number;
+  profit_margin_change?: number;
+  expense_ratio_change?: number;
+  avg_ticket_size?: number;
+  conversion_rate?: number;
+  cash_flow_trend?: number;
+} & NumericRecord;
+
+type KPIMetrics = {
+  current_period?: KPIValues;
+  previous_period?: KPIValues;
+  growth?: KPIGrowth;
+};
+
+type TimeSeries = {
+  labels?: string[];
+  revenue?: number[];
+  expenses?: number[];
+};
+
+type CategoryStat = {
+  category?: string;
+  total?: number;
+};
+
+type CategoryBreakdown = {
+  revenue_by_category?: CategoryStat[];
+  expenses_by_category?: CategoryStat[];
+};
+
+type TrendPrediction = {
+  next_value?: number;
+};
+
+type TrendInfo = {
+  direction?: 'increasing' | 'decreasing' | 'stable' | string;
+  strength?: number;
+};
+
+type Trends = {
+  profit?: {
+    trend?: TrendInfo;
+    prediction?: TrendPrediction;
+  };
+};
+
+type InventorySummary = {
     total_items?: number;
     total_cost_value?: number;
     total_selling_value?: number;
     potential_profit?: number;
     total_quantity_in_stock?: number;
   } | null;
-  sales?: {
+
+type SalesSummary = {
     total_sales?: number;
     total_revenue?: number;
     pending_sales?: number;
     posted_sales?: number;
   } | null;
+
+interface AnalyticsData {
+  kpis?: KPIMetrics | null;
+  time_series?: TimeSeries | null;
+  category_breakdown?: CategoryBreakdown | null;
+  trends?: Trends | null;
+  inventory?: InventorySummary;
+  sales?: SalesSummary;
 }
 
 const AnalyticsPage: React.FC = () => {
-  const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -626,6 +545,63 @@ const AnalyticsPage: React.FC = () => {
     y: 0,
     text: ''
   });
+  const profitValue = analyticsData?.kpis?.current_period?.profit ?? 0;
+
+  const loadAnalytics = useCallback(async () => {
+    if (!user) return;
+
+    // Don't proceed if period is 'custom' but dates are not provided
+    if (period === 'custom' && (!startDate || !endDate)) {
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params: { period: typeof period; start_date?: string; end_date?: string } = { period };
+      if (period === 'custom' && startDate && endDate) {
+        params.start_date = startDate;
+        params.end_date = endDate;
+      }
+
+      const response = await apiClient.getAnalyticsOverview(params);
+      if (response && response.data) {
+        setAnalyticsData(response.data as AnalyticsData);
+        setError(null);
+      } else {
+        throw new Error('Invalid response from analytics API');
+      }
+    } catch (err: unknown) {
+      let errorMessage = 'Failed to load analytics data';
+      
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const typedErr = err as { response?: { status?: number; data?: { detail?: string; message?: string } } };
+        const status = typedErr.response?.status;
+        const detail = typedErr.response?.data?.detail || typedErr.response?.data?.message;
+        
+        if (status === 403) {
+          errorMessage = detail || 'You do not have permission to view analytics';
+        } else if (status === 400) {
+          errorMessage = detail || 'Invalid date range or parameters';
+        } else if (status === 500) {
+          errorMessage = detail || 'Server error. Please try again later.';
+        } else if (status) {
+          errorMessage = detail || `Error: ${status}`;
+        }
+      } else if ((err as { message?: string }).message) {
+        errorMessage = (err as { message?: string }).message as string;
+      }
+      
+      setError(errorMessage);
+      // Clear data on error
+      setAnalyticsData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, period, startDate, endDate]);
 
   useEffect(() => {
     if (!user) {
@@ -641,62 +617,7 @@ const AnalyticsPage: React.FC = () => {
     }
 
     loadAnalytics();
-  }, [user, period, startDate, endDate]);
-
-  const loadAnalytics = async () => {
-    if (!user) return;
-
-    // Don't proceed if period is 'custom' but dates are not provided
-    if (period === 'custom' && (!startDate || !endDate)) {
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const params: any = { period };
-      if (period === 'custom' && startDate && endDate) {
-        params.start_date = startDate;
-        params.end_date = endDate;
-      }
-
-      const response = await apiClient.getAnalyticsOverview(params);
-      if (response && response.data) {
-        setAnalyticsData(response.data);
-        setError(null);
-      } else {
-        throw new Error('Invalid response from analytics API');
-      }
-    } catch (err: any) {
-      let errorMessage = 'Failed to load analytics data';
-      
-      if (err.response) {
-        const status = err.response.status;
-        const detail = err.response.data?.detail || err.response.data?.message;
-        
-        if (status === 403) {
-          errorMessage = detail || 'You do not have permission to view analytics';
-        } else if (status === 400) {
-          errorMessage = detail || 'Invalid date range or parameters';
-        } else if (status === 500) {
-          errorMessage = detail || 'Server error. Please try again later.';
-        } else {
-          errorMessage = detail || `Error: ${status}`;
-        }
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
-      // Clear data on error
-      setAnalyticsData(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [user, period, startDate, endDate, loadAnalytics]);
 
   const formatCurrency = (value: number) => {
     return `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1050,8 +971,8 @@ const AnalyticsPage: React.FC = () => {
               <KPIPairGrid>
                 <KPICard>
                   <KPILabel>Net Profit</KPILabel>
-                  <KPIValue style={{ color: analyticsData.kpis?.current_period?.profit >= 0 ? '#059669' : '#ef4444' }}>
-                    {formatCurrency(analyticsData.kpis?.current_period?.profit || 0)}
+                  <KPIValue style={{ color: profitValue >= 0 ? '#059669' : '#ef4444' }}>
+                    {formatCurrency(profitValue)}
                   </KPIValue>
                   {analyticsData.kpis?.growth?.profit_growth_percent !== undefined && (
                     <GrowthIndicator $positive={analyticsData.kpis.growth.profit_growth_percent >= 0}>
@@ -1069,7 +990,7 @@ const AnalyticsPage: React.FC = () => {
                   <KPILabel>Profit Margin</KPILabel>
                   <KPIValue>
                     {analyticsData.kpis?.current_period?.profit_margin !== undefined 
-                      ? `${Number(analyticsData.kpis.current_period.profit_margin).toFixed(2)}%`
+                      ? `${Number(analyticsData.kpis?.current_period?.profit_margin ?? 0).toFixed(2)}%`
                       : '0%'}
                   </KPIValue>
                   <KPILabel style={{ marginTop: '8px' }}>
@@ -1266,7 +1187,7 @@ const AnalyticsPage: React.FC = () => {
                 <ChartCard>
                   <ChartTitle>Revenue by Category</ChartTitle>
                   <CategoryList>
-                    {analyticsData.category_breakdown?.revenue_by_category?.map((item: any, index: number) => (
+                    {analyticsData.category_breakdown?.revenue_by_category?.map((item: CategoryStat, index: number) => (
                       <CategoryItem key={index}>
                         <span className="category-name">{item.category || 'Unknown'}</span>
                         <span className="category-amount">
@@ -1280,7 +1201,7 @@ const AnalyticsPage: React.FC = () => {
                 <ChartCard>
                   <ChartTitle>Expenses by Category</ChartTitle>
                   <CategoryList>
-                    {analyticsData.category_breakdown?.expenses_by_category?.map((item: any, index: number) => (
+                    {analyticsData.category_breakdown?.expenses_by_category?.map((item: CategoryStat, index: number) => (
                       <CategoryItem key={index}>
                         <span className="category-name">{item.category || 'Unknown'}</span>
                         <span className="category-amount">

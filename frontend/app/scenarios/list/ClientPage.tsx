@@ -1,11 +1,9 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  Target, Plus, ArrowLeft, Filter, Search, Building2,
-  TrendingUp, AlertCircle, CheckCircle, BarChart3
+  Target, Plus, ArrowLeft, Filter, Search, Building2
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -13,6 +11,18 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const PRIMARY_LIGHT = '#e8f5e9';
@@ -314,7 +324,7 @@ interface Scenario {
   name: string;
   description?: string;
   scenario_type: string;
-  adjustments?: any;
+  adjustments?: Record<string, { amount_multiplier?: number; amount?: number }>;
   total_revenue: number;
   total_expenses: number;
   total_profit: number;
@@ -323,7 +333,6 @@ interface Scenario {
 
 const ScenarioListPage: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [selectedBudgetId, setSelectedBudgetId] = useState<string>('');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -336,39 +345,41 @@ const ScenarioListPage: React.FC = () => {
     loadBudgets();
   }, []);
 
+  const loadBudgets = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.getBudgets();
+      setBudgets(Array.isArray(response.data) ? response.data : []);
+    } catch (error: unknown) {
+      const err = error as ErrorWithDetails;
+      toast.error(err.message || 'Failed to load budgets');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadScenarios = useCallback(async () => {
+    if (!selectedBudgetId) return;
+
+    try {
+      setLoadingScenarios(true);
+      const response = await apiClient.getScenarios(parseInt(selectedBudgetId));
+      setScenarios(Array.isArray(response.data) ? response.data : []);
+    } catch (error: unknown) {
+      const err = error as ErrorWithDetails;
+      toast.error(err.message || 'Failed to load scenarios');
+    } finally {
+      setLoadingScenarios(false);
+    }
+  }, [selectedBudgetId]);
+
   useEffect(() => {
     if (selectedBudgetId) {
       loadScenarios();
     } else {
       setScenarios([]);
     }
-  }, [selectedBudgetId]);
-
-  const loadBudgets = async () => {
-    try {
-      setLoading(true);
-      const response = await apiClient.getBudgets();
-      setBudgets(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budgets');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadScenarios = async () => {
-    if (!selectedBudgetId) return;
-    
-    try {
-      setLoadingScenarios(true);
-      const response = await apiClient.getScenarios(parseInt(selectedBudgetId));
-      setScenarios(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load scenarios');
-    } finally {
-      setLoadingScenarios(false);
-    }
-  };
+  }, [selectedBudgetId, loadScenarios]);
 
   const filteredScenarios = scenarios.filter(scenario => {
     if (searchQuery) {

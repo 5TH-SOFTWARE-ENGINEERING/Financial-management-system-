@@ -27,8 +27,8 @@ describe('Utility Functions', () => {
     })
 
     it('handles undefined/null by defaulting to 0', () => {
-      expect(formatCurrency(null as any)).toMatch(/0/)
-      expect(formatCurrency(undefined as any)).toMatch(/0/)
+      expect(formatCurrency(null as unknown as number)).toMatch(/0/)
+      expect(formatCurrency(undefined as unknown as number)).toMatch(/0/)
     })
   })
 

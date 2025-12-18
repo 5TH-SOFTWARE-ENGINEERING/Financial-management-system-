@@ -34,7 +34,7 @@ export default function PermissionsPage() {
   if (!user || managedUserTypes.length === 0) {
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
-        <p>You don't have permission to manage user permissions.</p>
+        <p>You don&apos;t have permission to manage user permissions.</p>
       </div>
     );
   }

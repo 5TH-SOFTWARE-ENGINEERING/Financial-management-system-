@@ -65,7 +65,7 @@ test.describe('Users Management', () => {
     // Wait for page to load or redirect with longer timeout
     try {
       await page.waitForLoadState('networkidle', { timeout: 10000 })
-    } catch (e) {
+    } catch {
       // If timeout, page might be loading or redirecting
     }
     

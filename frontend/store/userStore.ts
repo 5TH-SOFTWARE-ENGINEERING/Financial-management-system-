@@ -2,7 +2,6 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { UserRole } from '@/lib/validation'; // Assume only UserRole is needed; remove User if conflicting
 import apiClient, { type ApiUser } from '@/lib/api';
 
 // Define store user type (frontend-optimized, string IDs)
@@ -64,14 +63,60 @@ const normalizeOutboundRole = (role?: StoreUser['role']): string | undefined => 
   }
 };
 
-const mapToApiUser = (userLike: Partial<StoreUser>): Partial<ApiUser> => ({
-  full_name: userLike.name,
-  email: userLike.email,
-  role: normalizeOutboundRole(userLike.role),
-  department: userLike.department,
-  is_active: userLike.isActive,
-  manager_id: userLike.managerId ? parseInt(userLike.managerId, 10) : undefined,
-});
+const mapToApiUser = (userLike: Partial<StoreUser> | UserInput): Partial<ApiUser> => {
+  const managerIdValue = (userLike as { managerId?: string | number }).managerId;
+  return {
+    full_name: userLike.name,
+    email: userLike.email,
+    role: normalizeOutboundRole(userLike.role as StoreUser['role'] | undefined),
+    department: userLike.department,
+    is_active: userLike.isActive,
+    manager_id:
+      managerIdValue !== undefined
+        ? typeof managerIdValue === 'string'
+          ? parseInt(managerIdValue, 10)
+          : managerIdValue
+        : undefined,
+  };
+};
+
+type ErrorDetail = {
+  response?: {
+    data?: {
+      detail?: string;
+      error?: string;
+    };
+  };
+};
+
+const extractErrorMessage = (error: unknown): string => {
+  if (typeof error === 'object' && error !== null) {
+    const err = error as ErrorDetail;
+    const detail = err.response?.data?.detail ?? err.response?.data?.error;
+    if (detail) return detail;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Unknown error';
+};
+
+export type UserInput = Omit<Partial<StoreUser>, 'id' | 'managerId'> &
+  {
+    id?: string | number;
+    managerId?: string | number;
+  } & Record<string, unknown>;
+
+const toApiPayload = (userData: UserInput): Partial<ApiUser> => {
+  const apiBasics = mapToApiUser(userData);
+  return {
+    ...apiBasics,
+    ...(userData.id !== undefined ? { id: typeof userData.id === 'string' ? parseInt(userData.id, 10) : userData.id } : {}),
+    ...(userData.managerId !== undefined
+      ? { manager_id: typeof userData.managerId === 'string' ? parseInt(userData.managerId, 10) : userData.managerId }
+      : {}),
+  };
+};
 
 interface UserState {
   // User data
@@ -87,12 +132,12 @@ interface UserState {
   // Actions
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (userData: any) => Promise<void>;
+  register: (userData: UserInput) => Promise<void>;
   getCurrentUser: () => Promise<void>;
   fetchSubordinates: () => Promise<void>;
   fetchAllUsers: () => Promise<void>;
-  createUser: (userData: any) => Promise<void>;
-  updateUser: (userId: string, userData: any) => Promise<void>;
+  createUser: (userData: UserInput) => Promise<void>;
+  updateUser: (userId: string, userData: UserInput) => Promise<void>;
   deleteUser: (userId: string, password: string) => Promise<void>;
   clearError: () => void;
   
@@ -130,13 +175,13 @@ export const useUserStore = create<UserState>()(
             isAuthenticated: true,
             error: null,
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Clear any stored tokens on login failure
           if (typeof window !== 'undefined') {
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
           }
-          const detail = error.response?.data?.detail || error.response?.data?.error || error.message;
+          const detail = extractErrorMessage(error);
           set({ 
             user: null,
             error: detail || 'Login failed', 
@@ -166,12 +211,13 @@ export const useUserStore = create<UserState>()(
         }
       },
 
-      register: async (userData: any) => {
+      register: async (userData: UserInput) => {
         set({ isLoading: true, error: null });
         try {
-          await apiClient.register(userData);
-        } catch (error: any) {
-          const detail = error.response?.data?.detail || error.response?.data?.error || error.message;
+          const payload = toApiPayload(userData);
+          await apiClient.register(payload);
+        } catch (error: unknown) {
+          const detail = extractErrorMessage(error);
           set({ error: detail || 'Registration failed' });
           throw error;
         } finally {
@@ -189,11 +235,11 @@ export const useUserStore = create<UserState>()(
             isAuthenticated: true,
             error: null,
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
             user: null,
             isAuthenticated: false,
-            error: error.response?.data?.detail || error.response?.data?.error || 'Failed to get user data'
+            error: extractErrorMessage(error) || 'Failed to get user data'
           });
         } finally {
           set({ isLoading: false });
@@ -210,8 +256,8 @@ export const useUserStore = create<UserState>()(
           const response = await apiClient.getSubordinates(parseInt(user.id, 10));
           const mappedSubs = response.data.map(mapToStoreUser);
           set({ subordinates: mappedSubs });
-        } catch (error: any) {
-          set({ error: error.response?.data?.detail || error.response?.data?.error || 'Failed to fetch subordinates' });
+        } catch (error: unknown) {
+          set({ error: extractErrorMessage(error) || 'Failed to fetch subordinates' });
         } finally {
           set({ isLoading: false });
         }
@@ -223,34 +269,35 @@ export const useUserStore = create<UserState>()(
           const response = await apiClient.getUsers();
           const mappedUsers = response.data.map(mapToStoreUser);
           set({ allUsers: mappedUsers });
-        } catch (error: any) {
-          set({ error: error.response?.data?.detail || error.response?.data?.error || 'Failed to fetch users' });
+        } catch (error: unknown) {
+          set({ error: extractErrorMessage(error) || 'Failed to fetch users' });
         } finally {
           set({ isLoading: false });
         }
       },
 
-      createUser: async (userData: any) => {
+      createUser: async (userData: UserInput) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await apiClient.createUser(userData);
+          const payload = toApiPayload(userData);
+          const response = await apiClient.createUser(payload);
           const mappedUser = mapToStoreUser(response.data);
           set(state => ({
             allUsers: [...state.allUsers, mappedUser]
           }));
-        } catch (error: any) {
-          set({ error: error.response?.data?.detail || error.response?.data?.error || 'Failed to create user' });
+        } catch (error: unknown) {
+          set({ error: extractErrorMessage(error) || 'Failed to create user' });
           throw error;
         } finally {
           set({ isLoading: false });
         }
       },
 
-      updateUser: async (userId: string, userData: any) => {
+      updateUser: async (userId: string, userData: UserInput) => {
         set({ isLoading: true, error: null });
         try {
           // Map userData to API format if needed
-          const apiUserData = { ...userData, ...mapToApiUser(userData) };
+          const apiUserData = toApiPayload(userData);
           const response = await apiClient.updateUser(parseInt(userId, 10), apiUserData);
           const mappedUser = mapToStoreUser(response.data);
           set(state => ({
@@ -258,8 +305,8 @@ export const useUserStore = create<UserState>()(
             subordinates: state.subordinates.map(u => u.id === userId ? mappedUser : u),
             user: state.user?.id === userId ? mappedUser : state.user
           }));
-        } catch (error: any) {
-          set({ error: error.response?.data?.detail || error.response?.data?.error || 'Failed to update user' });
+        } catch (error: unknown) {
+          set({ error: extractErrorMessage(error) || 'Failed to update user' });
           throw error;
         } finally {
           set({ isLoading: false });
@@ -274,8 +321,8 @@ export const useUserStore = create<UserState>()(
             allUsers: state.allUsers.filter(u => u.id !== userId),
             subordinates: state.subordinates.filter(u => u.id !== userId)
           }));
-        } catch (error: any) {
-          set({ error: error.response?.data?.detail || error.response?.data?.error || 'Failed to delete user' });
+        } catch (error: unknown) {
+          set({ error: extractErrorMessage(error) || 'Failed to delete user' });
           throw error;
         } finally {
           set({ isLoading: false });

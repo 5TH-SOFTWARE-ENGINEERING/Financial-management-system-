@@ -1,16 +1,17 @@
 //components/common/Navbar.tsx
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styled, { keyframes, css } from 'styled-components';
 import {
-  Search, Plus, Bell, FileSpreadsheet, Globe, User, Users, LogOut, Settings, HelpCircle, Menu,
-  X, Clock, TrendingUp, Activity, Zap, Command, ChevronRight, Star, History, Sparkles
+  Search, Plus, Bell, FileSpreadsheet, Globe, User, Users, LogOut, Settings, HelpCircle,
+  Clock
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
-import { useUserStore } from '@/store/userStore';
+import { useUserStore, type StoreUser } from '@/store/userStore';
+import { type User as RbacUser } from '@/lib/rbac/models';
 import { theme } from './theme';
 import apiClient from '@/lib/api';
 import { usePathname } from 'next/navigation';
@@ -36,11 +37,6 @@ const slideDown = keyframes`
     opacity: 1;
     transform: translateY(0);
   }
-`;
-
-const shimmer = keyframes`
-  0% { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
 `;
 
 const getIconColor = (iconType: string, active: boolean = false): string => {
@@ -859,7 +855,7 @@ export default function Navbar() {
     if (stored) {
       try {
         setRecentSearches(JSON.parse(stored).slice(0, 5));
-      } catch (e) {
+      } catch {
         setRecentSearches([]);
       }
     }
@@ -944,8 +940,8 @@ export default function Navbar() {
         if (newCount > oldCount) {
           try {
             const notifResponse = await apiClient.getNotifications(true);
-            const latestNotifs = notifResponse.data || [];
-            const newNotifs = latestNotifs.filter((n: Notification) => !lastNotificationIdsRef.current.has(n.id));
+            const latestNotifs = (notifResponse.data || []) as Notification[];
+            const newNotifs = latestNotifs.filter((n) => !lastNotificationIdsRef.current.has(n.id));
             
             newNotifs.forEach((notification: Notification) => {
               lastNotificationIdsRef.current.add(notification.id);
@@ -965,9 +961,9 @@ export default function Navbar() {
               });
             });
             if (latestNotifs.length > 0) {
-              lastNotificationIdsRef.current = new Set(latestNotifs.map((n: Notification) => n.id));
+              lastNotificationIdsRef.current = new Set(latestNotifs.map((n) => n.id));
             }
-          } catch (notifErr) {
+          } catch {
             if (newCount > oldCount) {
               const toastId = toast.info('You have new notifications', {
                 description: `${newCount - oldCount} new notification${newCount - oldCount > 1 ? 's' : ''}`,
@@ -986,11 +982,12 @@ export default function Navbar() {
         previousUnreadCountRef.current = newCount;
         setUnreadCount(newCount);
         retryCount = 0; 
-      } catch (err: any) {
-        const isNetworkError = err.code === 'ERR_NETWORK' || 
-                               err.message === 'Network Error' ||
-                               err.message?.includes('ERR_CONNECTION_REFUSED') ||
-                               !err.response;
+      } catch (err: unknown) {
+        const errorDetails = err as { code?: string; message?: string; response?: unknown };
+        const isNetworkError = errorDetails.code === 'ERR_NETWORK' || 
+                               errorDetails.message === 'Network Error' ||
+                               errorDetails.message?.includes('ERR_CONNECTION_REFUSED') ||
+                               !errorDetails.response;
         
         if (!isNetworkError) {
           console.error('Failed to load unread count:', err);
@@ -1010,14 +1007,14 @@ export default function Navbar() {
       const initializeNotifications = async () => {
         try {
           const notifResponse = await apiClient.getNotifications(true);
-          const initialNotifs = notifResponse.data || [];
+          const initialNotifs = (notifResponse.data || []) as Notification[];
           if (initialNotifs.length > 0) {
-            lastNotificationIdsRef.current = new Set(initialNotifs.map((n: Notification) => n.id));
+            lastNotificationIdsRef.current = new Set(initialNotifs.map((n) => n.id));
             previousUnreadCountRef.current = initialNotifs.length;
           } else {
             previousUnreadCountRef.current = 0;
           }
-        } catch (err) {
+        } catch {
           previousUnreadCountRef.current = 0;
           lastNotificationIdsRef.current = new Set();
         }
@@ -1068,10 +1065,16 @@ export default function Navbar() {
     }
   }, [router, pathname]);
 
-  const debouncedSearchRef = useRef<ReturnType<typeof debounce> | null>(null);
+  const debouncedSearchRef = useRef<((value: unknown) => void) | null>(null);
   
   useEffect(() => {
-    debouncedSearchRef.current = debounce(navigateToSearch, 500);
+    debouncedSearchRef.current = debounce((value: unknown) => {
+      if (typeof value === 'string') {
+        navigateToSearch(value);
+      } else {
+        navigateToSearch(String(value));
+      }
+    }, 500);
     
     return () => {
       if (debouncedSearchRef.current) {
@@ -1086,11 +1089,11 @@ export default function Navbar() {
         setLoadingNotifications(true);
         try {
           const response = await apiClient.getNotifications(false); 
-          const notifs = response.data || [];
+          const notifs = (response.data || []) as Notification[];
           setNotifications(notifs);
-          const unreadCountFromList = notifs.filter((n: Notification) => !n.is_read).length;
+          const unreadCountFromList = notifs.filter((n) => !n.is_read).length;
           setUnreadCount(unreadCountFromList);
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error('Failed to load notifications:', err);
           setNotifications([]);
         } finally {
@@ -1209,7 +1212,7 @@ export default function Navbar() {
     try {
       try {
         await apiClient.logout();
-      } catch (apiErr: any) {
+      } catch {
       }
       try {
         const store = useUserStore.getState();
@@ -1299,7 +1302,7 @@ export default function Navbar() {
         router.push('/search');
       }
     }
-  }, [router, pathname, navigateToSearch]);
+  }, [router, pathname]);
 
   const handleSuggestionClick = (suggestion: string) => {
     setSearch(suggestion);
@@ -1309,10 +1312,17 @@ export default function Navbar() {
 
   const showSuggestions = searchFocused && (searchSuggestions.length > 0 || recentSearches.length > 0);
 
-  const currentUser = storeUser || user;
-  const userName = (currentUser as any)?.name || (currentUser as any)?.username || (currentUser as any)?.email || 'User';
+  const currentUser: StoreUser | RbacUser | null = storeUser || user;
+  const getUserName = (person: StoreUser | RbacUser | null): string => {
+    if (!person) return 'User';
+    if ('full_name' in person && person.full_name) return person.full_name;
+    if ('name' in person && person.name) return person.name;
+    if ('username' in person && person.username) return person.username;
+    return person.email ?? 'User';
+  };
+  const userName = getUserName(currentUser);
   const initials = userName
-    ? userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2)
+    ? userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
     : '?';
   const getRoleDisplayName = (role?: string) => {
     const roleMap: Record<string, string> = {

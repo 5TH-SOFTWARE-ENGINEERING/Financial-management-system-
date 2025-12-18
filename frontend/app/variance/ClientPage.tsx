@@ -2,7 +2,6 @@
 'use client';
 import React from 'react';
 import styled from 'styled-components';
-import { useRouter } from 'next/navigation';
 import {
   BarChart3, Calculator, History, ArrowRight
 } from 'lucide-react';

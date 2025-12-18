@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import Sidebar from '@/components/common/Sidebar'
 
 // Mock dependencies
@@ -34,9 +34,11 @@ jest.mock('@/lib/rbac', () => ({
 }))
 
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockNextLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>
   }
+  MockNextLink.displayName = 'MockNextLink'
+  return MockNextLink
 })
 
 describe('Sidebar', () => {

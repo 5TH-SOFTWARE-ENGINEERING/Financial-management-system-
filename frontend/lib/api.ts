@@ -1,17 +1,30 @@
 // lib/api.ts
 'use client';
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
 const DEFAULT_BASE_URL = 'http://localhost:8000/api/v1';
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || DEFAULT_BASE_URL).replace(/\/$/, '');
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   success?: boolean;
   data: T;
   message?: string;
   error?: string;
 }
+
+type Filters = Record<string, string | number | boolean | undefined>;
+type RevenueRecord = {
+  id?: number | string;
+  amount?: number;
+  date?: string;
+  created_at?: string;
+  [key: string]: unknown;
+};
+type ExpenseRecord = RevenueRecord;
+type TransactionRecord = (RevenueRecord | ExpenseRecord) & {
+  transaction_type: 'revenue' | 'expense';
+};
 
 interface AuthTokens {
   access_token: string;
@@ -155,7 +168,7 @@ class ApiClient {
     );
   }
 
-  private normalizeResponse<T>(payload: any): ApiResponse<T> {
+  private normalizeResponse<T>(payload: unknown): ApiResponse<T> {
     if (payload && typeof payload === 'object' && 'data' in payload) {
       return payload as ApiResponse<T>;
     }
@@ -167,17 +180,17 @@ class ApiClient {
     return this.normalizeResponse<T>(response.data);
   }
 
-  private async post<T, B = any>(url: string, data?: B, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  private async post<T, B = unknown>(url: string, data?: B, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.post<T>(url, data, config);
     return this.normalizeResponse<T>(response.data);
   }
 
-  private async put<T, B = any>(url: string, data?: B, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  private async put<T, B = unknown>(url: string, data?: B, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.put<T>(url, data, config);
     return this.normalizeResponse<T>(response.data);
   }
 
-  private async delete<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  private async delete<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.delete<T>(url, { ...config, data });
     return this.normalizeResponse<T>(response.data);
   }
@@ -207,7 +220,7 @@ class ApiClient {
     return normalized;
   }
 
-  async register(userData: any): Promise<ApiResponse<User>> {
+  async register(userData: Partial<User>): Promise<ApiResponse<User>> {
     return this.post<User>('/auth/register', userData);
   }
 
@@ -272,7 +285,7 @@ class ApiClient {
     return this.get(`/users/${userId}/subordinates`);
   }
 
-  async createUser(userData: any): Promise<ApiResponse<User>> {
+  async createUser(userData: Partial<User>): Promise<ApiResponse<User>> {
     return this.post('/users', userData);
   }
 
@@ -280,11 +293,11 @@ class ApiClient {
    * Create a subordinate (accountant or employee)
    * Used by finance managers to create accountants/employees
    */
-  async createSubordinate(userData: any): Promise<ApiResponse<User>> {
+  async createSubordinate(userData: Partial<User>): Promise<ApiResponse<User>> {
     return this.post('/users/subordinates', userData);
   }
 
-  async updateUser(userId: number, userData: any): Promise<ApiResponse<User>> {
+  async updateUser(userId: number, userData: Partial<User>): Promise<ApiResponse<User>> {
     return this.put(`/users/${userId}`, userData);
   }
 
@@ -301,16 +314,16 @@ class ApiClient {
   }
 
   // Permission endpoints
-  async getUserPermissions(userId: number): Promise<ApiResponse<{ permissions: any[] }>> {
+  async getUserPermissions(userId: number): Promise<ApiResponse<{ permissions: string[] }>> {
     return this.get(`/users/${userId}/permissions`);
   }
 
-  async updateUserPermissions(userId: number, permissions: any[]): Promise<ApiResponse<{ message: string; permissions: any[] }>> {
+  async updateUserPermissions(userId: number, permissions: string[]): Promise<ApiResponse<{ message: string; permissions: string[] }>> {
     return this.put(`/users/${userId}/permissions`, { permissions });
   }
 
   // Financial endpoints
-  async getRevenues(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
+  async getRevenues(filters?: Filters): Promise<ApiResponse<RevenueRecord[]>> {
     // For reports, we need all data, so increase limit significantly
     const params = { ...filters, limit: 10000, skip: 0 };
     const response = await this.get('/revenue', { params });
@@ -318,15 +331,15 @@ class ApiClient {
     return { ...response, data };
   }
 
-  async getRevenue(revenueId: number): Promise<ApiResponse<any>> {
+  async getRevenue(revenueId: number): Promise<ApiResponse<RevenueRecord>> {
     return this.get(`/revenue/${revenueId}`);
   }
 
-  async createRevenue(revenueData: any): Promise<ApiResponse<any>> {
+  async createRevenue(revenueData: RevenueRecord): Promise<ApiResponse<RevenueRecord>> {
     return this.post('/revenue', revenueData);
   }
 
-  async updateRevenue(revenueId: number, revenueData: any): Promise<ApiResponse<any>> {
+  async updateRevenue(revenueId: number, revenueData: RevenueRecord): Promise<ApiResponse<RevenueRecord>> {
     return this.put(`/revenue/${revenueId}`, revenueData);
   }
 
@@ -334,7 +347,7 @@ class ApiClient {
     return this.post(`/revenue/${revenueId}/delete`, { password });
   }
 
-  async getExpenses(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
+  async getExpenses(filters?: Filters): Promise<ApiResponse<ExpenseRecord[]>> {
     // For reports, we need all data, so increase limit significantly
     const params = { ...filters, limit: 10000, skip: 0 };
     const response = await this.get('/expenses', { params });
@@ -342,15 +355,15 @@ class ApiClient {
     return { ...response, data };
   }
 
-  async getExpense(expenseId: number): Promise<ApiResponse<any>> {
+  async getExpense(expenseId: number): Promise<ApiResponse<ExpenseRecord>> {
     return this.get(`/expenses/${expenseId}`);
   }
 
-  async createExpense(expenseData: any): Promise<ApiResponse<any>> {
+  async createExpense(expenseData: ExpenseRecord): Promise<ApiResponse<ExpenseRecord>> {
     return this.post('/expenses', expenseData);
   }
 
-  async updateExpense(expenseId: number, expenseData: any): Promise<ApiResponse<any>> {
+  async updateExpense(expenseId: number, expenseData: ExpenseRecord): Promise<ApiResponse<ExpenseRecord>> {
     return this.put(`/expenses/${expenseId}`, expenseData);
   }
 
@@ -359,24 +372,24 @@ class ApiClient {
   }
 
   // Transactions (combined revenues and expenses)
-  async getTransactions(): Promise<ApiResponse<any[]>> {
+  async getTransactions(): Promise<ApiResponse<TransactionRecord[]>> {
     try {
       const [revenuesResponse, expensesResponse] = await Promise.all([
         this.getRevenues(),
         this.getExpenses(),
       ]);
 
-      const revenues = (revenuesResponse.data || []).map((r: any) => ({
+      const revenues = (revenuesResponse.data || []).map((r: RevenueRecord): TransactionRecord => ({
         ...r,
         transaction_type: 'revenue',
         id: `revenue-${r.id}`,
       }));
 
-      const expenses = (expensesResponse.data || []).map((e: any) => ({
+      const expenses = (expensesResponse.data || []).map((e: ExpenseRecord): TransactionRecord => ({
         ...e,
         transaction_type: 'expense',
         id: `expense-${e.id}`,
-        amount: -Math.abs(e.amount), // Make expenses negative
+        amount: -Math.abs(Number(e.amount ?? 0)), // Make expenses negative
       }));
 
       const transactions = [...revenues, ...expenses].sort((a, b) => {
@@ -393,15 +406,15 @@ class ApiClient {
   }
 
   // Dashboard
-  async getDashboardOverview(): Promise<ApiResponse<any>> {
+  async getDashboardOverview(): Promise<ApiResponse<unknown>> {
     return this.get('/dashboard/overview');
   }
 
-  async getDashboardKPIs(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<ApiResponse<any>> {
+  async getDashboardKPIs(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<ApiResponse<unknown>> {
     return this.get('/dashboard/kpis', { params: { period } });
   }
 
-  async getDashboardRecentActivity(limit = 10): Promise<ApiResponse<any[]>> {
+  async getDashboardRecentActivity(limit = 10): Promise<ApiResponse<unknown[]>> {
     return this.get('/dashboard/recent-activity', { params: { limit } });
   }
 
@@ -410,7 +423,7 @@ class ApiClient {
     period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
     start_date?: string;
     end_date?: string;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<unknown>> {
     return this.get('/analytics/kpis', { params });
   }
 
@@ -419,7 +432,7 @@ class ApiClient {
     period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
     start_date?: string;
     end_date?: string;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<unknown>> {
     return this.get('/analytics/trends', { params });
   }
 
@@ -428,7 +441,7 @@ class ApiClient {
     period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
     start_date?: string;
     end_date?: string;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<unknown>> {
     return this.get('/analytics/time-series', { params });
   }
 
@@ -436,7 +449,7 @@ class ApiClient {
     period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
     start_date?: string;
     end_date?: string;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<unknown>> {
     return this.get('/analytics/category-breakdown', { params });
   }
 
@@ -444,24 +457,24 @@ class ApiClient {
     period?: 'week' | 'month' | 'quarter' | 'year' | 'custom';
     start_date?: string;
     end_date?: string;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     return this.get('/analytics/overview', { params });
   }
 
   // Reports
-  async getReports(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
+  async getReports(filters?: Filters): Promise<ApiResponse<Record<string, unknown>[]>> {
     return this.get('/reports', { params: filters });
   }
 
-  async getReport(reportId: number): Promise<ApiResponse<any>> {
+  async getReport(reportId: number): Promise<ApiResponse<Record<string, unknown>>> {
     return this.get(`/reports/${reportId}`);
   }
 
-  async createReport(reportData: any): Promise<ApiResponse<any>> {
+  async createReport(reportData: Record<string, unknown>): Promise<ApiResponse<Record<string, unknown>>> {
     return this.post('/reports', reportData);
   }
 
-  async updateReport(reportId: number, reportData: any): Promise<ApiResponse<any>> {
+  async updateReport(reportId: number, reportData: Record<string, unknown>): Promise<ApiResponse<Record<string, unknown>>> {
     return this.put(`/reports/${reportId}`, reportData);
   }
 
@@ -482,8 +495,8 @@ class ApiClient {
   }
 
   // Financial Reports - Direct data fetching
-  async getIncomeStatement(startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
-    const params: Record<string, any> = {};
+  async getIncomeStatement(startDate?: string, endDate?: string): Promise<ApiResponse<Record<string, unknown>>> {
+    const params: Filters = {};
     // Convert date strings to ISO datetime format (YYYY-MM-DD -> YYYY-MM-DDTHH:mm:ss)
     if (startDate) {
       const start = new Date(startDate + 'T00:00:00');
@@ -510,7 +523,7 @@ class ApiClient {
       const start = new Date(startDate + 'T00:00:00').getTime();
       const end = new Date(endDate + 'T23:59:59').getTime();
       
-      revenues = revenues.filter((r: any) => {
+      revenues = revenues.filter((r: RevenueRecord) => {
         const dateStr = r.date || r.created_at;
         if (!dateStr) return true; // Include entries without dates
         try {
@@ -521,7 +534,7 @@ class ApiClient {
         }
       });
       
-      expenses = expenses.filter((e: any) => {
+      expenses = expenses.filter((e: ExpenseRecord) => {
         const dateStr = e.date || e.created_at;
         if (!dateStr) return true; // Include entries without dates
         try {
@@ -535,41 +548,37 @@ class ApiClient {
 
     // Filter to only include APPROVED revenue and expense entries
     // This ensures revenue and net profit are only calculated from approved entries
-    const approvedRevenues = revenues.filter((r: any) => 
+    const approvedRevenues = revenues.filter((r: RevenueRecord) => 
       r.is_approved === true || r.is_approved === 'true' || r.approved === true
     );
-    const approvedExpenses = expenses.filter((e: any) => 
+    const approvedExpenses = expenses.filter((e: ExpenseRecord) => 
       e.is_approved === true || e.is_approved === 'true' || e.approved === true
     );
     
     // Calculate totals - ONLY from approved entries
-    const totalRevenue = approvedRevenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
-    const totalExpenses = approvedExpenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    const totalRevenue = approvedRevenues.reduce((sum: number, r: RevenueRecord) => sum + Number(r.amount || 0), 0);
+    const totalExpenses = approvedExpenses.reduce((sum: number, e: ExpenseRecord) => sum + Number(e.amount || 0), 0);
     const profit = totalRevenue - totalExpenses;
 
     // Group by category - handle both enum and string categories - ONLY from approved entries
     const revenueByCategory: Record<string, number> = {};
-    approvedRevenues.forEach((r: any) => {
-      let cat = r.category;
-      if (cat && typeof cat === 'object' && cat.value) {
-        cat = cat.value;
-      } else if (typeof cat !== 'string') {
-        cat = String(cat || 'other');
-      }
-      cat = cat || 'other';
-      revenueByCategory[cat] = (revenueByCategory[cat] || 0) + Number(r.amount || 0);
+    approvedRevenues.forEach((r: RevenueRecord) => {
+      const catValue =
+        r.category && typeof r.category === 'object' && 'value' in r.category
+          ? (r.category as { value?: unknown }).value
+          : r.category;
+      const catKey = typeof catValue === 'string' ? catValue : 'other';
+      revenueByCategory[catKey] = (revenueByCategory[catKey] || 0) + Number(r.amount || 0);
     });
 
     const expenseByCategory: Record<string, number> = {};
-    approvedExpenses.forEach((e: any) => {
-      let cat = e.category;
-      if (cat && typeof cat === 'object' && cat.value) {
-        cat = cat.value;
-      } else if (typeof cat !== 'string') {
-        cat = String(cat || 'other');
-      }
-      cat = cat || 'other';
-      expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(e.amount || 0);
+    approvedExpenses.forEach((e: ExpenseRecord) => {
+      const catValue =
+        e.category && typeof e.category === 'object' && 'value' in e.category
+          ? (e.category as { value?: unknown }).value
+          : e.category;
+      const catKey = typeof catValue === 'string' ? catValue : 'other';
+      expenseByCategory[catKey] = (expenseByCategory[catKey] || 0) + Number(e.amount || 0);
     });
 
     return {
@@ -589,8 +598,15 @@ class ApiClient {
     };
   }
 
-  async getCashFlow(startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
-    const params: Record<string, any> = {};
+  async getCashFlow(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<ApiResponse<{
+    period: { start_date?: string; end_date?: string };
+    summary: { total_inflow: number; total_outflow: number; net_cash_flow: number };
+    daily_cash_flow: Record<string, { inflow: number; outflow: number; net: number }>;
+  }>> {
+    const params: Record<string, unknown> = {};
     // Convert date strings to ISO datetime format (YYYY-MM-DD -> YYYY-MM-DDTHH:mm:ss)
     if (startDate) {
       const start = new Date(startDate + 'T00:00:00');
@@ -604,10 +620,7 @@ class ApiClient {
     
     // Fetch revenue and expense data to calculate cash flow
     // Always fetch all data first, then filter client-side if needed
-    const [revenuesRes, expensesRes] = await Promise.all([
-      this.getRevenues(),
-      this.getExpenses(),
-    ]);
+    const [revenuesRes, expensesRes] = await Promise.all([this.getRevenues(), this.getExpenses()]);
 
     let revenues = revenuesRes.data || [];
     let expenses = expensesRes.data || [];
@@ -617,7 +630,7 @@ class ApiClient {
       const start = new Date(startDate + 'T00:00:00').getTime();
       const end = new Date(endDate + 'T23:59:59').getTime();
       
-      revenues = revenues.filter((r: any) => {
+      revenues = revenues.filter((r: RevenueRecord) => {
         const dateStr = r.date || r.created_at;
         if (!dateStr) return true; // Include entries without dates
         try {
@@ -627,8 +640,8 @@ class ApiClient {
           return true; // Include if date parsing fails
         }
       });
-      
-      expenses = expenses.filter((e: any) => {
+
+      expenses = expenses.filter((e: ExpenseRecord) => {
         const dateStr = e.date || e.created_at;
         if (!dateStr) return true; // Include entries without dates
         try {
@@ -642,19 +655,19 @@ class ApiClient {
 
     // Filter to only include APPROVED revenue and expense entries
     // This ensures cash flow is only calculated from approved entries
-    const approvedRevenues = revenues.filter((r: any) => 
+    const approvedRevenues = revenues.filter((r: RevenueRecord) => 
       r.is_approved === true || r.is_approved === 'true' || r.approved === true
     );
-    const approvedExpenses = expenses.filter((e: any) => 
+    const approvedExpenses = expenses.filter((e: ExpenseRecord) => 
       e.is_approved === true || e.is_approved === 'true' || e.approved === true
     );
     
     // Calculate daily cash flow - ONLY from approved entries
     const cashFlowByDay: Record<string, { inflow: number; outflow: number; net: number }> = {};
     
-    approvedRevenues.forEach((r: any) => {
+    approvedRevenues.forEach((r: RevenueRecord) => {
       // Handle different date formats - try date, created_at, or use current date
-      let dateStr = r.date || r.created_at;
+      const dateStr = r.date || r.created_at;
       const day = dateStr ? new Date(dateStr).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
       if (!cashFlowByDay[day]) {
         cashFlowByDay[day] = { inflow: 0, outflow: 0, net: 0 };
@@ -664,9 +677,9 @@ class ApiClient {
       cashFlowByDay[day].net += amount;
     });
 
-    approvedExpenses.forEach((e: any) => {
+    approvedExpenses.forEach((e: ExpenseRecord) => {
       // Handle different date formats - try date, created_at, or use current date
-      let dateStr = e.date || e.created_at;
+      const dateStr = e.date || e.created_at;
       const day = dateStr ? new Date(dateStr).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
       if (!cashFlowByDay[day]) {
         cashFlowByDay[day] = { inflow: 0, outflow: 0, net: 0 };
@@ -694,7 +707,22 @@ class ApiClient {
   }
 
   // Financial Summary Report
-  async getFinancialSummary(startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
+  async getFinancialSummary(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<ApiResponse<{
+    period: { start_date?: string; end_date?: string };
+    financials: {
+      total_revenue: number;
+      total_expenses: number;
+      profit: number;
+      profit_margin: number;
+    };
+    revenue_by_category: Record<string, number>;
+    expenses_by_category: Record<string, number>;
+    transaction_counts: { revenue: number; expenses: number; total: number };
+    generated_at: string;
+  }>> {
     // Always fetch all data first, then calculate summary
     const [allRevenuesRes, allExpensesRes] = await Promise.all([
       this.getRevenues(),
@@ -709,7 +737,7 @@ class ApiClient {
       const start = new Date(startDate + 'T00:00:00').getTime();
       const end = new Date(endDate + 'T23:59:59').getTime();
       
-      revenues = revenues.filter((r: any) => {
+      revenues = revenues.filter((r: RevenueRecord) => {
         const dateStr = r.date || r.created_at;
         if (!dateStr) return true; // Include entries without dates
         try {
@@ -719,8 +747,8 @@ class ApiClient {
           return true; // Include if date parsing fails
         }
       });
-      
-      expenses = expenses.filter((e: any) => {
+
+      expenses = expenses.filter((e: ExpenseRecord) => {
         const dateStr = e.date || e.created_at;
         if (!dateStr) return true; // Include entries without dates
         try {
@@ -734,44 +762,41 @@ class ApiClient {
     
     // Filter to only include APPROVED revenue entries for calculations
     // This ensures revenue and net profit are only calculated from approved entries
-    const approvedRevenues = revenues.filter((r: any) => 
+    const approvedRevenues = revenues.filter((r: RevenueRecord) => 
       r.is_approved === true || r.is_approved === 'true' || r.approved === true
     );
     
     // Filter to only include APPROVED expense entries for calculations
-    const approvedExpenses = expenses.filter((e: any) => 
+    const approvedExpenses = expenses.filter((e: ExpenseRecord) => 
       e.is_approved === true || e.is_approved === 'true' || e.approved === true
     );
     
     // Calculate totals from filtered data - ONLY approved revenue and expenses
-    const totalRevenue = approvedRevenues.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
-    const totalExpenses = approvedExpenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    const totalRevenue = approvedRevenues.reduce((sum: number, r: RevenueRecord) => sum + Number(r.amount || 0), 0);
+    const totalExpenses = approvedExpenses.reduce((sum: number, e: ExpenseRecord) => sum + Number(e.amount || 0), 0);
     const profit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
     // Process category summaries - ONLY from approved revenue
     const revenueByCategory: Record<string, number> = {};
-    approvedRevenues.forEach((r: any) => {
-      let cat = r.category;
-      if (cat && typeof cat === 'object' && cat.value) {
-        cat = cat.value;
-      } else if (typeof cat !== 'string') {
-        cat = String(cat || 'other');
+    const normalizeCategory = (raw: unknown): string => {
+      if (typeof raw === 'string') return raw || 'other';
+      if (raw && typeof raw === 'object' && 'value' in raw) {
+        const value = (raw as { value?: unknown }).value;
+        return typeof value === 'string' ? value : String(value ?? 'other');
       }
-      cat = cat || 'other';
+      return String(raw ?? 'other');
+    };
+
+    approvedRevenues.forEach((r: RevenueRecord) => {
+      const cat = normalizeCategory(r.category);
       revenueByCategory[cat] = (revenueByCategory[cat] || 0) + Number(r.amount || 0);
     });
 
     // Process category summaries - ONLY from approved expenses
     const expenseByCategory: Record<string, number> = {};
-    approvedExpenses.forEach((e: any) => {
-      let cat = e.category;
-      if (cat && typeof cat === 'object' && cat.value) {
-        cat = cat.value;
-      } else if (typeof cat !== 'string') {
-        cat = String(cat || 'other');
-      }
-      cat = cat || 'other';
+    approvedExpenses.forEach((e: ExpenseRecord) => {
+      const cat = normalizeCategory(e.category);
       expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(e.amount || 0);
     });
 
@@ -803,23 +828,23 @@ class ApiClient {
   }
 
   // Approvals
-  async getApprovals(): Promise<ApiResponse<any[]>> {
+  async getApprovals(): Promise<ApiResponse<unknown[]>> {
     return this.get('/approvals');
   }
 
-  async getApproval(approvalId: number): Promise<ApiResponse<any>> {
+  async getApproval(approvalId: number): Promise<ApiResponse<unknown>> {
     return this.get(`/approvals/${approvalId}`);
   }
 
-  async getApprovalComments(approvalId: number): Promise<ApiResponse<any[]>> {
+  async getApprovalComments(approvalId: number): Promise<ApiResponse<unknown[]>> {
     return this.get(`/approvals/${approvalId}/comments`);
   }
 
-  async createApprovalComment(approvalId: number, comment: string): Promise<ApiResponse<any>> {
+  async createApprovalComment(approvalId: number, comment: string): Promise<ApiResponse<unknown>> {
     return this.post(`/approvals/${approvalId}/comments`, { comment });
   }
 
-  async approveItem(itemId: number, itemType: 'revenue' | 'expense'): Promise<ApiResponse<any>> {
+  async approveItem(itemId: number, itemType: 'revenue' | 'expense'): Promise<ApiResponse<unknown>> {
     if (itemType === 'revenue') {
       return this.post(`/revenue/${itemId}/approve`);
     } else {
@@ -827,7 +852,12 @@ class ApiClient {
     }
   }
 
-  async rejectItem(itemId: number, itemType: 'revenue' | 'expense', reason: string, password: string): Promise<ApiResponse<any>> {
+  async rejectItem(
+    itemId: number,
+    itemType: 'revenue' | 'expense',
+    reason: string,
+    password: string,
+  ): Promise<ApiResponse<unknown>> {
     // Reject revenue or expense entry through their respective endpoints
     if (itemType === 'revenue') {
       return this.post(`/revenue/${itemId}/reject`, { reason: reason || 'No reason provided', password });
@@ -836,20 +866,24 @@ class ApiClient {
     }
   }
 
-  async approveWorkflow(workflowId: number): Promise<ApiResponse<any>> {
+  async approveWorkflow(workflowId: number): Promise<ApiResponse<unknown>> {
     return this.post(`/approvals/${workflowId}/approve`);
   }
 
-  async rejectWorkflow(workflowId: number, reason: string, password: string): Promise<ApiResponse<any>> {
+  async rejectWorkflow(
+    workflowId: number,
+    reason: string,
+    password: string,
+  ): Promise<ApiResponse<unknown>> {
     return this.post(`/approvals/${workflowId}/reject`, { rejection_reason: reason, password });
   }
 
   // Notifications
-  async getNotifications(unreadOnly?: boolean): Promise<ApiResponse<any[]>> {
+  async getNotifications(unreadOnly?: boolean): Promise<ApiResponse<unknown[]>> {
     return this.get('/notifications', { params: { unread_only: unreadOnly } });
   }
 
-  async getNotification(notificationId: number): Promise<ApiResponse<any>> {
+  async getNotification(notificationId: number): Promise<ApiResponse<unknown>> {
     return this.get(`/notifications/${notificationId}`);
   }
 
@@ -869,32 +903,34 @@ class ApiClient {
     return this.get('/notifications/unread/count');
   }
 
-  async getNotificationPreferences(): Promise<ApiResponse<any>> {
+  async getNotificationPreferences(): Promise<ApiResponse<unknown>> {
     return this.get('/notifications/preferences');
   }
 
-  async updateNotificationPreferences(preferences: any): Promise<ApiResponse<any>> {
+  async updateNotificationPreferences(
+    preferences: Record<string, unknown>,
+  ): Promise<ApiResponse<unknown>> {
     return this.put('/notifications/preferences', preferences);
   }
 
   // Admin endpoints
-  async getAdminSystemStats(): Promise<ApiResponse<any>> {
+  async getAdminSystemStats(): Promise<ApiResponse<unknown>> {
     return this.get('/admin/system/stats');
   }
 
-  async getSystemSettings(): Promise<ApiResponse<any>> {
+  async getSystemSettings(): Promise<ApiResponse<unknown>> {
     return this.get('/admin/settings');
   }
 
-  async getSystemHealth(): Promise<ApiResponse<any>> {
+  async getSystemHealth(): Promise<ApiResponse<unknown>> {
     return this.get('/admin/health');
   }
 
-  async getHierarchy(): Promise<ApiResponse<any>> {
+  async getHierarchy(): Promise<ApiResponse<unknown>> {
     return this.get('/admin/hierarchy');
   }
 
-  async getRoles(): Promise<ApiResponse<any[]>> {
+  async getRoles(): Promise<ApiResponse<ApiRole[]>> {
     return this.get('/admin/roles');
   }
 
@@ -930,7 +966,7 @@ class ApiClient {
     return this.normalizeResponse<{ message: string }>(response.data);
   }
 
-  async listBackups(): Promise<ApiResponse<{ backups: any[] }>> {
+  async listBackups(): Promise<ApiResponse<{ backups: unknown[] }>> {
     return this.get('/admin/backup/list');
   }
 
@@ -945,7 +981,7 @@ class ApiClient {
     return this.post(`/admin/backup/${encodeURIComponent(backupName)}/delete`, { password });
   }
 
-  async getVerificationHistory(): Promise<ApiResponse<any[]>> {
+  async getVerificationHistory(): Promise<ApiResponse<unknown[]>> {
     return this.get('/users/me/verification-history');
   }
 
@@ -988,46 +1024,55 @@ class ApiClient {
   }
 
   // Department endpoints
-  async getDepartments(): Promise<ApiResponse<any[]>> {
+  async getDepartments(): Promise<ApiResponse<unknown[]>> {
     return this.get('/departments');
   }
 
-  async getDepartment(departmentId: string | number): Promise<ApiResponse<any>> {
+  async getDepartment(departmentId: string | number): Promise<ApiResponse<unknown>> {
     // URL encode the department ID to handle special characters like colons
     const encodedId = encodeURIComponent(String(departmentId));
     return this.get(`/departments/${encodedId}`);
   }
 
-  async createDepartment(departmentData: any): Promise<ApiResponse<any>> {
+  async createDepartment(departmentData: Record<string, unknown>): Promise<ApiResponse<unknown>> {
     return this.post('/departments', departmentData);
   }
 
-  async updateDepartment(departmentId: string | number, departmentData: any): Promise<ApiResponse<any>> {
+  async updateDepartment(
+    departmentId: string | number,
+    departmentData: Record<string, unknown>,
+  ): Promise<ApiResponse<unknown>> {
     // URL encode the department ID to handle special characters like colons
     const encodedId = encodeURIComponent(String(departmentId));
     return this.put(`/departments/${encodedId}`, departmentData);
   }
 
-  async deleteDepartment(departmentId: string | number, password: string): Promise<ApiResponse<{ message: string }>> {
+  async deleteDepartment(
+    departmentId: string | number,
+    password: string,
+  ): Promise<ApiResponse<{ message: string }>> {
     // URL encode the department ID to handle special characters like colons
     const encodedId = encodeURIComponent(String(departmentId));
     return this.post(`/departments/${encodedId}/delete`, { password });
   }
 
   // Project endpoints
-  async getProjects(filters?: Record<string, any>): Promise<ApiResponse<any[]>> {
+  async getProjects(filters?: Record<string, unknown>): Promise<ApiResponse<unknown[]>> {
     return this.get('/projects', { params: filters });
   }
 
-  async getProject(projectId: number): Promise<ApiResponse<any>> {
+  async getProject(projectId: number): Promise<ApiResponse<unknown>> {
     return this.get(`/projects/${projectId}`);
   }
 
-  async createProject(projectData: any): Promise<ApiResponse<any>> {
+  async createProject(projectData: Record<string, unknown>): Promise<ApiResponse<unknown>> {
     return this.post('/projects', projectData);
   }
 
-  async updateProject(projectId: number, projectData: any): Promise<ApiResponse<any>> {
+  async updateProject(
+    projectId: number,
+    projectData: Record<string, unknown>,
+  ): Promise<ApiResponse<unknown>> {
     return this.put(`/projects/${projectId}`, projectData);
   }
 
@@ -1044,8 +1089,8 @@ class ApiClient {
     resource_type?: string;
     start_date?: string;
     end_date?: string;
-  }): Promise<ApiResponse<any[]>> {
-    const params: Record<string, any> = {};
+  }): Promise<ApiResponse<Record<string, unknown>[]>> {
+    const params: Record<string, unknown> = {};
     if (filters) {
       if (filters.skip !== undefined) params.skip = filters.skip;
       if (filters.limit !== undefined) params.limit = filters.limit;
@@ -1079,12 +1124,12 @@ class ApiClient {
     return this.get(`/budgeting/budgets/${id}`);
   }
 
-  async createBudget(data: any) {
+  async createBudget(data: Record<string, unknown>) {
     return this.post('/budgeting/budgets', data);
   }
 
-  async createBudgetFromTemplate(templateName: string, data: any) {
-    const params: any = {
+  async createBudgetFromTemplate(templateName: string, data: Record<string, unknown>) {
+    const params: Record<string, unknown> = {
       template_name: templateName
     };
     if (data.name) params.name = data.name;
@@ -1096,7 +1141,7 @@ class ApiClient {
     return this.post(`/budgeting/budgets/from-template`, {}, { params });
   }
 
-  async updateBudget(id: number, data: any) {
+  async updateBudget(id: number, data: Record<string, unknown>) {
     return this.put(`/budgeting/budgets/${id}`, data);
   }
 
@@ -1113,11 +1158,11 @@ class ApiClient {
     return this.get(`/budgeting/budgets/${budgetId}/items`);
   }
 
-  async createBudgetItem(budgetId: number, data: any) {
+  async createBudgetItem(budgetId: number, data: Record<string, unknown>) {
     return this.post(`/budgeting/budgets/${budgetId}/items`, data);
   }
 
-  async updateBudgetItem(budgetId: number, itemId: number, data: any) {
+  async updateBudgetItem(budgetId: number, itemId: number, data: Record<string, unknown>) {
     return this.put(`/budgeting/budgets/${budgetId}/items/${itemId}`, data);
   }
 
@@ -1130,7 +1175,7 @@ class ApiClient {
     return this.get(`/budgeting/budgets/${budgetId}/scenarios`);
   }
 
-  async createScenario(budgetId: number, data: any) {
+  async createScenario(budgetId: number, data: Record<string, unknown>) {
     return this.post(`/budgeting/budgets/${budgetId}/scenarios`, data);
   }
 
@@ -1149,7 +1194,7 @@ class ApiClient {
     return this.get('/budgeting/forecasts', { params: queryParams });
   }
 
-  async createForecast(data: any) {
+  async createForecast(data: Record<string, unknown>) {
     return this.post('/budgeting/forecasts', data);
   }
 
@@ -1173,7 +1218,7 @@ class ApiClient {
         forecasted_value?: number;
         method?: string;
       }>;
-    }
+    },
   ) {
     return this.put(`/budgeting/forecasts/${id}`, data);
   }
@@ -1349,7 +1394,7 @@ class ApiClient {
   }
 
   // Generic request method
-  async request<T = any>(config: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async request<T = unknown>(config: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.request<T>(config);
     return this.normalizeResponse<T>(response.data);
   }

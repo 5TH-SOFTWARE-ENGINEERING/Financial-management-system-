@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
-import { Save, Lock, Shield, Key, AlertTriangle, Eye, EyeOff, CheckCircle, AlertCircle, X, QrCode } from 'lucide-react';
+import { Save, Shield, Key, AlertTriangle, Eye, EyeOff, CheckCircle, AlertCircle, X, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
@@ -91,9 +91,14 @@ const MessageIcon = styled(IconWrapper)`
     margin-right: 0.5rem;
 `;
 
-const ModalIcon = styled(IconWrapper)`
-    margin-right: 0.5rem;
-`;
+const errorMessageFromUnknown = (err: unknown, fallback: string) => {
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+    if (typeof detail === 'string') return detail;
+  }
+  if (err instanceof Error) return err.message || fallback;
+  return fallback;
+};
 
 // Styled components
 const Container = styled.div`
@@ -539,7 +544,7 @@ export default function SecuritySettingsPage() {
       const response = await apiClient.get2FAStatus();
       setIs2FAEnabled(response.data?.enabled || false);
       setSecuritySettings(prev => ({ ...prev, twoFactorEnabled: response.data?.enabled || false }));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load 2FA status:', err);
     } finally {
       setLoading2FAStatus(false);
@@ -555,9 +560,8 @@ export default function SecuritySettingsPage() {
       setManualEntryKey(response.data?.manual_entry_key || null);
       setShow2FASetup(true);
       setSetupStep('qr');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to setup 2FA. Please try again.';
-      setError(errorMessage);
+    } catch (err: unknown) {
+      setError(errorMessageFromUnknown(err, 'Failed to setup 2FA. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -581,9 +585,8 @@ export default function SecuritySettingsPage() {
       setManualEntryKey(null);
       setSuccess('2FA enabled successfully');
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Invalid verification code. Please try again.';
-      setError(errorMessage);
+    } catch (err: unknown) {
+      setError(errorMessageFromUnknown(err, 'Invalid verification code. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -605,9 +608,8 @@ export default function SecuritySettingsPage() {
       setDisablePassword('');
       setSuccess('2FA disabled successfully');
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to disable 2FA. Please check your password.';
-      setError(errorMessage);
+    } catch (err: unknown) {
+      setError(errorMessageFromUnknown(err, 'Failed to disable 2FA. Please check your password.'));
     } finally {
       setLoading(false);
     }
@@ -617,8 +619,9 @@ export default function SecuritySettingsPage() {
     setLoadingHistory(true);
     try {
       const response = await apiClient.getVerificationHistory();
-      setVerificationHistory(response.data || []);
-    } catch (err: any) {
+      const historyData = Array.isArray(response.data) ? (response.data as VerificationHistoryEntry[]) : [];
+      setVerificationHistory(historyData);
+    } catch (err: unknown) {
       console.error('Failed to load verification history:', err);
       setVerificationHistory([]);
     } finally {
@@ -633,7 +636,7 @@ export default function SecuritySettingsPage() {
       setIpRestrictionEnabled(response.data?.enabled || false);
       setAllowedIPs(response.data?.allowed_ips || []);
       setSecuritySettings(prev => ({ ...prev, ipRestriction: response.data?.enabled || false }));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load IP restriction status:', err);
     } finally {
       setLoadingIPRestriction(false);
@@ -650,9 +653,8 @@ export default function SecuritySettingsPage() {
       setSecuritySettings(prev => ({ ...prev, ipRestriction: enabled }));
       setSuccess(`IP restriction ${enabled ? 'enabled' : 'disabled'} successfully`);
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to update IP restriction. Please try again.';
-      setError(errorMessage);
+    } catch (err: unknown) {
+      setError(errorMessageFromUnknown(err, 'Failed to update IP restriction. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -672,9 +674,8 @@ export default function SecuritySettingsPage() {
       setNewIPAddress('');
       setSuccess('IP address added successfully');
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to add IP address. Please check the format.';
-      setIpError(errorMessage);
+    } catch (err: unknown) {
+      setIpError(errorMessageFromUnknown(err, 'Failed to add IP address. Please check the format.'));
     } finally {
       setLoading(false);
     }
@@ -688,9 +689,8 @@ export default function SecuritySettingsPage() {
       setAllowedIPs(response.data?.allowed_ips || []);
       setSuccess('IP address removed successfully');
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to remove IP address. Please try again.';
-      setError(errorMessage);
+    } catch (err: unknown) {
+      setError(errorMessageFromUnknown(err, 'Failed to remove IP address. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -831,8 +831,15 @@ export default function SecuritySettingsPage() {
       setTimeout(() => {
         setSuccess(null);
       }, 5000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Failed to update password. Please try again.';
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? ((err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail ||
+             (err as { response?: { data?: { message?: string } } }).response?.data?.message ||
+             'Failed to update password. Please try again.')
+          : err instanceof Error
+            ? err.message
+            : 'Failed to update password. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
       
@@ -862,7 +869,7 @@ export default function SecuritySettingsPage() {
       setTimeout(() => {
         setSuccess(null);
       }, 3000);
-    } catch (err) {
+    } catch {
       setError('Failed to update security settings. Please try again.');
     } finally {
       setLoading(false);
@@ -1151,7 +1158,7 @@ export default function SecuritySettingsPage() {
                 <option value={180}>Every 180 days</option>
                 <option value={0}>Never</option>
               </select>
-              <HelperText>How often you'll be required to change your password</HelperText>
+              <HelperText>How often you&apos;ll be required to change your password</HelperText>
             </FormGroup>
 
             <Divider />

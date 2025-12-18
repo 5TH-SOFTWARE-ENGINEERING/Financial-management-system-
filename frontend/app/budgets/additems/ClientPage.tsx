@@ -1,10 +1,9 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  Plus, ArrowLeft, Save, X, AlertCircle
+  Plus, ArrowLeft, Save, X
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -288,14 +287,6 @@ const AddBudgetItemPage: React.FC = () => {
     amount: ''
   });
 
-  useEffect(() => {
-    if (budgetIdParam) {
-      loadBudget(budgetIdParam);
-    } else {
-      fetchBudgetsForSelection();
-    }
-  }, [budgetIdParam]);
-
   const fetchBudgetsForSelection = async () => {
     try {
       setSelectingBudget(true);
@@ -305,8 +296,15 @@ const AddBudgetItemPage: React.FC = () => {
       if (data.length > 0) {
         setSelectedBudgetForNav(data[0].id.toString());
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budgets');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to load budgets');
+      toast.error(message);
     } finally {
       setSelectingBudget(false);
       setLoading(false);
@@ -321,7 +319,7 @@ const AddBudgetItemPage: React.FC = () => {
     router.push(`/budgets/additems?budget_id=${selectedBudgetForNav}`);
   };
 
-  const loadBudget = async (idValue?: string | null) => {
+  const loadBudget = useCallback(async (idValue?: string | null) => {
     const targetBudgetId = idValue ?? budgetIdParam;
     if (!targetBudgetId) return;
     
@@ -329,12 +327,27 @@ const AddBudgetItemPage: React.FC = () => {
       setLoading(true);
       const response = await apiClient.getBudget(parseInt(targetBudgetId));
       setBudget(response.data as Budget);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budget');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to load budget');
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [budgetIdParam]);
+
+  useEffect(() => {
+    if (budgetIdParam) {
+      loadBudget(budgetIdParam);
+    } else {
+      fetchBudgetsForSelection();
+    }
+  }, [budgetIdParam, loadBudget]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,8 +378,15 @@ const AddBudgetItemPage: React.FC = () => {
       });
       toast.success('Budget item added successfully!');
       router.push(`/budgets/listitems?budget_id=${budgetIdParam}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to add budget item');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to add budget item');
+      toast.error(message);
     } finally {
       setSaving(false);
     }

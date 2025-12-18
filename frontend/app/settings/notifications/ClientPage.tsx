@@ -174,13 +174,6 @@ const ChannelLabel = styled.label`
   gap: 0.5rem;
 `;
 
-const CheckboxContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-`;
-
 const Label = styled.label`
   display: block;
   font-size: 0.875rem;
@@ -292,16 +285,20 @@ interface NotificationSettings {
   };
 }
 
+type NotificationPreferencesState = NotificationSettings;
+
+const defaultQuietHours = {
+  enabled: false,
+  startTime: '22:00',
+  endTime: '08:00',
+};
+
 export default function NotificationsSettingsPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [doNotDisturb, setDoNotDisturb] = useState(false);
-  const [quietHours, setQuietHours] = useState({
-    enabled: false,
-    startTime: '22:00',
-    endTime: '08:00'
-  });
+  const [quietHours, setQuietHours] = useState(defaultQuietHours);
   
   // Load settings from backend API and localStorage on mount
   useEffect(() => {
@@ -312,7 +309,11 @@ export default function NotificationsSettingsPage() {
         // Try to load from backend first
         const response = await apiClient.getNotificationPreferences();
         if (response.data) {
-          const prefs = response.data;
+          const prefs = response.data as {
+            notificationPreferences?: NotificationPreferencesState;
+            doNotDisturb?: boolean;
+            quietHours?: typeof defaultQuietHours;
+          };
           if (prefs.notificationPreferences) {
             setNotificationPreferences(prefs.notificationPreferences);
           }
@@ -449,13 +450,18 @@ export default function NotificationsSettingsPage() {
           localStorage.setItem('user_notification_settings', JSON.stringify(settings));
         }
         setSuccess('Notification settings saved successfully');
-      } catch (apiError: any) {
+      } catch (apiError: unknown) {
         // If backend fails, still save to localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem('user_notification_settings', JSON.stringify(settings));
         }
         
-        const errorMessage = apiError.response?.data?.detail || apiError.message || 'Failed to save to server';
+        const errorMessage =
+          typeof apiError === 'object' && apiError !== null && 'response' in apiError
+            ? (apiError as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to save to server'
+            : apiError instanceof Error
+              ? apiError.message
+              : 'Failed to save to server';
         console.error('Failed to save to backend:', errorMessage);
         setSuccess('Settings saved locally, but failed to sync with server. Please try again.');
       }

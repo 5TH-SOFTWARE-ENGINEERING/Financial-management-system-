@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, FileText, DollarSign, Users, Building, FolderKanban } from 'lucide-react';
 import Link from 'next/link';
@@ -9,8 +9,15 @@ import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
-import { debounce } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+
+// Type definitions
+interface SearchResult {
+  type: 'user' | 'revenue' | 'expense' | 'project' | 'department';
+  data: unknown;
+  title: string;
+  subtitle?: string;
+}
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -282,7 +289,7 @@ export default function SearchPage() {
   const initialQuery = searchParams.get('q') || '';
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Update query from URL params on mount
@@ -291,7 +298,7 @@ export default function SearchPage() {
       setSearchInput(initialQuery);
       setQuery(initialQuery);
     }
-  }, [initialQuery]);
+  }, [initialQuery, searchInput]);
 
   // Create a stable search callback
   const performSearchAndUpdateURL = useCallback((searchQuery: string) => {
@@ -310,19 +317,8 @@ export default function SearchPage() {
     }
   }, [router]);
 
-  // Create debounced function with useRef to maintain stability
-  const debouncedSearchRef = useRef<ReturnType<typeof debounce> | null>(null);
-  
-  useEffect(() => {
-    debouncedSearchRef.current = debounce(performSearchAndUpdateURL, 500);
-    
-    return () => {
-      // Cleanup on unmount
-      if (debouncedSearchRef.current) {
-        debouncedSearchRef.current = null;
-      }
-    };
-  }, [performSearchAndUpdateURL]);
+  // Debounced search timeout ref
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const performSearch = useCallback(async (searchQuery: string) => {
     setLoading(true);
@@ -336,38 +332,43 @@ export default function SearchPage() {
         apiClient.getDepartments().catch(() => ({ data: [] })),
       ]);
 
-      const allResults: any[] = [];
+      const allResults: SearchResult[] = [];
       const lowerQuery = searchQuery.toLowerCase();
 
       // Filter and add results
-      (users.data || []).forEach((user: any) => {
-        const name = user.full_name || user.name || user.email || '';
-        if (name.toLowerCase().includes(lowerQuery) || user.email?.toLowerCase().includes(lowerQuery)) {
-          allResults.push({ type: 'user', data: user, title: name, subtitle: user.email });
+      (users.data || []).forEach((user: unknown) => {
+        const userData = user as { id: number; full_name?: string; name?: string; email?: string };
+        const name = userData.full_name || userData.name || userData.email || '';
+        if (name.toLowerCase().includes(lowerQuery) || userData.email?.toLowerCase().includes(lowerQuery)) {
+          allResults.push({ type: 'user', data: userData, title: name, subtitle: userData.email });
         }
       });
 
-      (revenues.data || []).forEach((revenue: any) => {
-        if (revenue.title?.toLowerCase().includes(lowerQuery) || revenue.description?.toLowerCase().includes(lowerQuery)) {
-          allResults.push({ type: 'revenue', data: revenue, title: revenue.title, subtitle: `$${revenue.amount}` });
+      (revenues.data || []).forEach((revenue: unknown) => {
+        const revenueData = revenue as { id: number; title?: string; description?: string; amount?: number };
+        if (revenueData.title?.toLowerCase().includes(lowerQuery) || revenueData.description?.toLowerCase().includes(lowerQuery)) {
+          allResults.push({ type: 'revenue', data: revenueData, title: revenueData.title || '', subtitle: `$${revenueData.amount || 0}` });
         }
       });
 
-      (expenses.data || []).forEach((expense: any) => {
-        if (expense.title?.toLowerCase().includes(lowerQuery) || expense.description?.toLowerCase().includes(lowerQuery)) {
-          allResults.push({ type: 'expense', data: expense, title: expense.title, subtitle: `$${expense.amount}` });
+      (expenses.data || []).forEach((expense: unknown) => {
+        const expenseData = expense as { id: number; title?: string; description?: string; amount?: number };
+        if (expenseData.title?.toLowerCase().includes(lowerQuery) || expenseData.description?.toLowerCase().includes(lowerQuery)) {
+          allResults.push({ type: 'expense', data: expenseData, title: expenseData.title || '', subtitle: `$${expenseData.amount || 0}` });
         }
       });
 
-      (projects.data || []).forEach((project: any) => {
-        if (project.name?.toLowerCase().includes(lowerQuery) || project.description?.toLowerCase().includes(lowerQuery)) {
-          allResults.push({ type: 'project', data: project, title: project.name, subtitle: project.department_name });
+      (projects.data || []).forEach((project: unknown) => {
+        const projectData = project as { id: number; name?: string; description?: string; department_name?: string };
+        if (projectData.name?.toLowerCase().includes(lowerQuery) || projectData.description?.toLowerCase().includes(lowerQuery)) {
+          allResults.push({ type: 'project', data: projectData, title: projectData.name || '', subtitle: projectData.department_name });
         }
       });
 
-      (departments.data || []).forEach((dept: any) => {
-        if (dept.name?.toLowerCase().includes(lowerQuery) || dept.description?.toLowerCase().includes(lowerQuery)) {
-          allResults.push({ type: 'department', data: dept, title: dept.name, subtitle: dept.description });
+      (departments.data || []).forEach((dept: unknown) => {
+        const deptData = dept as { id: number; name?: string; description?: string };
+        if (deptData.name?.toLowerCase().includes(lowerQuery) || deptData.description?.toLowerCase().includes(lowerQuery)) {
+          allResults.push({ type: 'department', data: deptData, title: deptData.name || '', subtitle: deptData.description });
         }
       });
 
@@ -393,19 +394,25 @@ export default function SearchPage() {
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchInput(value);
-    
+
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
     if (value.trim()) {
       setLoading(true);
-      if (debouncedSearchRef.current) {
-        debouncedSearchRef.current(value.trim());
-      }
+      // Set new timeout for debounced search
+      searchTimeoutRef.current = setTimeout(() => {
+        performSearchAndUpdateURL(value.trim());
+      }, 500);
     } else {
       setQuery('');
       setResults([]);
       setLoading(false);
       router.replace('/search', { scroll: false });
     }
-  }, [router]);
+  }, [performSearchAndUpdateURL, router]);
 
   const getResultIcon = (type: string) => {
     switch (type) {
@@ -497,10 +504,12 @@ export default function SearchPage() {
             </EmptyState>
           ) : (
             <ResultsContainer>
-              {results.map((result, index) => (
-                <ResultCard
-                  key={`${result.type}-${result.data.id}-${index}`}
-                  href={getResultLink(result.type, result.data.id)}
+              {results.map((result, index) => {
+                const data = result.data as { id: number | string };
+                return (
+                  <ResultCard
+                    key={`${result.type}-${data.id}-${index}`}
+                    href={getResultLink(result.type, Number(data.id))}
                 >
                   <ResultCardContent>
                     <IconWrapper $type={result.type}>
@@ -517,7 +526,8 @@ export default function SearchPage() {
                     </TypeBadge>
                   </ResultCardContent>
                 </ResultCard>
-              ))}
+                );
+              })}
             </ResultsContainer>
           )}
         </ContentContainer>

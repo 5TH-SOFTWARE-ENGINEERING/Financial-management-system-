@@ -13,7 +13,6 @@ import Navbar from '@/components/common/Navbar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
-import { RegisterSchema } from '@/lib/validation';
 import apiClient from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
@@ -31,7 +30,22 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 
-type FormData = z.infer<typeof RegisterSchema>;
+const formSchema = z.object({
+  full_name: z.string().min(2, 'Full name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  role: z.enum(['ADMIN', 'FINANCE_ADMIN', 'ACCOUNTANT', 'EMPLOYEE']),
+  phone: z.string().optional(),
+  department: z.string().optional(),
+  managerId: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 /* --------------------------------- LAYOUT ---------------------------------- */
 
@@ -143,12 +157,6 @@ const FormRow = styled.div`
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
-`;
-
-const HelpText = styled.p`
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--muted-foreground);
 `;
 
 const FieldError = styled.p`
@@ -274,14 +282,8 @@ export default function CreateFinancePage() {
     handleSubmit,
     formState: { errors },
     reset,
-    watch
-  } = useForm({
-    resolver: zodResolver(RegisterSchema.extend({
-      confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
-    }).refine((data) => data.password === data.confirmPassword, {
-      message: "Passwords don't match",
-      path: ["confirmPassword"],
-    })),
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       full_name: '',
       email: '',
@@ -295,7 +297,7 @@ export default function CreateFinancePage() {
     }
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormValues) => {
     // Prevent multiple submissions
     if (isSubmitting || loading) {
       return;
@@ -311,8 +313,8 @@ export default function CreateFinancePage() {
       const trimmedEmail = (data.email || '').trim().toLowerCase();
       const trimmedUsername = (data.username || '').trim();
       const trimmedFullName = (data.full_name || '').trim();
-      const trimmedPhone = data.phone ? (data.phone || '').trim() : null;
-      const trimmedDepartment = data.department ? (data.department || '').trim() : null;
+      const trimmedPhone = data.phone ? (data.phone || '').trim() : '';
+      const trimmedDepartment = data.department ? (data.department || '').trim() : '';
 
       // Validate that email and username are not empty after trimming
       if (!trimmedEmail) {
@@ -330,16 +332,14 @@ export default function CreateFinancePage() {
         email: trimmedEmail,
         username: trimmedUsername,
         password: data.password,
-        role: 'manager',
-        phone: trimmedPhone || null,
-        department: trimmedDepartment || null,
-        manager_id: data.managerId ? Number(data.managerId) : null
+        role: (data.role || 'FINANCE_ADMIN').toLowerCase(),
+        phone: trimmedPhone || undefined,
+        department: trimmedDepartment || undefined,
+        manager_id: data.managerId ? Number(data.managerId) : undefined
       };
 
       // Only call the API, don't call store's createUser as it might cause issues
-      const response = await apiClient.createUser(userData);
-      
-      // Refresh the user list after successful creation
+      await apiClient.createUser(userData);
       await fetchAllUsers();
 
       setSuccess('Finance manager created successfully!');
@@ -347,23 +347,22 @@ export default function CreateFinancePage() {
       reset();
 
       setTimeout(() => router.push('/finance/list'), 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating finance manager:', err);
       
-      // Better error message extraction
       let errorMessage = 'Failed to create finance manager';
-      
-      if (err.response?.data) {
-        if (typeof err.response.data === 'string') {
-          errorMessage = err.response.data;
-        } else if (err.response.data.detail) {
-          errorMessage = err.response.data.detail;
-        } else if (err.response.data.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response.data.error) {
-          errorMessage = err.response.data.error;
+      if (err && typeof err === 'object' && 'response' in err) {
+        const response = (err as { response?: { data?: unknown } }).response;
+        const data = response?.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data && typeof data === 'object') {
+          const detail = (data as { detail?: string }).detail;
+          const message = (data as { message?: string }).message;
+          const errorText = (data as { error?: string }).error;
+          errorMessage = detail || message || errorText || errorMessage;
         }
-      } else if (err.message) {
+      } else if (err instanceof Error && err.message) {
         errorMessage = err.message;
       }
 
@@ -409,14 +408,7 @@ export default function CreateFinancePage() {
             </AlertBox>
           )}
 
-          <FormCard 
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!loading && !isSubmitting) {
-                handleSubmit(onSubmit)(e);
-              }
-            }}
-          >
+          <FormCard onSubmit={handleSubmit(onSubmit)}>
             <FormGroup>
               <Label htmlFor="full_name">Full Name </Label>
               <StyledInput id="full_name" {...register('full_name')} disabled={loading} />

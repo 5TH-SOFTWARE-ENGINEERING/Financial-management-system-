@@ -46,14 +46,6 @@ const SectionTitle = styled.h2`
   color: #a5b4fc;
 `;
 
-const SubSection = styled.h3`
-  font-size: 1.05rem;
-  font-weight: 600;
-  margin-top: 1.45rem;
-  margin-bottom: 0.5rem;
-  color: #c4b5fd;
-`;
-
 const Paragraph = styled.p`
   margin-bottom: 1.05rem;
   line-height: 1.7;

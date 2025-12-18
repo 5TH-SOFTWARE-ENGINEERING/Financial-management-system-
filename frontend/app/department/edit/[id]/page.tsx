@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -106,12 +106,6 @@ const FieldError = styled.p`
   color: #dc2626;
   font-size: 14px;
   margin-top: 4px;
-`;
-
-const HelpText = styled.p`
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--muted-foreground);
 `;
 
 const MessageBox = styled.div<{ type: 'error' | 'success' }>`
@@ -240,13 +234,7 @@ export default function EditDepartmentPage() {
     resolver: zodResolver(CreateDepartmentSchema),
   });
 
-  useEffect(() => {
-    if (departmentId) {
-      loadDepartment();
-    }
-  }, [departmentId]);
-
-  const loadDepartment = async () => {
+  const loadDepartment = useCallback(async () => {
     if (!departmentId) return;
 
     setLoading(true);
@@ -254,21 +242,35 @@ export default function EditDepartmentPage() {
 
     try {
       const response = await apiClient.getDepartment(departmentId);
-      const department = response.data;
+      const department = response.data as {
+        name?: string;
+        description?: string | null;
+      };
       
       reset({
         name: department.name || '',
         description: department.description || '',
         managerId: '', // Departments don't have managers in current implementation
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load department';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        'Failed to load department';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [departmentId, reset]);
+
+  useEffect(() => {
+    if (departmentId) {
+      loadDepartment();
+    }
+  }, [departmentId, loadDepartment]);
 
   const onSubmit = async (data: CreateDepartmentInput) => {
     if (!departmentId) return;
@@ -285,8 +287,14 @@ export default function EditDepartmentPage() {
       await apiClient.updateDepartment(departmentId as string, departmentData);
       toast.success('Department updated successfully!');
       router.push('/department/list');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to update department';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail) ||
+        (err as { message?: string }).message ||
+        'Failed to update department';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

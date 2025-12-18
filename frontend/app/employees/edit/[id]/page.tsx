@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -228,11 +228,7 @@ export default function EditEmployeePage() {
     resolver: zodResolver(UpdateEmployeeSchema),
   });
 
-  useEffect(() => {
-    loadUser();
-  }, [id]);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     if (!id) return;
     
     setLoadingUser(true);
@@ -256,14 +252,21 @@ export default function EditEmployeePage() {
         department: user.department || '',
         managerId: user.manager_id?.toString() || '',
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load employee';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to load employee';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoadingUser(false);
     }
-  };
+  }, [id, reset]);
+
+  useEffect(() => {
+    loadUser();
+  }, [id, loadUser]);
 
   const onSubmit = async (data: FormData) => {
     if (!id) return;
@@ -277,9 +280,9 @@ export default function EditEmployeePage() {
         full_name: data.full_name,
         email: data.email,
         username: data.username,
-        phone: data.phone || null,
-        department: data.department || null,
-        manager_id: data.managerId ? parseInt(data.managerId, 10) : null,
+        phone: data.phone || undefined,
+        department: data.department || undefined,
+        manager_id: data.managerId ? parseInt(data.managerId, 10) : undefined,
       };
       
       await apiClient.updateUser(parseInt(id, 10), userData);
@@ -293,8 +296,12 @@ export default function EditEmployeePage() {
       setTimeout(() => {
         router.push('/employees/list');
       }, 2000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Failed to update employee';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail ||
+            (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message
+          : undefined) || 'Failed to update employee';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

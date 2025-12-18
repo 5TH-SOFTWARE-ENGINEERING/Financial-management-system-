@@ -2,9 +2,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  DollarSign, FileText, Save, X, Plus, Trash2, AlertCircle, CheckCircle
+  DollarSign, Save, X, Plus, Trash2, AlertCircle, CheckCircle
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -315,11 +314,21 @@ interface BudgetItem {
   amount: number;
 }
 
+type BudgetForm = {
+  name: string;
+  description: string;
+  period: 'monthly' | 'quarterly' | 'yearly' | string;
+  start_date: string;
+  end_date: string;
+  department: string;
+  project: string;
+  status: string;
+};
+
 const BudgetCreatePage: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<BudgetForm>({
     name: '',
     description: '',
     period: 'monthly',
@@ -332,7 +341,7 @@ const BudgetCreatePage: React.FC = () => {
   const [items, setItems] = useState<BudgetItem[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = <K extends keyof BudgetForm>(field: K, value: BudgetForm[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -346,7 +355,7 @@ const BudgetCreatePage: React.FC = () => {
     }]);
   };
 
-  const handleItemChange = (index: number, field: string, value: any) => {
+  const handleItemChange = (index: number, field: keyof BudgetItem, value: string | number) => {
     setItems(prev => prev.map((item, i) => 
       i === index ? { ...item, [field]: value } : item
     ));
@@ -422,33 +431,39 @@ const BudgetCreatePage: React.FC = () => {
       await apiClient.createBudget(budgetData);
       toast.success('Budget created successfully!');
       router.push('/budgets');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Budget creation error:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('Error response:', (error as { response?: unknown })?.response);
       
       let errorMessage = 'Failed to create budget';
       
-      if (error.response?.data) {
-        const errorData = error.response.data;
+      const errorResponse = (error as { response?: { data?: unknown } }).response?.data;
+
+      if (errorResponse) {
+        const errorData = errorResponse as { detail?: unknown; message?: string };
         
         // Handle Pydantic validation errors
-        if (Array.isArray(errorData.detail)) {
-          const validationErrors = errorData.detail.map((err: any) => {
-            if (err.loc && err.msg) {
+        const detail = errorData.detail;
+        if (Array.isArray(detail)) {
+          const validationErrors = detail.map((err: { loc?: unknown[]; msg?: string }) => {
+            if (Array.isArray(err.loc) && err.msg) {
               return `${err.loc.join('.')}: ${err.msg}`;
             }
             return err.msg || JSON.stringify(err);
           });
           errorMessage = validationErrors.join('\n');
-        } else if (typeof errorData.detail === 'string') {
-          errorMessage = errorData.detail;
-        } else if (errorData.detail?.msg) {
-          errorMessage = errorData.detail.msg;
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (typeof detail === 'object' && detail !== null && 'msg' in detail) {
+          const msg = (detail as { msg?: string }).msg;
+          if (msg) errorMessage = msg;
         } else if (errorData.message) {
           errorMessage = errorData.message;
         }
-      } else if (error.message) {
+      } else if (error instanceof Error && error.message) {
         errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
       }
       
       toast.error(errorMessage);
@@ -600,7 +615,7 @@ const BudgetCreatePage: React.FC = () => {
 
                 {items.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-                    <p>No items added yet. Click "Add Item" to get started.</p>
+                    <p>No items added yet. Click &quot;Add Item&quot; to get started.</p>
                   </div>
                 ) : (
                   <ItemsTable>

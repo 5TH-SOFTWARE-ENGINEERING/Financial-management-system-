@@ -2,11 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
   LineChart, FileText, Plus, Edit, Trash2, Calendar,
-  TrendingUp, TrendingDown, AlertCircle, Filter, Search,
-  BarChart3, Target, Activity, Loader2
+  TrendingUp, TrendingDown, Filter, Search,
+  BarChart3, Activity, Loader2
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -422,14 +421,23 @@ interface Forecast {
   start_date: string;
   end_date: string;
   method: string;
-  method_params?: any;
-  forecast_data?: any[];
+  method_params?: Record<string, unknown>;
+  forecast_data?: ForecastDataPoint[];
   created_at: string;
+}
+
+interface ForecastRaw extends Omit<Forecast, 'forecast_data' | 'method_params'> {
+  method_params?: Record<string, unknown> | string | null;
+  forecast_data?: ForecastDataPoint[] | string | null;
+}
+
+interface ForecastDataPoint {
+  forecasted_value?: number;
+  [key: string]: unknown;
 }
 
 const ForecastListPage: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -447,30 +455,40 @@ const ForecastListPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await apiClient.getForecasts();
-      const forecastsData = Array.isArray(response.data) ? response.data : [];
+      const forecastsData: ForecastRaw[] = Array.isArray(response.data) ? (response.data as ForecastRaw[]) : [];
       
       // Parse JSON fields if they're strings
-      const parsedForecasts = forecastsData.map((forecast: any) => {
+      const parsedForecasts: Forecast[] = forecastsData.map((forecast) => {
+        const forecastClone: ForecastRaw = { ...forecast };
+
         if (typeof forecast.forecast_data === 'string') {
           try {
-            forecast.forecast_data = JSON.parse(forecast.forecast_data);
-          } catch (e) {
-            forecast.forecast_data = [];
+            forecastClone.forecast_data = JSON.parse(forecast.forecast_data) as ForecastDataPoint[];
+          } catch {
+            forecastClone.forecast_data = [];
           }
+        } else if (Array.isArray(forecast.forecast_data)) {
+          forecastClone.forecast_data = forecast.forecast_data;
         }
         if (typeof forecast.method_params === 'string') {
           try {
-            forecast.method_params = JSON.parse(forecast.method_params);
-          } catch (e) {
-            forecast.method_params = {};
+              forecastClone.method_params = JSON.parse(forecast.method_params) as Record<string, unknown>;
+          } catch {
+            forecastClone.method_params = {};
           }
+        } else if (forecast.method_params) {
+          forecastClone.method_params = forecast.method_params;
         }
-        return forecast;
+        return forecastClone as Forecast;
       });
       
       setForecasts(parsedForecasts);
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to load forecasts';
+    } catch (error: unknown) {
+      const errorMessage =
+        (typeof error === 'object' && error !== null && 'response' in error
+          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (error instanceof Error ? error.message : 'Failed to load forecasts');
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -504,8 +522,12 @@ const ForecastListPage: React.FC = () => {
       setShowDeleteModal(null);
       setDeletePassword('');
       loadForecasts();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete forecast';
+    } catch (error: unknown) {
+      const errorMessage =
+        (typeof error === 'object' && error !== null && 'response' in error
+          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (error instanceof Error ? error.message : 'Failed to delete forecast');
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -548,7 +570,7 @@ const ForecastListPage: React.FC = () => {
       return { count: 0, total: 0, average: 0 };
     }
     
-    const values = forecast.forecast_data.map((item: any) => item.forecasted_value || 0);
+    const values = forecast.forecast_data.map((item: ForecastDataPoint) => item.forecasted_value || 0);
     const total = values.reduce((sum: number, val: number) => sum + val, 0);
     const average = values.length > 0 ? total / values.length : 0;
     

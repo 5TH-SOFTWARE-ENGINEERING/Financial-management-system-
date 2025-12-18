@@ -228,7 +228,17 @@ const ButtonRow = styled.div`
   align-items: center;
 `;
 
-type FormData = z.infer<typeof RegisterSchema>;
+const RoleEnum = z.enum(['ADMIN', 'FINANCE_ADMIN', 'ACCOUNTANT', 'EMPLOYEE']);
+
+const RegisterFormSchema = RegisterSchema.omit({ role: true }).extend({
+  role: RoleEnum,
+  confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+type RegisterFormValues = z.infer<typeof RegisterFormSchema>;
 
 // ──────────────────────────────────────────
 // Component
@@ -242,13 +252,8 @@ export default function CreateEmployeePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
-    resolver: zodResolver(RegisterSchema.extend({
-      confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
-    }).refine((data) => data.password === data.confirmPassword, {
-      message: "Passwords don't match",
-      path: ["confirmPassword"],
-    })),
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<RegisterFormValues>({
+    resolver: zodResolver(RegisterFormSchema),
     defaultValues: { 
       role: 'EMPLOYEE' as const,
       full_name: '',
@@ -262,7 +267,7 @@ export default function CreateEmployeePage() {
     },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: RegisterFormValues) => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -275,9 +280,9 @@ export default function CreateEmployeePage() {
         username: data.username.trim(),
         password: data.password,
         role: 'employee', // Backend expects lowercase
-        phone: data.phone?.trim() || null,
-        department: data.department?.trim() || null,
-        manager_id: data.managerId ? parseInt(data.managerId, 10) : null,
+        phone: data.phone?.trim() || undefined,
+        department: data.department?.trim() || undefined,
+        manager_id: data.managerId ? parseInt(data.managerId, 10) : undefined,
       };
       
       // Check user role to determine which endpoint to use
@@ -302,8 +307,18 @@ export default function CreateEmployeePage() {
       setTimeout(() => {
         router.push('/employees/list');
       }, 2000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Failed to create employee';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail) ||
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message) ||
+        (err as { message?: string }).message ||
+        'Failed to create employee';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

@@ -1,13 +1,13 @@
 // lib/services/role-service.ts
 
 import { Role, Permission, DEFAULT_PERMISSIONS, UserType, Resource, Action } from "../rbac/models";
-import apiClient, { ApiRole } from "../api";
+import apiClient, { ApiRole, type ApiUser } from "../api";
 
 interface RoleServiceInterface {
   getAllRoles(): Promise<Role[]>;
   getRoleById(roleId: string): Promise<Role | null>;
-  assignRoleToUser(userId: string, role: string): Promise<any>;
-  removeRoleFromUser(userId: string): Promise<any>;
+  assignRoleToUser(userId: string, role: string): Promise<ApiUser>;
+  removeRoleFromUser(userId: string): Promise<ApiUser>;
   getRolePermissions(roleId: string): Promise<Permission[]>;
   getRolesByUserType(userType: UserType): Promise<Role[]>;
   createRole(role: Omit<Role, "id">): Promise<Role>;
@@ -100,7 +100,7 @@ export class RoleService implements RoleServiceInterface {
    * Update a role
    */
   async updateRole(id: string, roleUpdate: Partial<Role>): Promise<Role | null> {
-    const payload: any = {};
+    const payload: Partial<ApiRole> & { permissions?: string[] } = {};
     if (roleUpdate.name) payload.name = roleUpdate.name;
     if (roleUpdate.description) payload.description = roleUpdate.description;
     if (roleUpdate.permissions) {
@@ -135,7 +135,7 @@ export class RoleService implements RoleServiceInterface {
    * Assign a role to a user by updating the user's role
    * Maps UserType to backend role string
    */
-  async assignRoleToUser(userId: string, role: string): Promise<any> {
+  async assignRoleToUser(userId: string, role: string): Promise<ApiUser> {
     try {
       // Map UserType to backend role string if necessary
       const roleMap: Record<string, string> = {
@@ -159,7 +159,7 @@ export class RoleService implements RoleServiceInterface {
   /**
    * Remove a role from a user (sets to default employee role)
    */
-  async removeRoleFromUser(userId: string): Promise<any> {
+  async removeRoleFromUser(userId: string): Promise<ApiUser> {
     try {
       const response = await apiClient.updateUser(Number(userId), { role: 'employee' });
       return response.data;

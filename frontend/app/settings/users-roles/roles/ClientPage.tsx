@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { theme } from '@/components/common/theme';
 import { Resource, Action } from '@/lib/rbac/models';
@@ -17,17 +17,9 @@ import {
 import { useRouter } from 'next/navigation';
 import apiClient, { type ApiRole } from '@/lib/api';
 import { 
-  Search, 
-  Plus, 
-  Edit, 
   Trash2, 
-  Copy,
   Loader2
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 // Styled components
@@ -79,18 +71,6 @@ const Message = styled.div`
   color: ${theme.colors.textSecondary};
 `;
 
-const ErrorText = styled.p`
-  color: #dc2626;
-  font-size: ${theme.typography.fontSizes.sm};
-  margin-top: 8px;
-`;
-
-const HelperText = styled.p`
-  font-size: ${theme.typography.fontSizes.sm};
-  color: ${theme.colors.textSecondary};
-  margin-top: 6px;
-`;
-
 interface Role {
   id: number;
   name: string;
@@ -108,16 +88,6 @@ const RolesPage: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'duplicate'>('create');
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [formValues, setFormValues] = useState({
-    name: '',
-    description: '',
-    permissionsText: '',
-  });
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
 
   // Load roles from API
@@ -137,14 +107,20 @@ const RolesPage: React.FC = () => {
           name: role.name,
           description: role.description || `Users with ${role.name} role`,
           permissions,
-          userCount: role.user_count ?? (role as any).userCount ?? 0,
-          permissionCount: role.permission_count ?? (role as any).permissionCount ?? permissions.length,
-          createdAt: role.created_at ?? (role as any).createdAt,
+          userCount: role.user_count ?? permissions.length,
+          permissionCount: role.permission_count ?? permissions.length,
+          createdAt: role.created_at,
         };
       });
       setRoles(transformedRoles);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load roles');
+    } catch (err: unknown) {
+      const detail =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : err instanceof Error
+            ? err.message
+            : null;
+      setError(detail || 'Failed to load roles');
       setRoles([]);
     } finally {
       setLoading(false);
@@ -156,100 +132,6 @@ const RolesPage: React.FC = () => {
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (char) => char.toUpperCase());
 
-  const resetForm = () => {
-    setFormValues({
-      name: '',
-      description: '',
-      permissionsText: '',
-    });
-    setFormError(null);
-    setEditingRole(null);
-  };
-
-  const handleModalStateChange = (open: boolean) => {
-    setIsModalOpen(open);
-    if (!open) {
-      resetForm();
-      setIsSubmitting(false);
-    }
-  };
-
-  const parsePermissionsFromInput = () => {
-    return Array.from(
-      new Set(
-        formValues.permissionsText
-          .split(/[\n,]+/)
-          .map((perm) => perm.trim())
-          .filter(Boolean)
-      )
-    );
-  };
-
-  const openCreateModal = () => {
-    setModalMode('create');
-    resetForm();
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (role: Role) => {
-    setModalMode('edit');
-    setEditingRole(role);
-    setFormValues({
-      name: role.name,
-      description: role.description || '',
-      permissionsText: role.permissions.join('\n'),
-    });
-    setFormError(null);
-    setIsModalOpen(true);
-  };
-
-  const openDuplicateModal = (role: Role) => {
-    setModalMode('duplicate');
-    setEditingRole(null);
-    setFormValues({
-      name: `${role.name}_copy`,
-      description: role.description || '',
-      permissionsText: role.permissions.join('\n'),
-    });
-    setFormError(null);
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setFormError(null);
-
-    const trimmedName = formValues.name.trim();
-    if (!trimmedName) {
-      setFormError('Role name is required.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    const payload = {
-      name: trimmedName,
-      description: formValues.description.trim() || undefined,
-      permissions: parsePermissionsFromInput(),
-    };
-
-    try {
-      if (modalMode === 'edit' && editingRole) {
-        await apiClient.updateRole(editingRole.id, payload);
-        toast.success('Role updated successfully');
-      } else {
-        await apiClient.createRole(payload);
-        toast.success(modalMode === 'duplicate' ? 'Role duplicated successfully' : 'Role created successfully');
-      }
-      handleModalStateChange(false);
-      await loadRoles();
-    } catch (err: any) {
-      const detail = err.response?.data?.detail || err.message || 'Unable to save role';
-      setFormError(detail);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleDeleteRole = async (role: Role) => {
     if (!confirm(`Delete role "${formatRoleName(role.name)}"? This action cannot be undone.`)) {
       return;
@@ -259,8 +141,13 @@ const RolesPage: React.FC = () => {
       await apiClient.deleteRole(role.id);
       setRoles((prev) => prev.filter((item) => item.id !== role.id));
       toast.success('Role deleted successfully');
-    } catch (err: any) {
-      const detail = err.response?.data?.detail || err.message || 'Failed to delete role';
+    } catch (err: unknown) {
+      const detail =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : err instanceof Error
+            ? err.message
+            : 'Failed to delete role';
       toast.error(detail);
     } finally {
       setDeleteLoadingId(null);
@@ -309,12 +196,6 @@ const RolesPage: React.FC = () => {
       >
         <Card>
           <ButtonGroup>
-            <Button 
-              onClick={openCreateModal}
-            >
-              <Plus size={16} className="mr-2" />
-              Create New Role
-            </Button>
             <Button onClick={navigateToUserRoles}>
               Assign User Roles
             </Button>
@@ -347,22 +228,6 @@ const RolesPage: React.FC = () => {
                   <TableCell>{role.createdAt}</TableCell>
                   <TableCell>
                     <ActionButtons>
-                      <Button 
-                        size="sm" 
-                        variant="secondary"
-                        onClick={() => openEditModal(role)}
-                      >
-                        <Edit size={14} className="mr-1" />
-                        Edit
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="secondary"
-                        onClick={() => openDuplicateModal(role)}
-                      >
-                        <Copy size={14} className="mr-1" />
-                        Duplicate
-                      </Button>
                       <Button 
                         size="sm" 
                         variant="destructive"

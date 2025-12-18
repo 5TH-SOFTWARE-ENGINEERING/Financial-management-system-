@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,12 +9,9 @@ import { apiClient } from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown,
-  Calendar,
-  Download,
+import {
+  DollarSign,
+  TrendingUp,
   RefreshCw,
   Loader2,
   ArrowUpRight,
@@ -29,6 +26,18 @@ import {
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -493,26 +502,8 @@ export default function ReportPage() {
   const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
   const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      const timer = setTimeout(() => {
-        loadReports(true);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user && startDate && endDate) {
-      const timer = setTimeout(() => {
-        loadReports(true);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [startDate, endDate]);
-
   // Helper function to safely convert values to numbers, handling NaN, null, undefined
-  const safeNumber = (value: any): number => {
+  const safeNumber = (value: unknown): number => {
     if (value === null || value === undefined || value === '') {
       return 0;
     }
@@ -520,7 +511,7 @@ export default function ReportPage() {
     return isNaN(num) ? 0 : num;
   };
 
-  const loadReports = async (useDateFilter: boolean = true) => {
+  const loadReports = useCallback(async (useDateFilter: boolean = true) => {
     if (!user) {
       setLoading(false);
       return;
@@ -531,7 +522,6 @@ export default function ReportPage() {
     
     try {
       const userRole = user?.role?.toLowerCase();
-      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
       const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
       const isAccountant = userRole === 'accountant';
       const isEmployee = userRole === 'employee';
@@ -543,11 +533,12 @@ export default function ReportPage() {
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
           const subordinatesRes = await apiClient.getSubordinates(userId);
           const subordinates = subordinatesRes?.data || [];
-          accessibleUserIds = [userId, ...subordinates.map((sub: any) => {
-            const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+          accessibleUserIds = [userId, ...subordinates.map((sub: unknown) => {
+            const subordinate = sub as { id: number | string };
+            const subId = typeof subordinate.id === 'string' ? parseInt(subordinate.id, 10) : subordinate.id;
             return subId;
           })];
-        } catch (err) {
+        } catch (err: unknown) {
           console.warn('Failed to fetch subordinates, using only finance admin ID:', err);
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
           accessibleUserIds = [userId];
@@ -562,7 +553,7 @@ export default function ReportPage() {
       const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
       
       // Fetch sales data for the period (for detailed breakdowns)
-      let salesData: any[] = [];
+      let salesData: unknown[] = [];
       try {
         const salesResponse = await apiClient.getSales({
           status: 'posted', // Only include posted sales in reports
@@ -573,31 +564,33 @@ export default function ReportPage() {
         const salesArray = Array.isArray(salesResponse?.data) 
           ? salesResponse.data 
           : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
-            ? (salesResponse.data as any).data || [] 
+            ? (salesResponse.data as { data?: unknown[] }).data || [] 
             : []);
         salesData = salesArray || [];
 
         // Apply role-based filtering to sales data
         if (isFinanceAdmin && accessibleUserIds && accessibleUserIds.length > 0) {
           // Finance Admin: filter to only their team's sales
-          salesData = salesData.filter((s: any) => {
-            const soldById = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
+          salesData = salesData.filter((s: unknown) => {
+            const sale = s as { sold_by_id?: unknown; soldBy?: unknown; sold_by?: unknown; created_by_id?: unknown; createdBy?: unknown };
+            const soldById = sale.sold_by_id || sale.soldBy || sale.sold_by || sale.created_by_id || sale.createdBy;
             if (!soldById) return false;
-            const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
+            const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : (typeof soldById === 'number' ? soldById : NaN);
             return accessibleUserIds!.includes(soldByIdNum);
           });
         } else if (isAccountant || isEmployee) {
           // Accountant and Employee: filter to only their own sales
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-          salesData = salesData.filter((s: any) => {
-            const soldById = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
+          salesData = salesData.filter((s: unknown) => {
+            const sale = s as { sold_by_id?: unknown; soldBy?: unknown; sold_by?: unknown; created_by_id?: unknown; createdBy?: unknown };
+            const soldById = sale.sold_by_id || sale.soldBy || sale.sold_by || sale.created_by_id || sale.createdBy;
             if (!soldById) return false;
             const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
             return soldByIdNum === userId;
           });
         }
         // Admin sees all - no filtering needed
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn('Failed to fetch detailed sales data for reports:', err);
         // Continue without sales data - we'll use sales summary API instead
       }
@@ -623,9 +616,10 @@ export default function ReportPage() {
         apiClient.getFinancialSummary(dateParams.startDate, dateParams.endDate),
         apiClient.getIncomeStatement(dateParams.startDate, dateParams.endDate),
         apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
-        canViewInventory ? apiClient.getInventorySummary().catch((err: any) => {
+        canViewInventory ? apiClient.getInventorySummary().catch((err: unknown) => {
           // Silently handle 403 errors (expected for non-finance admins)
-          if (err.response?.status === 403) {
+          const error = err as ErrorWithDetails;
+          if (error.response?.status === 403) {
             return { data: null };
           }
           throw err;
@@ -633,9 +627,10 @@ export default function ReportPage() {
         canViewSalesSummary ? apiClient.getSalesSummary({
           start_date: dateParams.startDate ? new Date(dateParams.startDate + 'T00:00:00').toISOString() : undefined,
           end_date: dateParams.endDate ? new Date(dateParams.endDate + 'T23:59:59').toISOString() : undefined,
-        }).catch((err: any) => {
+        }).catch((err: unknown) => {
           // Silently handle 403 errors (expected for non-authorized users)
-          if (err.response?.status === 403) {
+          const error = err as ErrorWithDetails;
+          if (error.response?.status === 403) {
             return { data: null };
           }
           throw err;
@@ -644,17 +639,22 @@ export default function ReportPage() {
       
       // Filter to only include POSTED sales for revenue/profit calculations
       // This ensures revenue and net profit are only calculated from approved sales
-      const postedSalesData = salesData.filter((s: any) => 
-        s.status === 'posted' || s.status === 'POSTED' || s.status?.toLowerCase() === 'posted'
-      );
+      const postedSalesData = salesData.filter((s: unknown) => {
+        const sale = s as { status?: string };
+        return sale.status === 'posted' || sale.status === 'POSTED' || sale.status?.toLowerCase() === 'posted';
+      });
       
       // Calculate sales totals from individual sales - ONLY from POSTED (approved) sales
       // This is a fallback if sales summary API is not available
-      const totalSalesFromData = postedSalesData.reduce((sum: number, s: any) => sum + safeNumber(s.total_sale), 0);
+      const totalSalesFromData = postedSalesData.reduce((sum: number, s: unknown) => {
+        const sale = s as { total_sale?: unknown };
+        return sum + safeNumber(sale.total_sale);
+      }, 0);
       const salesByCategory: Record<string, number> = {};
-      postedSalesData.forEach((s: any) => {
-        const category = s.item?.category || 'Sales';
-        salesByCategory[category] = (salesByCategory[category] || 0) + safeNumber(s.total_sale);
+      postedSalesData.forEach((s: unknown) => {
+        const sale = s as { category?: string; total_sale?: unknown; item?: { category?: string } };
+        const category = sale.item?.category || sale.category || 'Sales';
+        salesByCategory[category] = (salesByCategory[category] || 0) + safeNumber(sale.total_sale);
       });
 
       if (summaryResult.status === 'fulfilled') {
@@ -707,11 +707,13 @@ export default function ReportPage() {
       } else {
         // Failed to load financial summary, try to use income statement data if available
         if (incomeResult.status === 'fulfilled') {
-          const incomeData = incomeResult.value.data;
+          const incomeData = incomeResult.value.data as { revenue?: { by_category?: Record<string, number>; total?: number }; expenses?: { by_category?: Record<string, number>; total?: number } };
           const revenueCategories = Object.keys(incomeData.revenue?.by_category || {}).length;
           const expenseCategories = Object.keys(incomeData.expenses?.by_category || {}).length;
-          const baseRevenue = safeNumber(incomeData.revenue?.total);
-          const baseExpenses = safeNumber(incomeData.expenses?.total);
+          const revenueObj = incomeData.revenue && typeof incomeData.revenue === 'object' ? incomeData.revenue as { total?: number } : {};
+          const expensesObj = incomeData.expenses && typeof incomeData.expenses === 'object' ? incomeData.expenses as { total?: number } : {};
+          const baseRevenue = safeNumber(revenueObj.total);
+          const baseExpenses = safeNumber(expensesObj.total);
           const calculatedRevenue = baseRevenue + totalSalesFromData;
           const calculatedProfit = calculatedRevenue - baseExpenses;
           const calculatedProfitMargin = calculatedRevenue > 0
@@ -727,9 +729,9 @@ export default function ReportPage() {
               profit: calculatedProfit,
               profit_margin: calculatedProfitMargin,
             },
-            revenue_by_category: incomeData.revenue.by_category,
+            revenue_by_category: (incomeData.revenue?.by_category as Record<string, number>) || {},
             sales_by_category: salesByCategory,
-            expenses_by_category: incomeData.expenses.by_category,
+            expenses_by_category: (incomeData.expenses?.by_category as Record<string, number>) || {},
             transaction_counts: {
               revenue: revenueCategories > 0 ? revenueCategories : 0,
               sales: postedSalesData.length, // Only count POSTED sales
@@ -747,8 +749,8 @@ export default function ReportPage() {
         const incomeData = incomeResult.value.data || incomeResult.value;
         if (incomeData && (incomeData.revenue || incomeData.expenses)) {
           // Enhance income statement with sales data
-          const baseRevenue = safeNumber(incomeData.revenue?.total);
-          const baseExpenses = safeNumber(incomeData.expenses?.total);
+          const baseRevenue = safeNumber(incomeData.revenue && typeof incomeData.revenue === 'object' && incomeData.revenue !== null && 'total' in incomeData.revenue ? (incomeData.revenue as { total: number }).total : 0);
+          const baseExpenses = safeNumber(incomeData.expenses && typeof incomeData.expenses === 'object' && incomeData.expenses !== null && 'total' in incomeData.expenses ? (incomeData.expenses as { total: number }).total : 0);
           const calculatedRevenue = baseRevenue + totalSalesFromData;
           const calculatedProfit = calculatedRevenue - baseExpenses;
           const calculatedProfitMargin = calculatedRevenue > 0
@@ -762,13 +764,13 @@ export default function ReportPage() {
               by_category: salesByCategory,
             },
             revenue: {
-              ...incomeData.revenue,
+              by_category: (incomeData.revenue && typeof incomeData.revenue === 'object' && 'by_category' in incomeData.revenue ? incomeData.revenue.by_category : undefined) || {},
               total: calculatedRevenue,
             },
             profit: calculatedProfit,
             profit_margin: calculatedProfitMargin,
           };
-          setIncomeStatement(enhancedIncome);
+          setIncomeStatement(enhancedIncome as IncomeStatement);
         } else {
           if (process.env.NODE_ENV === 'development') {
             console.warn('Invalid income statement data structure:', incomeData);
@@ -785,12 +787,13 @@ export default function ReportPage() {
         if (cashFlowData && (cashFlowData.summary || cashFlowData.daily_cash_flow)) {
           // Enhance cash flow with sales data - ONLY from POSTED (approved) sales
           const salesByDay: Record<string, { inflow: number; outflow: number; net: number }> = {};
-          postedSalesData.forEach((sale: any) => {
-            const saleDate = sale.created_at ? new Date(sale.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+          postedSalesData.forEach((sale: unknown) => {
+            const saleData = sale as { created_at?: string; total_sale?: unknown };
+            const saleDate = saleData.created_at ? new Date(saleData.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
             if (!salesByDay[saleDate]) {
               salesByDay[saleDate] = { inflow: 0, outflow: 0, net: 0 };
             }
-            const saleAmount = safeNumber(sale.total_sale);
+            const saleAmount = safeNumber(saleData.total_sale);
             salesByDay[saleDate].inflow += saleAmount;
             salesByDay[saleDate].net += saleAmount;
           });
@@ -937,7 +940,11 @@ export default function ReportPage() {
           if (typeof detail === 'string') {
             errorMsg = detail;
           } else if (Array.isArray(detail)) {
-            errorMsg = detail.map((e: any) => typeof e === 'string' ? e : e.msg || JSON.stringify(e)).join(', ');
+            errorMsg = detail.map((e: unknown) => {
+              if (typeof e === 'string') return e;
+              const errorDetail = e as { msg?: string };
+              return errorDetail.msg || JSON.stringify(e);
+            }).join(', ');
           }
         } else if (firstError?.message) {
           errorMsg = firstError.message;
@@ -949,21 +956,24 @@ export default function ReportPage() {
         setCashFlow(null);
       }
       
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
       let errorMessage = 'Failed to load reports';
-      
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
+
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
         
         if (Array.isArray(detail)) {
-          errorMessage = detail.map((e: any) => {
+          errorMessage = detail.map((e: unknown) => {
             if (typeof e === 'string') return e;
-            if (e.msg) return `${e.loc?.join('.') || 'Field'}: ${e.msg}`;
+            const errorDetail = e as { msg?: string; loc?: string[] };
+            if (errorDetail.msg) return `${errorDetail.loc?.join('.') || 'Field'}: ${errorDetail.msg}`;
             return JSON.stringify(e);
           }).join(', ');
         }
-        else if (typeof detail === 'object' && detail.msg) {
-          errorMessage = `${detail.loc?.join('.') || 'Field'}: ${detail.msg}`;
+        else if (typeof detail === 'object' && detail && 'msg' in detail) {
+          const detailObj = detail as { msg?: string; loc?: string[] };
+          errorMessage = `${detailObj.loc?.join('.') || 'Field'}: ${detailObj.msg}`;
         }
         else if (typeof detail === 'string') {
           errorMessage = detail;
@@ -971,8 +981,8 @@ export default function ReportPage() {
         else {
           errorMessage = JSON.stringify(detail);
         }
-      } else if (err.message) {
-        errorMessage = err.message;
+      } else if ((err as ErrorWithDetails).message) {
+        errorMessage = (err as ErrorWithDetails).message!;
       }
       
       setError(errorMessage);
@@ -980,7 +990,25 @@ export default function ReportPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, startDate, endDate]);
+
+  useEffect(() => {
+    if (user) {
+      const timer = setTimeout(() => {
+        loadReports(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [user, loadReports]);
+
+  useEffect(() => {
+    if (user && startDate && endDate) {
+      const timer = setTimeout(() => {
+        loadReports(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [startDate, endDate, loadReports, user]);
 
   const formatCurrency = (amount: number | null | undefined): string => {
     const safeAmount = safeNumber(amount);
@@ -1504,7 +1532,7 @@ export default function ReportPage() {
                           {cashFlow.daily_cash_flow && Object.entries(cashFlow.daily_cash_flow).length > 0 ? (
                             Object.entries(cashFlow.daily_cash_flow)
                               .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
-                              .map(([date, flow]: [string, any]) => (
+                              .map(([date, flow]: [string, { inflow: number; outflow: number; net: number }]) => (
                                 <tr key={date}>
                                   <td>{formatDate(date)}</td>
                                   <td style={{ textAlign: 'right' }}>

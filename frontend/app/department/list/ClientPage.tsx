@@ -4,7 +4,6 @@ import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, Building2, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/layout';
@@ -343,7 +342,6 @@ interface Department {
 }
 
 export default function DepartmentListPage() {
-  const router = useRouter();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -364,12 +362,23 @@ export default function DepartmentListPage() {
     try {
       const response = await apiClient.getDepartments();
       setDepartments(response.data || []);
-    } catch (err: any) {
-      if (err.response?.status === 404) {
+    } catch (err: unknown) {
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        (err as { response?: { status?: number } }).response?.status === 404
+      ) {
         setError('Departments feature is not available. Please contact your administrator.');
         setDepartments([]);
       } else {
-        setError(err.response?.data?.detail || 'Failed to load departments');
+        const fallbackError =
+          (typeof err === 'object' &&
+            err !== null &&
+            'response' in err &&
+            (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+          'Failed to load departments';
+        setError(fallbackError);
       }
     } finally {
       setLoading(false);
@@ -409,8 +418,13 @@ export default function DepartmentListPage() {
       setDepartmentToDelete(null);
       setDeletePassword('');
       loadDepartments();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete department';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail) ||
+        'Failed to delete department';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {

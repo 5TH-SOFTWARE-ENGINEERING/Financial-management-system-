@@ -7,11 +7,49 @@ import Layout from '@/components/layout';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { UserType } from '@/lib/rbac/models';
-import { Settings, Users, Globe, Lock, Bell, Database, List, History, RefreshCw, Loader2, Activity, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Settings, Users, Globe, Lock, Bell, Database, List, History, RefreshCw, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { theme } from '@/components/common/theme';
 import apiClient from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+
+// Type definitions for system data and error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
+interface SystemStats {
+  users?: {
+    total?: number;
+    active?: number;
+    by_role?: Record<string, number>;
+  };
+  pending_approvals?: number;
+  financials?: {
+    total_revenue?: number;
+    net_profit?: number;
+    total_expenses?: number;
+  };
+  system_health?: string;
+}
+
+interface SystemSettings {
+  email_configured?: boolean;
+  redis_configured?: boolean;
+  s3_configured?: boolean;
+}
+
+interface SystemHealth {
+  database?: 'healthy' | 'unhealthy' | string;
+  status?: string;
+}
+
 
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
@@ -403,9 +441,9 @@ const SettingsPage: React.FC = () => {
                   user?.role?.toLowerCase() === 'super_admin' ||
                   user?.userType === UserType.ADMIN;
 
-  const [systemStats, setSystemStats] = useState<any>(null);
-  const [systemSettings, setSystemSettings] = useState<any>(null);
-  const [healthStatus, setHealthStatus] = useState<any>(null);
+  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
+  const [healthStatus, setHealthStatus] = useState<SystemHealth | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -495,20 +533,21 @@ const SettingsPage: React.FC = () => {
       }
 
       // Responses are already handled above in Promise.allSettled
-    } catch (err: any) {
+    } catch (err: unknown) {
       let message = 'Failed to load system data';
-      
-      // Handle specific error types
-      if (err?.code === 'ERR_NETWORK' || err?.message?.includes('Failed to fetch') || err?.message?.includes('ERR_FAILED')) {
+
+      // Handle specific error types with type guards
+      const error = err as ErrorWithDetails;
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Failed to fetch') || error?.message?.includes('ERR_FAILED')) {
         message = 'Unable to connect to backend server. Please ensure the backend is running on http://localhost:8000';
-      } else if (err?.message?.includes('CORS')) {
+      } else if (error?.message?.includes('CORS')) {
         message = 'CORS error: Backend may not be configured to allow requests from this origin. Check backend CORS settings.';
-      } else if (err?.response?.status === 403) {
+      } else if (error?.response?.status === 403) {
         message = 'Access denied. You do not have permission to view system statistics.';
-      } else if (err?.response?.data?.detail) {
-        message = err.response.data.detail;
-      } else if (err?.message) {
-        message = err.message;
+      } else if (error?.response?.data?.detail) {
+        message = error.response.data.detail;
+      } else if (error?.message) {
+        message = error.message;
       }
       
       setError(message);

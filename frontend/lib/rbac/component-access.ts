@@ -1,5 +1,5 @@
 // lib/rbac/component-access.ts
-import { UserType, Resource } from './models';
+import { UserType } from './models';
  
 // Common components
 export enum ComponentId {    

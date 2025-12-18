@@ -1,11 +1,9 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
   DollarSign, FileText, Plus, Edit, Trash2, Calendar,
-  TrendingUp, TrendingDown, AlertCircle, CheckCircle,
   Building2, FolderKanban, Filter, Search, Loader2, X
 } from 'lucide-react';
 import Layout from '@/components/layout';
@@ -472,7 +470,6 @@ interface Budget {
 
 const BudgetsPage: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -484,23 +481,30 @@ const BudgetsPage: React.FC = () => {
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadBudgets();
-  }, [selectedStatus]);
-
-  const loadBudgets = async () => {
+  const loadBudgets = useCallback(async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: Record<string, string> = {};
       if (selectedStatus) params.status = selectedStatus;
       const response = await apiClient.getBudgets(params);
       setBudgets(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budgets');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to load budgets');
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedStatus]);
+
+  useEffect(() => {
+    loadBudgets();
+  }, [selectedStatus, loadBudgets]);
 
   const handleDeleteClick = (id: number) => {
     setDeleteBudgetId(id);
@@ -527,10 +531,21 @@ const BudgetsPage: React.FC = () => {
       setDeleteBudgetId(null);
       setDeletePassword('');
       loadBudgets();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete budget';
-      setDeletePasswordError(errorMessage);
-      toast.error(errorMessage);
+    } catch (error: unknown) {
+      const errorMessage =
+        (typeof error === 'object' &&
+          error !== null &&
+          'response' in error &&
+          (error as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to delete budget');
+      const finalMessage = errorMessage ?? 'Failed to delete budget';
+      setDeletePasswordError(finalMessage);
+      toast.error(finalMessage);
     } finally {
       setDeleting(false);
     }
@@ -974,8 +989,15 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
       toast.success('Budget created from template successfully!');
       onSuccess();
       router.push('/budgets');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create budget from template');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to create budget from template');
+      toast.error(message);
     } finally {
       setLoading(false);
     }

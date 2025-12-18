@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { useForm } from 'react-hook-form';
+import { useForm, Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ExpenseSchema, type ExpenseInput } from '@/lib/validation';
+import { ExpenseSchema } from '@/lib/validation';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import Navbar from '@/components/common/Navbar';
@@ -106,12 +107,6 @@ const FieldError = styled.p`
   color: #dc2626;
   font-size: 14px;
   margin-top: 4px;
-`;
-
-const HelpText = styled.p`
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--muted-foreground);
 `;
 
 const MessageBox = styled.div<{ type: 'error' | 'success' }>`
@@ -320,28 +315,43 @@ export default function EditExpensePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    watch,
-  } = useForm({
-    resolver: zodResolver(ExpenseSchema),
-    defaultValues: {
-      isRecurring: false,
-    },
-  });
+type ExpenseFormValues = z.infer<typeof ExpenseSchema>;
 
-  const isRecurring = watch('isRecurring');
+interface ApiExpense {
+  id: number;
+  title: string;
+  description?: string | null;
+  category: string;
+  amount: number;
+  vendor?: string | null;
+  date?: string;
+  is_recurring?: boolean;
+  recurring_frequency?: string | null;
+  attachment_url?: string | null;
+}
 
-  useEffect(() => {
-    if (expenseId) {
-      loadExpense();
-    }
-  }, [expenseId]);
+const formResolver = zodResolver(ExpenseSchema) as unknown as Resolver<
+  ExpenseFormValues,
+  unknown,
+  ExpenseFormValues
+>;
 
-  const loadExpense = async () => {
+const {
+  register,
+  handleSubmit,
+  formState: { errors },
+  reset,
+  watch,
+} = useForm<ExpenseFormValues>({
+  resolver: formResolver,
+  defaultValues: {
+    isRecurring: false,
+  },
+});
+
+const isRecurring = watch('isRecurring');
+
+  const loadExpense = useCallback(async () => {
     if (!expenseId) return;
 
     setLoading(true);
@@ -349,7 +359,7 @@ export default function EditExpensePage() {
 
     try {
       const response = await apiClient.getExpense(expenseId);
-      const expense = response.data;
+      const expense = response.data as unknown as ApiExpense;
       
       if (!expense) {
         setError('Expense not found');
@@ -359,27 +369,40 @@ export default function EditExpensePage() {
       // Format date for input field (YYYY-MM-DD)
       const expenseDate = expense.date ? new Date(expense.date).toISOString().split('T')[0] : '';
       
+      const recurringFrequency = (['monthly', 'quarterly', 'yearly'].includes(expense.recurring_frequency || '')
+        ? expense.recurring_frequency
+        : undefined) as ExpenseFormValues['recurringFrequency'];
+
       reset({
-        title: expense.title || '',
-        description: expense.description || '',
-        category: expense.category || '',
-        amount: expense.amount || 0,
-        vendor: expense.vendor || '',
+        title: expense.title ?? '',
+        description: expense.description ?? '',
+        category: (expense.category as ExpenseFormValues['category']) ?? 'other',
+        amount: expense.amount ?? 0,
+        vendor: expense.vendor ?? '',
         date: expenseDate,
-        isRecurring: expense.is_recurring || false,
-        recurringFrequency: expense.recurring_frequency || undefined,
-        attachmentUrl: expense.attachment_url || '',
+        isRecurring: expense.is_recurring ?? false,
+        recurringFrequency,
+        attachmentUrl: expense.attachment_url ?? '',
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load expense';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to load expense';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [expenseId, reset]);
 
-  const onSubmit = async (data: any) => {
+  useEffect(() => {
+    if (expenseId) {
+      loadExpense();
+    }
+  }, [expenseId, loadExpense]);
+
+  const onSubmit = async (data: ExpenseFormValues) => {
     if (!expenseId) return;
 
     setSubmitting(true);
@@ -410,8 +433,12 @@ export default function EditExpensePage() {
       setTimeout(() => {
         router.push('/expenses/list');
       }, 2000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to update expense';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (err instanceof Error ? err.message : 'Failed to update expense');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

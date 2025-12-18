@@ -18,10 +18,6 @@ const TableHeaderContainer = styled.thead`
   background-color: ${theme.colors.backgroundSecondary};
 `;
 
-const TableHeaderRow = styled.tr`
-  height: 48px;
-`;
-
 const TableHeaderCell = styled.th`
   padding: 12px 16px;
   text-align: left;

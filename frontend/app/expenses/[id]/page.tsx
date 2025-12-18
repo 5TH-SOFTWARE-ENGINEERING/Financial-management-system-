@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import styled from 'styled-components';
 import {
@@ -12,7 +12,6 @@ import {
   AlertCircle,
   User,
   Calendar,
-  DollarSign,
   Building,
   FileText,
   Edit,
@@ -29,7 +28,7 @@ import { theme } from '@/components/common/theme';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -354,6 +353,18 @@ interface ExpenseDetail {
   approved_at?: string;
 }
 
+interface Approval {
+  id: number;
+  expense_entry_id?: number | null;
+}
+
+interface StoreUser {
+  id: number | string;
+  name?: string | null;
+  full_name?: string | null;
+  email?: string | null;
+}
+
 export default function ExpenseDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -390,18 +401,7 @@ export default function ExpenseDetailPage() {
     return isOwner || isAdmin;
   };
 
-  useEffect(() => {
-    if (expenseId) {
-      loadExpense();
-      loadRelatedApproval();
-    }
-    // Load all users for name resolution
-    if (allUsers.length === 0) {
-      fetchAllUsers();
-    }
-  }, [expenseId]);
-
-  const loadExpense = async () => {
+  const loadExpense = useCallback(async () => {
     if (!expenseId) return;
 
     setLoading(true);
@@ -409,32 +409,47 @@ export default function ExpenseDetailPage() {
 
     try {
       const response = await apiClient.getExpense(expenseId);
-      setExpense(response.data);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load expense details';
+      setExpense(response.data as unknown as ExpenseDetail);
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to load expense details';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [expenseId]);
 
-  const loadRelatedApproval = async () => {
+  const loadRelatedApproval = useCallback(async () => {
     if (!expenseId) return;
 
     try {
       // Fetch all approvals and find one linked to this expense
       const response = await apiClient.getApprovals();
-      const approvals = response.data || [];
-      const relatedApproval = approvals.find((a: any) => a.expense_entry_id === expenseId);
+      const approvals: Approval[] = Array.isArray(response.data)
+        ? (response.data as unknown as Approval[])
+        : [];
+      const relatedApproval = approvals.find((a) => a.expense_entry_id === expenseId);
       if (relatedApproval) {
         setRelatedApprovalId(relatedApproval.id);
       }
-    } catch (err: any) {
+    } catch {
       // Silently fail - approval lookup is optional
       setRelatedApprovalId(null);
     }
-  };
+  }, [expenseId]);
+
+  useEffect(() => {
+    if (expenseId) {
+      loadExpense();
+      loadRelatedApproval();
+    }
+    if (allUsers.length === 0) {
+      fetchAllUsers();
+    }
+  }, [allUsers.length, expenseId, fetchAllUsers, loadExpense, loadRelatedApproval]);
 
   const handleApprove = async () => {
     if (!expenseId || !canApprove()) {
@@ -449,8 +464,11 @@ export default function ExpenseDetailPage() {
       await apiClient.approveItem(expenseId, 'expense');
       toast.success('Expense entry approved successfully');
       await loadExpense();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to approve expense';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to approve expense';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -490,8 +508,11 @@ export default function ExpenseDetailPage() {
       setRejectionReason('');
       setRejectPassword('');
       await loadExpense();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to reject expense';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to reject expense';
       setRejectPasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -518,8 +539,11 @@ export default function ExpenseDetailPage() {
       setShowDeleteModal(false);
       setDeletePassword('');
       router.push('/expenses/list');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete expense';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to delete expense';
       setDeletePasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -533,18 +557,16 @@ export default function ExpenseDetailPage() {
       return `User #${userId}`;
     }
     const userIdStr = userId.toString();
-    const foundUser = allUsers.find((u: any) => 
-      u.id === userId || 
-      u.id?.toString() === userIdStr ||
-      parseInt(u.id) === userId
-    );
+    const foundUser = (allUsers as StoreUser[]).find((u) => {
+      if (u.id === userId) return true;
+      if (typeof u.id === 'string' && u.id === userIdStr) return true;
+      const parsed = Number(u.id);
+      return !Number.isNaN(parsed) && parsed === userId;
+    });
     if (!foundUser) {
       return `User #${userId}`;
     }
-    return (foundUser as any).name || 
-           (foundUser as any).full_name || 
-           (foundUser as any).email || 
-           `User #${userId}`;
+    return foundUser.name || foundUser.full_name || foundUser.email || `User #${userId}`;
   };
 
   const getCategoryDisplayName = (category: string) => {

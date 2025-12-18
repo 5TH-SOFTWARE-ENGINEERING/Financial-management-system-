@@ -1,8 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
   Plus,
@@ -22,9 +21,6 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import { useUserStore } from '@/store/userStore';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -564,8 +560,24 @@ interface Expense {
   approval_status?: 'pending' | 'approved' | 'rejected';
 }
 
+interface ApiExpense {
+  id: number;
+  title: string;
+  description?: string | null;
+  category: string;
+  amount: number;
+  vendor?: string | null;
+  date: string;
+  is_recurring?: boolean;
+  recurring_frequency?: string | null;
+  is_approved?: boolean;
+  created_by_id?: number;
+  created_at: string;
+  updated_at?: string | null;
+  approval_status?: 'pending' | 'approved' | 'rejected';
+}
+
 export default function ExpenseListPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const { canApproveTransactions } = useUserStore();
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -586,10 +598,13 @@ export default function ExpenseListPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const getStatus = (expense: Expense) =>
     expense.approval_status || (expense.is_approved ? 'approved' : 'pending');
-  const normalizeExpenses = (items: any[]): Expense[] =>
-    (items || []).map((exp: any) => ({
+  const normalizeExpenses = (items: ApiExpense[] = []): Expense[] =>
+    items.map((exp) => ({
       ...exp,
-      approval_status: exp?.approval_status || (exp?.is_approved ? 'approved' : 'pending')
+      is_recurring: exp.is_recurring ?? false,
+      is_approved: exp.is_approved ?? false,
+      approval_status: exp.approval_status || (exp.is_approved ? 'approved' : 'pending'),
+      created_by_id: exp.created_by_id ?? 0
     }));
   
   const canApprove = () => {
@@ -599,25 +614,45 @@ export default function ExpenseListPage() {
     return role === 'admin' || role === 'super_admin' || role === 'manager' || role === 'finance_manager';
   };
 
-  useEffect(() => {
-    loadExpenses();
-  }, []);
-
-  const loadExpenses = async () => {
+  const loadExpenses = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
       const response = await apiClient.getExpenses();
-      setExpenses(normalizeExpenses(response.data));
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load expenses';
+      const rawData = Array.isArray(response.data) ? response.data : [];
+      const apiExpenses: ApiExpense[] = rawData.map((item) => ({
+        id: Number((item as { id?: number }).id) || 0,
+        title: (item as { title?: string }).title || '',
+        description: (item as { description?: string | null }).description ?? null,
+        category: (item as { category?: string }).category || '',
+        amount: Number((item as { amount?: number }).amount) || 0,
+        vendor: (item as { vendor?: string | null }).vendor ?? null,
+        date: (item as { date?: string }).date || '',
+        is_recurring: Boolean((item as { is_recurring?: boolean }).is_recurring),
+        recurring_frequency: (item as { recurring_frequency?: string | null }).recurring_frequency ?? null,
+        is_approved: Boolean((item as { is_approved?: boolean }).is_approved),
+        created_by_id: Number((item as { created_by_id?: number }).created_by_id) || 0,
+        created_at: (item as { created_at?: string }).created_at || '',
+        updated_at: (item as { updated_at?: string | null }).updated_at ?? null,
+        approval_status: (item as { approval_status?: 'pending' | 'approved' | 'rejected' }).approval_status
+      }));
+      setExpenses(normalizeExpenses(apiExpenses));
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to load expenses';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadExpenses();
+  }, [loadExpenses]);
 
   const handleDeleteClick = (id: number) => {
     setShowDeleteModal(id);
@@ -646,8 +681,11 @@ export default function ExpenseListPage() {
       setShowDeleteModal(null);
       setDeletePassword('');
       loadExpenses();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete expense';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to delete expense';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -672,8 +710,11 @@ export default function ExpenseListPage() {
             : exp
         )
       );
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to approve expense';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to approve expense';
       toast.error(errorMessage);
     } finally {
       setApprovingId(null);
@@ -709,8 +750,11 @@ export default function ExpenseListPage() {
           exp.id === id ? { ...exp, approval_status: 'rejected', is_approved: false } : exp
         )
       );
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to reject expense';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to reject expense';
       setRejectPasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {

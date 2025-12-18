@@ -1,11 +1,9 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  History, ArrowLeft, Calendar, TrendingUp, TrendingDown, BarChart3,
-  Filter, Search, RefreshCw
+  History, ArrowLeft,
+  Filter, RefreshCw
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -184,17 +182,43 @@ interface VarianceHistory {
 }
 
 const VarianceHistoryPage: React.FC = () => {
-  const router = useRouter();
-  const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [selectedBudgetId, setSelectedBudgetId] = useState<string>('');
   const [history, setHistory] = useState<VarianceHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  const loadBudgets = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.getBudgets();
+      setBudgets(Array.isArray(response.data) ? response.data : []);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load budgets';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadHistory = useCallback(async () => {
+    if (!selectedBudgetId) return;
+    
+    try {
+      setLoadingHistory(true);
+      const response = await apiClient.getVarianceHistory(parseInt(selectedBudgetId), { limit: 50 });
+      setHistory(Array.isArray(response.data) ? response.data : []);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load variance history';
+      toast.error(message);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [selectedBudgetId]);
+
   useEffect(() => {
     loadBudgets();
-  }, []);
+  }, [loadBudgets]);
 
   useEffect(() => {
     if (selectedBudgetId) {
@@ -202,33 +226,7 @@ const VarianceHistoryPage: React.FC = () => {
     } else {
       setHistory([]);
     }
-  }, [selectedBudgetId]);
-
-  const loadBudgets = async () => {
-    try {
-      setLoading(true);
-      const response = await apiClient.getBudgets();
-      setBudgets(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budgets');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadHistory = async () => {
-    if (!selectedBudgetId) return;
-    
-    try {
-      setLoadingHistory(true);
-      const response = await apiClient.getVarianceHistory(parseInt(selectedBudgetId), { limit: 50 });
-      setHistory(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load variance history');
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
+  }, [selectedBudgetId, loadHistory]);
 
   const formatCurrency = (value: number) => {
     return `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

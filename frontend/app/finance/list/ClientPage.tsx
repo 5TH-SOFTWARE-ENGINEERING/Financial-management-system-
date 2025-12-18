@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -11,8 +10,6 @@ import { Switch } from '@/components/ui/switch';
 import apiClient from '@/lib/api';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
-import { formatDate } from '@/lib/utils';
-
 import {
   AlertCircle,
   UserPlus,
@@ -36,12 +33,6 @@ const CardShadow = `
   0 1px 2px -1px rgba(0, 0, 0, 0.03),
   inset 0 0 0 1px rgba(0, 0, 0, 0.02)
 `;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
-`;
-
 const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -427,8 +418,29 @@ interface FinanceManager {
   department?: string | null;
 }
 
+interface ApiUser {
+  id: number;
+  full_name?: string | null;
+  email: string;
+  username?: string | null;
+  phone?: string | null;
+  role?: string | null;
+  is_active?: boolean;
+  department?: string | null;
+}
+
+const toFinanceManager = (user: ApiUser): FinanceManager => ({
+  id: user.id,
+  full_name: user.full_name ?? null,
+  email: user.email,
+  username: user.username ?? null,
+  phone: user.phone ?? null,
+  role: user.role ?? 'employee',
+  is_active: user.is_active ?? false,
+  department: user.department ?? null
+});
+
 export default function FinanceListPage() {
-  const router = useRouter();
   const [financeManagers, setFinanceManagers] = useState<FinanceManager[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -458,24 +470,26 @@ export default function FinanceListPage() {
 
       const response = await apiClient.getUsers();
 
-      const managers = (response.data || []).filter((user: any) =>
-        ['manager', 'finance_manager'].includes(user.role?.toLowerCase())
-      );
+      const users: ApiUser[] = Array.isArray(response.data) ? response.data : [];
+      const managers = users
+        .filter((user) => ['manager', 'finance_manager'].includes((user.role || '').toLowerCase()))
+        .map(toFinanceManager);
 
       setFinanceManagers(managers);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading finance managers:', err);
       let message = 'Failed to load finance managers';
       
-      if (err.response) {
-        if (err.response.status === 404) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const response = (err as { response?: { status?: number; data?: { detail?: string; message?: string } } }).response;
+        if (response?.status === 404) {
           message = 'Users endpoint not found. Please check API configuration.';
-        } else if (err.response.status === 403) {
+        } else if (response?.status === 403) {
           message = 'You do not have permission to view users. Only managers and admins can access this page.';
         } else {
-          message = err.response?.data?.detail || err.response?.data?.message || message;
+          message = response?.data?.detail || response?.data?.message || message;
         }
-      } else if (err.message) {
+      } else if (err instanceof Error && err.message) {
         message = err.message;
       }
       
@@ -519,8 +533,11 @@ export default function FinanceListPage() {
       setManagerToDelete(null);
       setDeletePassword('');
       loadFinanceManagers();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete finance manager';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to delete finance manager';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -577,8 +594,11 @@ export default function FinanceListPage() {
       setManagerToActivate(null);
       setActivatePassword('');
       await loadFinanceManagers();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to activate finance manager';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to activate finance manager';
       setActivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -603,8 +623,11 @@ export default function FinanceListPage() {
       setManagerToDeactivate(null);
       setDeactivatePassword('');
       await loadFinanceManagers();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to deactivate finance manager';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to deactivate finance manager';
       setDeactivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {

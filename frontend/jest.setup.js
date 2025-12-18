@@ -1,6 +1,7 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
+import React from 'react'
 
 // Cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {
@@ -33,16 +34,12 @@ jest.mock('next/navigation', () => ({
 }))
 
 // Mock Next.js Image component
-jest.mock('next/image', () => {
-  const React = require('react')
-  return {
-    __esModule: true,
-    default: (props) => {
-      // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
-      return React.createElement('img', props)
-    },
-  }
-})
+jest.mock('next/image', () => ({
+  __esModule: true,
+  default: (props) => {
+    return React.createElement('img', props)
+  },
+}))
 
 // Mock next-themes
 jest.mock('next-themes', () => ({

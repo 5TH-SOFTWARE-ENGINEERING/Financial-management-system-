@@ -1,8 +1,7 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
   Edit, ArrowLeft, Save, X, AlertCircle
 } from 'lucide-react';
@@ -297,16 +296,7 @@ const EditBudgetItemPage: React.FC = () => {
     amount: ''
   });
 
-  useEffect(() => {
-    if (itemIdParam && budgetIdParam) {
-      loadData();
-    } else {
-      toast.error('Item ID and Budget ID are required');
-      router.push('/budgets');
-    }
-  }, [itemIdParam, budgetIdParam]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!itemIdParam || !budgetIdParam) return;
     
     try {
@@ -333,13 +323,29 @@ const EditBudgetItemPage: React.FC = () => {
         toast.error('Budget item not found');
         router.push(`/budgets/listitems?budget_id=${budgetIdParam}`);
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budget item');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to load budget item');
+      toast.error(message);
       router.push('/budgets');
     } finally {
       setLoading(false);
     }
-  };
+  }, [budgetIdParam, itemIdParam, router]);
+
+  useEffect(() => {
+    if (itemIdParam && budgetIdParam) {
+      loadData();
+    } else {
+      toast.error('Item ID and Budget ID are required');
+      router.push('/budgets');
+    }
+  }, [itemIdParam, budgetIdParam, loadData, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -370,8 +376,15 @@ const EditBudgetItemPage: React.FC = () => {
       });
       toast.success('Budget item updated successfully!');
       router.push(`/budgets/listitems?budget_id=${budgetIdParam}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update budget item');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to update budget item');
+      toast.error(message);
     } finally {
       setSaving(false);
     }

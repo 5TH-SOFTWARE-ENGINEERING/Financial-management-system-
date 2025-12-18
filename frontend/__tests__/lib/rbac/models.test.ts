@@ -5,8 +5,6 @@ import {
   AdminType,
   DEFAULT_PERMISSIONS,
   DEFAULT_ROLES,
-  type Permission,
-  type Role,
 } from '@/lib/rbac/models'
 
 describe('RBAC Models', () => {

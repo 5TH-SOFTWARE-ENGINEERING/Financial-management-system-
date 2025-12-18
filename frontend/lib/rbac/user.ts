@@ -20,6 +20,6 @@ export interface BaseUser {
 export interface Admin extends BaseUser {
   adminType: AdminType;
   corporateClientId: string | null;
-  roles?: any[];
-  permissions?: any;
+  roles?: Role[];
+  permissions?: Permission[];
 }

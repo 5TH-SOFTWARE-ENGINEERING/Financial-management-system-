@@ -5,7 +5,7 @@ import Header from '@/components/common/Header'
 // Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props: any) => {
+  default: (props: React.ComponentProps<'img'>) => {
     // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
     return <img {...props} />
   },
@@ -13,9 +13,11 @@ jest.mock('next/image', () => ({
 
 // Mock next/link
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockNextLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>
   }
+  MockNextLink.displayName = 'MockNextLink'
+  return MockNextLink
 })
 
 describe('Header Component', () => {

@@ -1,12 +1,9 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  DollarSign, FileText, Edit, Trash2, Calendar, ArrowLeft,
-  Building2, FolderKanban, Plus, AlertCircle, CheckCircle,
-  TrendingUp, TrendingDown, Eye, ListChecks, Loader2, X
+  DollarSign, Edit, Trash2, ArrowLeft, Plus, AlertCircle, CheckCircle, Loader2
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -26,12 +23,6 @@ const CardShadow = `
   0 1px 2px -1px rgba(0, 0, 0, 0.03),
   inset 0 0 0 1px rgba(0, 0, 0, 0.02)
 `;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
-`;
-
 const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -407,7 +398,6 @@ interface Budget {
 const BudgetDetailPage: React.FC = () => {
   const router = useRouter();
   const params = useParams();
-  const { user } = useAuth();
   const [budget, setBudget] = useState<Budget | null>(null);
   const [items, setItems] = useState<BudgetItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -419,38 +409,45 @@ const BudgetDetailPage: React.FC = () => {
 
   const budgetId = params?.id ? parseInt(params.id as string) : null;
 
-  useEffect(() => {
-    if (budgetId) {
-      loadBudget();
-      loadItems();
-    }
-  }, [budgetId]);
-
-  const loadBudget = async () => {
+  const loadBudget = useCallback(async () => {
     if (!budgetId) return;
     
     try {
       setLoading(true);
       const response = await apiClient.getBudget(budgetId);
       setBudget(response.data as Budget);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budget');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to load budget');
+      toast.error(message);
       router.push('/budgets');
     } finally {
       setLoading(false);
     }
-  };
+  }, [budgetId, router]);
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     if (!budgetId) return;
     
     try {
       const response = await apiClient.getBudgetItems(budgetId);
       setItems(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load budget items:', error);
     }
-  };
+  }, [budgetId]);
+
+  useEffect(() => {
+    if (budgetId) {
+      loadBudget();
+      loadItems();
+    }
+  }, [budgetId, loadBudget, loadItems]);
 
   const handleValidate = async () => {
     if (!budgetId) return;
@@ -458,7 +455,7 @@ const BudgetDetailPage: React.FC = () => {
     try {
       setValidating(true);
       const response = await apiClient.validateBudget(budgetId);
-      const result = response.data as any;
+      const result = response.data as { valid?: boolean; warnings?: string[]; errors?: string[] } | undefined;
       
       if (result?.valid) {
         toast.success('Budget is valid!');
@@ -471,8 +468,15 @@ const BudgetDetailPage: React.FC = () => {
         const errors = result?.errors || ['Validation failed'];
         toast.error(`Validation failed: ${Array.isArray(errors) ? errors.join(', ') : 'Unknown error'}`);
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to validate budget');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to validate budget');
+      toast.error(message);
     } finally {
       setValidating(false);
     }
@@ -501,8 +505,19 @@ const BudgetDetailPage: React.FC = () => {
       setShowDeleteModal(false);
       setDeletePassword('');
       router.push('/budgets');
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete budget';
+    } catch (error: unknown) {
+      const errorMessage =
+        (typeof error === 'object' &&
+          error !== null &&
+          'response' in error &&
+          (error as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : null) ||
+        'Failed to delete budget';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -676,7 +691,6 @@ const BudgetDetailPage: React.FC = () => {
             
             {items.length === 0 ? (
               <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-                <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
                 <p>No budget items yet. Add items to get started.</p>
               </div>
             ) : (

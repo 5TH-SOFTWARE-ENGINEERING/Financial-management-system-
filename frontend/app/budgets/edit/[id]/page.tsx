@@ -1,8 +1,7 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
   DollarSign, Save, X, Plus, Trash2, AlertCircle, CheckCircle, ArrowLeft, Loader2
 } from 'lucide-react';
@@ -463,10 +462,20 @@ interface BudgetItem {
   amount: number;
 }
 
+interface Budget {
+  name?: string;
+  description?: string | null;
+  period?: string;
+  start_date?: string;
+  end_date?: string;
+  department?: string | null;
+  project?: string | null;
+  status?: string;
+}
+
 const BudgetEditPage: React.FC = () => {
   const router = useRouter();
   const params = useParams();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [budgetId, setBudgetId] = useState<number | null>(null);
@@ -489,20 +498,11 @@ const BudgetEditPage: React.FC = () => {
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    const id = params?.id ? parseInt(params.id as string) : null;
-    if (id) {
-      setBudgetId(id);
-      loadBudget(id);
-      loadItems(id);
-    }
-  }, [params]);
-
-  const loadBudget = async (id: number) => {
+  const loadBudget = useCallback(async (id: number) => {
     try {
       setLoading(true);
       const response = await apiClient.getBudget(id);
-      const budget = response.data as any;
+      const budget = response.data as Budget | undefined;
       
       setFormData({
         name: budget?.name || '',
@@ -514,24 +514,40 @@ const BudgetEditPage: React.FC = () => {
         project: budget?.project || '',
         status: budget?.status || 'draft'
       });
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budget');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to load budget');
+      toast.error(message);
       router.push('/budgets');
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
-  const loadItems = async (id: number) => {
+  const loadItems = useCallback(async (id: number) => {
     try {
       const response = await apiClient.getBudgetItems(id);
       setItems(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load budget items:', error);
     }
-  };
+  }, []);
 
-  const handleInputChange = (field: string, value: any) => {
+  useEffect(() => {
+    const id = params?.id ? parseInt(params.id as string) : null;
+    if (id) {
+      setBudgetId(id);
+      loadBudget(id);
+      loadItems(id);
+    }
+  }, [params, loadBudget, loadItems]);
+
+  const handleInputChange = <K extends keyof typeof formData>(field: K, value: (typeof formData)[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -545,7 +561,7 @@ const BudgetEditPage: React.FC = () => {
     }]);
   };
 
-  const handleItemChange = (index: number, field: string, value: any) => {
+  const handleItemChange = (index: number, field: keyof BudgetItem, value: string | number) => {
     setItems(prev => prev.map((item, i) => 
       i === index ? { ...item, [field]: value } : item
     ));
@@ -587,8 +603,19 @@ const BudgetEditPage: React.FC = () => {
       setDeletePassword('');
       // Reload items to sync with server
       loadItems(budgetId);
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete item';
+    } catch (error: unknown) {
+      const errorMessage =
+        (typeof error === 'object' &&
+          error !== null &&
+          'response' in error &&
+          (error as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : null) ||
+        'Failed to delete item';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -620,7 +647,7 @@ const BudgetEditPage: React.FC = () => {
           amount: item.amount
         });
         // Update the item with the new ID
-        const newItem = response.data as any;
+        const newItem = response.data as BudgetItem | undefined;
         setItems(prev => prev.map((it, i) => 
           i === index ? { ...it, id: newItem?.id } : it
         ));
@@ -628,8 +655,15 @@ const BudgetEditPage: React.FC = () => {
       }
       // Reload items to sync with server
       loadItems(budgetId);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save item');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to save item');
+      toast.error(message);
     }
   };
 
@@ -654,15 +688,22 @@ const BudgetEditPage: React.FC = () => {
       // Validate on server
       try {
         const response = await apiClient.validateBudget(budgetId);
-        const result = response.data as any;
+        const result = response.data as { valid?: boolean; errors?: string[] } | undefined;
         if (result?.valid) {
           toast.success('Budget is valid!');
         } else {
           const errors = result?.errors || ['Validation failed'];
           toast.error(`Validation failed: ${errors.join(', ')}`);
         }
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to validate budget');
+      } catch (error: unknown) {
+        const message =
+          (typeof error === 'object' &&
+            error !== null &&
+            'message' in error &&
+            typeof (error as { message?: string }).message === 'string'
+            ? (error as { message?: string }).message
+            : 'Failed to validate budget');
+        toast.error(message);
       }
     }
     return errors.length === 0;
@@ -682,8 +723,15 @@ const BudgetEditPage: React.FC = () => {
       await apiClient.updateBudget(budgetId, formData);
       toast.success('Budget updated successfully!');
       router.push(`/budgets/${budgetId}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update budget');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to update budget');
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -851,7 +899,7 @@ const BudgetEditPage: React.FC = () => {
 
                 {items.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-                    <p>No items added yet. Click "Add Item" to get started.</p>
+                    <p>No items added yet. Click &quot;Add Item&quot; to get started.</p>
                   </div>
                 ) : (
                   <ItemsTable>

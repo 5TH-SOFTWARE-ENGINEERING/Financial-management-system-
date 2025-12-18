@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import {
-  Package, Plus, Edit, Trash2, Search, Filter,
-  DollarSign, TrendingUp, AlertCircle, CheckCircle,
-  Loader2, Eye, EyeOff, Save, X, Power, PowerOff
+  Package, Plus, Edit, Trash2, Search,
+  DollarSign, TrendingUp, AlertCircle,
+  Loader2, Save, X, Power, PowerOff
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -106,10 +106,6 @@ const ActionIcon = styled(IconWrapper)`
 const MessageIcon = styled(IconWrapper)`
     margin-right: ${theme.spacing.xs};
     vertical-align: middle;
-`;
-
-const ModalIcon = styled(IconWrapper)`
-    margin-right: ${theme.spacing.sm};
 `;
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -547,6 +543,19 @@ interface InventoryItem {
   created_by_id?: number;
 }
 
+interface InventorySummary {
+  total_items?: number;
+  total_value?: number;
+  total_profit?: number;
+  active_items?: number;
+  low_stock_items?: number;
+  [key: string]: number | undefined;
+}
+
+interface Subordinate {
+  id: number | string;
+}
+
 export default function InventoryManagePage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -558,7 +567,7 @@ export default function InventoryManagePage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
@@ -585,26 +594,7 @@ export default function InventoryManagePage() {
     is_active: true,
   });
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/dashboard');
-      return;
-    }
-    // Allow Admin, Finance Admin, Manager, and Accountant (read-only) to view inventory
-    const userRole = user?.role?.toLowerCase() || '';
-    const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'manager', 'accountant'];
-    if (!allowedRoles.includes(userRole)) {
-      router.push('/dashboard');
-      return;
-    }
-    loadItems();
-    // Only Finance Admin and Admin can see summary
-    if (userRole !== 'accountant') {
-      loadSummary();
-    }
-  }, [user, router]);
-
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -613,11 +603,15 @@ export default function InventoryManagePage() {
     setLoading(true);
     setError(null);
     try {
-      const response: any = await apiClient.getInventoryItems({ limit: 1000 });
+      const response = await apiClient.getInventoryItems({ limit: 1000 });
       // Handle both direct array response and wrapped response
-      let itemsData = Array.isArray(response?.data) 
-        ? response.data 
-        : (response?.data?.data || []);
+      const rawData = response?.data as unknown;
+      let itemsData: InventoryItem[] = [];
+      if (Array.isArray(rawData)) {
+        itemsData = rawData as InventoryItem[];
+      } else if (rawData && typeof rawData === 'object' && Array.isArray((rawData as { data?: unknown }).data)) {
+        itemsData = (rawData as { data: InventoryItem[] }).data;
+      }
 
       // Get accessible user IDs for finance admins (themselves + subordinates)
       // Accountants can see ALL items from Finance Admin and Employee for revenue posting
@@ -664,10 +658,10 @@ export default function InventoryManagePage() {
             
             // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
             const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
-            const subordinates = subordinatesRes?.data || [];
+            const subordinates = Array.isArray(subordinatesRes?.data) ? (subordinatesRes.data as Subordinate[]) : [];
             
             // Include the Finance Admin themselves and all their subordinates
-            currentAccessibleUserIds = [financeAdminId, ...subordinates.map((sub: any) => {
+            currentAccessibleUserIds = [financeAdminId, ...subordinates.map((sub) => {
               const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
               return subId;
             })];
@@ -711,9 +705,9 @@ export default function InventoryManagePage() {
           // Get subordinates - backend already filters to return only accountants and employees under this finance admin
           const financeAdminId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
           const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
-          const subordinates = subordinatesRes?.data || [];
+          const subordinates = Array.isArray(subordinatesRes?.data) ? (subordinatesRes.data as Subordinate[]) : [];
           // Include the finance admin themselves
-          currentAccessibleUserIds = [financeAdminId, ...subordinates.map((sub: any) => {
+          currentAccessibleUserIds = [financeAdminId, ...subordinates.map((sub) => {
             const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
             return subId;
           })];
@@ -782,26 +776,53 @@ export default function InventoryManagePage() {
       // Admins see all items (no filtering)
 
       setItems(itemsData);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to load inventory items';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (err instanceof Error ? err.message : 'Failed to load inventory items');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [storeUser, user]);
 
-  const loadSummary = async () => {
+  const loadSummary = useCallback(async () => {
     try {
-      const response: any = await apiClient.getInventorySummary();
+      const response = await apiClient.getInventorySummary();
       // Handle both direct object response and wrapped response
-      const summaryData = response?.data || response;
+      const rawData = response?.data as unknown;
+      const summaryData =
+        rawData && typeof rawData === 'object' && !Array.isArray(rawData)
+          ? (rawData as InventorySummary)
+          : null;
       setSummary(summaryData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Silently fail - summary is optional
       console.warn('Failed to load inventory summary:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/dashboard');
+      return;
+    }
+    // Allow Admin, Finance Admin, Manager, and Accountant (read-only) to view inventory
+    const userRole = user?.role?.toLowerCase() || '';
+    const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'manager', 'accountant'];
+    if (!allowedRoles.includes(userRole)) {
+      router.push('/dashboard');
+      return;
+    }
+    loadItems();
+    // Only Finance Admin and Admin can see summary
+    if (userRole !== 'accountant') {
+      loadSummary();
+    }
+  }, [user, router, loadItems, loadSummary]);
 
   const handleCreate = () => {
     setEditingItem(null);
@@ -889,8 +910,12 @@ export default function InventoryManagePage() {
       setShowModal(false);
       await loadItems();
       await loadSummary();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to save item';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (err instanceof Error ? err.message : 'Failed to save item');
       toast.error(errorMessage);
       console.error('Error saving item:', err);
     }
@@ -939,8 +964,12 @@ export default function InventoryManagePage() {
       setDeletePassword('');
       await loadItems();
       await loadSummary();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to delete item';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (err instanceof Error ? err.message : 'Failed to delete item');
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -996,8 +1025,12 @@ export default function InventoryManagePage() {
       setActivateDeactivatePassword('');
       await loadItems();
       await loadSummary();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || `Failed to ${isActivating ? 'activate' : 'deactivate'} item`;
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (err instanceof Error ? err.message : `Failed to ${isActivating ? 'activate' : 'deactivate'} item`);
       setActivateDeactivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -1176,7 +1209,7 @@ export default function InventoryManagePage() {
                       <Package size={48} />
                     </IconWrapper>
                     <p style={{ margin: 0, marginBottom: theme.spacing.sm }}>No inventory items yet</p>
-                    <p style={{ margin: 0, fontSize: theme.typography.fontSizes.sm }}>Click "Add Item" to create your first inventory item</p>
+                    <p style={{ margin: 0, fontSize: theme.typography.fontSizes.sm }}>Click &quot;Add Item&quot; to create your first inventory item</p>
                   </>
                 ) : (
                   <>
@@ -1457,7 +1490,7 @@ export default function InventoryManagePage() {
                   <MessageIcon $iconType="alert-circle" $size={16} $active={true}>
                     <AlertCircle size={16} />
                   </MessageIcon>
-                  You are about to permanently delete <strong>"{itemToDelete.item_name}"</strong>. This action cannot be undone.
+                  You are about to permanently delete <strong>&quot;{itemToDelete.item_name}&quot;</strong>. This action cannot be undone.
                 </p>
               </div>
 
@@ -1560,7 +1593,7 @@ export default function InventoryManagePage() {
                   <MessageIcon $iconType="alert-circle" $size={16} $active={true}>
                     <AlertCircle size={16} />
                   </MessageIcon>
-                  You are about to {isActivating ? 'activate' : 'deactivate'} <strong>"{itemToActivateDeactivate.item_name}"</strong>.
+                  You are about to {isActivating ? 'activate' : 'deactivate'} <strong>&quot;{itemToActivateDeactivate.item_name}&quot;</strong>.
                   {!isActivating && ' Deactivated items will not be available for sale.'}
                 </p>
               </div>

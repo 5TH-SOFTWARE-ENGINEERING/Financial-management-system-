@@ -5,12 +5,10 @@ import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, UserPlus, Edit, Trash2, Users, Loader2, UserCheck, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Switch } from '@/components/ui/switch';
-import { formatDate } from '@/lib/utils';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -346,8 +344,19 @@ interface Employee {
   manager_id?: number | null;
 }
 
+interface ApiUser {
+  id: number;
+  full_name?: string | null;
+  email?: string | null;
+  username?: string | null;
+  phone?: string | null;
+  role?: string | null;
+  is_active?: boolean;
+  department?: string | null;
+  manager_id?: number | null;
+}
+
 export default function EmployeeListPage() {
-  const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -376,10 +385,10 @@ export default function EmployeeListPage() {
     
     try {
       const response = await apiClient.getUsers();
-      // Filter for employees only and map to Employee type
-      const employeeUsers = (response.data || [])
-        .filter((user: any) => user.role?.toLowerCase() === 'employee')
-        .map((user: any): Employee => ({
+      const rawUsers: ApiUser[] = Array.isArray(response.data) ? response.data : [];
+      const employeeUsers = rawUsers
+        .filter((user) => (user.role || '').toLowerCase() === 'employee')
+        .map((user): Employee => ({
           id: user.id,
           full_name: user.full_name || '',
           email: user.email || '',
@@ -388,12 +397,16 @@ export default function EmployeeListPage() {
           role: user.role || 'employee',
           is_active: user.is_active ?? true,
           department: user.department || null,
-          manager_id: user.manager_id || null,
+          manager_id: user.manager_id ?? null,
         }));
       setEmployees(employeeUsers);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load employees');
-      toast.error('Failed to load employees');
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to load employees';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -432,8 +445,11 @@ export default function EmployeeListPage() {
       setEmployeeToDelete(null);
       setDeletePassword('');
       loadEmployees();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete employee';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to delete employee';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -490,8 +506,11 @@ export default function EmployeeListPage() {
       setEmployeeToActivate(null);
       setActivatePassword('');
       await loadEmployees();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to activate employee';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to activate employee';
       setActivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -516,8 +535,11 @@ export default function EmployeeListPage() {
       setEmployeeToDeactivate(null);
       setDeactivatePassword('');
       await loadEmployees();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to deactivate employee';
+    } catch (err: unknown) {
+      const errorMessage =
+        (err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to deactivate employee';
       setDeactivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,6 +13,14 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, DollarSign, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+
+type RevenueApiResponse = Partial<RevenueInput> & {
+  id?: number;
+  is_recurring?: boolean;
+  recurring_frequency?: RevenueInput['recurringFrequency'] | null;
+  attachment_url?: string | null;
+  date?: string;
+};
 
 // ──────────────────────────────────────────
 // Styled Components Layout
@@ -106,12 +114,6 @@ const FieldError = styled.p`
   color: #dc2626;
   font-size: 14px;
   margin-top: 4px;
-`;
-
-const HelpText = styled.p`
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--muted-foreground);
 `;
 
 const MessageBox = styled.div<{ type: 'error' | 'success' }>`
@@ -308,6 +310,14 @@ export default function EditRevenuePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const getErrorMessage = useCallback((err: unknown, fallback: string) => {
+    if (typeof err === 'object' && err !== null) {
+      const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+      return errorObj.response?.data?.detail || errorObj.message || fallback;
+    }
+    if (err instanceof Error) return err.message;
+    return fallback;
+  }, []);
 
   const {
     register,
@@ -325,13 +335,7 @@ export default function EditRevenuePage() {
 
   const isRecurring = watch('isRecurring');
 
-  useEffect(() => {
-    if (revenueId) {
-      loadRevenue();
-    }
-  }, [revenueId]);
-
-  const loadRevenue = async () => {
+  const loadRevenue = useCallback(async () => {
     if (!revenueId) return;
 
     setLoading(true);
@@ -339,14 +343,13 @@ export default function EditRevenuePage() {
 
     try {
       const response = await apiClient.getRevenue(revenueId);
-      const revenue = response.data;
+      const revenue = response.data as RevenueApiResponse;
       
       if (!revenue) {
         setError('Revenue entry not found');
         return;
       }
 
-      // Format date for input field (YYYY-MM-DD)
       const revenueDate = revenue.date ? new Date(revenue.date).toISOString().split('T')[0] : '';
       
       reset({
@@ -360,14 +363,20 @@ export default function EditRevenuePage() {
         recurringFrequency: revenue.recurring_frequency || undefined,
         attachmentUrl: revenue.attachment_url || '',
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load revenue entry';
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err, 'Failed to load revenue entry');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [getErrorMessage, reset, revenueId]);
+
+  useEffect(() => {
+    if (revenueId) {
+      loadRevenue();
+    }
+  }, [loadRevenue, revenueId]);
 
   const onSubmit = async (data: RevenueInput) => {
     if (!revenueId) return;
@@ -400,8 +409,8 @@ export default function EditRevenuePage() {
       setTimeout(() => {
         router.push('/revenue/list');
       }, 2000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to update revenue entry';
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err, 'Failed to update revenue entry');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

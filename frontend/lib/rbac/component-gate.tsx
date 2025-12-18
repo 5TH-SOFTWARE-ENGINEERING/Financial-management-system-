@@ -74,9 +74,11 @@ export function withComponentAccess<P extends object>(
   fallback?: React.ReactNode,
   debug?: boolean
 ): React.FC<P> {
-  return (props: P) => (
+  const Wrapped: React.FC<P> = (props: P) => (
     <ComponentGate componentId={componentId} fallback={fallback} debug={debug}>
       <Component {...props} />
     </ComponentGate>
   );
+  Wrapped.displayName = `WithComponentAccess(${Component.displayName || Component.name || 'Component'})`;
+  return Wrapped;
 } 

@@ -311,7 +311,7 @@ export default function UnauthorizedPage() {
                 <SectionTitle>What can you do?</SectionTitle>
                 <List>
                   <li>Contact your administrator to request access</li>
-                  <li>Verify that you're logged in with the correct account</li>
+                  <li>Verify that you&apos;re logged in with the correct account</li>
                   <li>Return to the dashboard and navigate to accessible pages</li>
                 </List>
               </InfoSection>

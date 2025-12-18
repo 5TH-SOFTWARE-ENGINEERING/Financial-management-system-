@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { z } from 'zod';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CreateProjectSchema, type CreateProjectInput } from '@/lib/validation';
+import { CreateProjectSchema } from '@/lib/validation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import Navbar from '@/components/common/Navbar';
@@ -109,11 +110,28 @@ const FieldError = styled.p`
   margin-top: 4px;
 `;
 
-const HelpText = styled.p`
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--muted-foreground);
-`;
+type ApiProject = {
+  id: number;
+  name: string;
+  description?: string | null;
+  department_id?: number | null;
+  assigned_users?: number[];
+  budget?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+};
+
+type DepartmentOption = {
+  id: number;
+  name: string;
+};
+
+const CreateProjectFormSchema = CreateProjectSchema.extend({
+  startDate: z.string().min(1, 'Start date is required'),
+  endDate: z.string().optional(),
+});
+
+type ProjectFormValues = z.infer<typeof CreateProjectFormSchema>;
 
 const MessageBox = styled.div<{ type: 'error' | 'success' }>`
   padding: 14px;
@@ -320,7 +338,7 @@ export default function EditProjectPage() {
   const params = useParams();
   const projectId = params?.id ? parseInt(params.id as string, 10) : null;
   const { allUsers } = useUserStore();
-  const [departments, setDepartments] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -332,18 +350,11 @@ export default function EditProjectPage() {
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<any>({
-    resolver: zodResolver(CreateProjectSchema),
+  } = useForm<ProjectFormValues>({
+    resolver: zodResolver(CreateProjectFormSchema),
   });
 
-  useEffect(() => {
-    if (projectId) {
-      loadProject();
-      loadDepartments();
-    }
-  }, [projectId]);
-
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
     if (!projectId) return;
 
     setLoading(true);
@@ -351,8 +362,8 @@ export default function EditProjectPage() {
 
     try {
       const response = await apiClient.getProjects();
-      const projects = response.data || [];
-      const project = projects.find((p: any) => p.id === projectId);
+      const projects = (response.data || []) as ApiProject[];
+      const project = projects.find((p) => p.id === projectId);
       
       if (!project) {
         setError('Project not found');
@@ -368,31 +379,41 @@ export default function EditProjectPage() {
         description: project.description || '',
         departmentId: project.department_id?.toString() || '',
         budget: project.budget || undefined,
-        startDate: startDate as any,
-        endDate: (endDate || undefined) as any,
-        assignedUsers: project.assigned_users?.map((id: number) => id.toString()) || [],
+        startDate,
+        endDate: endDate || undefined,
+        assignedUsers: project.assigned_users?.map((id) => id.toString()) || [],
       });
 
-      setSelectedUsers(project.assigned_users?.map((id: number) => id.toString()) || []);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load project';
+      setSelectedUsers(project.assigned_users?.map((id) => id.toString()) || []);
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) || 'Failed to load project';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId, reset]);
 
-  const loadDepartments = async () => {
+  const loadDepartments = useCallback(async () => {
     try {
       const response = await apiClient.getDepartments();
-      setDepartments(response.data || []);
-    } catch (err: any) {
+      setDepartments((response.data as DepartmentOption[]) || []);
+    } catch (err: unknown) {
       console.error('Failed to load departments:', err);
     }
-  };
+  }, []);
 
-  const onSubmit = async (data: any) => {
+  useEffect(() => {
+    if (projectId) {
+      loadProject();
+      loadDepartments();
+    }
+  }, [projectId, loadProject, loadDepartments]);
+
+  const onSubmit = async (data: ProjectFormValues) => {
     if (!projectId) return;
 
     setSubmitting(true);
@@ -422,8 +443,12 @@ export default function EditProjectPage() {
       setTimeout(() => {
         router.push('/project/list');
       }, 2000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to update project';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (err instanceof Error ? err.message : 'Failed to update project');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -585,7 +610,7 @@ export default function EditProjectPage() {
                         disabled={submitting}
                       />
                       <label htmlFor={`user-${user.id}`}>
-                        {(user as any).full_name || user.email} ({user.role})
+                        {user.name || user.email} ({user.role})
                       </label>
                     </CheckboxItem>
                   ))
@@ -620,4 +645,3 @@ export default function EditProjectPage() {
     </LayoutWrapper>
   );
 }
-

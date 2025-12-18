@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import styled from 'styled-components';
 import {
@@ -29,6 +29,18 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
+
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -422,6 +434,45 @@ export default function RevenueDetailPage() {
     return isOwner || isAdmin;
   };
 
+  const loadRevenue = useCallback(async () => {
+    if (!revenueId) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.getRevenue(revenueId);
+      setRevenue(response.data as unknown as RevenueDetail);
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to load revenue details';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [revenueId]);
+
+  const loadRelatedApproval = useCallback(async () => {
+    if (!revenueId) return;
+
+    try {
+      // Fetch all approvals and find one linked to this revenue
+      const response = await apiClient.getApprovals();
+      const approvals = response.data || [];
+      const relatedApproval = approvals.find((a: unknown) => {
+        const approval = a as { revenue_entry_id: number; id: number };
+        return approval.revenue_entry_id === revenueId;
+      }) as { id: number } | undefined;
+      if (relatedApproval) {
+        setRelatedApprovalId(relatedApproval.id);
+      }
+    } catch {
+      // Silently fail - approval lookup is optional
+      setRelatedApprovalId(null);
+    }
+  }, [revenueId]);
+
   useEffect(() => {
     if (revenueId) {
       loadRevenue();
@@ -431,42 +482,7 @@ export default function RevenueDetailPage() {
     if (allUsers.length === 0) {
       fetchAllUsers();
     }
-  }, [revenueId]);
-
-  const loadRevenue = async () => {
-    if (!revenueId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await apiClient.getRevenue(revenueId);
-      setRevenue(response.data);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load revenue details';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadRelatedApproval = async () => {
-    if (!revenueId) return;
-
-    try {
-      // Fetch all approvals and find one linked to this revenue
-      const response = await apiClient.getApprovals();
-      const approvals = response.data || [];
-      const relatedApproval = approvals.find((a: any) => a.revenue_entry_id === revenueId);
-      if (relatedApproval) {
-        setRelatedApprovalId(relatedApproval.id);
-      }
-    } catch (err: any) {
-      // Silently fail - approval lookup is optional
-      setRelatedApprovalId(null);
-    }
-  };
+  }, [revenueId, allUsers.length, fetchAllUsers, loadRelatedApproval, loadRevenue]);
 
   const handleApprove = async () => {
     if (!revenueId || !canApprove()) {
@@ -481,8 +497,9 @@ export default function RevenueDetailPage() {
       await apiClient.approveItem(revenueId, 'revenue');
       toast.success('Revenue entry approved successfully');
       await loadRevenue();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to approve revenue';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to approve revenue';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -522,8 +539,9 @@ export default function RevenueDetailPage() {
       setRejectionReason('');
       setRejectPassword('');
       await loadRevenue();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to reject revenue';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to reject revenue';
       setRejectPasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -550,8 +568,9 @@ export default function RevenueDetailPage() {
       setShowDeleteModal(false);
       setDeletePassword('');
       router.push('/revenue/list');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete revenue';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to delete revenue';
       setDeletePasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -565,17 +584,19 @@ export default function RevenueDetailPage() {
       return `User #${userId}`;
     }
     const userIdStr = userId.toString();
-    const foundUser = allUsers.find((u: any) => 
-      u.id === userId || 
-      u.id?.toString() === userIdStr ||
-      parseInt(u.id) === userId
-    );
+    const foundUser = allUsers.find((u: unknown) => {
+      const user = u as { id: number | string };
+      return user.id === userId ||
+        user.id?.toString() === userIdStr ||
+        parseInt(user.id as string) === userId;
+    });
     if (!foundUser) {
       return `User #${userId}`;
     }
-    return (foundUser as any).name || 
-           (foundUser as any).full_name || 
-           (foundUser as any).email || 
+    const user = foundUser as { name?: string; full_name?: string; email?: string };
+    return user.name ||
+           user.full_name ||
+           user.email ||
            `User #${userId}`;
   };
 

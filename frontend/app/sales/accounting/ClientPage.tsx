@@ -1,17 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import {
-  FileText, DollarSign, CheckCircle, Clock, TrendingUp,
-  Loader2, AlertCircle, Search, Filter, Calendar,
-  BookOpen, Receipt, Eye
+  DollarSign, CheckCircle, Clock,
+  Loader2, BookOpen, Receipt
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
-import useUserStore from '@/store/userStore';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
@@ -20,6 +18,25 @@ import { Label } from '@/components/ui/label';
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+// Type definitions
+interface SalesSummary {
+  total_sales?: number;
+  total_revenue?: number;
+  pending_sales?: number;
+  posted_sales?: number;
+}
+
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -370,13 +387,6 @@ const FormGroup = styled.div`
   }
 `;
 
-const HelpText = styled.p`
-  font-size: ${theme.typography.fontSizes.xs};
-  color: ${TEXT_COLOR_MUTED};
-  margin: 0;
-  margin-top: ${theme.spacing.xs};
-`;
-
 const ModalActions = styled.div`
   display: flex;
   gap: ${theme.spacing.md};
@@ -420,11 +430,10 @@ interface JournalEntry {
 export default function AccountingDashboard() {
   const router = useRouter();
   const { user } = useAuth();
-  const storeUser = useUserStore((state) => state.user);
   const [activeTab, setActiveTab] = useState<'sales' | 'journal'>('sales');
   const [sales, setSales] = useState<Sale[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<SalesSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'posted'>('pending');
   const [showPostModal, setShowPostModal] = useState(false);
@@ -465,8 +474,9 @@ export default function AccountingDashboard() {
             }
             const userIds = [
               userId,
-              ...subordinates.map((sub: any) => {
-                const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+              ...subordinates.map((sub: unknown) => {
+                const subordinate = sub as { id: number | string };
+                const subId = typeof subordinate.id === 'string' ? parseInt(subordinate.id, 10) : subordinate.id;
                 return subId;
               })
             ];
@@ -498,24 +508,7 @@ export default function AccountingDashboard() {
     initializeAccess();
   }, [user, router]);
 
-  // Load data when accessibleUserIds is set or when statusFilter changes
-  useEffect(() => {
-    if (!user) return;
-    
-    const userRole = user?.role?.toLowerCase() || '';
-    const hasAccess = userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'employee';
-    if (!hasAccess) return;
-    
-    // For Admin, load immediately (no need to wait for accessibleUserIds)
-    if (userRole === 'admin' || userRole === 'super_admin') {
-      loadData();
-    } else if (accessibleUserIds !== null) {
-      // For other roles, wait for accessibleUserIds to be set
-      loadData();
-    }
-  }, [user, accessibleUserIds, statusFilter]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     // Double-check permissions before making API calls
     if (!user) return;
     
@@ -526,22 +519,25 @@ export default function AccountingDashboard() {
     setLoading(true);
     try {
       const [salesRes, summaryRes, journalRes] = await Promise.all([
-        apiClient.getSales({ status: statusFilter === 'all' ? undefined : statusFilter, limit: 1000 }).catch((err: any) => {
-          if (err.response?.status === 403) {
+        apiClient.getSales({ status: statusFilter === 'all' ? undefined : statusFilter, limit: 1000 }).catch((err: unknown) => {
+          const error = err as ErrorWithDetails;
+          if (error?.response?.status === 403) {
             console.warn('Access denied to sales data');
             return { data: [] };
           }
           throw err;
         }),
-        apiClient.getSalesSummary().catch((err: any) => {
-          if (err.response?.status === 403) {
+        apiClient.getSalesSummary().catch((err: unknown) => {
+          const error = err as ErrorWithDetails;
+          if (error?.response?.status === 403) {
             console.warn('Access denied to sales summary');
             return { data: null };
           }
           throw err;
         }),
-        apiClient.getJournalEntries({ limit: 1000 }).catch((err: any) => {
-          if (err.response?.status === 403) {
+        apiClient.getJournalEntries({ limit: 1000 }).catch((err: unknown) => {
+          const error = err as ErrorWithDetails;
+          if (error?.response?.status === 403) {
             console.warn('Access denied to journal entries');
             return { data: [] };
           }
@@ -551,24 +547,24 @@ export default function AccountingDashboard() {
       
       // Handle API response structure - ApiResponse wraps data in .data property
       // Backend now handles role-based filtering for sales, so we just use the response
-      const salesData = Array.isArray(salesRes.data) 
-        ? salesRes.data 
-        : (Array.isArray((salesRes.data as any)?.data) ? (salesRes.data as any).data : []);
-      
-      const summaryData = summaryRes.data || (summaryRes.data as any)?.data || null;
+      const salesData = Array.isArray(salesRes.data)
+        ? salesRes.data
+        : (Array.isArray((salesRes.data as { data?: unknown })?.data) ? (salesRes.data as { data: unknown[] }).data : []);
+
+      const summaryData = summaryRes.data || (summaryRes.data as { data?: SalesSummary })?.data || null;
       
       // Handle journal entries - backend returns array directly or wrapped
       let journalData: JournalEntry[] = [];
       if (Array.isArray(journalRes.data)) {
         journalData = journalRes.data;
-      } else if (journalRes.data && Array.isArray((journalRes.data as any)?.data)) {
-        journalData = (journalRes.data as any).data;
+      } else if (journalRes.data && Array.isArray((journalRes.data as { data?: JournalEntry[] })?.data)) {
+        journalData = (journalRes.data as { data: JournalEntry[] }).data;
       } else if (Array.isArray(journalRes)) {
         // In case the response is the array directly
-        journalData = journalRes as any;
+        journalData = journalRes as JournalEntry[];
       } else if (journalRes && typeof journalRes === 'object' && 'data' in journalRes) {
         // Try to extract from nested structure
-        const nested = (journalRes as any).data;
+        const nested = (journalRes as { data?: unknown }).data;
         if (Array.isArray(nested)) {
           journalData = nested;
         }
@@ -640,14 +636,32 @@ export default function AccountingDashboard() {
       setSales(salesData as Sale[]);
       setSummary(summaryData);
       setJournalEntries(journalData);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to load data';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to load data';
       toast.error(errorMessage);
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, statusFilter, accessibleUserIds]);
+
+  // Load data when accessibleUserIds is set or when statusFilter changes
+  useEffect(() => {
+    if (!user) return;
+
+    const userRole = user?.role?.toLowerCase() || '';
+    const hasAccess = userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'employee';
+    if (!hasAccess) return;
+
+    // For Admin, load immediately (no need to wait for accessibleUserIds)
+    if (userRole === 'admin' || userRole === 'super_admin') {
+      loadData();
+    } else if (accessibleUserIds !== null) {
+      // For other roles, wait for accessibleUserIds to be set
+      loadData();
+    }
+  }, [user, accessibleUserIds, statusFilter, loadData]);
 
   const handlePostSale = (sale: Sale) => {
     setSelectedSale(sale);
@@ -674,8 +688,9 @@ export default function AccountingDashboard() {
       await new Promise(resolve => setTimeout(resolve, 500));
       // Reload data to get the new journal entry
       await loadData();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to post sale';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to post sale';
       toast.error(errorMessage);
     }
   };
@@ -760,7 +775,7 @@ export default function AccountingDashboard() {
               <h2 style={{ margin: 0 }}>Sales Transactions</h2>
               <StyledSelect
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'posted')}
                 style={{ width: 'auto', minWidth: '150px' }}
               >
                 <option value="all">All Status</option>

@@ -128,7 +128,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const hasPermission = (resource: Resource, _action?: Action): boolean => {
+  const hasPermission = (resource: Resource, action?: Action): boolean => {
+    void action;
     if (!mappedUser || !mappedUser.is_active) return false;
 
     const rolePermissions: Record<UserType, Resource[]> = {

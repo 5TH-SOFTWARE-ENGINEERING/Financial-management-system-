@@ -232,14 +232,17 @@ export default function Contact() {
         message: form.message.trim(),
       });
       setSubmitted(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const backendMessage =
-        err?.response?.data?.detail ||
-        err?.response?.data?.error ||
-        err?.message;
+        (err as { response?: { data?: { detail?: string; error?: string }; status?: number }; message?: string })
+          ?.response?.data?.detail ||
+        (err as { response?: { data?: { detail?: string; error?: string }; status?: number }; message?: string })
+          ?.response?.data?.error ||
+        (err as Error).message;
 
       // Friendly fallback when endpoint is missing (404) or unreachable
-      if (err?.response?.status === 404) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 404) {
         setError(
           "Contact endpoint not available. Please email us directly at support@finmgmt.co."
         );

@@ -5,12 +5,11 @@ import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, Edit, Trash2, UserPlus, Loader2, UserCheck, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Switch } from '@/components/ui/switch';
-import { formatDate } from '@/lib/utils';
+import { type ApiUser } from '@/lib/api';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -395,8 +394,15 @@ const Badge = styled.span<{ $variant: 'admin' | 'finance_manager' | 'finance_adm
   }}
 `;
 
+const getErrorMessage = (err: unknown, fallback: string) => {
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const typedErr = err as { response?: { data?: { detail?: string; message?: string } } };
+    return typedErr.response?.data?.detail || typedErr.response?.data?.message || fallback;
+  }
+  return (err as { message?: string }).message || fallback;
+};
+
 function AccountantListPageInner() {
-  const router = useRouter();
   const [accountants, setAccountants] = useState<Accountant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -425,10 +431,11 @@ function AccountantListPageInner() {
     
     try {
       const response = await apiClient.getUsers();
+      const users = Array.isArray(response.data) ? (response.data as ApiUser[]) : [];
       // Filter for accountants only
-      const accountantUsers = (response.data || []).filter(
-        (user: any) => user.role?.toLowerCase() === 'accountant'
-      ).map((user: any) => ({
+      const accountantUsers = users
+        .filter((user) => user.role?.toLowerCase() === 'accountant')
+        .map((user) => ({
         id: user.id,
         full_name: user.full_name || '',
         email: user.email || '',
@@ -439,8 +446,8 @@ function AccountantListPageInner() {
         department: user.department || null,
       }));
       setAccountants(accountantUsers);
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to load accountants';
+    } catch (err: unknown) {
+      const errorMsg = getErrorMessage(err, 'Failed to load accountants');
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -481,8 +488,8 @@ function AccountantListPageInner() {
       setAccountantToDelete(null);
       setDeletePassword('');
       loadAccountants();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete accountant';
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err, 'Failed to delete accountant');
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -539,8 +546,8 @@ function AccountantListPageInner() {
       setAccountantToActivate(null);
       setActivatePassword('');
       await loadAccountants();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to activate accountant';
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err, 'Failed to activate accountant');
       setActivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -565,8 +572,8 @@ function AccountantListPageInner() {
       setAccountantToDeactivate(null);
       setDeactivatePassword('');
       await loadAccountants();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to deactivate accountant';
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err, 'Failed to deactivate accountant');
       setDeactivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {

@@ -157,14 +157,6 @@ const PermissionChip = styled.span`
   border: 1px solid ${PRIMARY_COLOR}30;
 `;
 
-const SelectionCard = styled.div`
-  padding: ${theme.spacing.lg};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  margin-bottom: ${theme.spacing.lg};
-  background: ${PRIMARY_COLOR}08;
-`;
-
 const SelectionHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -362,10 +354,6 @@ interface PermissionItem {
   };
 }
 
-interface UserPermissionMap {
-  [key: string]: PermissionItem[];
-}
-
 interface UserPermissions {
   userId: string;
   userName: string;
@@ -377,8 +365,8 @@ interface UserPermissions {
 
 interface PermissionManagerProps {
   title: string;
-  adminType: UserType.ADMIN | UserType.FINANCE_ADMIN;
   managedUserTypes: UserType[];
+  adminType?: UserType;
 }
 
 interface RoleTemplate {
@@ -387,6 +375,19 @@ interface RoleTemplate {
   userType: UserType;
   permissions: PermissionItem[];
 }
+
+type ApiUserLite = {
+  id: string | number;
+  full_name?: string;
+  username?: string;
+  email?: string;
+  role?: string;
+  is_active?: boolean;
+};
+
+type PermissionResponse = {
+  permissions?: unknown;
+};
 
 // Ensure permissions are unique per resource and merged
 const mergePermissionsByResource = (perms: PermissionItem[]): PermissionItem[] => {
@@ -411,9 +412,8 @@ const mergePermissionsByResource = (perms: PermissionItem[]): PermissionItem[] =
   return Array.from(merged.values());
 };
 
-const PermissionManager: React.FC<PermissionManagerProps> = ({ 
-  title, 
-  adminType,
+const PermissionManager: React.FC<PermissionManagerProps> = ({
+  title,
   managedUserTypes
 }) => {
   const { user: currentUser } = useAuth();
@@ -433,8 +433,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   const [confirmUser, setConfirmUser] = useState<UserPermissions | null>(null);
   
   // Map backend role to frontend UserType
-  const mapRoleToUserType = (role: string): UserType => {
-    const normalized = role?.toLowerCase();
+  const mapRoleToUserType = (role?: string): UserType => {
+    const normalized = role?.toLowerCase() ?? '';
     if (normalized === 'admin') return UserType.ADMIN;
     if (normalized === 'manager' || normalized === 'finance_manager') return UserType.FINANCE_ADMIN;
     if (normalized === 'accountant') return UserType.ACCOUNTANT;
@@ -519,6 +519,25 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     return defaultPerms;
   };
 
+  const normalizePermissions = (raw: unknown): PermissionItem[] => {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((p): p is { resource: Resource; actions: Record<string, boolean> } => {
+        return (
+          typeof p === 'object' &&
+          p !== null &&
+          'resource' in p &&
+          'actions' in p &&
+          typeof (p as { resource?: unknown }).resource === 'string' &&
+          typeof (p as { actions?: unknown }).actions === 'object'
+        );
+      })
+      .map((p) => ({
+        resource: (p.resource as Resource) || Resource.REPORTS,
+        actions: { ...(p.actions as Record<string, boolean>) },
+      }));
+  };
+
   const loadUsers = useCallback(async () => {
     if (!currentUser) return;
     
@@ -527,28 +546,35 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     
     try {
       const response = await apiClient.getUsers();
-      const apiUsers = response.data || [];
+      const apiUsers = (response.data || []) as ApiUserLite[];
       
       // Load permissions from backend for each user
       const usersWithPermissions = await Promise.allSettled(
-        apiUsers.map(async (apiUser: any) => {
+        apiUsers.map(async (apiUser) => {
           const userType = mapRoleToUserType(apiUser.role);
           
           // Try to load permissions from backend
           let permissions = getDefaultPermissions(userType);
           try {
-            const permResponse = await apiClient.getUserPermissions(apiUser.id);
+            const permResponse = await apiClient.getUserPermissions(Number(apiUser.id));
             // If backend returns permissions and it's a non-empty array, use them
             // Empty array or null/undefined means use defaults
-            if (permResponse.data?.permissions && 
-                Array.isArray(permResponse.data.permissions) && 
-                permResponse.data.permissions.length > 0) {
-              permissions = permResponse.data.permissions;
+            const apiPerms = (permResponse.data as PermissionResponse | undefined)?.permissions;
+            const normalized = normalizePermissions(apiPerms);
+            if (normalized.length > 0) {
+              permissions = normalized;
             }
-          } catch (permErr: any) {
+          } catch (permErr: unknown) {
             // If 403 (forbidden) or 404 (not found), user doesn't have permissions set yet, use defaults
             // This is expected for new users or users without custom permissions
-            if (permErr.response?.status === 403 || permErr.response?.status === 404) {
+            if (
+              typeof permErr === 'object' &&
+              permErr !== null &&
+              'response' in permErr &&
+              typeof (permErr as { response?: { status?: number } }).response?.status === 'number' &&
+              (((permErr as { response?: { status?: number } }).response?.status ?? 0) === 403 ||
+                ((permErr as { response?: { status?: number } }).response?.status ?? 0) === 404)
+            ) {
               // Use defaults, no error needed
             } else {
               // Other errors (network, server error, etc.) - log but continue with defaults
@@ -560,8 +586,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             userId: apiUser.id.toString(),
             userName: apiUser.full_name || apiUser.username || apiUser.email,
             email: apiUser.email,
-            userType: userType,
-            isActive: apiUser.is_active,
+            userType,
+            isActive: apiUser.is_active ?? false,
             permissions: mergePermissionsByResource(permissions),
           };
         })
@@ -581,8 +607,12 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
       if (filteredUsers.length > 0 && !selectedUser) {
         setSelectedUser(filteredUsers[0].userId);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load users');
+    } catch (err: unknown) {
+      const message =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : null;
+      setError(message || 'Failed to load users');
     } finally {
       setLoading(false);
     }
@@ -717,7 +747,13 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
         throw new Error('Invalid user ID');
       }
       
-      await apiClient.updateUserPermissions(userId, selectedUserData.permissions);
+      const serializedPermissions = selectedUserData.permissions.flatMap((perm) =>
+        Object.entries(perm.actions)
+          .filter(([, allowed]) => allowed === true)
+          .map(([action]) => `${perm.resource}:${action}`)
+      );
+
+      await apiClient.updateUserPermissions(userId, serializedPermissions);
       
       setSuccess('Permissions saved successfully!');
       setTimeout(() => setSuccess(null), 3000);
@@ -725,9 +761,15 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
       setConfirmUser(null);
       // Refresh from backend to reflect real-time state
       await loadUsers();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to save permissions';
-      setError(errorMessage);
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } }; message?: string }).response?.data?.detail ||
+            (err as { message?: string }).message
+          : err instanceof Error
+            ? err.message
+            : 'Failed to save permissions';
+      setError(errorMessage || 'Failed to save permissions');
       console.error('Error saving permissions:', err);
     } finally {
       setLoading(false);

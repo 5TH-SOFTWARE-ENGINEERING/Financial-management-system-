@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import apiClient from '@/lib/api';
+import apiClient, { type ApiUser } from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import { toast } from 'sonner';
 import {
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
+import type { StoreUser } from '@/store/userStore';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -248,7 +249,7 @@ export default function EditUserPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<Record<string, string>>({});
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<ApiUser | null>(null);
   const [formData, setFormData] = useState<UserFormData>({
     email: '',
     username: '',
@@ -260,17 +261,7 @@ export default function EditUserPage() {
     manager_id: '',
   });
 
-  useEffect(() => {
-    if (userId) {
-      loadUser();
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    fetchAllUsers();
-  }, []);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     if (!userId) return;
 
     setLoading(true);
@@ -289,21 +280,36 @@ export default function EditUserPage() {
       setFormData({
         email: foundUser.email || '',
         username: foundUser.username || '',
-        full_name: foundUser.full_name || (foundUser as any).name || '',
+        full_name: foundUser.full_name || foundUser.username || foundUser.email || '',
         phone: foundUser.phone || '',
         role: foundUser.role?.toLowerCase() || 'employee',
         department: foundUser.department || '',
         is_active: foundUser.is_active !== false,
         manager_id: foundUser.manager_id?.toString() || '',
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load user';
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to load user'
+          : err instanceof Error
+            ? err.message
+            : 'Failed to load user';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      loadUser();
+    }
+  }, [userId, loadUser]);
+
+  useEffect(() => {
+    fetchAllUsers();
+  }, [fetchAllUsers]);
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
@@ -359,12 +365,18 @@ export default function EditUserPage() {
         }
       }
 
-      const updateData: any = {
+      type UpdatePayload = Partial<ApiUser> & {
+        department?: string | null;
+        phone?: string | null;
+        manager_id?: number | null;
+      };
+
+      const updateData: UpdatePayload = {
         email: formData.email.trim(),
         username: formData.username.trim(),
         full_name: formData.full_name.trim(),
-        phone: formData.phone.trim() || null,
-        department: formData.department.trim() || null,
+        phone: formData.phone.trim() || undefined,
+        department: formData.department.trim() || undefined,
       };
 
       // Only admins can edit role, manager_id, and is_active
@@ -372,11 +384,7 @@ export default function EditUserPage() {
         updateData.role = formData.role;
         updateData.is_active = formData.is_active;
         
-        if (formData.manager_id) {
-          updateData.manager_id = parseInt(formData.manager_id);
-        } else {
-          updateData.manager_id = null;
-        }
+        updateData.manager_id = formData.manager_id ? parseInt(formData.manager_id, 10) : undefined;
       }
       // Finance managers can edit their subordinates but cannot change role, manager_id, or is_active
       // Those fields are handled by the backend which will reject changes
@@ -385,8 +393,13 @@ export default function EditUserPage() {
       toast.success('User updated successfully');
       fetchAllUsers(); // Refresh user list
       router.push(`/users/${userId}`);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to update user';
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to update user'
+          : err instanceof Error
+            ? err.message
+            : 'Failed to update user';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -455,7 +468,7 @@ export default function EditUserPage() {
   const canEditUser = isAdmin || (isFinanceManager && isSubordinate && isTargetSubordinate) || (userId?.toString() === currentUser.id?.toString());
 
   // Get available managers for dropdown
-  const availableManagers = allUsers.filter((u: any) => {
+  const availableManagers = allUsers.filter((u: StoreUser) => {
     const role = (u.role || '').toLowerCase();
     return role === 'manager' || role === 'finance_manager' || role === 'finance_admin' || role === 'admin';
   });
@@ -564,12 +577,12 @@ export default function EditUserPage() {
                   <option value="finance_manager">Finance Manager</option>
                   <option value="finance_admin">Finance Admin</option>
                   <option value="admin">Administrator</option>
-                  {(currentRole === 'super_admin' || (currentUser as any).role === 'SUPER_ADMIN') && (
+                  {currentRole === 'super_admin' && (
                     <option value="super_admin">Super Admin</option>
                   )}
                 </Select>
                 {!canEditRole && (
-                  <HelperText>You don't have permission to change the role</HelperText>
+                  <HelperText>You don&apos;t have permission to change the role</HelperText>
                 )}
               </FormGroup>
 
@@ -592,9 +605,9 @@ export default function EditUserPage() {
                     onChange={(e) => handleChange('manager_id', e.target.value)}
                   >
                     <option value="">None</option>
-                    {availableManagers.map((manager: any) => (
+                    {availableManagers.map((manager: StoreUser) => (
                       <option key={manager.id} value={manager.id}>
-                        {manager.full_name || manager.name || manager.email}
+                        {manager.name || manager.email}
                       </option>
                     ))}
                   </Select>

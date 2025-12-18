@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import {
-  ShoppingCart, Package, Search, Plus, Receipt,
-  Loader2, AlertCircle, CheckCircle, DollarSign,
+  ShoppingCart, Package, Plus, Receipt,
+  Loader2,
   X, Printer
 } from 'lucide-react';
 import Layout from '@/components/layout';
@@ -373,6 +373,22 @@ interface SaleItem {
   total: number;
 }
 
+interface Subordinate {
+  id: number | string;
+}
+
+interface ReceiptData {
+  id?: number;
+  receipt_number?: string;
+  item_name?: string;
+  quantity_sold?: number;
+  selling_price?: number;
+  total_sale?: number;
+  customer_name?: string;
+  customer_email?: string;
+  created_at?: string;
+}
+
 export default function SalesPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -387,10 +403,67 @@ export default function SalesPage() {
   const [notes, setNotes] = useState('');
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [showReceipt, setShowReceipt] = useState(false);
-  const [receiptData, setReceiptData] = useState<any>(null);
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [managerId, setManagerId] = useState<number | null>(null);
   const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
+
+  const loadItems = useCallback(async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const response = await apiClient.getInventoryItems({ limit: 1000, is_active: true });
+      const rawData = response?.data as unknown;
+      let itemsData: InventoryItem[] = [];
+
+      if (Array.isArray(rawData)) {
+        itemsData = rawData as InventoryItem[];
+      } else if (rawData && typeof rawData === 'object' && Array.isArray((rawData as { data?: unknown }).data)) {
+        itemsData = (rawData as { data: InventoryItem[] }).data;
+      }
+      
+      // Apply role-based filtering
+      const userRole = user?.role?.toLowerCase() || '';
+      const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
+      const isAccountant = userRole === 'accountant';
+      const isEmployee = userRole === 'employee';
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      
+      if (isAdmin) {
+        // Admin sees all items - no filtering needed
+      } else if (isFinanceAdmin && accessibleUserIds && accessibleUserIds.length > 0) {
+        // Finance Admin: See items created by themselves and their subordinates
+        itemsData = itemsData.filter((item: InventoryItem) => {
+          const createdById = item.created_by_id || item.createdBy || item.created_by;
+          if (!createdById) return false;
+          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
+          return accessibleUserIds.includes(createdByIdNum);
+        });
+      } else if ((isAccountant || isEmployee) && accessibleUserIds && accessibleUserIds.length > 0) {
+        // Employee/Accountant: See items created by their Finance Admin's team (Finance Admin + all subordinates)
+        itemsData = itemsData.filter((item: InventoryItem) => {
+          const createdById = item.created_by_id || item.createdBy || item.created_by;
+          if (!createdById) return false;
+          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
+          return accessibleUserIds.includes(createdByIdNum);
+        });
+      } else if (isAccountant || isEmployee) {
+        // Employee/Accountant without manager or accessibleUserIds: See no items
+        itemsData = [];
+      }
+      
+      setItems(itemsData);
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail
+          : undefined) || (err instanceof Error ? err.message : 'Failed to load items');
+      toast.error(errorMessage);
+      console.error('Error loading items:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [accessibleUserIds, user]);
 
   useEffect(() => {
     if (!user) {
@@ -412,7 +485,6 @@ export default function SalesPage() {
       // Admin: See all items (no filtering needed)
       if (userRole === 'admin' || userRole === 'super_admin') {
         setAccessibleUserIds(null);
-        setManagerId(null);
         loadItems();
         return;
       }
@@ -422,17 +494,15 @@ export default function SalesPage() {
         const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
         try {
           const subordinatesRes = await apiClient.getSubordinates(userId);
-          const subordinates = subordinatesRes?.data || [];
-          const userIds = [userId, ...subordinates.map((sub: any) => {
+          const subordinates = Array.isArray(subordinatesRes?.data) ? (subordinatesRes.data as Subordinate[]) : [];
+          const userIds = [userId, ...subordinates.map((sub) => {
             const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
             return subId;
           })];
           setAccessibleUserIds(userIds);
-          setManagerId(userId);
         } catch (err) {
           console.error('Failed to fetch subordinates for Finance Admin:', err);
           setAccessibleUserIds([userId]);
-          setManagerId(userId);
         }
         return;
       }
@@ -467,16 +537,15 @@ export default function SalesPage() {
             
             // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
             const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
-            const subordinates = subordinatesRes?.data || [];
+            const subordinates = Array.isArray(subordinatesRes?.data) ? (subordinatesRes.data as Subordinate[]) : [];
             
             // Include the Finance Admin themselves and all their subordinates
-            const userIds = [financeAdminId, ...subordinates.map((sub: any) => {
+            const userIds = [financeAdminId, ...subordinates.map((sub) => {
               const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
               return subId;
             })];
             
             setAccessibleUserIds(userIds);
-            setManagerId(financeAdminId);
             
             if (process.env.NODE_ENV === 'development') {
               console.log(`${userRole === 'employee' ? 'Employee' : 'Accountant'} - Accessible User IDs (from Finance Admin):`, {
@@ -491,7 +560,6 @@ export default function SalesPage() {
             // Fallback: if we can't get subordinates, at least try to show items from the Finance Admin
             const fallbackUserIds = [managerIdValue];
             setAccessibleUserIds(fallbackUserIds);
-            setManagerId(managerIdValue);
             
             if (process.env.NODE_ENV === 'development') {
               console.log(`${userRole === 'employee' ? 'Employee' : 'Accountant'} - Using fallback (Finance Admin only):`, {
@@ -505,73 +573,21 @@ export default function SalesPage() {
           // Employee/Accountant has no manager assigned - show no items
           console.warn(`${userRole === 'employee' ? 'Employee' : 'Accountant'} has no manager (Finance Admin) assigned`);
           setAccessibleUserIds([]);
-          setManagerId(null);
         }
         return;
       }
     };
     
     initializeAccess();
-  }, [user, storeUser, router]);
+  }, [user, storeUser, router, loadItems]);
 
   // Reload items when accessibleUserIds changes (for Finance Admin, Accountant, Employee)
   useEffect(() => {
     if (user && accessibleUserIds !== null) {
       loadItems();
     }
-  }, [accessibleUserIds]);
-
-  const loadItems = async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      const response: any = await apiClient.getInventoryItems({ limit: 1000, is_active: true });
-      // Handle both direct array response and wrapped response
-      let itemsData = Array.isArray(response?.data) 
-        ? response.data 
-        : (response?.data?.data || []);
-      
-      // Apply role-based filtering
-      const userRole = user?.role?.toLowerCase() || '';
-      const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
-      const isAccountant = userRole === 'accountant';
-      const isEmployee = userRole === 'employee';
-      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-      
-      if (isAdmin) {
-        // Admin sees all items - no filtering needed
-        // itemsData remains unchanged
-      } else if (isFinanceAdmin && accessibleUserIds && accessibleUserIds.length > 0) {
-        // Finance Admin: See items created by themselves and their subordinates
-        itemsData = itemsData.filter((item: InventoryItem) => {
-          const createdById = item.created_by_id || item.createdBy || item.created_by;
-          if (!createdById) return false;
-          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return accessibleUserIds.includes(createdByIdNum);
-        });
-      } else if ((isAccountant || isEmployee) && accessibleUserIds && accessibleUserIds.length > 0) {
-        // Employee/Accountant: See items created by their Finance Admin's team (Finance Admin + all subordinates)
-        itemsData = itemsData.filter((item: InventoryItem) => {
-          const createdById = item.created_by_id || item.createdBy || item.created_by;
-          if (!createdById) return false;
-          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return accessibleUserIds.includes(createdByIdNum);
-        });
-      } else if (isAccountant || isEmployee) {
-        // Employee/Accountant without manager or accessibleUserIds: See no items
-        itemsData = [];
-      }
-      
-      setItems(itemsData);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to load items';
-      toast.error(errorMessage);
-      console.error('Error loading items:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [accessibleUserIds, loadItems, user]);
+  
 
   const handleAddToSale = () => {
     if (!selectedItem) {
@@ -647,20 +663,24 @@ export default function SalesPage() {
     setProcessing(true);
     try {
       // Process each sale item sequentially to avoid race conditions
-      const sales: any[] = [];
+      const sales: ReceiptData[] = [];
       for (const item of saleItems) {
         try {
-          const saleResponse: any = await apiClient.createSale({
+          const saleResponse = await apiClient.createSale({
             item_id: item.item_id,
             quantity_sold: item.quantity,
             customer_name: customerName || undefined,
             customer_email: customerEmail || undefined,
             notes: notes || undefined,
           });
-          const saleData = saleResponse?.data || saleResponse;
-          sales.push(saleData);
-        } catch (err: any) {
-          const errorMessage = err.response?.data?.detail || err.message || `Failed to create sale for ${item.item_name}`;
+          const saleData = (saleResponse?.data as unknown) ?? (saleResponse as unknown);
+          sales.push((saleData as ReceiptData) || {});
+        } catch (err: unknown) {
+          const errorMessage =
+            (typeof err === 'object' && err !== null && 'response' in err
+              ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+              : undefined) ||
+            (err instanceof Error ? err.message : `Failed to create sale for ${item.item_name}`);
           toast.error(errorMessage);
           throw err; // Stop processing if one sale fails
         }
@@ -669,11 +689,11 @@ export default function SalesPage() {
       // Get receipt for the first sale
       if (sales.length > 0 && sales[0]?.id) {
         try {
-          const receiptResponse: any = await apiClient.getReceipt(sales[0].id);
-          const receiptData = receiptResponse?.data || receiptResponse;
-          setReceiptData(receiptData);
+          const receiptResponse = await apiClient.getReceipt(sales[0].id as number);
+          const receipt = (receiptResponse?.data as unknown) ?? (receiptResponse as unknown);
+          setReceiptData(receipt as ReceiptData);
           setShowReceipt(true);
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn('Failed to load receipt, but sale was successful:', err);
           // Sale was successful, just show success message
           toast.success('Sale completed successfully!');
@@ -694,8 +714,12 @@ export default function SalesPage() {
       if (!showReceipt) {
         toast.success('Sale completed successfully!');
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to complete sale';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (err instanceof Error ? err.message : 'Failed to complete sale');
       toast.error(errorMessage);
       console.error('Error completing sale:', err);
     } finally {
@@ -993,5 +1017,4 @@ export default function SalesPage() {
     </Layout>
   );
 }
-
 

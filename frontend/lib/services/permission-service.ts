@@ -101,7 +101,7 @@ export class PermissionService implements PermissionServiceInterface {
    * Delete a permission
    * Not supported by backend.
    */
-  async deletePermission(id: string): Promise<boolean> {
+  async deletePermission(): Promise<boolean> {
     console.warn("deletePermission: Backend does not support permission deletion.");
     return false;
   }

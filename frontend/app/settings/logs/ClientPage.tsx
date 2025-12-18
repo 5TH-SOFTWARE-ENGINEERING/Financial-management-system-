@@ -7,7 +7,6 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import { 
   FileText, 
   RefreshCw, 
-  Search,
   Filter,
   Calendar,
   User,
@@ -361,7 +360,7 @@ function getActionBadgeVariant(action: string): 'success' | 'warning' | 'danger'
 export default function LogsPage() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AuditLog['user'][]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -413,8 +412,14 @@ export default function LogsPage() {
   const loadUsers = async () => {
     try {
       const response = await apiClient.getUsers();
-      setUsers(response.data || []);
-    } catch (err: any) {
+      const userList = (response.data || []).map((u: { id?: unknown; username?: unknown; full_name?: unknown; email?: unknown }) => ({
+        id: typeof u.id === 'number' ? u.id : parseInt(String(u.id ?? 0), 10),
+        username: typeof u.username === 'string' ? u.username : undefined,
+        full_name: typeof u.full_name === 'string' ? u.full_name : undefined,
+        email: typeof u.email === 'string' ? u.email : undefined,
+      }));
+      setUsers(userList);
+    } catch {
       // Silently fail - users are optional for filtering
       setUsers([]);
     }
@@ -427,7 +432,7 @@ export default function LogsPage() {
     setError(null);
 
     try {
-      const filters: any = {
+      const filters: Record<string, unknown> = {
         skip: (currentPage - 1) * limit,
         limit: limit,
       };
@@ -449,16 +454,23 @@ export default function LogsPage() {
       }
 
       const response = await apiClient.getAuditLogs(filters);
-      const logsData = response.data || [];
+      const logsData = Array.isArray(response.data)
+        ? (response.data as unknown[]).filter((item): item is AuditLog => {
+            const record = item as Partial<AuditLog>;
+            return typeof record.id === 'number' && typeof record.user_id === 'number' && typeof record.created_at === 'string';
+          })
+        : [];
       
       // Use user information from API response or fallback to users list
-      const enrichedLogs = logsData.map((log: any) => ({
+      const enrichedLogs = logsData.map((log) => ({
         ...log,
-        user: log.user || users.find((u: any) => u.id === log.user_id) || {
-          id: log.user_id,
-          username: `User ${log.user_id}`,
-          full_name: `User ${log.user_id}`,
-        }
+        user:
+          log.user ||
+          users.find((u) => u?.id === log.user_id) || {
+            id: log.user_id,
+            username: `User ${log.user_id}`,
+            full_name: `User ${log.user_id}`,
+          },
       }));
 
       setLogs(enrichedLogs);
@@ -468,15 +480,25 @@ export default function LogsPage() {
       if (logsData.length === limit) {
         // Could fetch next page to check, but for now we'll just show current count
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load logs:', err);
-      if (err.response?.status === 403) {
+      const status = typeof err === 'object' && err !== null && 'response' in err
+        ? (err as { response?: { status?: number } }).response?.status
+        : undefined;
+      const detail = typeof err === 'object' && err !== null && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : err instanceof Error
+          ? err.message
+          : undefined;
+
+      if (status === 403) {
         setError('Access denied. Logs view requires ADMIN role.');
         setHasPermission(false);
         toast.error('Access denied. Logs view requires ADMIN role.');
       } else {
-        setError(err.response?.data?.detail || 'Failed to load logs. Please try again.');
-        toast.error(err.response?.data?.detail || 'Failed to load logs.');
+        const message = detail || 'Failed to load logs. Please try again.';
+        setError(message);
+        toast.error(message);
       }
       setLogs([]);
     } finally {
@@ -623,10 +645,12 @@ export default function LogsPage() {
                   }}
                 >
                   <option value="">All Users</option>
-                  {users.map((u: any) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name || u.username || u.email}
-                    </option>
+                  {users.map((u) => (
+                    u ? (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name || u.username || u.email}
+                      </option>
+                    ) : null
                   ))}
                 </Select>
               </FormGroup>

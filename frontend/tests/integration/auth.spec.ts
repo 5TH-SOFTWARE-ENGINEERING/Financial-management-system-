@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Route } from '@playwright/test'
 
 // Define the expected login heading text for reuse
 const LOGIN_HEADING = /login to your account/i
@@ -18,7 +18,7 @@ test.describe('Authentication Flow', () => {
             try {
                 localStorage.clear()
                 sessionStorage.clear()
-            } catch (e) {
+            } catch {
                 // Ignore errors - storage might not be accessible in some contexts
             }
         })
@@ -32,7 +32,7 @@ test.describe('Authentication Flow', () => {
             // Wait for the main heading to ensure the page is rendered
             try {
                 await expect(page.getByRole('heading', { name: LOGIN_HEADING })).toBeVisible({ timeout: 10000 })
-            } catch (e) {
+            } catch {
                 // If heading not found, page might be loading - wait a bit more
                 await page.waitForTimeout(1000)
             }
@@ -90,7 +90,7 @@ test.describe('Authentication Flow', () => {
             if (errorCount > 0) {
                 try {
                     await expect(possibleErrors.first()).toBeVisible({ timeout: 3000 })
-                } catch (e) {
+                } catch {
                     // Errors might not be visible yet - that's okay, main test is URL check
                 }
             }
@@ -130,7 +130,7 @@ test.describe('Authentication Flow', () => {
                 response => response.url().includes('/auth/login-json') && response.status() === 401,
                 { timeout: 10000 }
             )
-        } catch (e) {
+        } catch {
             // If response doesn't come, continue anyway
         }
         
@@ -160,7 +160,7 @@ test.describe('Authentication Flow', () => {
         }
     })
 
-    test('should submit login form successfully', async ({ page, context }) => {
+    test('should submit login form successfully', async ({ page }) => {
         // Wait for inputs to be available (already handled by beforeEach)
         
         let loginRequestHit = false
@@ -168,7 +168,7 @@ test.describe('Authentication Flow', () => {
         
         // Set up routes FIRST - before any interaction
         // Mock the login endpoint - use more flexible patterns
-        const loginHandler = async (route: any) => {
+        const loginHandler = async (route: Route) => {
             loginRequestHit = true
             const url = route.request().url()
             console.log('Route matched:', url)
@@ -189,7 +189,7 @@ test.describe('Authentication Flow', () => {
         await page.route(/.*login-json.*/, loginHandler)
         
         // Mock the current user endpoint
-        const userHandler = async (route: any) => {
+        const userHandler = async (route: Route) => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -246,7 +246,7 @@ test.describe('Authentication Flow', () => {
         
         // Click sign in button and wait for API response
         // Use Promise.allSettled to handle both response and potential navigation
-        const [responseResult, clickResult] = await Promise.allSettled([
+        const [responseResult] = await Promise.allSettled([
             page.waitForResponse(
                 response => {
                     const url = response.url()
@@ -274,7 +274,7 @@ test.describe('Authentication Flow', () => {
             }
             try {
                 token = await page.evaluate(() => localStorage.getItem('access_token'))
-            } catch (err) {
+            } catch {
                 if (page.isClosed()) {
                     break
                 }
@@ -295,7 +295,7 @@ test.describe('Authentication Flow', () => {
         let currentUrl = ''
         try {
             currentUrl = page.url()
-        } catch (err) {
+        } catch {
             currentUrl = 'page-closed'
         }
         

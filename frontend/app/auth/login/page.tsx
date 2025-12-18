@@ -499,7 +499,7 @@ const BackButton = styled.button`
 `;
 
 export default function Login() {
-  const { login, error: authError, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { login, isLoading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -590,13 +590,14 @@ export default function Login() {
       setIsLoading(false);
       return;
       
-    } catch (error: any) {
-      const errorResponse = error?.response;
+    } catch (error: unknown) {
+      const errObj = typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : {};
+      const errorResponse = errObj.response as { status?: number; data?: { detail?: unknown; error?: unknown } } | undefined;
       const errorStatus = errorResponse?.status;
       const errorData = errorResponse?.data;
-      const errorDetail = errorData?.detail || errorData?.error || error?.message || '';
-      const errorCode = error?.code;
-      const errorMessage = String(error?.message || '').toLowerCase();
+      const errorDetail = (errorData?.detail as unknown) || (errorData?.error as unknown) || (errObj.message as unknown) || '';
+      const errorCode = errObj.code as string | undefined;
+      const errorMessage = String((errObj.message as string | undefined) || '').toLowerCase();
       const errorDetailLower = String(errorDetail).toLowerCase();
       const isNetworkError = !errorResponse || 
                             errorCode === 'ECONNREFUSED' ||
@@ -607,11 +608,12 @@ export default function Login() {
                             errorMessage.includes('failed to fetch') ||
                             errorMessage.includes('timeout');
       
-      const isServerError = errorStatus >= 500 && errorStatus < 600;
+      const statusCode = typeof errorStatus === 'number' ? errorStatus : null;
+      const isServerError = statusCode !== null && statusCode >= 500 && statusCode < 600;
       
-      const isAuthError = errorStatus === 401 || 
-                         errorStatus === 403 || 
-                         errorStatus === 404 ||
+      const isAuthError = statusCode === 401 || 
+                         statusCode === 403 || 
+                         statusCode === 404 ||
                          errorDetailLower.includes('incorrect username') ||
                          errorDetailLower.includes('incorrect password') ||
                          errorDetailLower.includes('invalid credentials') ||

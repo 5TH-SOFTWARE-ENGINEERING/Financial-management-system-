@@ -1,10 +1,9 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  LineChart, Save, X, AlertCircle, TrendingUp, BarChart3, ArrowLeft
+  LineChart, Save, X, AlertCircle, ArrowLeft
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -214,6 +213,17 @@ const Spinner = styled.div`
   }
 `;
 
+type ForecastMethod = 'moving_average' | 'linear_growth' | 'trend' | string;
+
+type MethodParams = Record<string, unknown>;
+
+interface ForecastDataPoint {
+  period?: string;
+  date?: string;
+  forecasted_value?: number;
+  method?: ForecastMethod;
+}
+
 interface Forecast {
   id: number;
   name: string;
@@ -222,16 +232,15 @@ interface Forecast {
   period_type: string;
   start_date: string;
   end_date: string;
-  method: string;
-  method_params?: any;
-  forecast_data?: any[];
+  method: ForecastMethod;
+  method_params?: MethodParams;
+  forecast_data?: ForecastDataPoint[];
   created_at: string;
 }
 
 const ForecastEditPage: React.FC = () => {
   const router = useRouter();
   const params = useParams();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [forecast, setForecast] = useState<Forecast | null>(null);
@@ -242,26 +251,20 @@ const ForecastEditPage: React.FC = () => {
 
   const forecastId = params?.id ? parseInt(params.id as string) : null;
 
-  useEffect(() => {
-    if (forecastId) {
-      loadForecast();
-    }
-  }, [forecastId]);
-
-  const loadForecast = async () => {
+  const loadForecast = useCallback(async () => {
     if (!forecastId) return;
     
     try {
       setLoading(true);
       const response = await apiClient.getForecast(forecastId);
-      const forecastData = response.data as any;
+      const forecastData = response.data as Forecast;
       
       // Parse JSON fields if they're strings
       if (typeof forecastData.forecast_data === 'string') {
-        forecastData.forecast_data = JSON.parse(forecastData.forecast_data);
+        forecastData.forecast_data = JSON.parse(forecastData.forecast_data) as ForecastDataPoint[];
       }
       if (typeof forecastData.method_params === 'string') {
-        forecastData.method_params = JSON.parse(forecastData.method_params);
+        forecastData.method_params = JSON.parse(forecastData.method_params) as MethodParams;
       }
       
       setForecast(forecastData);
@@ -269,15 +272,20 @@ const ForecastEditPage: React.FC = () => {
         name: forecastData.name || '',
         description: forecastData.description || ''
       });
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load forecast');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load forecast';
+      toast.error(message);
       router.push('/forecast/list');
     } finally {
       setLoading(false);
     }
-  };
+  }, [forecastId, router]);
 
-  const handleInputChange = (field: string, value: any) => {
+  useEffect(() => {
+    loadForecast();
+  }, [loadForecast]);
+
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -301,8 +309,13 @@ const ForecastEditPage: React.FC = () => {
       
       toast.success('Forecast updated successfully!');
       router.push(`/forecast/${forecastId}`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || error.message || 'Failed to update forecast');
+    } catch (error: unknown) {
+      const apiMessage =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined;
+      const message = apiMessage || (error instanceof Error ? error.message : 'Failed to update forecast');
+      toast.error(message);
     } finally {
       setSaving(false);
     }

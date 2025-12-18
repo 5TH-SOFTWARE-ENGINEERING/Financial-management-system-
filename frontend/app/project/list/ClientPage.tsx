@@ -5,11 +5,22 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, FolderKanban, Plus, Edit, Trash2, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 import { theme } from '@/components/common/theme';
+
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
 
 // ──────────────────────────────────────────
 // Theme Constants
@@ -22,11 +33,6 @@ const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
   0 1px 2px -1px rgba(0, 0, 0, 0.03),
   inset 0 0 0 1px rgba(0, 0, 0, 0.02)
-`;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
 `;
 
 // ──────────────────────────────────────────
@@ -487,10 +493,6 @@ const ModalActions = styled.div`
   margin-top: ${theme.spacing.lg};
 `;
 
-const ModalAlertIcon = styled(AlertCircle)`
-  color: #ef4444;
-`;
-
 const ButtonContent = styled.span`
   display: inline-flex;
   align-items: center;
@@ -514,9 +516,8 @@ interface Project {
 }
 
 export default function ProjectListPage() {
-  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -540,12 +541,13 @@ export default function ProjectListPage() {
     try {
       const response = await apiClient.getProjects();
       setProjects(response.data || []);
-    } catch (err: any) {
-      if (err.response?.status === 404) {
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      if (error.response?.status === 404) {
         setError('Projects feature is not available. Please contact your administrator.');
         setProjects([]);
       } else {
-        setError(err.response?.data?.detail || 'Failed to load projects');
+        setError(error.response?.data?.detail || 'Failed to load projects');
         toast.error('Failed to load projects');
       }
     } finally {
@@ -557,7 +559,7 @@ export default function ProjectListPage() {
     try {
       const response = await apiClient.getDepartments();
       setDepartments(response.data || []);
-    } catch (err: any) {
+    } catch {
       // Silently fail - departments are optional for filtering
       setDepartments([]);
     }
@@ -596,8 +598,9 @@ export default function ProjectListPage() {
       setProjectToDelete(null);
       setDeletePassword('');
       loadProjects();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete project';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to delete project';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {

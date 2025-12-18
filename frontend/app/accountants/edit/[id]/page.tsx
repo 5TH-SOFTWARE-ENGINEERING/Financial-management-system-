@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,19 +16,7 @@ import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-
-const CardShadow = `
-  0 2px 4px -1px rgba(0, 0, 0, 0.06),
-  0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
-`;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
-`;
 
 const UpdateAccountantSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -183,12 +171,6 @@ const StyledInput = styled.input`
   }
 `;
 
-const HelpText = styled.p`
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--muted-foreground);
-`;
-
 const FieldError = styled.p`
   color: #dc2626;
   font-size: ${theme.typography.fontSizes.sm};
@@ -282,11 +264,7 @@ export default function EditAccountantPage() {
     resolver: zodResolver(UpdateAccountantSchema),
   });
 
-  useEffect(() => {
-    loadUser();
-  }, [id]);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     if (!id) return;
     
     setLoadingUser(true);
@@ -309,12 +287,20 @@ export default function EditAccountantPage() {
         phone: user.phone || '',
         department: user.department || '',
       });
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load accountant');
+    } catch (err: unknown) {
+      const errMessage =
+        (typeof err === 'object' && err !== null && 'response' in err && (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (err as { message?: string }).message ||
+        'Failed to load accountant';
+      setError(errMessage);
     } finally {
       setLoadingUser(false);
     }
-  };
+  }, [id, reset]);
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
 
   const onSubmit = async (data: FormData) => {
     if (!id) return;
@@ -329,7 +315,7 @@ export default function EditAccountantPage() {
         email: data.email,
         username: data.username,
         phone: data.phone || null,
-        department: data.department || null,
+        department: data.department || undefined,
       };
       
       await apiClient.updateUser(parseInt(id, 10), userData);
@@ -342,8 +328,18 @@ export default function EditAccountantPage() {
       setTimeout(() => {
         router.push('/accountants/list');
       }, 2000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Failed to update accountant';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail) ||
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message) ||
+        (err as { message?: string }).message ||
+        'Failed to update accountant';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

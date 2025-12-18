@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
-import { ArrowLeft, Mail, Lock, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/lib/rbac';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,7 +14,6 @@ import {
   ResetPasswordRequestSchema, 
   ResetPasswordOTPSchema,
   ResetPasswordNewSchema,
-  type ResetPasswordInput 
 } from '@/lib/validation';
 import apiClient from '@/lib/api';
 
@@ -100,10 +99,6 @@ const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: 
 
 const LinkIcon = styled(IconWrapper)`
   margin-right: ${theme.spacing.xs};
-`;
-
-const FormIcon = styled(IconWrapper)`
-  margin-right: ${theme.spacing.sm};
 `;
 
 const SuccessIcon = styled(IconWrapper)`
@@ -402,8 +397,18 @@ export default function ResetPassword() {
       } else {
         throw new Error('Invalid response from server');
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to send OTP. Please try again.';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail) ||
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message) ||
+        (err as { message?: string }).message ||
+        'Failed to send OTP. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -418,7 +423,7 @@ export default function ResetPassword() {
     setError(null);
     
     try {
-      const response = await apiClient.requestOTP(email);
+      await apiClient.requestOTP(email);
       setCanResendOTP(false);
       setResendTimer(60); // Reset timer
       
@@ -435,8 +440,14 @@ export default function ResetPassword() {
       }, 1000);
       
       toast.success('OTP resent to your email!');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to resend OTP. Please try again.';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (err as { message?: string }).message ||
+        'Failed to resend OTP. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -457,8 +468,14 @@ export default function ResetPassword() {
       setStep('new-password');
       toast.success('Please enter your new password.');
       otpForm.reset();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to proceed. Please try again.';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (err as { message?: string }).message ||
+        'Failed to proceed. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -502,8 +519,18 @@ export default function ResetPassword() {
       setTimeout(() => {
         router.push('/auth/login');
       }, 2000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to reset password. Please try again.';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail) ||
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message) ||
+        (err as { message?: string }).message ||
+        'Failed to reset password. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
       
@@ -599,7 +626,7 @@ export default function ResetPassword() {
               </ResetButton>
             </form>
             <ResendContainer>
-              <p>Didn't receive the OTP?</p>
+              <p>Didn&apos;t receive the OTP?</p>
               {canResendOTP ? (
                 <ResendButton
                   type="button"

@@ -3,12 +3,11 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/rbac/auth-context';
-import { ComponentGate, ComponentId } from '@/lib/rbac';
 import {
-  Users, DollarSign, TrendingUp, FileText, Shield, Calendar,
-  CreditCard, Activity, Briefcase, UserCheck,
+  Users, DollarSign, TrendingUp, FileText, Shield,
+  CreditCard, Activity,
   ClipboardList, BarChart3, Wallet, ArrowRight, AlertCircle,
-  LineChart, Target, ArrowUpRight, ArrowDownRight, Package, ShoppingCart, BookOpen
+  LineChart, ArrowUpRight, ArrowDownRight, Package, ShoppingCart
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -114,7 +113,9 @@ const DashboardGrid = styled.div`
   }
 `;
 
-const getIconColor = (IconComponent: React.FC<any>) => {
+type IconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
+
+const getIconColor = (IconComponent: IconComponent) => {
   switch (IconComponent) {
     case Users:
     case TrendingUp:
@@ -134,7 +135,7 @@ const getIconColor = (IconComponent: React.FC<any>) => {
   }
 };
 
-const StatsCard = styled.div<{ $IconComponent: React.FC<any>; $clickable?: boolean }>`
+const StatsCard = styled.div<{ $IconComponent: IconComponent; $clickable?: boolean }>`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
   border: 1px solid ${theme.colors.border};
@@ -181,7 +182,7 @@ const StatsCard = styled.div<{ $IconComponent: React.FC<any>; $clickable?: boole
   }
 `;
 
-const CardIcon = styled.div<{ $IconComponent: React.FC<any> }>`
+const CardIcon = styled.div<{ $IconComponent: IconComponent }>`
   width: 64px;
   height: 64px;
   border-radius: ${theme.borderRadius.md};
@@ -419,9 +420,7 @@ const RoleBadge = styled.span<{ $role: string }>`
     if (role.includes('accountant')) return 'rgba(255, 255, 255, 0.15)';
     return 'rgba(255, 255, 255, 0.1)';
   }};
-  color: ${props => {
-    return '#ffffff';
-  }};
+  color: ${() => '#ffffff'};
 `;
 
 const ErrorBanner = styled.div`
@@ -488,22 +487,123 @@ interface ActivityItem {
   status?: string;
 }
 
+type Financials = {
+  total_revenue?: number | string;
+  total_expenses?: number | string;
+  profit?: number | string;
+  profit_margin?: number | string;
+};
+
+type OverviewStats = {
+  total_users?: number;
+  active_users?: number;
+  managers?: number;
+  employees?: number;
+  total_sales?: number;
+};
+
+type OverviewData = {
+  financials?: Financials;
+  pending_approvals?: number;
+  team_stats?: Partial<OverviewStats> & { pending_approvals?: number };
+  personal_stats?: Partial<OverviewStats> & { pending_approvals?: number };
+  stats?: OverviewStats;
+  sales?: { total_sales?: number };
+};
+
+type AnalyticsGrowth = {
+  revenue_growth_percent?: number;
+  expense_growth_percent?: number;
+  profit_growth_percent?: number;
+};
+
+type AnalyticsData = {
+  growth?: AnalyticsGrowth;
+};
+
+type InventorySummary = {
+  total_items?: number;
+  total_selling_value?: number;
+  potential_profit?: number;
+  total_cost_value?: number;
+};
+
+type SalesSummary = {
+  pending_sales?: number;
+  posted_sales?: number;
+  total_revenue?: number | string;
+  total_profit?: number | string;
+  total_sales?: number;
+};
+
+type Subordinate = { id?: number | string };
+
+type Workflow = {
+  status?: { value?: string } | string;
+  requester_id?: number | string;
+  requesterId?: number | string;
+  revenue_entry_id?: number | string;
+  expense_entry_id?: number | string;
+};
+
+type Revenue = {
+  id?: number | string;
+  is_approved?: boolean;
+  created_by_id?: number | string;
+  createdBy?: number | string;
+  created_by?: number | string;
+};
+
+type Expense = {
+  id?: number | string;
+  is_approved?: boolean;
+  created_by_id?: number | string;
+  createdBy?: number | string;
+  created_by?: number | string;
+};
+
+type Sale = {
+  id?: number | string;
+  status?: { value?: string } | string;
+  sold_by_id?: number | string;
+  soldBy?: number | string;
+  sold_by?: number | string;
+  created_by_id?: number | string;
+  createdBy?: number | string;
+  item_name?: string;
+  total_sale?: number | string;
+  total_revenue?: number | string;
+  total_amount?: number | string;
+  created_at?: string;
+};
+
+type ActivityApiEntry = {
+  id?: string | number;
+  type?: string;
+  title?: string;
+  amount?: number | string;
+  date?: string;
+  created_at?: string;
+  status?: string;
+  is_approved?: boolean;
+};
+
 const AdminDashboard: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
   const storeUser = useUserStore((state) => state.user);
-  const [overview, setOverview] = useState<any | null>(null);
+  const [overview, setOverview] = useState<OverviewData | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
-  const [analyticsData, setAnalyticsData] = useState<any | null>(null);
-  const [inventorySummary, setInventorySummary] = useState<any | null>(null);
-  const [salesSummary, setSalesSummary] = useState<any | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
+  const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
   const [pendingSalesCount, setPendingSalesCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Helper function to safely convert values to numbers, handling NaN, null, undefined
-  const safeNumber = (value: any): number => {
+  const safeNumber = (value: unknown): number => {
     if (value === null || value === undefined || value === '') {
       return 0;
     }
@@ -533,52 +633,43 @@ const AdminDashboard: React.FC = () => {
         const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'admin' || userRole === 'super_admin';
         const isAccountant = userRole === 'accountant';
         const isManager = userRole === 'manager';
-        const isEmployee = userRole === 'employee';
         
-        const promises: Promise<any>[] = [
-          apiClient.getDashboardOverview(),
-          apiClient.getDashboardRecentActivity(8),
-          apiClient.getAdvancedKPIs({ period: 'month' }).catch(() => null), // Optional analytics
-        ];
+        const overviewRes = await apiClient.getDashboardOverview();
+        const activityRes = await apiClient.getDashboardRecentActivity(8);
+        const analyticsRes = await apiClient.getAdvancedKPIs({ period: 'month' }).catch(() => null); // Optional analytics
         
         // Load inventory summary for Finance Admin, Admin, Super Admin, and Managers
         // Backend restricts access to these roles only
-        if (isFinanceAdmin || isManager) {
-          promises.push(
-            apiClient.getInventorySummary().catch((err: any) => {
-              // Silently handle 403 errors (expected for unauthorized roles)
-              if (err.response?.status === 403) {
+        const inventoryRes = (isFinanceAdmin || isManager)
+          ? await apiClient.getInventorySummary().catch((err: unknown) => {
+              const status = typeof err === 'object' && err !== null && 'response' in err
+                ? (err as { response?: { status?: number } }).response?.status
+                : undefined;
+              if (status === 403) {
                 console.warn('Access denied to inventory summary for role:', userRole);
                 return null;
               }
               console.warn('Failed to load inventory summary:', err);
               return null;
             })
-          );
-        } else {
-          promises.push(Promise.resolve(null));
-        }
+          : null;
         
         // Load sales summary ONLY for Accountants and Finance Admins (NOT managers)
         // Managers do not have access to sales summary
-        if ((isAccountant || isFinanceAdmin) && !isManager) {
-          promises.push(
-            apiClient.getSalesSummary().catch((err: any) => {
-              // Silently handle 403 errors (expected for managers and other non-authorized roles)
-              if (err.response?.status === 403) {
+        const salesRes = ((isAccountant || isFinanceAdmin) && !isManager)
+          ? await apiClient.getSalesSummary().catch((err: unknown) => {
+              const status = typeof err === 'object' && err !== null && 'response' in err
+                ? (err as { response?: { status?: number } }).response?.status
+                : undefined;
+              if (status === 403) {
                 return null;
               }
               console.warn('Failed to load sales summary:', err);
               return null;
             })
-          );
-        } else {
-          promises.push(Promise.resolve(null));
-        }
-        
-        const [overviewRes, activityRes, analyticsRes, inventoryRes, salesRes] = await Promise.all(promises);
+          : null;
         // Ensure overview data is properly set
-        const overviewData = overviewRes.data || {};
+        const overviewData: OverviewData = (overviewRes as { data?: OverviewData })?.data || {};
         setOverview(overviewData);
         
         // Get accessible user IDs for finance admins and accountants (themselves + subordinates)
@@ -591,14 +682,21 @@ const AdminDashboard: React.FC = () => {
         if (isFinanceAdminRole && user?.id) {
           try {
             // Finance Admin: Get their own subordinates
-            const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+            const userIdRaw = user.id;
+            const userId = typeof userIdRaw === 'string' ? parseInt(userIdRaw, 10) : Number(userIdRaw);
+            if (Number.isNaN(userId)) throw new Error('Invalid user id');
             const subordinatesRes = await apiClient.getSubordinates(userId);
-            const subordinates = subordinatesRes?.data || [];
+            const subordinates: Subordinate[] = subordinatesRes?.data || [];
             // Include the finance admin themselves
-            accessibleUserIds = [userId, ...subordinates.map((sub: any) => {
-              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
-              return subId;
-            })];
+            accessibleUserIds = [
+              userId,
+              ...subordinates
+                .map((sub) => {
+                  const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+                  return Number.isNaN(subId) ? undefined : subId;
+                })
+                .filter((id): id is number => id !== undefined),
+            ];
             
             if (process.env.NODE_ENV === 'development') {
               console.log('Finance Admin - Accessible User IDs:', {
@@ -642,10 +740,10 @@ const AdminDashboard: React.FC = () => {
               
               // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
               const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
-              const subordinates = subordinatesRes?.data || [];
+              const subordinates: Subordinate[] = subordinatesRes?.data || [];
               
               // Include the Finance Admin themselves and all their subordinates
-              accessibleUserIds = [financeAdminId, ...subordinates.map((sub: any) => {
+              accessibleUserIds = [financeAdminId, ...subordinates.map((sub) => {
                 const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
                 return subId;
               })];
@@ -686,27 +784,31 @@ const AdminDashboard: React.FC = () => {
         // Use deduplication logic to avoid counting items with workflows twice
         // IMPORTANT: For finance admins, only count approvals from themselves and their subordinates
         let totalPendingCount = 0;
-        let debugInfo: any = {};
+        const debugInfo: Record<string, unknown> = {};
         
         // Store pending sales count for later use
-        let pendingSalesForActivity: any[] = [];
+        let pendingSalesForActivity: Sale[] = [];
         
         try {
           // Fetch approval workflows to identify which entries have workflows
           const workflowsRes = await apiClient.getApprovals();
-          const workflows = workflowsRes?.data || [];
+          const workflows: Workflow[] = Array.isArray(workflowsRes?.data) ? (workflowsRes.data as Workflow[]) : [];
           
           // Count pending workflows - filter by requester_id for finance admins and accountants
-          const pendingWorkflows = workflows.filter((w: any) => {
-            const status = w.status?.value || w.status || 'pending';
-            const isPending = status.toString().toLowerCase() === 'pending';
+          const pendingWorkflows = workflows.filter((w) => {
+            const statusRaw = typeof w.status === 'string' ? w.status : w.status?.value;
+            const status = (statusRaw ?? 'pending').toString().toLowerCase();
+            const isPending = status === 'pending';
             
             // For finance admins and accountants, only count workflows they requested or from their subordinates
             if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
-              const requesterId = typeof (w.requester_id || w.requesterId) === 'string' 
-                ? parseInt(w.requester_id || w.requesterId, 10) 
-                : (w.requester_id || w.requesterId);
-              return requesterId && accessibleUserIds.includes(requesterId);
+              const requesterRaw = w.requester_id ?? w.requesterId;
+              const requesterId = typeof requesterRaw === 'string'
+                ? parseInt(requesterRaw, 10)
+                : typeof requesterRaw === 'number'
+                  ? requesterRaw
+                  : undefined;
+              return requesterId !== undefined && accessibleUserIds.includes(requesterId);
             }
             
             return isPending;
@@ -718,13 +820,13 @@ const AdminDashboard: React.FC = () => {
           // This prevents duplication - if an entry has a workflow, we only count the workflow
           const revenueIdsWithWorkflow = new Set(
             workflows
-              .filter((w: any) => w.revenue_entry_id)
-              .map((w: any) => w.revenue_entry_id)
+              .filter((w) => w.revenue_entry_id)
+              .map((w) => w.revenue_entry_id)
           );
           const expenseIdsWithWorkflow = new Set(
             workflows
-              .filter((w: any) => w.expense_entry_id)
-              .map((w: any) => w.expense_entry_id)
+              .filter((w) => w.expense_entry_id)
+              .map((w) => w.expense_entry_id)
           );
           debugInfo.revenueIdsWithWorkflow = revenueIdsWithWorkflow.size;
           debugInfo.expenseIdsWithWorkflow = expenseIdsWithWorkflow.size;
@@ -732,8 +834,8 @@ const AdminDashboard: React.FC = () => {
           // Fetch pending revenue entries - only count those WITHOUT workflows
           // For finance admins and accountants, only count revenues created by themselves or their subordinates
           const revenuesRes = await apiClient.getRevenues({ is_approved: false });
-          if (revenuesRes?.data && Array.isArray(revenuesRes.data)) {
-            const pendingRevenues = revenuesRes.data.filter((r: any) => {
+          if (Array.isArray(revenuesRes?.data)) {
+            const pendingRevenues = revenuesRes.data.filter((r: Revenue) => {
               // Only count if not approved AND doesn't have an existing workflow
               const isPending = !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
               
@@ -756,8 +858,8 @@ const AdminDashboard: React.FC = () => {
           // Fetch pending expense entries - only count those WITHOUT workflows
           // For finance admins and accountants, only count expenses created by themselves or their subordinates
           const expensesRes = await apiClient.getExpenses({ is_approved: false });
-          if (expensesRes?.data && Array.isArray(expensesRes.data)) {
-            const pendingExpenses = expensesRes.data.filter((e: any) => {
+          if (Array.isArray(expensesRes?.data)) {
+            const pendingExpenses = expensesRes.data.filter((e: Expense) => {
               // Only count if not approved AND doesn't have an existing workflow
               const isPending = !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
               
@@ -789,17 +891,18 @@ const AdminDashboard: React.FC = () => {
           
           if (canViewSales) {
             try {
-              const salesResponse: any = await apiClient.getSales({ status: 'pending', limit: 1000 });
-              const salesData = Array.isArray(salesResponse?.data) 
+              const salesResponse = await apiClient.getSales({ status: 'pending', limit: 1000 });
+              const salesData: Sale[] = Array.isArray(salesResponse?.data) 
                 ? salesResponse.data 
                 : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
-                  ? (salesResponse.data as any).data || [] 
+                  ? ((salesResponse.data as { data?: Sale[] }).data || []) 
                   : []);
               
               // Filter for pending sales (status is 'pending' or 'PENDING')
               // For finance admins and accountants, only count sales created by themselves or their subordinates
-              const pendingSales = (salesData || []).filter((s: any) => {
-                const saleStatus = (s.status?.value || s.status || 'pending')?.toLowerCase();
+              const pendingSales = (salesData || []).filter((s) => {
+                const saleStatusRaw = typeof s.status === 'string' ? s.status : s.status?.value;
+                const saleStatus = (saleStatusRaw ?? 'pending').toString().toLowerCase();
                 const isPending = saleStatus === 'pending';
                 
                 // For finance admins and accountants, also check if sold by them or their subordinates
@@ -807,8 +910,10 @@ const AdminDashboard: React.FC = () => {
                   const soldByIdRaw = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
                   const soldById = typeof soldByIdRaw === 'string' 
                     ? parseInt(soldByIdRaw, 10) 
-                    : soldByIdRaw;
-                  return soldById && accessibleUserIds.includes(soldById);
+                    : typeof soldByIdRaw === 'number'
+                      ? soldByIdRaw
+                      : undefined;
+                  return soldById !== undefined && accessibleUserIds.includes(soldById);
                 }
                 
                 return isPending;
@@ -820,12 +925,15 @@ const AdminDashboard: React.FC = () => {
               
               // Store for adding to recent activity
               pendingSalesForActivity = pendingSales;
-            } catch (salesErr: any) {
+            } catch (salesErr: unknown) {
+              const salesStatus = typeof salesErr === 'object' && salesErr !== null && 'response' in salesErr
+                ? (salesErr as { response?: { status?: number } }).response?.status
+                : undefined;
               // Silently handle 403 errors (expected for users without sales access)
-              if (salesErr.response?.status !== 403) {
+              if (salesStatus !== 403) {
                 console.warn('Failed to fetch pending sales for approvals count:', salesErr);
               }
-              debugInfo.salesError = salesErr.response?.status === 403 ? 'No access' : 'Error';
+              debugInfo.salesError = salesStatus === 403 ? 'No access' : 'Error';
             }
           }
         } catch (err) {
@@ -843,6 +951,10 @@ const AdminDashboard: React.FC = () => {
         
         setPendingApprovalsCount(Math.max(0, totalPendingCount));
         
+        const analyticsDataPayload = (analyticsRes as { data?: AnalyticsData })?.data;
+        const inventorySummaryPayload = (inventoryRes as { data?: InventorySummary | null })?.data;
+        const salesSummaryPayload = (salesRes as { data?: SalesSummary | null })?.data;
+        
         // Log for debugging (only in development)
         if (process.env.NODE_ENV === 'development') {
           console.log('Dashboard Overview Data:', {
@@ -853,9 +965,11 @@ const AdminDashboard: React.FC = () => {
             overview: overviewData,
             financials: overviewData.financials,
             base_revenue: overviewData.financials?.total_revenue,
-            sales_summary: salesSummary,
-            sales_revenue: salesSummary?.total_revenue,
-            total_revenue_calculated: safeNumber(overviewData.financials?.total_revenue) + (salesSummary ? safeNumber(salesSummary?.total_revenue) : 0),
+            sales_summary: salesSummaryPayload,
+            sales_revenue: salesSummaryPayload?.total_revenue,
+            total_revenue_calculated:
+              safeNumber(overviewData.financials?.total_revenue) +
+              (salesSummaryPayload ? safeNumber(salesSummaryPayload?.total_revenue) : 0),
             total_expenses: overviewData.financials?.total_expenses,
             profit: overviewData.financials?.profit,
             pending_approvals_count: totalPendingCount,
@@ -869,8 +983,12 @@ const AdminDashboard: React.FC = () => {
           });
         }
         
+        const activityData = Array.isArray((activityRes as { data?: ActivityApiEntry[] })?.data)
+          ? ((activityRes as { data?: ActivityApiEntry[] }).data || [])
+          : [];
+        
         // Map regular activity
-        const activity = (activityRes.data || []).map((entry: any, index: number): ActivityItem => ({
+        const activity = activityData.map((entry: ActivityApiEntry, index: number): ActivityItem => ({
           id: entry.id?.toString() ?? `activity-${index}`,
           type: entry.type ?? 'activity',
           title: entry.title ?? entry.type,
@@ -890,11 +1008,11 @@ const AdminDashboard: React.FC = () => {
         
         // Add pending sales to recent activity if available
         if (canViewSales && pendingSalesForActivity.length > 0) {
-          const salesActivity = pendingSalesForActivity.map((s: any): ActivityItem => ({
+          const salesActivity = pendingSalesForActivity.map((s): ActivityItem => ({
             id: `sale-${s.id}`,
             type: 'sale',
             title: s.item_name || `Sale #${s.id}`,
-            amount: s.total_sale,
+            amount: Number(s.total_sale ?? s.total_amount ?? 0),
             date: s.created_at,
             status: 'pending',
           }));
@@ -914,21 +1032,27 @@ const AdminDashboard: React.FC = () => {
         }
         
         // Set analytics data if available
-        if (analyticsRes?.data) {
-          setAnalyticsData(analyticsRes.data);
+        if (analyticsDataPayload) {
+          setAnalyticsData(analyticsDataPayload);
         }
         
         // Set inventory summary if available
-        if (inventoryRes?.data) {
-          setInventorySummary(inventoryRes.data);
+        if (inventorySummaryPayload) {
+          setInventorySummary(inventorySummaryPayload ?? null);
         }
         
         // Set sales summary if available
-        if (salesRes?.data) {
-          setSalesSummary(salesRes.data);
+        if (salesSummaryPayload) {
+          setSalesSummary(salesSummaryPayload ?? null);
         }
-      } catch (err: any) {
-        const errorMessage = err.response?.data?.detail || err.message || 'Failed to load dashboard data';
+      } catch (err: unknown) {
+        const errorMessage =
+          (typeof err === 'object' &&
+            err !== null &&
+            'response' in err &&
+            (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+          (err as { message?: string }).message ||
+          'Failed to load dashboard data';
         setError(errorMessage);
         // Set default values on error so UI still renders
         setOverview({
@@ -947,7 +1071,7 @@ const AdminDashboard: React.FC = () => {
     };
 
     loadDashboard();
-  }, [user]);
+  }, [user, storeUser?.managerId]);
 
   // Extract financial data with proper type conversion (handles Decimal from backend)
   // Always ensure we have valid numbers, defaulting to 0 if data is missing
@@ -999,7 +1123,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const createStatsCard = (
-    Icon: React.FC<any>, 
+    Icon: IconComponent, 
     title: string, 
     value: string, 
     clickable: boolean = false,
@@ -1242,7 +1366,7 @@ const AdminDashboard: React.FC = () => {
                 color: TEXT_COLOR_MUTED,
                 marginLeft: theme.spacing.sm
               }}>
-                (Your team's activities)
+                (Your team&apos;s activities)
               </span>
             )}
           </SectionTitle>

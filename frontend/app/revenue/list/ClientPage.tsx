@@ -1,8 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Edit,
   Trash2,
@@ -23,14 +22,22 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import { useUserStore } from '@/store/userStore';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
+
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const PRIMARY_LIGHT = '#e8f5e9';
 const TEXT_COLOR_DARK = '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -598,7 +605,6 @@ interface Revenue {
 }
 
 export default function RevenueListPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const { canApproveTransactions } = useUserStore();
   const [revenues, setRevenues] = useState<Revenue[]>([]);
@@ -620,11 +626,14 @@ export default function RevenueListPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const getStatus = (revenue: Revenue) =>
     revenue.approval_status || (revenue.is_approved ? 'approved' : 'pending');
-  const normalizeRevenues = (items: any[]): Revenue[] =>
-    (items || []).map((rev: any) => ({
-      ...rev,
-      approval_status: rev?.approval_status || (rev?.is_approved ? 'approved' : 'pending')
-    }));
+  const normalizeRevenues = (items: unknown[]): Revenue[] =>
+    (items || []).map((rev: unknown) => {
+      const revenue = rev as { approval_status?: string; is_approved?: boolean } & Record<string, unknown>;
+      return ({
+        ...revenue,
+        approval_status: revenue?.approval_status || (revenue?.is_approved ? 'approved' : 'pending')
+      } as Revenue);
+    });
   
   const canApprove = () => {
     if (canApproveTransactions()) return true;
@@ -633,11 +642,7 @@ export default function RevenueListPage() {
     return role === 'admin' || role === 'super_admin' || role === 'manager' || role === 'finance_manager';
   };
 
-  useEffect(() => {
-    loadRevenues();
-  }, []);
-
-  const loadRevenues = async (showRefreshLoading = false) => {
+  const loadRevenues = useCallback(async (showRefreshLoading = false) => {
     if (showRefreshLoading) {
       setRefreshing(true);
     } else {
@@ -659,15 +664,20 @@ export default function RevenueListPage() {
         return createdB - createdA;
       });
       setRevenues(revenues);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load revenues';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to load revenues';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadRevenues();
+  }, [loadRevenues]);
 
   const handleRefresh = async () => {
     await loadRevenues(true);
@@ -731,8 +741,9 @@ export default function RevenueListPage() {
       setShowDeleteModal(null);
       setDeletePassword('');
       loadRevenues();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete revenue entry';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to delete revenue entry';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -755,8 +766,9 @@ export default function RevenueListPage() {
           rev.id === id ? { ...rev, is_approved: true, approval_status: 'approved' } : rev
         )
       );
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to approve revenue entry';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to approve revenue entry';
       toast.error(errorMessage);
     } finally {
       setApprovingId(null);
@@ -792,8 +804,9 @@ export default function RevenueListPage() {
           rev.id === id ? { ...rev, approval_status: 'rejected', is_approved: false } : rev
         )
       );
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to reject revenue entry';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to reject revenue entry';
       setRejectPasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {

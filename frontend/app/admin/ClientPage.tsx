@@ -4,23 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Users,
-  Building,
   Settings,
   Shield,
   Download,
-  Upload,
   Eye,
   Edit,
-  Trash2,
-  Plus,
   Search,
-  Filter,
   ChevronDown,
   ChevronRight,
   UserPlus,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
   BarChart3,
   FileText,
   Activity,
@@ -40,6 +32,24 @@ interface SystemStats {
   pendingApprovals: number;
   systemHealth: 'healthy' | 'warning' | 'error' | 'unhealthy';
 }
+
+type SystemStatsResponse = {
+  users?: {
+    total?: number;
+    active?: number;
+  };
+  financials?: {
+    total_revenue?: number;
+    total_expenses?: number;
+  };
+  total_users?: number;
+  active_users?: number;
+  total_revenue?: number;
+  total_expenses?: number;
+  pending_approvals?: number;
+  system_health?: SystemStats['systemHealth'] | string;
+  health?: SystemStats['systemHealth'] | string;
+};
 
 export default function AdminPage() {
   const router = useRouter();
@@ -62,14 +72,14 @@ export default function AdminPage() {
       fetchAllUsers();
       fetchSystemStats();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, fetchAllUsers]);
 
   const fetchSystemStats = async () => {
     setStatsLoading(true);
     setStatsError(null);
     try {
       const response = await apiClient.getAdminSystemStats();
-      const data = response.data || response;
+      const data = (response.data || response || {}) as SystemStatsResponse;
       
       // Handle different response structures
       const usersData = data.users || {};
@@ -83,9 +93,15 @@ export default function AdminPage() {
         pendingApprovals: data.pending_approvals ?? 0,
         systemHealth: (data.system_health || data.health || 'healthy') as SystemStats['systemHealth'],
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch system stats:', error);
-      setStatsError(error.response?.data?.detail || error.message || 'Failed to load system stats');
+      const errObj = error as { response?: { data?: { detail?: string; message?: string } }; message?: string };
+      const message =
+        errObj.response?.data?.detail ||
+        errObj.response?.data?.message ||
+        errObj.message ||
+        'Failed to load system stats';
+      setStatsError(message);
     } finally {
       setStatsLoading(false);
     }
@@ -295,7 +311,7 @@ const getHealthColor = (health: string) => {
         <div className="text-center">
           <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h1 className="text-xl font-semibold text-foreground mb-2">Access Denied</h1>
-          <p className="text-muted-foreground">You don't have permission to access this page.</p>
+          <p className="text-muted-foreground">You don&apos;t have permission to access this page.</p>
         </div>
       </div>
     );

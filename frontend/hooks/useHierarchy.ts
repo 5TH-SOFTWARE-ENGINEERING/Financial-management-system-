@@ -7,6 +7,18 @@ interface UseHierarchyProps {
   userType?: UserType;
 }
 
+type FetchRolesError = { message?: string };
+type ServiceError = FetchRolesError & { response?: { data?: { detail?: string; error?: string } } };
+
+const getErrorMessage = (err: unknown, fallback: string) => {
+  if (typeof err === 'object' && err !== null) {
+    const e = err as ServiceError;
+    return e.response?.data?.detail || e.response?.data?.error || e.message || fallback;
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+};
+
 export function useHierarchy({ userType }: UseHierarchyProps = {}) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -24,8 +36,8 @@ export function useHierarchy({ userType }: UseHierarchyProps = {}) {
         fetchedRoles = await roleService.getAllRoles();
       }
       setRoles(fetchedRoles);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch roles');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to fetch roles'));
     } finally {
       setLoading(false);
     }
@@ -36,8 +48,8 @@ export function useHierarchy({ userType }: UseHierarchyProps = {}) {
     try {
       const updatedUser = await roleService.assignRoleToUser(userId, role);
       return updatedUser;
-    } catch (err: any) {
-      setError(err.message || 'Failed to assign role');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to assign role'));
       return null;
     }
   }, []);
@@ -47,8 +59,8 @@ export function useHierarchy({ userType }: UseHierarchyProps = {}) {
     try {
       const updatedUser = await roleService.removeRoleFromUser(userId);
       return updatedUser;
-    } catch (err: any) {
-      setError(err.message || 'Failed to remove role');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to remove role'));
       return null;
     }
   }, []);
@@ -58,8 +70,8 @@ export function useHierarchy({ userType }: UseHierarchyProps = {}) {
     try {
       const permissions: Permission[] = await roleService.getRolePermissions(role);
       return permissions;
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch permissions');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to fetch permissions'));
       return [];
     }
   }, []);

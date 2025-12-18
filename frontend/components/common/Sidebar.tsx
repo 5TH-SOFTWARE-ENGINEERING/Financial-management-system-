@@ -1,12 +1,12 @@
 // components/common/sidebar.tsx
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styled from 'styled-components';
 import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
-    UserCog, Settings, ChevronDown, Menu, Wallet, Shield, UserPlus, List, Calculator,
+    UserCog, Settings, ChevronDown, Wallet, Shield, UserPlus, List, Calculator,
     DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3, Package, ShoppingCart, BookOpen,
     Key, ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -413,15 +413,6 @@ const Sidebar: React.FC = () => {
     };
 
     const isOpen = (key: string) => openSections[key] || pathname.includes(`/${key}`);
-
-    useEffect(() => {
-        const paths = ['revenue', 'expense', 'transaction', 'inventory', 'report', 'forecast', 'scenario', 'variance', 'budget', 'finance-admin', 'accountant', 'employee', 'department', 'project'];
-        const newOpen = { ...openSections };
-        paths.forEach(p => {
-            if (pathname.includes(`/${p}`)) newOpen[p] = true; 
-        });
-        setOpenSections(newOpen);
-    }, [pathname]);
     const isAdmin = hasUserType(UserType.ADMIN) || user?.userType?.toLowerCase() === "admin";
     const isFinanceAdmin = hasUserType(UserType.FINANCE_ADMIN) || user?.userType?.toLowerCase() === "finance_admin";
     const isManager = user?.role?.toLowerCase() === "manager";

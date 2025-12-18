@@ -1,9 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
   ArrowUpRight,
@@ -16,7 +15,6 @@ import {
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { theme } from '@/components/common/theme';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -407,12 +405,6 @@ const TransactionTitle = styled.div`
   color: ${TEXT_COLOR_DARK};
 `;
 
-const TransactionDescription = styled.div`
-  font-size: ${theme.typography.fontSizes.xs};
-  color: ${TEXT_COLOR_MUTED};
-  margin-top: ${theme.spacing.xs};
-`;
-
 interface Transaction {
   id: string;
   transaction_type: 'revenue' | 'expense' | 'sale' | 'inventory';
@@ -440,24 +432,46 @@ interface Transaction {
   sold_by_id?: number;
 }
 
+type TransactionItem = Partial<Transaction> & {
+  id: string;
+  transaction_type: 'revenue' | 'expense' | 'sale' | 'inventory';
+  title: string;
+  category?: string;
+  amount: number;
+  date?: string;
+  is_approved?: boolean;
+  created_at?: string;
+  status?: string;
+  createdById?: number;
+  soldById?: number;
+  quantity?: number;
+  item_name?: string;
+};
+
+const toNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+  return undefined;
+};
+
+const toString = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined;
+
+const toRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+
 export default function TransactionListPage() {
-  const router = useRouter();
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
-
-  useEffect(() => {
-    if (user) {
-      loadTransactions();
-    }
-  }, [user]);
-
-  const loadTransactions = async () => {
+  const loadTransactions = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -468,7 +482,6 @@ export default function TransactionListPage() {
     
     try {
       const userRole = user?.role?.toLowerCase();
-      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
       const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
       const isAccountant = userRole === 'accountant';
       const isEmployee = userRole === 'employee';
@@ -480,25 +493,18 @@ export default function TransactionListPage() {
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
           const subordinatesRes = await apiClient.getSubordinates(userId);
           const subordinates = subordinatesRes?.data || [];
-          userIds = [userId, ...subordinates.map((sub: any) => {
-            const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
-            return subId;
-          })];
-          setAccessibleUserIds(userIds);
+          userIds = [userId, ...subordinates.map((sub: unknown) => toNumber((sub as { id?: unknown })?.id)).filter((id): id is number => typeof id === 'number')];
         } catch (err) {
           console.warn('Failed to fetch subordinates, using only finance admin ID:', err);
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
           userIds = [userId];
-          setAccessibleUserIds(userIds);
         }
       } else if ((isAccountant || isEmployee) && user?.id) {
         // Accountant and Employee can only see their own
         const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
         userIds = [userId];
-        setAccessibleUserIds(userIds);
       } else {
         // Admin can see all - no filtering needed
-        setAccessibleUserIds(null);
       }
 
       // Fetch revenues, expenses, sales, and inventory items
@@ -512,48 +518,63 @@ export default function TransactionListPage() {
       let transactions = transactionsResponse.data || [];
       
       // Transform sales to transaction format
-      const salesData: any = salesResponse?.data || [];
-      let salesTransactions = (Array.isArray(salesData) ? salesData : (salesData?.data || [])).map((sale: any) => ({
-        id: `sale-${sale.id}`,
-        transaction_type: 'sale' as const,
-        title: sale.item_name || `Sale #${sale.id}`,
-        description: sale.customer_name ? `Customer: ${sale.customer_name}` : sale.notes || `Receipt: ${sale.receipt_number || `#${sale.id}`}`,
-        category: sale.item?.category || 'Sales',
-        amount: sale.total_sale || 0,
-        date: sale.created_at || sale.date,
-        is_approved: sale.status === 'posted',
-        created_at: sale.created_at,
-        status: sale.status || 'pending',
-        item_name: sale.item_name,
-        quantity_sold: sale.quantity_sold,
-        receipt_number: sale.receipt_number,
-        customer_name: sale.customer_name,
-        sold_by_id: sale.sold_by_id || sale.soldBy || sale.sold_by,
-        created_by_id: sale.created_by_id || sale.createdBy || sale.created_by,
-      }));
+      const salesDataRaw = salesResponse?.data || [];
+      const salesArray = Array.isArray(salesDataRaw) ? salesDataRaw : (toRecord(salesDataRaw).data as unknown[]) || [];
+      let salesTransactions = salesArray.map((saleRaw): TransactionItem => {
+        const sale = toRecord(saleRaw);
+        const saleId = toNumber(sale.id) ?? 0;
+        const soldById = toNumber(sale.sold_by_id ?? sale.soldBy ?? sale.sold_by);
+        const createdById = toNumber(sale.created_by_id ?? sale.createdBy ?? sale.created_by);
+        return {
+          id: `sale-${saleId}`,
+          transaction_type: 'sale',
+          title: toString(sale.item_name) || `Sale #${saleId}`,
+          description: toString(sale.customer_name)
+            ? `Customer: ${sale.customer_name as string}`
+            : toString(sale.notes) || `Receipt: ${toString(sale.receipt_number) || `#${saleId}`}`,
+          category: toRecord(sale.item).category as string || 'Sales',
+          amount: typeof sale.total_sale === 'number' ? sale.total_sale : 0,
+          date: toString(sale.created_at) || toString(sale.date),
+          is_approved: sale.status === 'posted',
+          created_at: toString(sale.created_at),
+          status: (toString(sale.status) as Transaction['status']) || 'pending',
+          item_name: toString(sale.item_name),
+          quantity_sold: toNumber(sale.quantity_sold),
+          receipt_number: toString(sale.receipt_number),
+          customer_name: toString(sale.customer_name),
+          soldById,
+          createdById,
+        };
+      });
 
       // Transform inventory items to transaction format (treating creation as expense)
-      const inventoryData: any = inventoryResponse?.data || [];
-      let inventoryTransactions = (Array.isArray(inventoryData) ? inventoryData : (inventoryData?.data || [])).map((item: any) => {
-        // Calculate total cost for the initial quantity
-        const totalCost = (item.total_cost || item.buying_price || 0) * (item.quantity || 0);
+      const inventoryRaw = inventoryResponse?.data || [];
+      const inventoryArray = Array.isArray(inventoryRaw) ? inventoryRaw : (toRecord(inventoryRaw).data as unknown[]) || [];
+      let inventoryTransactions = inventoryArray.map((itemRaw): TransactionItem => {
+        const item = toRecord(itemRaw);
+        const itemId = toNumber(item.id) ?? 0;
+        const quantity = toNumber(item.quantity) ?? 0;
+        const totalCost =
+          (typeof item.total_cost === 'number' ? item.total_cost : typeof item.buying_price === 'number' ? item.buying_price : 0) *
+          quantity;
+        const createdById = toNumber(item.created_by_id ?? item.createdBy ?? item.created_by);
         return {
-          id: `inventory-${item.id}`,
-          transaction_type: 'inventory' as const,
-          title: item.item_name || `Inventory Item #${item.id}`,
-          description: item.description || `SKU: ${item.sku || 'N/A'}`,
-          category: item.category || 'Inventory',
-          amount: totalCost, // Total cost of inventory purchase
-          date: item.created_at || item.date,
-          is_approved: item.is_active !== false, // Active items are considered "approved"
-          created_at: item.created_at,
-          status: item.is_active ? 'active' : 'inactive',
-          item_name: item.item_name,
-          quantity: item.quantity || 0,
-          sku: item.sku,
-          buying_price: item.buying_price,
-          total_cost: item.total_cost,
-          created_by_id: item.created_by_id || item.createdBy || item.created_by,
+          id: `inventory-${itemId}`,
+          transaction_type: 'inventory',
+          title: toString(item.item_name) || `Inventory Item #${itemId}`,
+          description: toString(item.description) || `SKU: ${toString(item.sku) || 'N/A'}`,
+          category: toString(item.category) || 'Inventory',
+          amount: totalCost,
+          date: toString(item.created_at) || toString(item.date),
+          is_approved: item.is_active !== false,
+          created_at: toString(item.created_at),
+          status: (item.is_active === false ? 'inactive' : 'active') as Transaction['status'],
+          item_name: toString(item.item_name),
+          quantity,
+          sku: toString(item.sku),
+          buying_price: typeof item.buying_price === 'number' ? item.buying_price : undefined,
+          total_cost: typeof item.total_cost === 'number' ? item.total_cost : undefined,
+          createdById,
         };
       });
 
@@ -562,77 +583,97 @@ export default function TransactionListPage() {
       // may see all data from backend, so we filter on frontend for Finance Admin
       if (isFinanceAdmin && userIds && userIds.length > 0) {
         // Filter transactions by accessible user IDs
-        transactions = transactions.filter((t: any) => {
-          const createdById = t.created_by_id || t.createdBy || t.created_by;
-          if (!createdById) return false;
-          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return userIds.includes(createdByIdNum);
+        transactions = transactions.filter((t) => {
+          const createdById = toNumber(
+            (t as { created_by_id?: unknown; createdBy?: unknown; created_by?: unknown }).created_by_id ??
+            (t as { createdBy?: unknown }).createdBy ??
+            (t as { created_by?: unknown }).created_by
+          );
+          return createdById !== undefined && userIds.includes(createdById);
         });
 
         // Filter sales by accessible user IDs
-        salesTransactions = salesTransactions.filter((s: any) => {
-          const soldById = s.sold_by_id || s.created_by_id;
-          if (!soldById) return false;
-          const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
-          return userIds.includes(soldByIdNum);
+        salesTransactions = salesTransactions.filter((s) => {
+          const soldById = toNumber((s as { soldById?: unknown; createdById?: unknown }).soldById ?? (s as { createdById?: unknown }).createdById);
+          return soldById !== undefined && userIds.includes(soldById);
         });
 
         // Filter inventory by accessible user IDs
-        inventoryTransactions = inventoryTransactions.filter((i: any) => {
-          const createdById = i.created_by_id;
-          if (!createdById) return false;
-          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return userIds.includes(createdByIdNum);
+        inventoryTransactions = inventoryTransactions.filter((i) => {
+          const createdById = toNumber((i as { createdById?: unknown }).createdById);
+          return createdById !== undefined && userIds.includes(createdById);
         });
       } else if (isAccountant || isEmployee) {
         // Accountant and Employee should only see their own transactions
         // Backend should already filter, but we apply additional filtering for safety
         const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
         
-        transactions = transactions.filter((t: any) => {
-          const createdById = t.created_by_id || t.createdBy || t.created_by;
-          if (!createdById) return false;
-          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return createdByIdNum === userId;
+        transactions = transactions.filter((t) => {
+          const createdById = toNumber(
+            (t as { created_by_id?: unknown; createdBy?: unknown; created_by?: unknown }).created_by_id ??
+            (t as { createdBy?: unknown }).createdBy ??
+            (t as { created_by?: unknown }).created_by
+          );
+          return createdById === userId;
         });
 
-        salesTransactions = salesTransactions.filter((s: any) => {
-          const soldById = s.sold_by_id || s.created_by_id;
-          if (!soldById) return false;
-          const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
-          return soldByIdNum === userId;
+        salesTransactions = salesTransactions.filter((s) => {
+          const soldById = toNumber((s as { soldById?: unknown; createdById?: unknown }).soldById ?? (s as { createdById?: unknown }).createdById);
+          return soldById === userId;
         });
 
-        inventoryTransactions = inventoryTransactions.filter((i: any) => {
-          const createdById = i.created_by_id;
-          if (!createdById) return false;
-          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return createdByIdNum === userId;
+        inventoryTransactions = inventoryTransactions.filter((i) => {
+          const createdById = toNumber((i as { createdById?: unknown }).createdById);
+          return createdById === userId;
         });
       }
       // Admin sees all - no filtering needed
 
       // Combine all transactions and sort by date
-      const allTransactions = [...transactions, ...salesTransactions, ...inventoryTransactions].sort((a, b) => {
+      const normalizedExisting: TransactionItem[] = (transactions || []).map((t) => ({
+        id: t.id?.toString() || '',
+        transaction_type: t.transaction_type,
+        title: typeof t.title === 'string' ? t.title : 'Transaction',
+        description: typeof t.description === 'string' ? t.description : undefined,
+        category: typeof t.category === 'string' ? t.category : 'N/A',
+        amount: typeof t.amount === 'number' ? t.amount : 0,
+        date: toString(t.date) || toString(t.created_at),
+        is_approved: Boolean(t.is_approved),
+        created_at: toString(t.created_at),
+        status: (t.status as Transaction['status']) || 'pending',
+        item_name: toString((t as { item_name?: unknown }).item_name),
+        quantity: typeof t.quantity === 'number' ? t.quantity : undefined,
+        quantity_sold: typeof t.quantity_sold === 'number' ? t.quantity_sold : undefined,
+        receipt_number: toString(t.receipt_number),
+        customer_name: toString(t.customer_name),
+        sku: toString(t.sku),
+        buying_price: typeof t.buying_price === 'number' ? t.buying_price : undefined,
+        total_cost: typeof t.total_cost === 'number' ? t.total_cost : undefined,
+        createdById: toNumber((t as { created_by_id?: unknown }).created_by_id),
+        soldById: toNumber((t as { sold_by_id?: unknown }).sold_by_id),
+      }));
+
+      const allTransactions = [...normalizedExisting, ...salesTransactions, ...inventoryTransactions].sort((a, b) => {
         const dateA = new Date(a.date || a.created_at || 0).getTime();
         const dateB = new Date(b.date || b.created_at || 0).getTime();
         return dateB - dateA; // Most recent first
       });
 
       setTransactions(allTransactions);
-    } catch (err: any) {
+    } catch (err: unknown) {
       let errorMessage = 'Failed to load transactions';
       
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const response = (err as { response?: { data?: { detail?: unknown } } }).response;
+        const detail = response?.data?.detail;
         if (typeof detail === 'string') {
           errorMessage = detail;
         } else if (Array.isArray(detail)) {
-          errorMessage = detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
-        } else if (typeof detail === 'object' && detail.msg) {
-          errorMessage = detail.msg;
+          errorMessage = detail.map((e) => (e as { msg?: string }).msg || JSON.stringify(e)).join(', ');
+        } else if (detail && typeof detail === 'object' && 'msg' in (detail as Record<string, unknown>)) {
+          errorMessage = (detail as { msg?: string }).msg || errorMessage;
         }
-      } else if (err.message) {
+      } else if (err instanceof Error) {
         errorMessage = err.message;
       }
       
@@ -641,7 +682,13 @@ export default function TransactionListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadTransactions();
+    }
+  }, [user, loadTransactions]);
 
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = 
@@ -815,8 +862,7 @@ export default function TransactionListPage() {
                     {filteredTransactions.map((transaction) => {
                       const originalId = transaction.id.split('-')[1];
                       const isExpense = transaction.transaction_type === 'expense';
-                      const isSale = transaction.transaction_type === 'sale';
-                      const isInventory = transaction.transaction_type === 'inventory';
+                        const isSale = transaction.transaction_type === 'sale';
                       
                       return (
                         <tr key={transaction.id}>
@@ -849,10 +895,10 @@ export default function TransactionListPage() {
                           <AmountCell $isExpense={isExpense || transaction.transaction_type === 'inventory'} style={{ whiteSpace: 'nowrap' }}>
                             {isExpense || transaction.transaction_type === 'inventory' ? '-' : '+'}{formatCurrency(Math.abs(transaction.amount))}
                           </AmountCell>
-                          <td style={{ whiteSpace: 'nowrap' }}>{formatDate(transaction.date)}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{formatDate(transaction.date || transaction.created_at || '')}</td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <StatusBadge 
-                              $approved={transaction.is_approved} 
+                              $approved={Boolean(transaction.is_approved)} 
                               $status={transaction.status}
                             >
                               {transaction.status === 'posted' 

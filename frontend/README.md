@@ -627,3 +627,5 @@ Create scenarios (best/worst case)
 Generate forecasts using historical data
 At quarter end, calculate variance to see actual vs. budget
 Use insights to improve next quarter's budget
+
+Run automated checks: npm run lint, npm test, npm run test:e2e.

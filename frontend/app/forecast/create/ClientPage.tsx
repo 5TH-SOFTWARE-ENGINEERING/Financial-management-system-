@@ -2,9 +2,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  LineChart, Save, X, AlertCircle, TrendingUp, BarChart3
+  LineChart, Save, X, AlertCircle
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -279,11 +278,44 @@ const ValidationErrors = styled.div`
   }
 `;
 
+type ForecastMethod = 'moving_average' | 'linear_growth' | 'trend';
+
+type ForecastForm = {
+  name: string;
+  description: string;
+  forecast_type: 'revenue' | 'expense' | 'profit' | 'all';
+  period_type: 'monthly' | 'quarterly' | 'yearly';
+  start_date: string;
+  end_date: string;
+  method: ForecastMethod;
+  historical_start_date: string;
+  historical_end_date: string;
+  window: number;
+  growth_rate: number;
+};
+
+type MethodParams = {
+  window?: number;
+  growth_rate?: number;
+};
+
+type ForecastPayload = {
+  name: string;
+  description?: string;
+  forecast_type: ForecastForm['forecast_type'];
+  period_type: ForecastForm['period_type'];
+  start_date: string;
+  end_date: string;
+  method: ForecastMethod;
+  method_params?: MethodParams;
+  historical_start_date?: string;
+  historical_end_date?: string;
+};
+
 const ForecastCreatePage: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ForecastForm>({
     name: '',
     description: '',
     forecast_type: 'revenue',
@@ -298,7 +330,7 @@ const ForecastCreatePage: React.FC = () => {
   });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = <K extends keyof ForecastForm>(field: K, value: ForecastForm[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -363,7 +395,7 @@ const ForecastCreatePage: React.FC = () => {
       const historicalStartISO = formData.historical_start_date ? `${formData.historical_start_date}T00:00:00` : undefined;
       const historicalEndISO = formData.historical_end_date ? `${formData.historical_end_date}T23:59:59` : undefined;
 
-      const forecastPayload: any = {
+      const forecastPayload: ForecastPayload = {
         name: formData.name,
         description: formData.description || undefined,
         forecast_type: formData.forecast_type,
@@ -374,7 +406,7 @@ const ForecastCreatePage: React.FC = () => {
       };
 
       // Add method-specific parameters only if they exist
-      const methodParams: any = {};
+      const methodParams: MethodParams = {};
       if (formData.method === 'moving_average') {
         methodParams.window = formData.window;
       } else if (formData.method === 'linear_growth') {
@@ -396,8 +428,13 @@ const ForecastCreatePage: React.FC = () => {
       await apiClient.createForecast(forecastPayload);
       toast.success('Forecast created successfully!');
       router.push('/forecast/list');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create forecast');
+    } catch (error: unknown) {
+      const errorMessage =
+        (typeof error === 'object' && error !== null && 'response' in error
+          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined) ||
+        (error instanceof Error ? error.message : 'Failed to create forecast');
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -448,7 +485,7 @@ const ForecastCreatePage: React.FC = () => {
                   <label>Forecast Type </label>
                   <StyledSelect
                     value={formData.forecast_type}
-                    onChange={(e) => handleInputChange('forecast_type', e.target.value)}
+                    onChange={(e) => handleInputChange('forecast_type', e.target.value as ForecastForm['forecast_type'])}
                     required
                   >
                     <option value="revenue">Revenue</option>
@@ -460,9 +497,9 @@ const ForecastCreatePage: React.FC = () => {
 
                 <FormGroup>
                   <label>Period Type </label>
-                  <StyledSelect
-                    value={formData.period_type}
-                    onChange={(e) => handleInputChange('period_type', e.target.value)}
+                <StyledSelect
+                  value={formData.period_type}
+                  onChange={(e) => handleInputChange('period_type', e.target.value as ForecastForm['period_type'])}
                     required
                   >
                     <option value="monthly">Monthly</option>
@@ -504,7 +541,7 @@ const ForecastCreatePage: React.FC = () => {
                 <label>Method </label>
                 <StyledSelect
                   value={formData.method}
-                  onChange={(e) => handleInputChange('method', e.target.value)}
+                  onChange={(e) => handleInputChange('method', e.target.value as ForecastMethod)}
                   required
                 >
                   <option value="moving_average">Moving Average</option>

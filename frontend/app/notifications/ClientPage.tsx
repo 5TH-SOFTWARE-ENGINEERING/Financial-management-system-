@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import {
@@ -28,6 +28,18 @@ import { theme } from '@/components/common/theme';
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -527,41 +539,33 @@ export default function NotificationsPage() {
     }
   }, [isAuthenticated, isLoading, user, router]);
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchNotifications(true);
-      // Set up real-time updates every 30 seconds (reduced frequency to avoid excessive requests)
-      const interval = setInterval(() => {
-        fetchNotifications(false); // Don't show loading on background refresh
-      }, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated, user]);
-
-  const fetchNotifications = async (showLoading: boolean = true) => {
+  const fetchNotifications = useCallback(async (showLoading: boolean = true) => {
     if (showLoading) {
       setLoading(true);
     }
     setError(null);
     
     try {
-      const response: any = await apiClient.getNotifications();
+      const response = await apiClient.getNotifications();
       // Handle both direct array response and wrapped response
-      const notificationsData = Array.isArray(response?.data) 
-        ? response.data 
-        : (response?.data?.data || []);
+      const notificationsData = Array.isArray(response?.data)
+        ? response.data
+        : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data ? (response.data as { data: unknown[] }).data : []);
       
-      const apiNotifications = (notificationsData || []).map((notif: any) => ({
-        id: notif.id,
-        type: mapNotificationType(notif.notification_type || notif.type || 'info'),
-        title: notif.title || 'Notification',
-        message: notif.message || notif.content || '',
-        is_read: notif.is_read || notif.read || false,
-        created_at: notif.created_at || notif.createdAt || new Date().toISOString(),
-        action_url: notif.action_url || notif.actionUrl || null,
-        notification_type: notif.notification_type || notif.type,
-        priority: notif.priority,
-      }));
+      const apiNotifications = (notificationsData || []).map((notif: unknown) => {
+        const notification = notif as { id?: number; message?: string; type?: string; created_at?: string; is_read?: boolean; user_id?: number; title?: string; data?: unknown };
+        return {
+          id: notification.id || 0,
+          type: mapNotificationType(notification.type || 'info'),
+          title: notification.title || 'Notification',
+          message: notification.message || '',
+          is_read: notification.is_read || false,
+          created_at: notification.created_at || new Date().toISOString(),
+          action_url: null,
+          notification_type: notification.type || 'info',
+          priority: 'normal',
+        };
+      });
       
       // Sort by created_at (newest first)
       apiNotifications.sort((a: Notification, b: Notification) => 
@@ -569,8 +573,9 @@ export default function NotificationsPage() {
       );
       
       setNotifications(apiNotifications);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to load notifications';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to load notifications';
       setError(errorMessage);
       console.error('Failed to fetch notifications:', err);
       
@@ -583,7 +588,7 @@ export default function NotificationsPage() {
         setLoading(false);
       }
     }
-  };
+  }, []);
 
   const mapNotificationType = (type: string): 'success' | 'error' | 'warning' | 'info' => {
     const normalized = type?.toLowerCase() || 'info';
@@ -631,6 +636,17 @@ export default function NotificationsPage() {
     return 'info';
   };
 
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchNotifications(true);
+      // Set up real-time updates every 30 seconds (reduced frequency to avoid excessive requests)
+      const interval = setInterval(() => {
+        fetchNotifications(false); // Don't show loading on background refresh
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, user, fetchNotifications]);
+
   const markAsRead = async (notificationId: number) => {
     if (processingIds.has(notificationId)) return;
     
@@ -649,8 +665,9 @@ export default function NotificationsPage() {
       
       // Don't show toast for individual mark as read to avoid spam
       // toast.success('Notification marked as read');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to mark notification as read';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to mark notification as read';
       toast.error(errorMessage);
       // Refresh on error to ensure consistency
       await fetchNotifications();
@@ -676,8 +693,9 @@ export default function NotificationsPage() {
       );
       
       toast.success('All notifications marked as read');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to mark all notifications as read';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to mark all notifications as read';
       toast.error(errorMessage);
       await fetchNotifications();
     } finally {
@@ -706,8 +724,9 @@ export default function NotificationsPage() {
       );
       
       toast.success('Notification deleted');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to delete notification';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to delete notification';
       toast.error(errorMessage);
       await fetchNotifications();
     } finally {

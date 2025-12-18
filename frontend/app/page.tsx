@@ -231,13 +231,6 @@ const FeatureSection = styled.section`
   }
 `;
 
-const FeatureGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
-`;
-
 const ParallelFeaturesContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -427,7 +420,7 @@ const TeamImage = styled(Image)`
 
 export default function Home() {
   const [openModal, setOpenModal] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery] = useState('');
 
   const modals = {
     growth: {

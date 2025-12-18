@@ -1,5 +1,5 @@
 import { RoleService } from '@/lib/services/role-service'
-import { UserType, DEFAULT_ROLES } from '@/lib/rbac/models'
+import { UserType } from '@/lib/rbac/models'
 
 // Mock apiClient - use jest.fn() directly in factory to avoid hoisting issues
 jest.mock('@/lib/api', () => ({

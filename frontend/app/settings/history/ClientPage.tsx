@@ -17,7 +17,6 @@ import {
   FileText,
   MapPin,
   Monitor,
-  Loader2
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -33,11 +32,6 @@ const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
   0 1px 2px -1px rgba(0, 0, 0, 0.03),
   inset 0 0 0 1px rgba(0, 0, 0, 0.02)
-`;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
 `;
 
 const PageContainer = styled.div`
@@ -366,16 +360,29 @@ export default function HistoryPage() {
     try {
       if (activeTab === 'login') {
         const response = await apiClient.getVerificationHistory();
-        setLoginHistory(response.data || []);
+        const data = Array.isArray(response.data) ? (response.data as LoginHistoryItem[]) : [];
+        setLoginHistory(data);
       } else if (activeTab === 'activity') {
         const response = await apiClient.getDashboardRecentActivity(50);
-        setActivityHistory(response.data || []);
+        const data = Array.isArray(response.data) ? (response.data as ActivityItem[]) : [];
+        setActivityHistory(data);
       } else if (activeTab === 'audit' && isAdmin) {
         const response = await apiClient.getAuditLogs({ limit: 100 });
-        setAuditLogs(response.data || []);
+        const data = Array.isArray(response.data)
+          ? (response.data as unknown[]).filter((item): item is AuditLogItem => {
+              const log = item as Partial<AuditLogItem>;
+              return typeof log.id === 'number' && typeof log.user_id === 'number' && typeof log.created_at === 'string' && typeof log.action === 'string' && typeof log.resource_type === 'string';
+            })
+          : [];
+        setAuditLogs(data);
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load history';
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to load history'
+          : err instanceof Error
+            ? err.message
+            : 'Failed to load history';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

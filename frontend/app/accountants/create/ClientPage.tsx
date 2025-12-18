@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
 
 const CardShadow = `
@@ -282,7 +281,15 @@ const ButtonRow = styled.div`
   align-items: center;
 `;
 
-type FormData = z.infer<typeof RegisterSchema>;
+const CreateAccountantSchema = RegisterSchema.extend({
+  role: z.literal('ACCOUNTANT'),
+  confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+type FormData = z.infer<typeof CreateAccountantSchema>;
 
 export default function CreateAccountantPage() {
   const router = useRouter();
@@ -294,13 +301,8 @@ export default function CreateAccountantPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
-    resolver: zodResolver(RegisterSchema.extend({
-      confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
-    }).refine((data) => data.password === data.confirmPassword, {
-      message: "Passwords don't match",
-      path: ["confirmPassword"],
-    })),
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
+    resolver: zodResolver(CreateAccountantSchema) as Resolver<FormData>,
     defaultValues: {
       full_name: '',
       email: '',
@@ -313,7 +315,7 @@ export default function CreateAccountantPage() {
     },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormData) => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -325,8 +327,8 @@ export default function CreateAccountantPage() {
         username: data.username.trim(),
         password: data.password,
         role: 'accountant',
-        phone: data.phone?.trim() || null,
-        department: data.department?.trim() || null,
+        phone: data.phone?.trim() || undefined,
+        department: data.department?.trim() || undefined,
       };
 
       // Check user role to determine which endpoint to use
@@ -349,10 +351,17 @@ export default function CreateAccountantPage() {
       reset();
 
       setTimeout(() => router.push('/accountants/list'), 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const message =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail) ||
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message) ||
+        (err as { message?: string }).message ||
         'Failed to create accountant';
       setError(message);
       toast.error(message);

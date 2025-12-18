@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
@@ -444,17 +444,7 @@ export default function UserDetailPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (userId) {
-      loadUser();
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    fetchAllUsers();
-  }, []);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     if (!userId) return;
 
     setLoading(true);
@@ -481,16 +471,31 @@ export default function UserDetailPage() {
         department: foundUser.department || null,
         manager_id: foundUser.manager_id || null,
         created_at: foundUser.created_at || '',
-        updated_at: (foundUser as any).updated_at || null,
+        updated_at: (foundUser as { updated_at?: string | null }).updated_at ?? null,
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load user';
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to load user'
+          : err instanceof Error
+            ? err.message
+            : 'Failed to load user';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      loadUser();
+    }
+  }, [userId, loadUser]);
+
+  useEffect(() => {
+    fetchAllUsers();
+  }, [fetchAllUsers]);
 
   const handleDeleteClick = () => {
     setShowDeleteModal(true);
@@ -521,8 +526,13 @@ export default function UserDetailPage() {
       toast.success('User deleted successfully');
       setShowDeleteModal(false);
       router.push('/users');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to delete user';
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to delete user'
+          : err instanceof Error
+            ? err.message
+            : 'Failed to delete user';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {

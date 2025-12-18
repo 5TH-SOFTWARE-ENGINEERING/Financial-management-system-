@@ -1,19 +1,29 @@
 'use client';
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  GitCompare, ArrowLeft, CheckSquare, Square, AlertCircle, BarChart3
+  GitCompare, ArrowLeft
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
+
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
 export const revalidate = 0;
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -229,7 +239,6 @@ const CompareScenariosPageInner: React.FC = () => {
   const budgetIdParam = searchParams?.get('budget_id');
   const scenariosParam = searchParams?.get('scenarios');
   
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [loadingComparison, setLoadingComparison] = useState(false);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -248,7 +257,7 @@ const CompareScenariosPageInner: React.FC = () => {
       toast.error('Budget ID is required');
       router.push('/scenarios/list');
     }
-  }, [budgetIdParam, scenariosParam]);
+  }, [budgetIdParam, scenariosParam, loadScenarios, router]);
 
   useEffect(() => {
     if (selectedScenarios.length > 0 && budgetIdParam) {
@@ -256,9 +265,9 @@ const CompareScenariosPageInner: React.FC = () => {
     } else {
       setComparison(null);
     }
-  }, [selectedScenarios, budgetIdParam]);
+  }, [selectedScenarios, budgetIdParam, compareScenarios]);
 
-  const loadScenarios = async () => {
+  const loadScenarios = useCallback(async () => {
     if (!budgetIdParam) return;
     
     try {
@@ -269,28 +278,30 @@ const CompareScenariosPageInner: React.FC = () => {
       ]);
       
       setScenarios(Array.isArray(scenariosResponse.data) ? scenariosResponse.data : []);
-      const budget = budgetResponse.data as any;
+      const budget = budgetResponse.data as { name?: string };
       setBudgetName(budget.name || 'Budget');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load scenarios');
+    } catch (error: unknown) {
+      const err = error as ErrorWithDetails;
+      toast.error(err.message || 'Failed to load scenarios');
     } finally {
       setLoading(false);
     }
-  };
+  }, [budgetIdParam]);
 
-  const compareScenarios = async () => {
+  const compareScenarios = useCallback(async () => {
     if (!budgetIdParam || selectedScenarios.length === 0) return;
     
     try {
       setLoadingComparison(true);
       const response = await apiClient.compareScenarios(parseInt(budgetIdParam), selectedScenarios);
       setComparison(response.data as ComparisonResult);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to compare scenarios');
+    } catch (error: unknown) {
+      const err = error as ErrorWithDetails;
+      toast.error(err.message || 'Failed to compare scenarios');
     } finally {
       setLoadingComparison(false);
     }
-  };
+  }, [budgetIdParam, selectedScenarios]);
 
   const handleScenarioToggle = (scenarioId: number) => {
     setSelectedScenarios(prev => {

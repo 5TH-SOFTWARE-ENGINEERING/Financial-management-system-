@@ -4,20 +4,38 @@
 
 import apiClient from '../api';
 
+type Revenue = {
+  id?: number | string;
+  date?: string;
+  created_at?: string;
+  [key: string]: unknown;
+};
+
+type Expense = {
+  id?: number | string;
+  date?: string;
+  created_at?: string;
+  [key: string]: unknown;
+};
+
+type Transaction = (Revenue | Expense) & { type: 'revenue' | 'expense' };
+
+type Filters = Record<string, string | number | boolean | undefined>;
+
 interface FinanceServiceInterface {
-  createRevenue(revenueData: any): Promise<any>;
-  createExpense(expenseData: any): Promise<any>;
-  getTransactions(): Promise<any[]>;
+  createRevenue(revenueData: Revenue): Promise<Revenue>;
+  createExpense(expenseData: Expense): Promise<Expense>;
+  getTransactions(): Promise<Transaction[]>;
   approveTransaction(transactionId: number, itemType: 'revenue' | 'expense'): Promise<boolean>;
-  getRevenues(filters?: Record<string, any>): Promise<any[]>;
-  getExpenses(filters?: Record<string, any>): Promise<any[]>;
+  getRevenues(filters?: Filters): Promise<Revenue[]>;
+  getExpenses(filters?: Filters): Promise<Expense[]>;
 }
 
 export class FinanceService implements FinanceServiceInterface {
   /**
    * Create a new revenue entry
    */
-  async createRevenue(revenueData: any): Promise<any> {
+  async createRevenue(revenueData: Revenue): Promise<Revenue> {
     try {
       const response = await apiClient.createRevenue(revenueData);
       return response.data;
@@ -30,7 +48,7 @@ export class FinanceService implements FinanceServiceInterface {
   /**
    * Create a new expense entry
    */
-  async createExpense(expenseData: any): Promise<any> {
+  async createExpense(expenseData: Expense): Promise<Expense> {
     try {
       const response = await apiClient.createExpense(expenseData);
       return response.data;
@@ -43,21 +61,21 @@ export class FinanceService implements FinanceServiceInterface {
   /**
    * Get all transactions (revenues + expenses combined)
    */
-  async getTransactions(): Promise<any[]> {
+  async getTransactions(): Promise<Transaction[]> {
     try {
       const [revenuesResponse, expensesResponse] = await Promise.all([
         apiClient.getRevenues(),
         apiClient.getExpenses(),
       ]);
 
-      const revenues = (revenuesResponse.data || []).map((r: any) => ({
+      const revenues = (revenuesResponse.data || []).map((r: Revenue): Transaction => ({
         ...r,
-        type: 'revenue',
+        type: 'revenue' as const,
       }));
 
-      const expenses = (expensesResponse.data || []).map((e: any) => ({
+      const expenses = (expensesResponse.data || []).map((e: Expense): Transaction => ({
         ...e,
-        type: 'expense',
+        type: 'expense' as const,
       }));
 
       return [...revenues, ...expenses].sort((a, b) => {
@@ -87,7 +105,7 @@ export class FinanceService implements FinanceServiceInterface {
   /**
    * Get all revenue entries
    */
-  async getRevenues(filters?: Record<string, any>): Promise<any[]> {
+  async getRevenues(filters?: Filters): Promise<Revenue[]> {
     try {
       const response = await apiClient.getRevenues(filters);
       return response.data || [];
@@ -100,7 +118,7 @@ export class FinanceService implements FinanceServiceInterface {
   /**
    * Get all expense entries
    */
-  async getExpenses(filters?: Record<string, any>): Promise<any[]> {
+  async getExpenses(filters?: Filters): Promise<Expense[]> {
     try {
       const response = await apiClient.getExpenses(filters);
       return response.data || [];

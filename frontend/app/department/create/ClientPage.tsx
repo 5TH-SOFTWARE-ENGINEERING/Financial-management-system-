@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -124,27 +124,6 @@ const ButtonRow = styled.div`
   padding-top: 12px;
 `;
 
-const Select = styled.select`
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 14px;
-  color: var(--foreground);
-  
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
 export default function CreateDepartmentPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -170,12 +149,18 @@ export default function CreateDepartmentPage() {
         description: data.description?.trim() || null,
       };
 
-      const response = await apiClient.createDepartment(departmentData);
+      await apiClient.createDepartment(departmentData);
       toast.success('Department created successfully!');
       reset();
       router.push('/department/list');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to create department';
+    } catch (err: unknown) {
+      const errorMessage =
+        (typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (err as { message?: string }).message ||
+        'Failed to create department';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

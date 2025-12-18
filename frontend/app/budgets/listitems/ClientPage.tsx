@@ -1,11 +1,10 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/lib/rbac/auth-context';
 import {
-  List, ArrowLeft, Plus, Edit, Trash2, DollarSign,
-  TrendingUp, TrendingDown, Search, Filter, Loader2, X
+  List, ArrowLeft, Plus, Edit, Trash2,
+  TrendingUp, TrendingDown, Search, Filter, Loader2
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -361,7 +360,7 @@ interface BudgetItem {
   type: string;
   category: string;
   amount: number;
-  monthly_amounts?: any;
+  monthly_amounts?: Record<string, number>;
 }
 
 interface Budget {
@@ -374,7 +373,6 @@ const BudgetItemsListPage: React.FC = () => {
   const searchParams = useSearchParams();
   const budgetIdParam = searchParams?.get('budget_id');
   
-  const { user } = useAuth();
   const [availableBudgets, setAvailableBudgets] = useState<Budget[]>([]);
   const [selectingBudget, setSelectingBudget] = useState(false);
   const [selectedBudgetForNav, setSelectedBudgetForNav] = useState<string>('');
@@ -389,14 +387,6 @@ const BudgetItemsListPage: React.FC = () => {
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (budgetIdParam) {
-      loadData(budgetIdParam);
-    } else {
-      fetchBudgetsForSelection();
-    }
-  }, [budgetIdParam]);
-
   const fetchBudgetsForSelection = async () => {
     try {
       setSelectingBudget(true);
@@ -406,8 +396,15 @@ const BudgetItemsListPage: React.FC = () => {
       if (data.length > 0) {
         setSelectedBudgetForNav(data[0].id.toString());
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budgets');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to load budgets');
+      toast.error(message);
     } finally {
       setSelectingBudget(false);
     }
@@ -421,7 +418,7 @@ const BudgetItemsListPage: React.FC = () => {
     router.push(`/budgets/listitems?budget_id=${selectedBudgetForNav}`);
   };
 
-  const loadData = async (idValue?: string | null) => {
+  const loadData = useCallback(async (idValue?: string | null) => {
     const targetBudgetId = idValue ?? budgetIdParam;
     if (!targetBudgetId) return;
     
@@ -434,12 +431,31 @@ const BudgetItemsListPage: React.FC = () => {
       
       setBudget(budgetResponse.data as Budget);
       setItems(Array.isArray(itemsResponse.data) ? itemsResponse.data : []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load budget items');
+    } catch (error: unknown) {
+      const message =
+        (typeof error === 'object' &&
+          error !== null &&
+          'response' in error &&
+          (error as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to load budget items');
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [budgetIdParam]);
+
+  useEffect(() => {
+    if (budgetIdParam) {
+      loadData(budgetIdParam);
+    } else {
+      fetchBudgetsForSelection();
+    }
+  }, [budgetIdParam, loadData]);
 
   const handleDeleteClick = (itemId: number) => {
     setDeleteItemId(itemId);
@@ -466,8 +482,18 @@ const BudgetItemsListPage: React.FC = () => {
       setDeleteItemId(null);
       setDeletePassword('');
       loadData();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete budget item';
+    } catch (error: unknown) {
+      const errorMessage =
+        (typeof error === 'object' &&
+          error !== null &&
+          'response' in error &&
+          (error as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: string }).message === 'string'
+          ? (error as { message?: string }).message
+          : 'Failed to delete budget item');
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {

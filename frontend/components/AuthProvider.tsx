@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, ReactNode } from 'react';
 import apiClient from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
-import useUserStore, { type StoreUser } from '@/store/userStore';
+import useUserStore, { type StoreUser, type UserInput } from '@/store/userStore';
 
 // Define AuthContextType based on store
 interface AuthContextType {
@@ -12,7 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (userData: any) => Promise<void>;
+  register: (userData: UserInput) => Promise<void>;
   canManageUsers: () => boolean;
   canViewAllData: () => boolean;
   canApproveTransactions: () => boolean;

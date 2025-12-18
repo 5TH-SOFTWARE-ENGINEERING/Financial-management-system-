@@ -4,13 +4,38 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '@/lib/rbac/auth-context';
-import { User, UserType } from '@/lib/rbac/models';
+import { UserType } from '@/lib/rbac/models';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { Camera, Mail, User as UserIcon, Users, Building, Phone, Briefcase, Calendar, Save, Edit, X, CheckCircle, AlertCircle } from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import { theme } from '@/components/common/theme';
+
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
+
+interface ApiUser {
+  id?: number | string;
+  full_name?: string | null;
+  username?: string;
+  email?: string;
+  role?: string;
+  department?: string | null;
+  phone?: string | null;
+  is_active?: boolean;
+  created_at?: string;
+  manager_id?: number;
+}
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -341,7 +366,7 @@ const mapRoleToUserType = (role: string | undefined | null): UserType => {
 };
 
 // Map API user to ExtendedUser
-const mapApiUserToExtended = (apiUser: any): ExtendedUser => {
+const mapApiUserToExtended = (apiUser: ApiUser): ExtendedUser => {
   const backendRole = apiUser.role || '';
   const userType = mapRoleToUserType(backendRole);
   
@@ -385,10 +410,11 @@ export default function ProfilePage() {
       try {
         // Fetch fresh user data from API
         const response = await apiClient.getCurrentUser();
-        const extendedUser = mapApiUserToExtended(response.data);
+        const extendedUser = mapApiUserToExtended(response.data as ApiUser);
         setUserData(extendedUser);
-      } catch (err: any) {
-        const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Failed to load profile data';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || (error.response?.data as { error?: string })?.error || 'Failed to load profile data';
         setError(errorMessage);
       } finally {
         setInitialLoading(false);
@@ -424,7 +450,12 @@ export default function ProfilePage() {
       setError(null);
       
       // Prepare update payload - only include fields that are in the backend schema
-      const updatePayload: any = {
+      const updatePayload: {
+        full_name?: string | null;
+        email?: string;
+        phone?: string | null;
+        department?: string | null;
+      } = {
         full_name: userData.name,
         email: userData.email,
         phone: userData.phoneNumber || null,
@@ -432,17 +463,17 @@ export default function ProfilePage() {
       };
 
       // Remove undefined/null values
+      const cleanedPayload: Record<string, string | null> = {};
       Object.keys(updatePayload).forEach(key => {
-        if (updatePayload[key] === undefined || updatePayload[key] === '') {
-          updatePayload[key] = null;
-        }
+        const value = updatePayload[key as keyof typeof updatePayload];
+        cleanedPayload[key] = value === undefined || value === '' ? null : value;
       });
 
       // Call API to update profile
-      const response = await apiClient.updateCurrentUser(updatePayload);
+      const response = await apiClient.updateCurrentUser(cleanedPayload);
       
       // Update local state with response
-      const updatedUser = mapApiUserToExtended(response.data);
+      const updatedUser = mapApiUserToExtended(response.data as ApiUser);
       setUserData(updatedUser);
       
       // Refresh user store
@@ -455,8 +486,9 @@ export default function ProfilePage() {
       setTimeout(() => {
         setSuccess(null);
       }, 3000);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Failed to update profile. Please try again.';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || (error.response?.data as { error?: string })?.error || 'Failed to update profile. Please try again.';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -468,11 +500,11 @@ export default function ProfilePage() {
     try {
       setError(null);
       const response = await apiClient.getCurrentUser();
-      const extendedUser = mapApiUserToExtended(response.data);
+      const extendedUser = mapApiUserToExtended(response.data as ApiUser);
       setUserData(extendedUser);
-    } catch (err: any) {
+    } catch {
       // If API fails, just reset editing mode
-      console.error('Failed to reload user data:', err);
+      console.error('Failed to reload user data');
     }
     setIsEditing(false);
   };

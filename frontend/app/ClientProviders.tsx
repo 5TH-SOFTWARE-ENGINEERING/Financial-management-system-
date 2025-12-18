@@ -4,8 +4,7 @@
 
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { toast, Toaster } from 'sonner';
-import { AuthProvider } from '@/lib/rbac/auth-context';
+import { Toaster } from 'sonner';
 
 function ZustandProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;

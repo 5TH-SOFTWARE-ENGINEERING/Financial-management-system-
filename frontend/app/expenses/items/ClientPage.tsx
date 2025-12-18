@@ -9,7 +9,6 @@ import { ArrowLeft, Plus, Trash2, Calculator, DollarSign, AlertCircle, CheckCirc
 import Link from 'next/link';
 import { toast } from 'sonner';
 import apiClient from '@/lib/api';
-import { useAuth } from '@/lib/rbac/auth-context';
 import { theme } from '@/components/common/theme';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -538,7 +537,6 @@ interface CalculatedItem extends ExpenseItem {
 
 export default function ExpenseItemsPage() {
   const router = useRouter();
-  const { user } = useAuth();
   const idCounterRef = useRef(0);
   const [items, setItems] = useState<ExpenseItem[]>([]);
   const [calculatedItems, setCalculatedItems] = useState<CalculatedItem[]>([]);
@@ -719,7 +717,7 @@ export default function ExpenseItemsPage() {
     setLoading(true);
 
     try {
-      const savePromises: Promise<any>[] = [];
+      const savePromises: Promise<unknown>[] = [];
       let revenueCount = 0;
 
       for (const item of calculatedItems) {
@@ -810,21 +808,30 @@ export default function ExpenseItemsPage() {
         setGlobalVendor('');
         setSuccess(null);
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       let errorMessage = 'Failed to save expenses';
       
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
+      if (err && typeof err === 'object' && 'response' in err) {
+        const response = (err as { response?: { data?: { detail?: unknown } } }).response;
+        const detail = response?.data?.detail;
         if (Array.isArray(detail)) {
-          errorMessage = detail.map((e: any) => {
+          errorMessage = detail.map((e: unknown) => {
             if (typeof e === 'string') return e;
-            if (e.msg) return `${e.loc?.join('.') || 'Field'}: ${e.msg}`;
-            return JSON.stringify(e);
+            if (e && typeof e === 'object' && 'msg' in e) {
+              const obj = e as { msg?: string; loc?: unknown };
+              const loc = Array.isArray(obj.loc) ? obj.loc.join('.') : 'Field';
+              return `${loc}: ${obj.msg ?? 'Invalid value'}`;
+            }
+            try {
+              return JSON.stringify(e);
+            } catch {
+              return 'Unknown error';
+            }
           }).join(', ');
         } else if (typeof detail === 'string') {
           errorMessage = detail;
         }
-      } else if (err.message) {
+      } else if (err instanceof Error && err.message) {
         errorMessage = err.message;
       }
       

@@ -28,6 +28,16 @@ import apiClient from '@/lib/api';
 import { toast } from 'sonner';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
+import type { StoreUser } from '@/store/userStore';
+
+type DisplayUser = StoreUser & {
+  full_name?: string;
+  name?: string;
+  username?: string;
+  created_at?: string;
+  is_active?: boolean;
+  manager_id?: string | number | null;
+};
 import { Button } from '@/components/ui/button';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -555,7 +565,7 @@ export default function UsersPage() {
     if (isAuthenticated && user) {
       fetchAllUsers();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, fetchAllUsers]);
 
   const toggleUserExpansion = (userId: string) => {
     setExpandedUsers(prev => {
@@ -592,8 +602,13 @@ export default function UsersPage() {
       setUserToDelete(null);
       setDeletePassword('');
       fetchAllUsers();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to delete user';
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to delete user'
+          : err instanceof Error
+            ? err.message
+            : 'Failed to delete user';
       setDeletePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -631,8 +646,13 @@ export default function UsersPage() {
       setUserToActivate(null);
       setActivatePassword('');
       fetchAllUsers();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to activate user';
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to activate user'
+          : err instanceof Error
+            ? err.message
+            : 'Failed to activate user';
       setActivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -656,8 +676,13 @@ export default function UsersPage() {
       setUserToDeactivate(null);
       setDeactivatePassword('');
       fetchAllUsers();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to deactivate user';
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to deactivate user'
+          : err instanceof Error
+            ? err.message
+            : 'Failed to deactivate user';
       setDeactivatePasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -666,75 +691,64 @@ export default function UsersPage() {
   };
 
   // Get direct subordinates of a user from a given user list
-  const getSubordinates = (userId: string, usersList: any[]) => {
+  const getManagerId = (u: DisplayUser): string | undefined => {
+    const mgr =
+      (u as { managerId?: string | number | null }).managerId ??
+      (u as { manager_id?: string | number | null }).manager_id;
+    return mgr != null ? mgr.toString() : undefined;
+  };
+
+  const getDisplayName = (u: DisplayUser): string =>
+    u.name || u.full_name || u.username || u.email || 'N/A';
+
+  const getIsActive = (u: DisplayUser): boolean => {
+    if ('isActive' in u && typeof u.isActive === 'boolean') return u.isActive;
+    if ('is_active' in u && typeof (u as { is_active?: boolean }).is_active === 'boolean') {
+      return Boolean((u as { is_active?: boolean }).is_active);
+    }
+    return true;
+  };
+
+  const toNumberId = (id: string | number): number =>
+    typeof id === 'string' ? parseInt(id, 10) : id;
+
+  const getCreatedAt = (u: DisplayUser): string | null => (u.createdAt || u.created_at) ?? null;
+
+  const getSubordinates = (userId: string, usersList: DisplayUser[]): DisplayUser[] => {
     const userIdStr = userId.toString();
-    return usersList.filter((u: any) => {
-      const managerId = u.managerId?.toString() || u.manager_id?.toString();
+    return usersList.filter((u) => {
+      const managerId = getManagerId(u);
       return managerId === userIdStr;
     });
   };
 
   // Get all users in a finance_manager's hierarchy recursively (including themselves)
-  const getAllTeamMembers = (managerId: string, users: any[] = allUsers): any[] => {
-    const managerIdStr = managerId.toString();
-    const teamMembers = new Set<string>();
-    
-    // Add the manager themselves
-    const manager = users.find((u: any) => u.id?.toString() === managerIdStr || u.id === managerIdStr);
-    if (manager) {
-      teamMembers.add(manager.id?.toString() || manager.id.toString());
-    }
-    
-    // Recursively add all subordinates
-    const addSubordinatesRecursively = (parentId: string) => {
-      const subordinates = users.filter((u: any) => {
-        const mgrId = u.managerId?.toString() || u.manager_id?.toString();
-        return mgrId === parentId.toString();
-      });
-      
-      subordinates.forEach((sub: any) => {
-        const subId = sub.id?.toString() || sub.id.toString();
-        if (!teamMembers.has(subId)) {
-          teamMembers.add(subId);
-          addSubordinatesRecursively(subId);
-        }
-      });
-    };
-    
-    addSubordinatesRecursively(managerIdStr);
-    
-    return users.filter((u: any) => {
-      const userId = u.id?.toString() || u.id.toString();
-      return teamMembers.has(userId);
-    });
-  };
-
   // Get accessible users based on role
-  const getAccessibleUsers = (): any[] => {
+  const getAccessibleUsers = (): DisplayUser[] => {
     if (!user) return [];
     
     if (user.role === 'admin') {
       // Admin sees all users
-      return allUsers;
+      return allUsers as DisplayUser[];
     } else if ((user.role as string) === 'finance_admin') {
       // Finance admin: Backend already filters to return only their subordinates (accountants and employees)
       // The backend API /users/ endpoint returns only accountants and employees under this finance admin
       // So we can use allUsers directly, but also filter by role as a safety measure
-      const filtered = allUsers.filter((u: any) => {
+      const filtered = allUsers.filter((u) => {
         const role = (u.role || '').toLowerCase();
         return role === 'accountant' || role === 'employee';
-      });
+      }) as DisplayUser[];
       
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
         console.log('Finance Admin - allUsers from backend:', allUsers.length);
         console.log('Finance Admin - filtered users:', filtered.length);
         console.log('Finance Admin - user.id:', user.id);
-        console.log('Finance Admin - sample users:', allUsers.slice(0, 3).map((u: any) => ({
+        console.log('Finance Admin - sample users:', filtered.slice(0, 3).map((u) => ({
           id: u.id,
-          name: u.full_name || u.name,
+          name: getDisplayName(u),
           role: u.role,
-          manager_id: u.manager_id || u.managerId
+          manager_id: getManagerId(u),
         })));
       }
       
@@ -743,21 +757,21 @@ export default function UsersPage() {
       // Finance manager: Backend already filters to return only their subordinates (accountants and employees)
       // The backend API /users/ endpoint returns only accountants and employees under this finance manager
       // So we can use allUsers directly, but also filter by role as a safety measure
-      const filtered = allUsers.filter((u: any) => {
+      const filtered = allUsers.filter((u) => {
         const role = (u.role || '').toLowerCase();
         return role === 'accountant' || role === 'employee';
-      });
+      }) as DisplayUser[];
       
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
         console.log('Finance Manager - allUsers from backend:', allUsers.length);
         console.log('Finance Manager - filtered users:', filtered.length);
         console.log('Finance Manager - user.id:', user.id);
-        console.log('Finance Manager - sample users:', allUsers.slice(0, 3).map((u: any) => ({
+        console.log('Finance Manager - sample users:', filtered.slice(0, 3).map((u) => ({
           id: u.id,
-          name: u.full_name || u.name,
+          name: getDisplayName(u),
           role: u.role,
-          manager_id: u.manager_id || u.managerId
+          manager_id: getManagerId(u),
         })));
       }
       
@@ -770,22 +784,17 @@ export default function UsersPage() {
   // Get users that match search/filter criteria from accessible users
   const accessibleUsers = getAccessibleUsers();
   
-  const filteredUsers = accessibleUsers.filter((userItem: any) => {
+  const filteredUsers = accessibleUsers.filter((userItem) => {
     const userRole = (userItem.role || '').toLowerCase();
-    const userName = userItem.full_name || userItem.name || userItem.email || '';
+    const userName = getDisplayName(userItem);
     const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (userItem.email || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole === 'all' || userRole === filterRole;
     const matchesStatus = filterStatus === 'all' || 
-                          (filterStatus === 'active' && (userItem.is_active !== false)) ||
-                          (filterStatus === 'inactive' && (userItem.is_active === false));
+                          (filterStatus === 'active' && getIsActive(userItem)) ||
+                          (filterStatus === 'inactive' && !getIsActive(userItem));
     return matchesSearch && matchesRole && matchesStatus;
   });
-
-  const isAdminRole = (role: string) => {
-    const normalized = (role || '').toLowerCase();
-    return normalized === 'admin' || normalized === 'super_admin';
-  };
 
   const getRoleBadgeVariant = (role: string): 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'default' => {
     switch (role) {
@@ -831,8 +840,8 @@ export default function UsersPage() {
     return roleNames[role] || role;
   };
 
-  const renderUserHierarchy = (users: any[], level = 0): any[] => {
-    return users.flatMap((userItem: any) => {
+  const renderUserHierarchy = (users: DisplayUser[], level = 0) => {
+    return users.flatMap((userItem) => {
       const userRole = (userItem.role || '').toLowerCase();
       const userId = userItem.id?.toString() || userItem.id;
       const subordinates = getSubordinates(userId, accessibleUsers);
@@ -854,13 +863,13 @@ export default function UsersPage() {
             <UserDetails>
               <UserHeaderRow>
                 <UserName>
-                  {userItem.full_name || userItem.name || userItem.email}
+                  {getDisplayName(userItem)}
                 </UserName>
                 <Badge $variant={getRoleBadgeVariant(userRole)}>
                   {getRoleDisplayName(userRole)}
                 </Badge>
-                <Badge $variant={userItem.is_active !== false ? 'active' : 'inactive'}>
-                  {userItem.is_active !== false ? 'Active' : 'Inactive'}
+                <Badge $variant={getIsActive(userItem) ? 'active' : 'inactive'}>
+                  {getIsActive(userItem) ? 'Active' : 'Inactive'}
                 </Badge>
               </UserHeaderRow>
               <UserMeta>
@@ -874,10 +883,10 @@ export default function UsersPage() {
                     {userItem.phone}
                   </MetaItem>
                 )}
-                {userItem.created_at && (
+                {getCreatedAt(userItem) && (
                   <MetaItem>
                     <Calendar size={12} />
-                    Joined {formatDate(userItem.created_at)}
+                    Joined {formatDate(getCreatedAt(userItem)!)}
                   </MetaItem>
                 )}
               </UserMeta>
@@ -917,15 +926,19 @@ export default function UsersPage() {
                 <Edit size={16} />
               </ActionButton>
               {/* Activate/Deactivate toggle button - for finance_admin, finance_manager, and admin */}
-              {(user?.role === 'admin' || user?.role === 'finance_manager' || (user?.role as string) === 'finance_admin') &&
-               userItem.id !== user?.id &&
-               userItem.role !== 'admin' && userItem.role !== 'super_admin' && (
+              {user &&
+               (user.role === 'admin' || user.role === 'finance_manager' || (user.role as string) === 'finance_admin') &&
+               toNumberId(userItem.id) !== toNumberId(user.id) &&
+               (() => {
+                 const roleLower = (userItem.role || '').toLowerCase();
+                 return roleLower !== 'admin' && roleLower !== 'super_admin';
+               })() && (
                 <ActionButton
                   onClick={(e) => {
                     e.stopPropagation();
-                    const userName = userItem.full_name || userItem.name || userItem.email;
-                    const userId = typeof userItem.id === 'string' ? parseInt(userItem.id) : userItem.id;
-                    const isActive = userItem.is_active !== false;
+                    const userName = getDisplayName(userItem);
+                    const userId = toNumberId(userItem.id);
+                    const isActive = getIsActive(userItem);
                     
                     if (isActive) {
                       // User is active, show deactivate modal
@@ -941,15 +954,15 @@ export default function UsersPage() {
                       setActivatePasswordError(null);
                     }
                   }}
-                  title={userItem.is_active !== false ? "Deactivate user" : "Activate user"}
-                  disabled={deactivatingUserId === userItem.id || activatingUserId === userItem.id}
+                  title={getIsActive(userItem) ? "Deactivate user" : "Activate user"}
+                  disabled={deactivatingUserId === toNumberId(userItem.id) || activatingUserId === toNumberId(userItem.id)}
                   style={{
-                    color: userItem.is_active !== false ? '#dc2626' : '#16a34a'
+                    color: getIsActive(userItem) ? '#dc2626' : '#16a34a'
                   }}
                 >
-                  {(deactivatingUserId === userItem.id || activatingUserId === userItem.id) ? (
+                  {(deactivatingUserId === toNumberId(userItem.id) || activatingUserId === toNumberId(userItem.id)) ? (
                     <Loader2 size={16} className="animate-spin" />
-                  ) : userItem.is_active !== false ? (
+                  ) : getIsActive(userItem) ? (
                     <Shield size={16} />
                   ) : (
                     <UserCheck size={16} />
@@ -959,13 +972,16 @@ export default function UsersPage() {
               
               {/* Delete button - for admin, finance_manager, and finance_admin */}
               {(user?.role === 'admin' || user?.role === 'finance_manager' || (user?.role as string) === 'finance_admin') && 
-               userItem.id !== user?.id &&
-               userItem.role !== 'admin' && userItem.role !== 'super_admin' && (
+               toNumberId(userItem.id) !== (user ? toNumberId(user.id) : -1) &&
+               (() => {
+                 const roleLower = (userItem.role || '').toLowerCase();
+                 return roleLower !== 'admin' && roleLower !== 'super_admin';
+               })() && (
                 <ActionButton
                   onClick={(e) => {
                     e.stopPropagation();
-                    const userName = userItem.full_name || userItem.name || userItem.email;
-                    const userId = typeof userItem.id === 'string' ? parseInt(userItem.id) : userItem.id;
+                    const userName = getDisplayName(userItem);
+                    const userId = toNumberId(userItem.id);
                     setUserToDelete({ id: userId, name: userName });
                     setShowDeleteModal(true);
                     setDeletePassword('');
@@ -1009,7 +1025,7 @@ export default function UsersPage() {
             Access Denied
           </h1>
           <p style={{ color: TEXT_COLOR_MUTED }}>
-            You don't have permission to access this page.
+            You don&apos;t have permission to access this page.
           </p>
         </AccessDeniedContainer>
       </Layout>
@@ -1018,8 +1034,8 @@ export default function UsersPage() {
 
   // Calculate stats based on accessible users
   const totalUsers = accessibleUsers.length;
-  const activeUsers = accessibleUsers.filter((u: any) => u.is_active !== false).length;
-  const inactiveUsers = accessibleUsers.filter((u: any) => u.is_active === false).length;
+  const activeUsers = accessibleUsers.filter((u) => getIsActive(u)).length;
+  const inactiveUsers = accessibleUsers.filter((u) => !getIsActive(u)).length;
 
   return (
     <Layout>
@@ -1155,40 +1171,11 @@ export default function UsersPage() {
               <>
                 {renderUserHierarchy(
                   user.role === 'admin' 
-                    ? filteredUsers.filter((u: any) => {
-                        // For admin: show top-level users (no manager) at root
-                        const managerId = u.managerId?.toString() || u.manager_id?.toString();
-                        return !managerId;
-                      })
+                    ? filteredUsers.filter((u) => !getManagerId(u))
                     : (() => {
-                        // For finance_admin: show all subordinates (backend already filtered)
-                        if ((user.role as string) === 'finance_admin') {
-                          // Finance admin: Backend already returns only their subordinates (accountants and employees)
-                          // Show all filtered users - they are all under this finance admin
-                          // First show direct subordinates (manager_id === current user id)
-                          const directSubordinates = filteredUsers.filter((u: any) => {
-                            const managerId = u.managerId?.toString() || u.manager_id?.toString();
-                            const currentUserId = user.id?.toString() || user.id.toString();
-                            return managerId === currentUserId;
-                          });
-                          
-                          // If no direct subordinates found, show all filtered users (they're all subordinates)
-                          // This handles cases where manager_id might not be set or users are nested
-                          return directSubordinates.length > 0 ? directSubordinates : filteredUsers;
-                        } else {
-                          // For finance_manager: Backend already returns only their subordinates (accountants and employees)
-                          // Show all filtered users - they are all under this finance manager
-                          // First show direct subordinates (manager_id === current user id)
-                          const directSubordinates = filteredUsers.filter((u: any) => {
-                            const managerId = u.managerId?.toString() || u.manager_id?.toString();
-                            const currentUserId = user.id?.toString() || user.id.toString();
-                            return managerId === currentUserId;
-                          });
-                          
-                          // If no direct subordinates found, show all filtered users (they're all subordinates)
-                          // This handles cases where manager_id might not be set or users are nested
-                          return directSubordinates.length > 0 ? directSubordinates : filteredUsers;
-                        }
+                        const currentUserId = user.id.toString();
+                        const directSubordinates = filteredUsers.filter((u) => getManagerId(u) === currentUserId);
+                        return directSubordinates.length > 0 ? directSubordinates : filteredUsers;
                       })()
                 )}
               </>
@@ -1225,9 +1212,9 @@ export default function UsersPage() {
             </WarningBox>
 
             {(() => {
-              const userDetails = accessibleUsers.find((u: any) => {
-                const userId = typeof u.id === 'string' ? parseInt(u.id) : u.id;
-                return userId === userToDelete.id;
+              const userDetails = accessibleUsers.find((u) => {
+                const userIdNum = typeof u.id === 'string' ? parseInt(u.id, 10) : u.id;
+                return userIdNum === userToDelete.id;
               });
               
               return userDetails ? (
@@ -1250,7 +1237,7 @@ export default function UsersPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                       <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
                       <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                        {userDetails.full_name || userDetails.name || userDetails.email || 'N/A'}
+                        {getDisplayName(userDetails)}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
@@ -1267,8 +1254,8 @@ export default function UsersPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                       <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
-                      <Badge $variant={userDetails.is_active !== false ? 'active' : 'inactive'}>
-                        {userDetails.is_active !== false ? 'Active' : 'Inactive'}
+                      <Badge $variant={getIsActive(userDetails) ? 'active' : 'inactive'}>
+                        {getIsActive(userDetails) ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
                     {userDetails.phone && (
@@ -1279,11 +1266,11 @@ export default function UsersPage() {
                         </span>
                       </div>
                     )}
-                    {userDetails.created_at && (
+                    {getCreatedAt(userDetails) && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                         <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Joined:</strong>
                         <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                          {formatDate(userDetails.created_at)}
+                          {formatDate(getCreatedAt(userDetails)!)}
                         </span>
                       </div>
                     )}
@@ -1433,10 +1420,7 @@ export default function UsersPage() {
             </WarningBox>
 
             {(() => {
-              const userDetails = accessibleUsers.find((u: any) => {
-                const userId = typeof u.id === 'string' ? parseInt(u.id) : u.id;
-                return userId === userToDeactivate.id;
-              });
+              const userDetails = accessibleUsers.find((u) => toNumberId(u.id) === userToDeactivate.id);
               
               return userDetails ? (
                 <div style={{
@@ -1458,7 +1442,7 @@ export default function UsersPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
                       <strong style={{ minWidth: '100px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
                       <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                        {userDetails.full_name || userDetails.name || userDetails.email || 'N/A'}
+                        {getDisplayName(userDetails)}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>

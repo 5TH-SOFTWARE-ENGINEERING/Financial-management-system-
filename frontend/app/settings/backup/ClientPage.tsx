@@ -21,6 +21,18 @@ import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
 
+// Type definitions for error handling
+type ErrorWithDetails = {
+  code?: string;
+  message?: string;
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+};
+
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
     if (active) {
@@ -474,19 +486,20 @@ export default function BackupSettingsPage() {
     setLoadingBackups(true);
     try {
       const response = await apiClient.listBackups();
-      setBackups(response.data?.backups || []);
+      setBackups((response.data?.backups || []) as Backup[]);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load backups:', err);
-      
+
       // Check if it's a permission error
-      if (err.response?.status === 403) {
+      const error = err as ErrorWithDetails;
+      if (error?.response?.status === 403) {
         const errorMessage = 'Access denied. Backup management requires ADMIN, FINANCE_ADMIN, or SUPER_ADMIN role.';
         setError(errorMessage);
         setHasPermission(false);
         toast.error(errorMessage);
       } else {
-        const errorMessage = err.response?.data?.detail || 'Failed to load backups.';
+        const errorMessage = error?.response?.data?.detail || 'Failed to load backups.';
         setError(errorMessage);
         toast.error(errorMessage);
       }
@@ -516,14 +529,15 @@ export default function BackupSettingsPage() {
       setTimeout(() => {
         loadBackups();
       }, 2000);
-    } catch (err: any) {
-      if (err.response?.status === 403) {
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      if (error?.response?.status === 403) {
         const errorMessage = 'Access denied. Backup management requires ADMIN, FINANCE_ADMIN, or SUPER_ADMIN role.';
         setError(errorMessage);
         setHasPermission(false);
         toast.error(errorMessage);
       } else {
-        const errorMessage = err.response?.data?.detail || 'Failed to create backup. Please try again.';
+        const errorMessage = error?.response?.data?.detail || 'Failed to create backup. Please try again.';
         setError(errorMessage);
         toast.error(errorMessage);
       }
@@ -558,14 +572,15 @@ export default function BackupSettingsPage() {
       setTimeout(() => {
         loadBackups();
       }, 1000);
-    } catch (err: any) {
-      if (err.response?.status === 403) {
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      if (error?.response?.status === 403) {
         const errorMessage = 'Access denied. Backup management requires ADMIN, FINANCE_ADMIN, or SUPER_ADMIN role.';
         setError(errorMessage);
         setHasPermission(false);
         toast.error(errorMessage);
       } else {
-        const errorMessage = err.response?.data?.detail || 'Failed to restore backup. Please try again.';
+        const errorMessage = error?.response?.data?.detail || 'Failed to restore backup. Please try again.';
         setError(errorMessage);
         toast.error(errorMessage);
       }
@@ -606,10 +621,11 @@ export default function BackupSettingsPage() {
       
       // Refresh backup list
       loadBackups();
-    } catch (err: any) {
-      if (err.response?.status === 403) {
-        if (err.response?.data?.detail?.includes('password') || err.response?.data?.detail?.includes('Password')) {
-          const errorMessage = err.response?.data?.detail || 'Invalid password. Please verify your password to delete this backup.';
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      if (error?.response?.status === 403) {
+        if (error?.response?.data?.detail?.includes('password') || error?.response?.data?.detail?.includes('Password')) {
+          const errorMessage = error?.response?.data?.detail || 'Invalid password. Please verify your password to delete this backup.';
           setPasswordError(errorMessage);
           toast.error(errorMessage);
         } else {
@@ -619,12 +635,12 @@ export default function BackupSettingsPage() {
           toast.error(errorMessage);
           setShowDeleteModal(false);
         }
-      } else if (err.response?.status === 400) {
-        const errorMessage = err.response?.data?.detail || 'Password is required to delete a backup.';
+      } else if (error?.response?.status === 400) {
+        const errorMessage = error?.response?.data?.detail || 'Password is required to delete a backup.';
         setPasswordError(errorMessage);
         toast.error(errorMessage);
       } else {
-        const errorMessage = err.response?.data?.detail || 'Failed to delete backup. Please try again.';
+        const errorMessage = error?.response?.data?.detail || 'Failed to delete backup. Please try again.';
         setError(errorMessage);
         toast.error(errorMessage);
         setShowDeleteModal(false);
