@@ -1,9 +1,9 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import {
   Brain, Play, CheckCircle, XCircle, AlertCircle, Loader2,
-  TrendingUp, TrendingDown, Package, Calendar, RefreshCw, Info
+  TrendingUp, TrendingDown, Package, Info
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -272,6 +272,66 @@ interface ModelInfo {
   error?: string;
 }
 
+interface TrainingResponse {
+  data?: TrainingResult;
+  status?: string;
+  detail?: string;
+  message?: string;
+}
+
+interface TrainingResult {
+  status?: string;
+  model_type?: string;
+  mae?: number;
+  rmse?: number;
+  data_points?: number;
+  model_path?: string;
+  detail?: string;
+  message?: string;
+}
+
+interface TrainingAllResponse {
+  data?: {
+    results?: TrainingResults;
+  };
+  results?: TrainingResults;
+}
+
+interface TrainingResults {
+  expenses?: {
+    arima?: TrainingResult;
+    prophet?: TrainingResult;
+    linear_regression?: TrainingResult;
+  };
+  revenue?: {
+    prophet?: TrainingResult;
+    xgboost?: TrainingResult;
+    lstm?: TrainingResult;
+  };
+  inventory?: {
+    sarima?: TrainingResult;
+    xgboost?: TrainingResult;
+    lstm?: TrainingResult;
+  };
+  errors?: string[];
+  [key: string]: unknown;
+}
+
+interface ApiError {
+  response?: {
+    data?: {
+      detail?: string;
+      message?: string;
+      results?: TrainingResults;
+    };
+  };
+  data?: {
+    detail?: string;
+    message?: string;
+  };
+  message?: string;
+}
+
 const MLTrainingPage: React.FC = () => {
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
@@ -366,30 +426,35 @@ const MLTrainingPage: React.FC = () => {
     ));
 
     try {
-      let result: any;
+      let result: TrainingResponse;
       
       if (modelId === 'expenses-arima') {
-        result = await apiClient.trainExpensesArima(startDate, endDate);
+        result = await apiClient.trainExpensesArima(startDate, endDate) as TrainingResponse;
       } else if (modelId === 'expenses-prophet') {
-        result = await apiClient.trainExpensesProphet(startDate, endDate);
+        result = await apiClient.trainExpensesProphet(startDate, endDate) as TrainingResponse;
       } else if (modelId === 'expenses-linear-regression') {
-        result = await apiClient.trainExpensesLinearRegression(startDate, endDate);
+        result = await apiClient.trainExpensesLinearRegression(startDate, endDate) as TrainingResponse;
       } else if (modelId === 'revenue-prophet') {
-        result = await apiClient.trainRevenueProphet(startDate, endDate);
+        result = await apiClient.trainRevenueProphet(startDate, endDate) as TrainingResponse;
       } else if (modelId === 'revenue-xgboost') {
-        result = await apiClient.trainRevenueXGBoost(startDate, endDate);
+        result = await apiClient.trainRevenueXGBoost(startDate, endDate) as TrainingResponse;
       } else if (modelId === 'revenue-lstm') {
-        result = await apiClient.trainRevenueLSTM(startDate, endDate);
+        result = await apiClient.trainRevenueLSTM(startDate, endDate) as TrainingResponse;
       } else if (modelId === 'inventory-sarima') {
-        result = await apiClient.trainInventorySARIMA(startDate, endDate);
+        result = await apiClient.trainInventorySARIMA(startDate, endDate) as TrainingResponse;
       } else if (modelId === 'inventory-xgboost') {
-        result = await apiClient.trainInventoryXGBoost(startDate, endDate);
+        result = await apiClient.trainInventoryXGBoost(startDate, endDate) as TrainingResponse;
       } else if (modelId === 'inventory-lstm') {
-        result = await apiClient.trainInventoryLSTM(startDate, endDate);
+        result = await apiClient.trainInventoryLSTM(startDate, endDate) as TrainingResponse;
+      } else {
+        return;
       }
 
-      const responseData = result?.data || result;
-      if (responseData?.status === 'trained' || responseData?.status === 'success') {
+      // Handle both axios response format and direct response
+      const responseData = (result?.data || result) as TrainingResult;
+      // Check for successful training status
+      if (responseData?.status === 'trained' || responseData?.status === 'success' || 
+          (responseData?.model_type && responseData?.status !== 'error')) {
         setModels(prev => prev.map(m => 
           m.id === modelId ? {
             ...m,
@@ -406,20 +471,23 @@ const MLTrainingPage: React.FC = () => {
       } else {
         throw new Error(responseData?.detail || responseData?.message || 'Training failed');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Extract error message from various response formats
       let errorMessage = 'Training failed';
       
-      if (error?.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.data?.detail) {
-        errorMessage = error.data.detail;
-      } else if (error?.message) {
-        errorMessage = error.message;
+      const apiError = error as ApiError;
+      if (apiError?.response?.data?.detail) {
+        errorMessage = apiError.response.data.detail;
+      } else if (apiError?.response?.data?.message) {
+        errorMessage = apiError.response.data.message;
+      } else if (apiError?.data?.detail) {
+        errorMessage = apiError.data.detail;
+      } else if (apiError?.message) {
+        errorMessage = apiError.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
 
       // Provide helpful context for common errors
@@ -442,9 +510,13 @@ const MLTrainingPage: React.FC = () => {
     setModels(prev => prev.map(m => ({ ...m, status: 'pending', error: undefined })));
 
     try {
-      const response = await apiClient.trainAllModels(startDate, endDate);
-      const responseData = response.data || response;
-      const results = (responseData as any)?.results || {};
+      const response = await apiClient.trainAllModels(startDate, endDate) as TrainingAllResponse;
+      // Handle both axios response format and direct response
+      const responseData = response?.data || response;
+      const resultsData = (responseData as TrainingAllResponse)?.results || responseData;
+      const results: TrainingResults = (typeof resultsData === 'object' && resultsData !== null && 'results' in resultsData) 
+        ? (resultsData as { results?: TrainingResults }).results || {} as TrainingResults
+        : (resultsData as TrainingResults) || {} as TrainingResults;
       
       // Update model statuses based on results
       setModels(prev => prev.map(model => {
@@ -457,7 +529,14 @@ const MLTrainingPage: React.FC = () => {
                          model.id.includes('lstm') ? 'lstm' :
                          model.id.includes('sarima') ? 'sarima' : '';
         
-        const modelResult = results[metricKey]?.[methodKey];
+        let modelResult: TrainingResult | undefined;
+        if (metricKey === 'expenses' && results.expenses) {
+          modelResult = (results.expenses as Record<string, TrainingResult | undefined>)[methodKey];
+        } else if (metricKey === 'revenue' && results.revenue) {
+          modelResult = (results.revenue as Record<string, TrainingResult | undefined>)[methodKey];
+        } else if (metricKey === 'inventory' && results.inventory) {
+          modelResult = (results.inventory as Record<string, TrainingResult | undefined>)[methodKey];
+        }
         
         if (modelResult?.status === 'trained') {
           return {
@@ -472,7 +551,7 @@ const MLTrainingPage: React.FC = () => {
           };
         } else {
           // Check errors
-          const errors = results.errors || [];
+          const errors: string[] = results.errors || [];
           const error = errors.find((e: string) => 
             e.toLowerCase().includes(model.metric) && 
             e.toLowerCase().includes(methodKey)
@@ -485,31 +564,38 @@ const MLTrainingPage: React.FC = () => {
         }
       }));
 
-      const trainedCount = Object.values(results).reduce((acc: number, metric: any) => {
-        if (typeof metric === 'object') {
-          return acc + Object.values(metric).filter((m: any) => m?.status === 'trained').length;
+      const trainedCount = Object.values(results).reduce((acc: number, metric: unknown) => {
+        if (typeof metric === 'object' && metric !== null) {
+          const metricObj = metric as Record<string, TrainingResult | unknown>;
+          return acc + Object.values(metricObj).filter((m: unknown) => {
+            const trainingResult = m as TrainingResult;
+            return trainingResult?.status === 'trained';
+          }).length;
         }
         return acc;
       }, 0);
 
       toast.success(`Training completed! ${trainedCount} models trained successfully`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Extract error message from various response formats
       let errorMessage = 'Training failed';
       
-      if (error?.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.data?.detail) {
-        errorMessage = error.data.detail;
-      } else if (error?.message) {
+      const apiError = error as ApiError;
+      if (apiError?.response?.data?.detail) {
+        errorMessage = apiError.response.data.detail;
+      } else if (apiError?.response?.data?.message) {
+        errorMessage = apiError.response.data.message;
+      } else if (apiError?.data?.detail) {
+        errorMessage = apiError.data.detail;
+      } else if (apiError?.message) {
+        errorMessage = apiError.message;
+      } else if (error instanceof Error) {
         errorMessage = error.message;
       }
 
       // For train all, we might have partial results, so check if we have results structure
-      if (error?.response?.data?.results) {
-        const results = error.response.data.results;
+      if (apiError?.response?.data?.results) {
+        const errorResults = apiError.response.data.results;
         // Update models based on partial results
         setModels(prev => prev.map(model => {
           const metricKey = model.metric === 'expense' ? 'expenses' : 
@@ -521,7 +607,14 @@ const MLTrainingPage: React.FC = () => {
                            model.id.includes('lstm') ? 'lstm' :
                            model.id.includes('sarima') ? 'sarima' : '';
           
-          const modelResult = results[metricKey]?.[methodKey];
+          let modelResult: TrainingResult | undefined;
+          if (metricKey === 'expenses' && errorResults.expenses) {
+            modelResult = (errorResults.expenses as Record<string, TrainingResult | undefined>)[methodKey];
+          } else if (metricKey === 'revenue' && errorResults.revenue) {
+            modelResult = (errorResults.revenue as Record<string, TrainingResult | undefined>)[methodKey];
+          } else if (metricKey === 'inventory' && errorResults.inventory) {
+            modelResult = (errorResults.inventory as Record<string, TrainingResult | undefined>)[methodKey];
+          }
           if (modelResult?.status === 'trained') {
             return {
               ...model,

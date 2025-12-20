@@ -465,7 +465,9 @@ const ForecastListPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await apiClient.getForecasts();
-      const forecastsData: ForecastRaw[] = Array.isArray(response.data) ? (response.data as ForecastRaw[]) : [];
+      // Handle both axios response format and direct response
+      const responseData = response?.data || response;
+      const forecastsData: ForecastRaw[] = Array.isArray(responseData) ? (responseData as ForecastRaw[]) : [];
       
       // Parse JSON fields if they're strings
       const parsedForecasts: Forecast[] = forecastsData.map((forecast) => {

@@ -312,7 +312,7 @@ class MLForecastingService:
                     seasonality_mode='multiplicative'
                 )
                 model.fit(prophet_df)
-            except (AttributeError, ImportError, RuntimeError) as e:
+            except (AttributeError, ImportError, RuntimeError, Exception) as e:
                 error_str = str(e).lower()
                 if 'stan_backend' in error_str or 'cmdstanpy' in error_str or 'cmdstan' in error_str:
                     # Prophet stan_backend issue - this is a known Windows/Python 3.12 issue
@@ -321,8 +321,11 @@ class MLForecastingService:
                         "Prophet requires cmdstanpy which may not be properly installed. "
                         "Try: pip install cmdstanpy or use alternative models (ARIMA, XGBoost, LSTM)."
                     )
+                elif 'no module named' in error_str or 'cannot import' in error_str:
+                    raise ImportError(f"Prophet dependency error: {str(e)}. Please check Prophet installation.")
                 else:
-                    raise
+                    # Re-raise with more context
+                    raise RuntimeError(f"Prophet model fitting failed: {str(e)}. This may be due to insufficient data or Prophet installation issues.")
             
             # Generate in-sample predictions for metrics
             future = model.make_future_dataframe(periods=0)
@@ -349,9 +352,21 @@ class MLForecastingService:
                 "model_path": str(model_path) if model_path else None,
                 "trained_at": datetime.now(timezone.utc).isoformat()
             }
-        except Exception as e:
+        except (ImportError, ValueError, RuntimeError) as e:
+            # Re-raise known exceptions with their original messages
             logger.error(f"Prophet training failed: {str(e)}")
             raise
+        except Exception as e:
+            # Catch any other unexpected exceptions and wrap them
+            error_msg = str(e)
+            logger.error(f"Prophet training failed with unexpected error: {error_msg}", exc_info=True)
+            # Provide helpful error message
+            if 'stan' in error_msg.lower() or 'cmdstan' in error_msg.lower():
+                raise ImportError(
+                    "Prophet stan_backend error. This is a known issue on Windows/Python 3.12. "
+                    "Try using alternative models (ARIMA, XGBoost, LSTM) instead."
+                )
+            raise RuntimeError(f"Prophet training failed: {error_msg}")
     
     @staticmethod
     def train_linear_regression_expenses(
@@ -453,7 +468,7 @@ class MLForecastingService:
                     seasonality_mode='multiplicative'
                 )
                 model.fit(prophet_df)
-            except (AttributeError, ImportError, RuntimeError) as e:
+            except (AttributeError, ImportError, RuntimeError, Exception) as e:
                 error_str = str(e).lower()
                 if 'stan_backend' in error_str or 'cmdstanpy' in error_str or 'cmdstan' in error_str:
                     # Prophet stan_backend issue - this is a known Windows/Python 3.12 issue
@@ -462,8 +477,11 @@ class MLForecastingService:
                         "Prophet requires cmdstanpy which may not be properly installed. "
                         "Try: pip install cmdstanpy or use alternative models (ARIMA, XGBoost, LSTM)."
                     )
+                elif 'no module named' in error_str or 'cannot import' in error_str:
+                    raise ImportError(f"Prophet dependency error: {str(e)}. Please check Prophet installation.")
                 else:
-                    raise
+                    # Re-raise with more context
+                    raise RuntimeError(f"Prophet model fitting failed: {str(e)}. This may be due to insufficient data or Prophet installation issues.")
             
             # Generate in-sample predictions for metrics
             future = model.make_future_dataframe(periods=0)
@@ -490,9 +508,21 @@ class MLForecastingService:
                 "model_path": str(model_path) if model_path else None,
                 "trained_at": datetime.now(timezone.utc).isoformat()
             }
-        except Exception as e:
+        except (ImportError, ValueError, RuntimeError) as e:
+            # Re-raise known exceptions with their original messages
             logger.error(f"Prophet revenue training failed: {str(e)}")
             raise
+        except Exception as e:
+            # Catch any other unexpected exceptions and wrap them
+            error_msg = str(e)
+            logger.error(f"Prophet revenue training failed with unexpected error: {error_msg}", exc_info=True)
+            # Provide helpful error message
+            if 'stan' in error_msg.lower() or 'cmdstan' in error_msg.lower():
+                raise ImportError(
+                    "Prophet stan_backend error. This is a known issue on Windows/Python 3.12. "
+                    "Try using alternative models (ARIMA, XGBoost, LSTM) instead."
+                )
+            raise RuntimeError(f"Prophet revenue training failed: {error_msg}")
     
     @staticmethod
     def train_xgboost_revenue(

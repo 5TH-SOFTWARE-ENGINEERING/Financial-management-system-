@@ -786,9 +786,22 @@ def train_expenses_prophet(
             db, start_date_dt, end_date_dt, current_user.id, current_user.role
         )
         return result
+    except ImportError as e:
+        # Prophet dependency/installation errors - return 400 (client error)
+        logger.error(f"Prophet training failed (import error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as e:
+        # Data validation errors - return 400 (client error)
+        logger.error(f"Prophet training failed (validation error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        # Other errors - return 500 (server error)
         logger.error(f"Prophet training failed: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+        error_msg = str(e)
+        # Provide helpful message for common Prophet issues
+        if 'stan' in error_msg.lower() or 'cmdstan' in error_msg.lower():
+            error_msg = "Prophet stan_backend error. This is a known issue on Windows/Python 3.12. Try using alternative models (ARIMA, XGBoost, LSTM) instead."
+        raise HTTPException(status_code=500, detail=f"Training failed: {error_msg}")
 
 
 @router.post("/ml/train/expenses/linear-regression")
@@ -840,9 +853,22 @@ def train_revenue_prophet(
             db, start_date_dt, end_date_dt, current_user.id, current_user.role
         )
         return result
+    except ImportError as e:
+        # Prophet dependency/installation errors - return 400 (client error)
+        logger.error(f"Prophet training failed (import error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as e:
+        # Data validation errors - return 400 (client error)
+        logger.error(f"Prophet training failed (validation error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Prophet revenue training failed: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+        # Other errors - return 500 (server error)
+        logger.error(f"Prophet training failed: {str(e)}", exc_info=True)
+        error_msg = str(e)
+        # Provide helpful message for common Prophet issues
+        if 'stan' in error_msg.lower() or 'cmdstan' in error_msg.lower():
+            error_msg = "Prophet stan_backend error. This is a known issue on Windows/Python 3.12. Try using alternative models (ARIMA, XGBoost, LSTM) instead."
+        raise HTTPException(status_code=500, detail=f"Training failed: {error_msg}")
 
 
 @router.post("/ml/train/revenue/xgboost")

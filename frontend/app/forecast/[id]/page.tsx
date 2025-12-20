@@ -156,30 +156,6 @@ const MethodBadge = styled.span<{ $method: string }>`
   text-transform: capitalize;
 `;
 
-const OldMethodBadge = styled.span<{ $method: string }>`
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.medium};
-  background: ${props => {
-    switch (props.$method) {
-      case 'moving_average': return '#dbeafe';
-      case 'linear_growth': return '#d1fae5';
-      case 'trend': return '#fef3c7';
-      default: return '#f3f4f6';
-    }
-  }};
-  color: ${props => {
-    switch (props.$method) {
-      case 'moving_average': return '#1e40af';
-      case 'linear_growth': return '#065f46';
-      case 'trend': return '#92400e';
-      default: return '#6b7280';
-    }
-  }};
-  text-transform: capitalize;
-`;
-
 const ForecastDataCard = styled.div`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
@@ -425,7 +401,9 @@ const ForecastDetailPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await apiClient.getForecast(forecastId);
-      const forecastData = response.data as Forecast;
+      // Handle both axios response format and direct response
+      const responseData = response?.data || response;
+      const forecastData = responseData as Forecast;
       
       // Parse JSON fields if they're strings
       if (typeof forecastData.forecast_data === 'string') {
@@ -539,9 +517,11 @@ const ForecastDetailPage: React.FC = () => {
   const loadBudgets = useCallback(async () => {
     try {
       const response = await apiClient.getBudgets({ limit: 100 });
-      if (response.data) {
-        const parsedBudgets = Array.isArray(response.data)
-          ? response.data
+      // Handle both axios response format and direct response
+      const responseData = response?.data || response;
+      if (responseData) {
+        const parsedBudgets = Array.isArray(responseData)
+          ? responseData
           : [];
         setBudgets(parsedBudgets as BudgetSummary[]);
       }

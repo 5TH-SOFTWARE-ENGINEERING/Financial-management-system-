@@ -257,7 +257,9 @@ const ForecastEditPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await apiClient.getForecast(forecastId);
-      const forecastData = response.data as Forecast;
+      // Handle both axios response format and direct response
+      const responseData = response?.data || response;
+      const forecastData = responseData as Forecast;
       
       // Parse JSON fields if they're strings
       if (typeof forecastData.forecast_data === 'string') {
