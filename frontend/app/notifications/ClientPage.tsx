@@ -738,6 +738,9 @@ interface Notification {
   expires_at?: string | null;
   // Computed display type for UI
   display_type?: 'success' | 'error' | 'warning' | 'info';
+  // Optional user info for admin/finance admin views
+  user_name?: string;
+  user_email?: string;
 }
 
 export default function NotificationsPage() {
@@ -756,6 +759,7 @@ export default function NotificationsPage() {
   const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [verifyingPassword, setVerifyingPassword] = useState(false);
+  const [userCache, setUserCache] = useState<Map<number, { name: string; email: string }>>(new Map());
 
   // Role-based access control - all authenticated users can access notifications
   useEffect(() => {
@@ -784,6 +788,69 @@ export default function NotificationsPage() {
       }
     }
   }, [isAuthenticated, isLoading, user, router]);
+
+  // Helper to fetch user information for notifications
+  const fetchUserInfoForNotifications = useCallback(async (notifications: Notification[]) => {
+    if (!user) return;
+    
+    const userRole = user.role?.toLowerCase() || '';
+    const isAdminOrFinanceAdmin = ['admin', 'super_admin', 'finance_admin', 'manager'].includes(userRole);
+    
+    // Only fetch user info if admin/finance admin and viewing notifications from other users
+    if (!isAdminOrFinanceAdmin) return;
+    
+    try {
+      // Get unique user IDs from notifications that are not the current user
+      const currentUserId = Number(user.id);
+      const uniqueUserIds = [...new Set(notifications
+        .map(n => n.user_id)
+        .filter(id => id && id !== currentUserId && !userCache.has(id))
+      )];
+      
+      if (uniqueUserIds.length === 0) return;
+      
+      // Fetch user information for unique user IDs
+      const userPromises = uniqueUserIds.map(async (userId) => {
+        try {
+          const userResponse = await apiClient.getUser(userId);
+          const userData = userResponse.data as { full_name?: string; email?: string; username?: string };
+          return {
+            id: userId,
+            name: userData.full_name || userData.username || 'Unknown User',
+            email: userData.email || ''
+          };
+        } catch (err) {
+          // If user fetch fails, return basic info
+          return {
+            id: userId,
+            name: `User #${userId}`,
+            email: ''
+          };
+        }
+      });
+      
+      const userInfos = await Promise.all(userPromises);
+      const newCache = new Map(userCache);
+      userInfos.forEach(userInfo => {
+        newCache.set(userInfo.id, { name: userInfo.name, email: userInfo.email });
+      });
+      setUserCache(newCache);
+      
+      // Update notifications with user info
+      setNotifications(prevNotifications => 
+        prevNotifications.map(notif => {
+          const userInfo = newCache.get(notif.user_id);
+          return userInfo ? {
+            ...notif,
+            user_name: userInfo.name,
+            user_email: userInfo.email
+          } : notif;
+        })
+      );
+    } catch (err) {
+      console.error('Failed to fetch user information for notifications:', err);
+    }
+  }, [user, userCache]);
 
   const fetchNotifications = useCallback(async (showLoading: boolean = true) => {
     if (showLoading) {
@@ -814,9 +881,14 @@ export default function NotificationsPage() {
           action_url?: string | null;
         };
         const notificationType = notification.type || 'system_alert';
+        const notificationUserId = notification.user_id || 0;
+        
+        // Check cache for user info
+        const cachedUserInfo = userCache.get(notificationUserId);
+        
         return {
           id: notification.id || 0,
-          user_id: notification.user_id || 0,
+          user_id: notificationUserId,
           type: notificationType,
           priority: notification.priority || 'medium',
           title: notification.title || 'Notification',
@@ -828,6 +900,8 @@ export default function NotificationsPage() {
           expires_at: notification.expires_at || null,
           action_url: notification.action_url || null,
           display_type: mapNotificationType(notificationType, notification.title, notification.message),
+          user_name: cachedUserInfo?.name,
+          user_email: cachedUserInfo?.email,
         };
       });
       
@@ -837,6 +911,66 @@ export default function NotificationsPage() {
       );
       
       setNotifications(apiNotifications);
+      
+      // Fetch user info for notifications from other users (async, doesn't block UI)
+      // Call this after setting notifications, but don't wait for it
+      if (user) {
+        const userRole = user.role?.toLowerCase() || '';
+        const isAdminOrFinanceAdmin = ['admin', 'super_admin', 'finance_admin', 'manager'].includes(userRole);
+        
+        if (isAdminOrFinanceAdmin) {
+          // Get unique user IDs from notifications that are not the current user
+          const currentUserId = Number(user.id);
+          const uniqueUserIds = [...new Set(apiNotifications
+            .map(n => n.user_id)
+            .filter(id => id && id !== currentUserId && !userCache.has(id))
+          )];
+          
+          if (uniqueUserIds.length > 0) {
+            // Fetch user information asynchronously (fire and forget)
+            Promise.all(uniqueUserIds.map(async (userId) => {
+              try {
+                const userResponse = await apiClient.getUser(userId);
+                const userData = userResponse.data as { full_name?: string; email?: string; username?: string };
+                return {
+                  id: userId,
+                  name: userData.full_name || userData.username || 'Unknown User',
+                  email: userData.email || ''
+                };
+              } catch (err) {
+                return {
+                  id: userId,
+                  name: `User #${userId}`,
+                  email: ''
+                };
+              }
+            })).then(userInfos => {
+              setUserCache(prev => {
+                const newCache = new Map(prev);
+                userInfos.forEach(userInfo => {
+                  newCache.set(userInfo.id, { name: userInfo.name, email: userInfo.email });
+                });
+                
+                // Update notifications with user info after cache is updated
+                setNotifications(prevNotifications => 
+                  prevNotifications.map(notif => {
+                    const userInfo = newCache.get(notif.user_id);
+                    return userInfo ? {
+                      ...notif,
+                      user_name: userInfo.name,
+                      user_email: userInfo.email
+                    } : notif;
+                  })
+                );
+                
+                return newCache;
+              });
+            }).catch(err => {
+              console.error('Failed to fetch user information for notifications:', err);
+            });
+          }
+        }
+      }
     } catch (err: unknown) {
       const error = err as ErrorWithDetails;
       const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to load notifications';
@@ -852,7 +986,7 @@ export default function NotificationsPage() {
         setLoading(false);
       }
     }
-  }, []);
+  }, [user]);
 
   const mapNotificationType = (type: string, title?: string, message?: string): 'success' | 'error' | 'warning' | 'info' => {
     const normalized = type?.toLowerCase() || 'system_alert';
@@ -947,6 +1081,28 @@ export default function NotificationsPage() {
       return () => clearInterval(interval);
     }
   }, [isAuthenticated, user, fetchNotifications]);
+  
+  // Update user cache when user changes
+  useEffect(() => {
+    if (user) {
+      // Add current user to cache
+      setUserCache(prev => {
+        const newCache = new Map(prev);
+        const userId = Number(user.id);
+        // Handle both StoreUser (has 'name') and User (has 'full_name')
+        const userName = ('name' in user ? user.name : undefined) || 
+                         (('full_name' in user) ? (user as { full_name?: string }).full_name : undefined) || 
+                         ('email' in user ? user.email : '') || 
+                         'You';
+        const userEmail = ('email' in user ? user.email : '') || '';
+        newCache.set(userId, {
+          name: userName,
+          email: userEmail
+        });
+        return newCache;
+      });
+    }
+  }, [user]);
 
   // Auto-refresh when window regains focus (user returns to tab)
   useEffect(() => {
@@ -1229,6 +1385,16 @@ export default function NotificationsPage() {
     }
   };
 
+  // Determine notification scope based on user role
+  const userRole = user?.role?.toLowerCase() || '';
+  const isAdmin = ['admin', 'super_admin'].includes(userRole);
+  const isFinanceAdminOrManager = ['finance_admin', 'manager'].includes(userRole);
+  const notificationScope = isAdmin 
+    ? 'all users' 
+    : isFinanceAdminOrManager 
+    ? 'your team' 
+    : 'your own';
+
   return (
     <Layout>
       <PageContainer>
@@ -1237,7 +1403,14 @@ export default function NotificationsPage() {
             <HeaderContent>
               <div>
                 <h1>Notifications</h1>
-                <p>Stay updated with important alerts and updates</p>
+                <p>
+                  {isAdmin 
+                    ? 'Viewing all notifications across the system'
+                    : isFinanceAdminOrManager
+                    ? 'Viewing your notifications and your team\'s notifications'
+                    : 'Stay updated with your important alerts and updates'
+                  }
+                </p>
               </div>
               <HeaderActions>
                 <ActionButton
@@ -1401,6 +1574,16 @@ export default function NotificationsPage() {
                           <NotificationMessage>{notification.message}</NotificationMessage>
                           <NotificationMeta>
                             <NotificationTime>{formatDate(notification.created_at)}</NotificationTime>
+                            {/* Show user info for admins/finance admins viewing other users' notifications */}
+                            {user && notification.user_id !== Number(user.id) && (notification.user_name || notification.user_id) && (
+                              <span style={{ 
+                                fontSize: theme.typography.fontSizes.sm, 
+                                color: TEXT_COLOR_MUTED,
+                                fontStyle: 'italic'
+                              }}>
+                                {notification.user_name || `User #${notification.user_id}`}
+                              </span>
+                            )}
                             {notification.action_url && (
                               <ViewDetailsLink
                                 onClick={(e) => {

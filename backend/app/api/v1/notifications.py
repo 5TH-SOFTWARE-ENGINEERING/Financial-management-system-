@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
+from sqlalchemy import and_ # type: ignore[import-untyped]
 from typing import List, Optional
 import logging
 
 from ...core.database import get_db
 from ...crud.notification import notification as notification_crud
+from ...crud.user import user as user_crud
 from ...schemas.notification import NotificationOut, NotificationUpdate, NotificationPreferencesUpdate, NotificationPreferencesOut
 from ...models.user import User, UserRole
+from ...models.notification import Notification
 from ...api.deps import get_current_active_user, require_min_role
 
 router = APIRouter()
@@ -21,7 +24,11 @@ def read_notifications(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get current user's notifications"""
+    """Get notifications with role-based access:
+    - Admin/Super Admin: See all notifications
+    - Finance Admin/Manager: See their own and subordinates' notifications
+    - Others: See only their own notifications
+    """
     try:
         # Check for pending approvals and notify approvers periodically
         try:
@@ -43,10 +50,45 @@ def read_notifications(
         except Exception as e:
             logger.warning(f"Failed to check pending approvals: {str(e)}")
         
-        if unread_only:
-            notifications = notification_crud.get_unread(db, current_user.id, skip, limit)
+        # Determine which user IDs the current user can access
+        accessible_user_ids = [current_user.id]  # Always include self
+        
+        # Admin/Super Admin can see all notifications
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            # Get all notifications (no user_id filter)
+            if unread_only:
+                notifications = db.query(Notification).filter(
+                    Notification.is_read == False
+                ).order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
+            else:
+                notifications = db.query(Notification).order_by(
+                    Notification.created_at.desc()
+                ).offset(skip).limit(limit).all()
+        # Finance Admin/Manager can see their own and subordinates' notifications
+        elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            # Get all subordinates in the hierarchy
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            accessible_user_ids.extend([sub.id for sub in subordinates])
+            
+            # Query notifications for accessible users
+            if unread_only:
+                notifications = db.query(Notification).filter(
+                    and_(
+                        Notification.user_id.in_(accessible_user_ids),
+                        Notification.is_read == False
+                    )
+                ).order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
+            else:
+                notifications = db.query(Notification).filter(
+                    Notification.user_id.in_(accessible_user_ids)
+                ).order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
+        # Others can only see their own notifications
         else:
-            notifications = notification_crud.get_by_user(db, current_user.id, skip, limit)
+            if unread_only:
+                notifications = notification_crud.get_unread(db, current_user.id, skip, limit)
+            else:
+                notifications = notification_crud.get_by_user(db, current_user.id, skip, limit)
+        
         return notifications
     except Exception as e:
         logger.error(f"Error fetching notifications for user {current_user.id}: {str(e)}", exc_info=True)
@@ -59,9 +101,36 @@ def get_unread_count(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get count of unread notifications"""
+    """Get count of unread notifications with role-based access:
+    - Admin/Super Admin: Count all unread notifications
+    - Finance Admin/Manager: Count unread notifications for themselves and subordinates
+    - Others: Count only their own unread notifications
+    """
     try:
-        count = notification_crud.get_unread_count(db, current_user.id)
+        # Determine which user IDs the current user can access
+        accessible_user_ids = [current_user.id]  # Always include self
+        
+        # Admin/Super Admin can see all notifications
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            count = db.query(Notification).filter(
+                Notification.is_read == False
+            ).count()
+        # Finance Admin/Manager can see their own and subordinates' notifications
+        elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            # Get all subordinates in the hierarchy
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            accessible_user_ids.extend([sub.id for sub in subordinates])
+            
+            count = db.query(Notification).filter(
+                and_(
+                    Notification.user_id.in_(accessible_user_ids),
+                    Notification.is_read == False
+                )
+            ).count()
+        # Others can only see their own notifications
+        else:
+            count = notification_crud.get_unread_count(db, current_user.id)
+        
         return {"unread_count": count}
     except Exception as e:
         logger.error(f"Error fetching unread notification count for user {current_user.id}: {str(e)}", exc_info=True)
@@ -75,17 +144,34 @@ def read_notification(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get specific notification"""
+    """Get specific notification with role-based access:
+    - Admin/Super Admin: Can access any notification
+    - Finance Admin/Manager: Can access notifications for themselves and subordinates
+    - Others: Can only access their own notifications
+    """
     try:
         notification = notification_crud.get(db, id=notification_id)
         if notification is None:
             raise HTTPException(status_code=404, detail="Notification not found")
         
-        # Users can only access their own notifications
-        if notification.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+        # Admin/Super Admin can access any notification
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            return notification
         
-        return notification
+        # Self access - always allowed
+        if notification.user_id == current_user.id:
+            return notification
+        
+        # Finance Admin/Manager can access notifications for their subordinates
+        if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            subordinate_ids = [sub.id for sub in subordinates]
+            if notification.user_id in subordinate_ids:
+                return notification
+        
+        # If we reach here, user doesn't have permission
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -103,17 +189,34 @@ def update_notification(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Update notification (mark as read/unread)"""
+    """Update notification (mark as read/unread) with role-based access:
+    - Admin/Super Admin: Can update any notification
+    - Finance Admin/Manager: Can update notifications for themselves and subordinates
+    - Others: Can only update their own notifications
+    """
     try:
         notification = notification_crud.get(db, id=notification_id)
         if notification is None:
             raise HTTPException(status_code=404, detail="Notification not found")
         
-        # Users can only update their own notifications
-        if notification.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+        # Admin/Super Admin can update any notification
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            return notification_crud.update(db, db_obj=notification, obj_in=notification_update)
         
-        return notification_crud.update(db, db_obj=notification, obj_in=notification_update)
+        # Self access - always allowed
+        if notification.user_id == current_user.id:
+            return notification_crud.update(db, db_obj=notification, obj_in=notification_update)
+        
+        # Finance Admin/Manager can update notifications for their subordinates
+        if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            subordinate_ids = [sub.id for sub in subordinates]
+            if notification.user_id in subordinate_ids:
+                return notification_crud.update(db, db_obj=notification, obj_in=notification_update)
+        
+        # If we reach here, user doesn't have permission
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -130,18 +233,37 @@ def mark_notification_as_read(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Mark notification as read"""
+    """Mark notification as read with role-based access:
+    - Admin/Super Admin: Can mark any notification as read
+    - Finance Admin/Manager: Can mark notifications for themselves and subordinates as read
+    - Others: Can only mark their own notifications as read
+    """
     try:
         notification = notification_crud.get(db, id=notification_id)
         if notification is None:
             raise HTTPException(status_code=404, detail="Notification not found")
         
-        # Users can only mark their own notifications as read
-        if notification.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+        # Admin/Super Admin can mark any notification as read
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            notification_crud.mark_as_read(db, notification_id)
+            return {"message": "Notification marked as read"}
         
-        notification_crud.mark_as_read(db, notification_id)
-        return {"message": "Notification marked as read"}
+        # Self access - always allowed
+        if notification.user_id == current_user.id:
+            notification_crud.mark_as_read(db, notification_id)
+            return {"message": "Notification marked as read"}
+        
+        # Finance Admin/Manager can mark notifications for their subordinates as read
+        if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            subordinate_ids = [sub.id for sub in subordinates]
+            if notification.user_id in subordinate_ids:
+                notification_crud.mark_as_read(db, notification_id)
+                return {"message": "Notification marked as read"}
+        
+        # If we reach here, user doesn't have permission
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -175,18 +297,37 @@ def delete_notification(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Delete notification"""
+    """Delete notification with role-based access:
+    - Admin/Super Admin: Can delete any notification
+    - Finance Admin/Manager: Can delete notifications for themselves and subordinates
+    - Others: Can only delete their own notifications
+    """
     try:
         notification = notification_crud.get(db, id=notification_id)
         if notification is None:
             raise HTTPException(status_code=404, detail="Notification not found")
         
-        # Users can only delete their own notifications
-        if notification.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+        # Admin/Super Admin can delete any notification
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            notification_crud.delete(db, notification_id)
+            return {"message": "Notification deleted successfully"}
         
-        notification_crud.delete(db, notification_id)
-        return {"message": "Notification deleted successfully"}
+        # Self access - always allowed
+        if notification.user_id == current_user.id:
+            notification_crud.delete(db, notification_id)
+            return {"message": "Notification deleted successfully"}
+        
+        # Finance Admin/Manager can delete notifications for their subordinates
+        if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            subordinate_ids = [sub.id for sub in subordinates]
+            if notification.user_id in subordinate_ids:
+                notification_crud.delete(db, notification_id)
+                return {"message": "Notification deleted successfully"}
+        
+        # If we reach here, user doesn't have permission
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+        
     except HTTPException:
         raise
     except Exception as e:
