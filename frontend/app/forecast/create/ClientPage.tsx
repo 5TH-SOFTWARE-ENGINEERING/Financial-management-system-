@@ -278,7 +278,7 @@ const ValidationErrors = styled.div`
   }
 `;
 
-type ForecastMethod = 'moving_average' | 'linear_growth' | 'trend';
+type ForecastMethod = 'moving_average' | 'linear_growth' | 'trend' | 'arima' | 'prophet' | 'xgboost' | 'lstm' | 'linear_regression';
 
 type ForecastForm = {
   name: string;
@@ -331,7 +331,34 @@ const ForecastCreatePage: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const handleInputChange = <K extends keyof ForecastForm>(field: K, value: ForecastForm[K]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Auto-adjust forecast_type when AI method is selected
+      if (field === 'method') {
+        const method = value as ForecastMethod;
+        if (method === 'arima' || method === 'linear_regression') {
+          updated.forecast_type = 'expense';
+        } else if (method === 'xgboost' || method === 'lstm') {
+          updated.forecast_type = 'revenue';
+        }
+        // Prophet works with both revenue and expense, so no change needed
+      }
+      
+      // Validate method and forecast_type compatibility
+      if (field === 'forecast_type') {
+        const forecastType = value as ForecastForm['forecast_type'];
+        const currentMethod = prev.method;
+        if ((currentMethod === 'arima' || currentMethod === 'linear_regression') && forecastType !== 'expense') {
+          // Reset to compatible method if type changes
+          updated.method = 'moving_average';
+        } else if ((currentMethod === 'xgboost' || currentMethod === 'lstm') && forecastType !== 'revenue') {
+          updated.method = 'moving_average';
+        }
+      }
+      
+      return updated;
+    });
   };
 
   const getMethodInfo = () => {
@@ -350,6 +377,31 @@ const ForecastCreatePage: React.FC = () => {
         return {
           title: 'Trend Analysis Method',
           description: 'Uses linear regression to identify trends in historical data and project them forward. Best for identifying long-term patterns.'
+        };
+      case 'arima':
+        return {
+          title: 'ARIMA (AutoRegressive Integrated Moving Average)',
+          description: 'AI-powered time series forecasting method. Best for expenses forecasting. Requires trained model (automatically uses if available).'
+        };
+      case 'prophet':
+        return {
+          title: 'Facebook Prophet',
+          description: 'AI-powered forecasting tool by Facebook. Handles seasonality and holidays automatically. Best for revenue/expense forecasting with seasonal patterns. Requires trained model.'
+        };
+      case 'xgboost':
+        return {
+          title: 'XGBoost (Gradient Boosting)',
+          description: 'Advanced machine learning method using gradient boosting. Best for revenue forecasting with complex patterns. Requires trained model.'
+        };
+      case 'lstm':
+        return {
+          title: 'LSTM (Long Short-Term Memory)',
+          description: 'Deep learning neural network for sequence prediction. Best for revenue forecasting with long-term dependencies. Requires trained model.'
+        };
+      case 'linear_regression':
+        return {
+          title: 'Linear Regression (ML)',
+          description: 'Machine learning-based linear regression for expenses. More accurate than traditional trend analysis. Requires trained model.'
         };
       default:
         return { title: '', description: '' };
@@ -370,6 +422,17 @@ const ForecastCreatePage: React.FC = () => {
     }
     if (formData.method === 'linear_growth' && (formData.growth_rate < -1 || formData.growth_rate > 10)) {
       errors.push('Growth rate should be between -100% and 1000%');
+    }
+    
+    // Validate AI/ML method compatibility with forecast type
+    if (formData.method === 'arima' && formData.forecast_type !== 'expense') {
+      errors.push('ARIMA method is only available for expense forecasting');
+    }
+    if (formData.method === 'linear_regression' && formData.forecast_type !== 'expense') {
+      errors.push('Linear Regression ML method is only available for expense forecasting');
+    }
+    if ((formData.method === 'xgboost' || formData.method === 'lstm') && formData.forecast_type !== 'revenue') {
+      errors.push(`${formData.method.toUpperCase()} method is only available for revenue forecasting`);
     }
     
     setValidationErrors(errors);
@@ -544,16 +607,41 @@ const ForecastCreatePage: React.FC = () => {
                   onChange={(e) => handleInputChange('method', e.target.value as ForecastMethod)}
                   required
                 >
-                  <option value="moving_average">Moving Average</option>
-                  <option value="linear_growth">Linear Growth</option>
-                  <option value="trend">Trend Analysis</option>
+                  <optgroup label="Traditional Methods">
+                    <option value="moving_average">Moving Average</option>
+                    <option value="linear_growth">Linear Growth</option>
+                    <option value="trend">Trend Analysis</option>
+                  </optgroup>
+                  <optgroup label="AI/ML Methods (Requires Trained Models)">
+                    <option value="arima">ARIMA (Expenses)</option>
+                    <option value="prophet">Prophet (Revenue/Expense)</option>
+                    <option value="xgboost">XGBoost (Revenue)</option>
+                    <option value="lstm">LSTM (Revenue)</option>
+                    <option value="linear_regression">Linear Regression ML (Expenses)</option>
+                  </optgroup>
                 </StyledSelect>
+                <p style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginTop: theme.spacing.xs }}>
+                  AI/ML methods use pre-trained models. Ensure models are trained before using.
+                </p>
               </FormGroup>
 
               {methodInfo.title && (
                 <MethodInfo>
                   <h4>{methodInfo.title}</h4>
                   <p>{methodInfo.description}</p>
+                  {(formData.method === 'arima' || formData.method === 'prophet' || 
+                    formData.method === 'xgboost' || formData.method === 'lstm' || 
+                    formData.method === 'linear_regression') && (
+                    <p style={{ 
+                      fontSize: theme.typography.fontSizes.xs, 
+                      color: '#dc2626', 
+                      marginTop: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeights.medium
+                    }}>
+                      ⚠️ Note: This AI/ML method requires a trained model. If no model is available, the forecast will fail. 
+                      Train models first using the backend training script.
+                    </p>
+                  )}
                 </MethodInfo>
               )}
 

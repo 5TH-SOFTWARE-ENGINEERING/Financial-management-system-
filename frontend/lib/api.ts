@@ -1227,6 +1227,125 @@ class ApiClient {
     return this.post(`/budgeting/forecasts/${id}/delete`, { password });
   }
 
+  // ============================================================================
+  // AI/ML MODEL TRAINING
+  // ============================================================================
+
+  /**
+   * Train all AI/ML models
+   * @param startDate - Training data start date (YYYY-MM-DD)
+   * @param endDate - Training data end date (YYYY-MM-DD)
+   */
+  async trainAllModels(startDate: string, endDate: string) {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/all',
+      params: { start_date: startDate, end_date: endDate }
+    });
+  }
+
+  /**
+   * Train ARIMA model for expenses
+   * @param startDate - Training data start date (YYYY-MM-DD)
+   * @param endDate - Training data end date (YYYY-MM-DD)
+   * @param order - ARIMA order (p,d,q) as string "p,d,q"
+   */
+  async trainExpensesArima(startDate: string, endDate: string, order: string = "1,1,1") {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/expenses/arima',
+      params: { start_date: startDate, end_date: endDate, order }
+    });
+  }
+
+  /**
+   * Train Prophet model for expenses
+   */
+  async trainExpensesProphet(startDate: string, endDate: string) {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/expenses/prophet',
+      params: { start_date: startDate, end_date: endDate }
+    });
+  }
+
+  /**
+   * Train Linear Regression model for expenses
+   */
+  async trainExpensesLinearRegression(startDate: string, endDate: string) {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/expenses/linear-regression',
+      params: { start_date: startDate, end_date: endDate }
+    });
+  }
+
+  /**
+   * Train Prophet model for revenue
+   */
+  async trainRevenueProphet(startDate: string, endDate: string) {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/revenue/prophet',
+      params: { start_date: startDate, end_date: endDate }
+    });
+  }
+
+  /**
+   * Train XGBoost model for revenue
+   */
+  async trainRevenueXGBoost(startDate: string, endDate: string) {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/revenue/xgboost',
+      params: { start_date: startDate, end_date: endDate }
+    });
+  }
+
+  /**
+   * Train LSTM model for revenue
+   */
+  async trainRevenueLSTM(startDate: string, endDate: string, epochs: number = 50, batchSize: number = 32) {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/revenue/lstm',
+      params: { start_date: startDate, end_date: endDate, epochs, batch_size: batchSize }
+    });
+  }
+
+  /**
+   * Train SARIMA model for inventory
+   */
+  async trainInventorySARIMA(startDate: string, endDate: string, order: string = "1,1,1", seasonalOrder: string = "1,1,1,12") {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/inventory/sarima',
+      params: { start_date: startDate, end_date: endDate, order, seasonal_order: seasonalOrder }
+    });
+  }
+
+  /**
+   * Train XGBoost model for inventory
+   */
+  async trainInventoryXGBoost(startDate: string, endDate: string) {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/inventory/xgboost',
+      params: { start_date: startDate, end_date: endDate }
+    });
+  }
+
+  /**
+   * Train LSTM model for inventory
+   */
+  async trainInventoryLSTM(startDate: string, endDate: string, epochs: number = 50, batchSize: number = 32) {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/train/inventory/lstm',
+      params: { start_date: startDate, end_date: endDate, epochs, batch_size: batchSize }
+    });
+  }
+
   // Variance Analysis
   async calculateVariance(budgetId: number, periodStart: string, periodEnd: string) {
     return this.post(`/budgeting/budgets/${budgetId}/variance`, {}, {

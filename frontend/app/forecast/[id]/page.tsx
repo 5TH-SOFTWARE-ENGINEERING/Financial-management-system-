@@ -125,6 +125,40 @@ const InfoRow = styled.div`
 const MethodBadge = styled.span<{ $method: string }>`
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
   border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  background: ${props => {
+    switch (props.$method) {
+      case 'moving_average': return '#dbeafe';
+      case 'linear_growth': return '#d1fae5';
+      case 'trend': return '#fef3c7';
+      case 'arima': return '#e0e7ff';
+      case 'prophet': return '#fce7f3';
+      case 'xgboost': return '#dbeafe';
+      case 'lstm': return '#e0e7ff';
+      case 'linear_regression': return '#fef3c7';
+      default: return '#f3f4f6';
+    }
+  }};
+  color: ${props => {
+    switch (props.$method) {
+      case 'moving_average': return '#1e40af';
+      case 'linear_growth': return '#065f46';
+      case 'trend': return '#92400e';
+      case 'arima': return '#4338ca';
+      case 'prophet': return '#be185d';
+      case 'xgboost': return '#1e40af';
+      case 'lstm': return '#4338ca';
+      case 'linear_regression': return '#92400e';
+      default: return '#6b7280';
+    }
+  }};
+  text-transform: capitalize;
+`;
+
+const OldMethodBadge = styled.span<{ $method: string }>`
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
   background: ${props => {
@@ -700,7 +734,10 @@ const ForecastDetailPage: React.FC = () => {
                 </h1>
                 <div style={{ marginTop: theme.spacing.sm, display: 'flex', gap: theme.spacing.md, alignItems: 'center', flexWrap: 'wrap' }}>
                   <MethodBadge $method={forecast.method}>
-                    {forecast.method.replace('_', ' ')}
+                    {forecast.method.replace(/_/g, ' ')}
+                    {(forecast.method === 'arima' || forecast.method === 'prophet' || 
+                      forecast.method === 'xgboost' || forecast.method === 'lstm' || 
+                      forecast.method === 'linear_regression') && ' (AI)'}
                   </MethodBadge>
                   {forecast.description && (
                     <p style={{ margin: 0, opacity: 0.9, fontSize: theme.typography.fontSizes.md }}>

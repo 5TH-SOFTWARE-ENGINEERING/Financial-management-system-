@@ -8,7 +8,7 @@ import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Wallet, Shield, UserPlus, List, Calculator,
     DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3, Package, ShoppingCart, BookOpen,
-    Key, ChevronLeft, ChevronRight
+    Key, ChevronLeft, ChevronRight, Brain
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -664,6 +664,15 @@ const Sidebar: React.FC = () => {
                                     {!collapsed && 'forecasts'}
                                 </NavItem>
                             </ComponentGate>
+                            {/* ML Training - Only for Admin and Finance Admin */}
+                            {(isAdmin || user?.role === 'finance_admin') && (
+                                <NavItem href="/ml-training" $active={pathname === '/ml-training'} $collapsed={collapsed}>
+                                    <NavIcon $active={pathname === '/ml-training'} $collapsed={collapsed} $size={16} $iconType="brain">
+                                        <Brain />
+                                    </NavIcon>
+                                    {!collapsed && 'ML Training'}
+                                </NavItem>
+                            )}
                         </SubMenu>
                     )}
                 </>

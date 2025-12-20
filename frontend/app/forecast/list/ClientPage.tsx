@@ -210,6 +210,11 @@ const MethodBadge = styled.span<{ $method: string }>`
       case 'moving_average': return '#dbeafe';
       case 'linear_growth': return '#d1fae5';
       case 'trend': return '#fef3c7';
+      case 'arima': return '#e0e7ff';
+      case 'prophet': return '#fce7f3';
+      case 'xgboost': return '#dbeafe';
+      case 'lstm': return '#e0e7ff';
+      case 'linear_regression': return '#fef3c7';
       default: return '#f3f4f6';
     }
   }};
@@ -218,6 +223,11 @@ const MethodBadge = styled.span<{ $method: string }>`
       case 'moving_average': return '#1e40af';
       case 'linear_growth': return '#065f46';
       case 'trend': return '#92400e';
+      case 'arima': return '#4338ca';
+      case 'prophet': return '#be185d';
+      case 'xgboost': return '#1e40af';
+      case 'lstm': return '#4338ca';
+      case 'linear_regression': return '#92400e';
       default: return '#6b7280';
     }
   }};
@@ -664,7 +674,10 @@ const ForecastListPage: React.FC = () => {
                     <ForecastHeader>
                       <h3>{forecast.name}</h3>
                       <MethodBadge $method={forecast.method}>
-                        {forecast.method.replace('_', ' ')}
+                        {forecast.method.replace(/_/g, ' ')}
+                        {(forecast.method === 'arima' || forecast.method === 'prophet' || 
+                          forecast.method === 'xgboost' || forecast.method === 'lstm' || 
+                          forecast.method === 'linear_regression') && ' (AI)'}
                       </MethodBadge>
                     </ForecastHeader>
                     
