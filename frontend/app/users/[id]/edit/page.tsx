@@ -353,11 +353,12 @@ export default function EditUserPage() {
       const isSubordinate = isFinanceManager && user.manager_id?.toString() === currentUser.id?.toString();
       const targetRole = (user.role || '').toLowerCase();
       const isTargetSubordinate = targetRole === 'accountant' || targetRole === 'employee';
+      const isEditingSelf = userId.toString() === currentUser.id?.toString();
 
       // Check if current user can edit this user
       if (!isAdmin && !(isFinanceManager && isSubordinate && isTargetSubordinate)) {
         // If not admin and not editing own subordinate, check if editing self
-        if (userId.toString() !== currentUser.id?.toString()) {
+        if (!isEditingSelf) {
           setError('You do not have permission to edit this user');
           toast.error('You do not have permission to edit this user');
           setSaving(false);
@@ -376,15 +377,18 @@ export default function EditUserPage() {
         username: formData.username.trim(),
         full_name: formData.full_name.trim(),
         phone: formData.phone.trim() || undefined,
-        department: formData.department.trim() || undefined,
       };
 
-      // Only admins can edit role, manager_id, and is_active
-      if (isAdmin) {
+      // Only admins can edit role, manager_id, is_active, and department
+      // But admins cannot edit these fields when editing themselves
+      if (isAdmin && !isEditingSelf) {
         updateData.role = formData.role;
         updateData.is_active = formData.is_active;
-        
         updateData.manager_id = formData.manager_id ? parseInt(formData.manager_id, 10) : undefined;
+        updateData.department = formData.department.trim() || undefined;
+      } else if (!isEditingSelf || !isAdmin) {
+        // Non-admins or admins editing others can edit department
+        updateData.department = formData.department.trim() || undefined;
       }
       // Finance managers can edit their subordinates but cannot change role, manager_id, or is_active
       // Those fields are handled by the backend which will reject changes
@@ -460,12 +464,15 @@ export default function EditUserPage() {
   const targetRole = (user.role || '').toLowerCase();
   const isTargetSubordinate = targetRole === 'accountant' || targetRole === 'employee';
   const isSubordinate = isFinanceManager && user.manager_id?.toString() === currentUser.id?.toString();
+  const isEditingSelf = userId?.toString() === currentUser.id?.toString();
   
   // Determine what can be edited
-  const canEditRole = isAdmin;
-  const canEditManager = isAdmin;
-  const canEditStatus = isAdmin;
-  const canEditUser = isAdmin || (isFinanceManager && isSubordinate && isTargetSubordinate) || (userId?.toString() === currentUser.id?.toString());
+  // Admins cannot edit Role, Department, Active User, or Manager when editing themselves
+  const canEditRole = isAdmin && !isEditingSelf;
+  const canEditManager = isAdmin && !isEditingSelf;
+  const canEditStatus = isAdmin && !isEditingSelf;
+  const canEditDepartment = !isEditingSelf || !isAdmin;
+  const canEditUser = isAdmin || (isFinanceManager && isSubordinate && isTargetSubordinate) || isEditingSelf;
 
   // Get available managers for dropdown
   const availableManagers = allUsers.filter((u: StoreUser) => {
@@ -582,7 +589,11 @@ export default function EditUserPage() {
                   )}
                 </Select>
                 {!canEditRole && (
-                  <HelperText>You don&apos;t have permission to change the role</HelperText>
+                  <HelperText>
+                    {isEditingSelf && isAdmin 
+                      ? 'You cannot change your own role' 
+                      : 'You don&apos;t have permission to change the role'}
+                  </HelperText>
                 )}
               </FormGroup>
 
@@ -593,16 +604,21 @@ export default function EditUserPage() {
                   type="text"
                   value={formData.department}
                   onChange={(e) => handleChange('department', e.target.value)}
+                  disabled={!canEditDepartment}
                 />
+                {!canEditDepartment && isEditingSelf && isAdmin && (
+                  <HelperText>You cannot change your own department</HelperText>
+                )}
               </FormGroup>
 
-              {canEditManager && (
+              {(canEditManager || isEditingSelf) && (
                 <FormGroup>
                   <Label htmlFor="manager_id">Manager</Label>
                   <Select
                     id="manager_id"
                     value={formData.manager_id}
                     onChange={(e) => handleChange('manager_id', e.target.value)}
+                    disabled={!canEditManager}
                   >
                     <option value="">None</option>
                     {availableManagers.map((manager: StoreUser) => (
@@ -611,23 +627,32 @@ export default function EditUserPage() {
                       </option>
                     ))}
                   </Select>
-                  <HelperText>Select a manager for this user</HelperText>
+                  <HelperText>
+                    {!canEditManager && isEditingSelf && isAdmin
+                      ? 'You cannot change your own manager'
+                      : 'Select a manager for this user'}
+                  </HelperText>
                 </FormGroup>
               )}
 
-              {canEditStatus && (
+              {(canEditStatus || isEditingSelf) && (
                 <FormGroup>
                   <CheckboxWrapper>
                     <Checkbox
                       id="is_active"
                       checked={formData.is_active}
                       onChange={(e) => handleChange('is_active', e.target.checked)}
+                      disabled={!canEditStatus}
                     />
-                    <Label htmlFor="is_active" style={{ margin: 0, cursor: 'pointer' }}>
+                    <Label htmlFor="is_active" style={{ margin: 0, cursor: canEditStatus ? 'pointer' : 'not-allowed' }}>
                       Active User
                     </Label>
                   </CheckboxWrapper>
-                  <HelperText>Inactive users cannot log in to the system</HelperText>
+                  <HelperText>
+                    {!canEditStatus && isEditingSelf && isAdmin
+                      ? 'You cannot change your own active status'
+                      : 'Inactive users cannot log in to the system'}
+                  </HelperText>
                 </FormGroup>
               )}
             </FormGrid>
