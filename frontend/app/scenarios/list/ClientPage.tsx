@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
 import {
-  Target, Plus, ArrowLeft, Filter, Search, Building2
+  Target, Plus, ArrowLeft, Filter, Search, Building2, Trash2, Loader2, Eye, EyeOff, Lock, XCircle
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -11,6 +11,7 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useAuth } from '@/lib/rbac/auth-context';
 
 // Type definitions for error handling
 type ErrorWithDetails = {
@@ -312,6 +313,207 @@ const Spinner = styled.div`
   }
 `;
 
+const ModalOverlay = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: ${props => props.$isOpen ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContent = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.lg};
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: ${theme.spacing.lg};
+  padding-bottom: ${theme.spacing.md};
+  border-bottom: 1px solid ${theme.colors.border};
+  
+  h3 {
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.sm};
+  }
+  
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${TEXT_COLOR_MUTED};
+    padding: ${theme.spacing.xs};
+    border-radius: ${theme.borderRadius.sm};
+    transition: all ${theme.transitions.default};
+    
+    &:hover {
+      background: ${theme.colors.backgroundSecondary};
+      color: ${TEXT_COLOR_DARK};
+    }
+    
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const WarningBox = styled.div`
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: ${theme.borderRadius.md};
+  margin-bottom: ${theme.spacing.lg};
+  
+  p {
+    margin: 0;
+    color: #dc2626;
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_DARK};
+  margin-bottom: ${theme.spacing.sm};
+`;
+
+const PasswordInputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  input {
+    width: 100%;
+    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    padding-right: 48px;
+    border: 1px solid ${theme.colors.border};
+    border-radius: ${theme.borderRadius.md};
+    background: ${theme.colors.background};
+    font-size: ${theme.typography.fontSizes.md};
+    color: ${TEXT_COLOR_DARK};
+    transition: all ${theme.transitions.default};
+    
+    &:focus {
+      outline: none;
+      border-color: ${PRIMARY_COLOR};
+      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    }
+    
+    &::placeholder {
+      color: ${TEXT_COLOR_MUTED};
+      opacity: 0.5;
+    }
+    
+    &:disabled {
+      background-color: ${theme.colors.backgroundSecondary};
+      color: ${TEXT_COLOR_MUTED};
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+  }
+  
+  button {
+    position: absolute;
+    right: ${theme.spacing.sm};
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${TEXT_COLOR_MUTED};
+    padding: ${theme.spacing.xs};
+    border-radius: ${theme.borderRadius.sm};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all ${theme.transitions.default};
+    
+    &:hover {
+      color: ${TEXT_COLOR_DARK};
+      background: ${theme.colors.backgroundSecondary};
+    }
+    
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #dc2626;
+  font-size: ${theme.typography.fontSizes.sm};
+  margin: ${theme.spacing.xs} 0 0 0;
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  margin-bottom: ${theme.spacing.md};
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: ${theme.spacing.lg};
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  align-items: center;
+`;
+
 interface Budget {
   id: number;
   name: string;
@@ -333,6 +535,7 @@ interface Scenario {
 
 const ScenarioListPage: React.FC = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [selectedBudgetId, setSelectedBudgetId] = useState<string>('');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -340,6 +543,13 @@ const ScenarioListPage: React.FC = () => {
   const [loadingScenarios, setLoadingScenarios] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [scenarioToDelete, setScenarioToDelete] = useState<Scenario | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
 
   useEffect(() => {
     loadBudgets();
@@ -403,6 +613,85 @@ const ScenarioListPage: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      // Use login endpoint to verify password
+      const identifier = user.email || '';
+      await apiClient.request({
+        method: 'POST',
+        url: '/auth/login-json',
+        data: {
+          username: identifier,
+          password: password
+        }
+      });
+      return true;
+    } catch (err: unknown) {
+      // If login fails, password is incorrect
+      return false;
+    }
+  };
+
+  const handleDeleteClick = (scenario: Scenario, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setScenarioToDelete(scenario);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+    setShowDeleteModal(true);
+    setShowDeletePassword(false);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setScenarioToDelete(null);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+    setShowDeletePassword(false);
+  };
+
+  const handleDelete = async () => {
+    if (!scenarioToDelete || !scenarioToDelete.id) return;
+
+    if (!deletePassword.trim()) {
+      setDeletePasswordError('Password is required');
+      return;
+    }
+
+    setVerifyingPassword(true);
+    setDeletePasswordError(null);
+
+    try {
+      // First verify password
+      const isValid = await verifyPassword(deletePassword.trim());
+      
+      if (!isValid) {
+        setDeletePasswordError('Incorrect password. Please try again.');
+        setVerifyingPassword(false);
+        return;
+      }
+
+      // Password is correct, proceed with deletion
+      setDeleting(true);
+      await apiClient.deleteScenario(parseInt(selectedBudgetId), scenarioToDelete.id, deletePassword.trim());
+      toast.success('Scenario deleted successfully');
+      setShowDeleteModal(false);
+      setScenarioToDelete(null);
+      setDeletePassword('');
+      setShowDeletePassword(false);
+      loadScenarios();
+    } catch (error: unknown) {
+      const err = error as ErrorWithDetails;
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to delete scenario';
+      setDeletePasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setDeleting(false);
+      setVerifyingPassword(false);
+    }
   };
 
   if (loading) {
@@ -520,9 +809,25 @@ const ScenarioListPage: React.FC = () => {
                   >
                     <ScenarioHeader>
                       <ScenarioTitle>{scenario.name}</ScenarioTitle>
-                      <ScenarioTypeBadge $type={scenario.scenario_type}>
-                        {scenario.scenario_type.replace('_', ' ')}
-                      </ScenarioTypeBadge>
+                      <ActionButtons>
+                        <ScenarioTypeBadge $type={scenario.scenario_type}>
+                          {scenario.scenario_type.replace('_', ' ')}
+                        </ScenarioTypeBadge>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={(e) => handleDeleteClick(scenario, e)}
+                          disabled={deleting}
+                          style={{ padding: '6px', minWidth: 'auto' }}
+                          title="Delete scenario"
+                        >
+                          {deleting && scenarioToDelete?.id === scenario.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                        </Button>
+                      </ActionButtons>
                     </ScenarioHeader>
                     
                     {scenario.description && (
@@ -558,6 +863,170 @@ const ScenarioListPage: React.FC = () => {
               <Target size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
               <p>Please select a budget to view scenarios.</p>
             </div>
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {showDeleteModal && scenarioToDelete && (
+            <ModalOverlay $isOpen={showDeleteModal} onClick={handleDeleteCancel}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalHeader>
+                  <ModalTitle>
+                    <Trash2 size={20} style={{ color: '#ef4444' }} />
+                    Delete Scenario
+                  </ModalTitle>
+                  <button onClick={handleDeleteCancel} title="Close" type="button">
+                    <XCircle />
+                  </button>
+                </ModalHeader>
+                
+                <WarningBox>
+                  <p>
+                    <strong>Warning:</strong> You are about to permanently delete this scenario. 
+                    This action cannot be undone. Please enter <strong>your own password</strong> to verify this action.
+                  </p>
+                </WarningBox>
+
+                <div style={{
+                  background: theme.colors.backgroundSecondary,
+                  border: '1px solid ' + theme.colors.border,
+                  borderRadius: theme.borderRadius.md,
+                  padding: theme.spacing.lg,
+                  marginBottom: theme.spacing.lg
+                }}>
+                  <h4 style={{
+                    fontSize: theme.typography.fontSizes.md,
+                    fontWeight: theme.typography.fontWeights.bold,
+                    color: TEXT_COLOR_DARK,
+                    margin: `0 0 ${theme.spacing.md} 0`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm
+                  }}>
+                    <Target size={18} />
+                    Scenario Details to be Deleted
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1 1 200px' }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Scenario Name</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
+                          {scenarioToDelete.name || 'N/A'}
+                        </span>
+                      </div>
+                      <div style={{ flex: '1 1 200px' }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Type</strong>
+                        <ScenarioTypeBadge $type={scenarioToDelete.scenario_type}>
+                          {scenarioToDelete.scenario_type.replace('_', ' ')}
+                        </ScenarioTypeBadge>
+                      </div>
+                    </div>
+                    {scenarioToDelete.description && (
+                      <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK, lineHeight: 1.6 }}>
+                          {scenarioToDelete.description}
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                      <div style={{ flex: '1 1 150px' }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Revenue</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.md, color: '#10b981', fontWeight: theme.typography.fontWeights.bold }}>
+                          {formatCurrency(scenarioToDelete.total_revenue)}
+                        </span>
+                      </div>
+                      <div style={{ flex: '1 1 150px' }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Expenses</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.md, color: '#ef4444', fontWeight: theme.typography.fontWeights.bold }}>
+                          {formatCurrency(scenarioToDelete.total_expenses)}
+                        </span>
+                      </div>
+                      <div style={{ flex: '1 1 150px' }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Profit</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.md, color: scenarioToDelete.total_profit >= 0 ? '#10b981' : '#ef4444', fontWeight: theme.typography.fontWeights.bold }}>
+                          {formatCurrency(scenarioToDelete.total_profit)}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Created Date</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                        {formatDate(scenarioToDelete.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <FormGroup>
+                  <Label htmlFor="delete-password">
+                    <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                    Enter <strong>your own password</strong> to confirm deletion of <strong>{scenarioToDelete.name || 'this scenario'}</strong>:
+                  </Label>
+                  <PasswordInputWrapper>
+                    <input
+                      id="delete-password"
+                      type={showDeletePassword ? 'text' : 'password'}
+                      value={deletePassword}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setDeletePassword(e.target.value);
+                        setDeletePasswordError(null);
+                      }}
+                      placeholder="Enter your password"
+                      autoFocus
+                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                        if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword && !deleting) {
+                          handleDelete();
+                        }
+                      }}
+                      disabled={verifyingPassword || deleting}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowDeletePassword(!showDeletePassword)}
+                      title={showDeletePassword ? 'Hide password' : 'Show password'}
+                      disabled={verifyingPassword || deleting}
+                    >
+                      {showDeletePassword ? <EyeOff /> : <Eye />}
+                    </button>
+                  </PasswordInputWrapper>
+                  {deletePasswordError && (
+                    <ErrorText>{deletePasswordError}</ErrorText>
+                  )}
+                </FormGroup>
+
+                <ModalActions>
+                  <Button
+                    variant="outline"
+                    onClick={handleDeleteCancel}
+                    disabled={deleting || verifyingPassword}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={!deletePassword.trim() || deleting || verifyingPassword}
+                  >
+                    {verifyingPassword ? (
+                      <>
+                        <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                        Verifying...
+                      </>
+                    ) : deleting ? (
+                      <>
+                        <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                        Delete Scenario
+                      </>
+                    )}
+                  </Button>
+                </ModalActions>
+              </ModalContent>
+            </ModalOverlay>
           )}
         </ContentContainer>
       </PageContainer>

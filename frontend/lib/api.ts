@@ -1281,6 +1281,10 @@ class ApiClient {
     return this.post(`/budgeting/budgets/${budgetId}/scenarios/compare`, { scenario_ids: scenarioIds });
   }
 
+  async deleteScenario(budgetId: number, scenarioId: number, password: string) {
+    return this.post(`/budgeting/budgets/${budgetId}/scenarios/${scenarioId}/delete`, { password });
+  }
+
   // Forecasting
   async getForecasts(params?: { skip?: number; limit?: number }) {
     // Always provide explicit defaults to match backend expectations
