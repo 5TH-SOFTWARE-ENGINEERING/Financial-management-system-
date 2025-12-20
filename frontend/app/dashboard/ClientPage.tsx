@@ -633,9 +633,41 @@ const AdminDashboard: React.FC = () => {
         const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'admin' || userRole === 'super_admin';
         const isAccountant = userRole === 'accountant';
         const isManager = userRole === 'manager';
+        const isEmployee = userRole === 'employee';
         
-        const overviewRes = await apiClient.getDashboardOverview();
-        const activityRes = await apiClient.getDashboardRecentActivity(8);
+        let overviewRes;
+        try {
+          overviewRes = await apiClient.getDashboardOverview();
+        } catch (err: unknown) {
+          console.error('Failed to fetch dashboard overview:', err);
+          // For employees, provide a default response structure to prevent complete failure
+          if (isEmployee) {
+            overviewRes = {
+              data: {
+                financials: {
+                  total_revenue: 0,
+                  total_expenses: 0,
+                  profit: 0,
+                  profit_margin: 0
+                },
+                personal_stats: {
+                  revenue_entries: 0,
+                  expense_entries: 0,
+                  pending_approvals: 0
+                }
+              }
+            };
+          } else {
+            throw err; // Re-throw for other roles to be caught by outer catch
+          }
+        }
+        
+        const activityRes = await apiClient.getDashboardRecentActivity(8).catch((err: unknown) => {
+          console.warn('Failed to fetch recent activity:', err);
+          // Return empty array for activity if it fails
+          return { data: [] };
+        });
+        
         const analyticsRes = await apiClient.getAdvancedKPIs({ period: 'month' }).catch(() => null); // Optional analytics
         
         // Load inventory summary for Finance Admin, Admin, Super Admin, and Managers
@@ -783,170 +815,223 @@ const AdminDashboard: React.FC = () => {
         // Fetch all pending approvals in real-time (workflows, revenue, expenses, sales)
         // Use deduplication logic to avoid counting items with workflows twice
         // IMPORTANT: For finance admins, only count approvals from themselves and their subordinates
+        // NOTE: Employees typically don't have approval permissions, so we skip this section for them
+        const hasApprovalPermissions = user?.role === 'admin' || 
+                                       user?.role === 'super_admin' || 
+                                       user?.role === 'manager' || 
+                                       user?.role === 'finance_manager' || 
+                                       user?.role === 'finance_admin' || 
+                                       user?.role === 'accountant';
+        
         let totalPendingCount = 0;
         const debugInfo: Record<string, unknown> = {};
         
         // Store pending sales count for later use
         let pendingSalesForActivity: Sale[] = [];
         
-        try {
-          // Fetch approval workflows to identify which entries have workflows
-          const workflowsRes = await apiClient.getApprovals();
-          const workflows: Workflow[] = Array.isArray(workflowsRes?.data) ? (workflowsRes.data as Workflow[]) : [];
-          
-          // Count pending workflows - filter by requester_id for finance admins and accountants
-          const pendingWorkflows = workflows.filter((w) => {
-            const statusRaw = typeof w.status === 'string' ? w.status : w.status?.value;
-            const status = (statusRaw ?? 'pending').toString().toLowerCase();
-            const isPending = status === 'pending';
-            
-            // For finance admins and accountants, only count workflows they requested or from their subordinates
-            if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
-              const requesterRaw = w.requester_id ?? w.requesterId;
-              const requesterId = typeof requesterRaw === 'string'
-                ? parseInt(requesterRaw, 10)
-                : typeof requesterRaw === 'number'
-                  ? requesterRaw
-                  : undefined;
-              return requesterId !== undefined && accessibleUserIds.includes(requesterId);
-            }
-            
-            return isPending;
-          });
-          totalPendingCount += pendingWorkflows.length;
-          debugInfo.pendingWorkflowsCount = pendingWorkflows.length;
-
-          // Collect all revenue/expense entry IDs that already have workflows
-          // This prevents duplication - if an entry has a workflow, we only count the workflow
-          const revenueIdsWithWorkflow = new Set(
-            workflows
-              .filter((w) => w.revenue_entry_id)
-              .map((w) => w.revenue_entry_id)
-          );
-          const expenseIdsWithWorkflow = new Set(
-            workflows
-              .filter((w) => w.expense_entry_id)
-              .map((w) => w.expense_entry_id)
-          );
-          debugInfo.revenueIdsWithWorkflow = revenueIdsWithWorkflow.size;
-          debugInfo.expenseIdsWithWorkflow = expenseIdsWithWorkflow.size;
-
-          // Fetch pending revenue entries - only count those WITHOUT workflows
-          // For finance admins and accountants, only count revenues created by themselves or their subordinates
-          const revenuesRes = await apiClient.getRevenues({ is_approved: false });
-          if (Array.isArray(revenuesRes?.data)) {
-            const pendingRevenues = revenuesRes.data.filter((r: Revenue) => {
-              // Only count if not approved AND doesn't have an existing workflow
-              const isPending = !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
-              
-              // For finance admins and accountants, also check if created by them or their subordinates
-              if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
-                const createdByIdRaw = r.created_by_id || r.createdBy || r.created_by;
-                if (!createdByIdRaw) return false;
-                const createdById = typeof createdByIdRaw === 'string'
-                  ? parseInt(createdByIdRaw, 10)
-                  : Number(createdByIdRaw);
-                return !isNaN(createdById) && accessibleUserIds.includes(createdById);
-              }
-              
-              return isPending;
-            });
-            totalPendingCount += pendingRevenues.length;
-            debugInfo.pendingRevenuesCount = pendingRevenues.length;
-          }
-
-          // Fetch pending expense entries - only count those WITHOUT workflows
-          // For finance admins and accountants, only count expenses created by themselves or their subordinates
-          const expensesRes = await apiClient.getExpenses({ is_approved: false });
-          if (Array.isArray(expensesRes?.data)) {
-            const pendingExpenses = expensesRes.data.filter((e: Expense) => {
-              // Only count if not approved AND doesn't have an existing workflow
-              const isPending = !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
-              
-              // For finance admins and accountants, also check if created by them or their subordinates
-              if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
-                const createdByIdRaw = e.created_by_id || e.createdBy || e.created_by;
-                if (!createdByIdRaw) return false;
-                const createdById = typeof createdByIdRaw === 'string'
-                  ? parseInt(createdByIdRaw, 10)
-                  : Number(createdByIdRaw);
-                return !isNaN(createdById) && accessibleUserIds.includes(createdById);
-              }
-              
-              return isPending;
-            });
-            totalPendingCount += pendingExpenses.length;
-            debugInfo.pendingExpensesCount = pendingExpenses.length;
-          }
-
-          // Fetch pending sales - for accountants, finance admins, managers, and admins
-          // Sales need to be approved/posted by accountants or finance admins
-          const userRoleLower = user?.role?.toLowerCase();
-          const canViewSales = userRoleLower === 'accountant' || 
-                              userRoleLower === 'finance_manager' || 
-                              userRoleLower === 'finance_admin' || 
-                              userRoleLower === 'admin' || 
-                              userRoleLower === 'super_admin' ||
-                              userRoleLower === 'manager';
-          
-          if (canViewSales) {
+        // Only fetch pending approvals if user has approval permissions
+        if (hasApprovalPermissions && !isEmployee) {
+          try {
+            // Fetch approval workflows to identify which entries have workflows
+            let workflows: Workflow[] = [];
             try {
-              const salesResponse = await apiClient.getSales({ status: 'pending', limit: 1000 });
-              const salesData: Sale[] = Array.isArray(salesResponse?.data) 
-                ? salesResponse.data 
-                : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
-                  ? ((salesResponse.data as { data?: Sale[] }).data || []) 
-                  : []);
-              
-              // Filter for pending sales (status is 'pending' or 'PENDING')
-              // For finance admins and accountants, only count sales created by themselves or their subordinates
-              const pendingSales = (salesData || []).filter((s) => {
-                const saleStatusRaw = typeof s.status === 'string' ? s.status : s.status?.value;
-                const saleStatus = (saleStatusRaw ?? 'pending').toString().toLowerCase();
-                const isPending = saleStatus === 'pending';
-                
-                // For finance admins and accountants, also check if sold by them or their subordinates
-                if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
-                  const soldByIdRaw = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
-                  const soldById = typeof soldByIdRaw === 'string' 
-                    ? parseInt(soldByIdRaw, 10) 
-                    : typeof soldByIdRaw === 'number'
-                      ? soldByIdRaw
-                      : undefined;
-                  return soldById !== undefined && accessibleUserIds.includes(soldById);
-                }
-                
-                return isPending;
-              });
-              
-              totalPendingCount += pendingSales.length;
-              debugInfo.pendingSalesCount = pendingSales.length;
-              setPendingSalesCount(pendingSales.length);
-              
-              // Store for adding to recent activity
-              pendingSalesForActivity = pendingSales;
-            } catch (salesErr: unknown) {
-              const salesStatus = typeof salesErr === 'object' && salesErr !== null && 'response' in salesErr
-                ? (salesErr as { response?: { status?: number } }).response?.status
+              const workflowsRes = await apiClient.getApprovals();
+              workflows = Array.isArray(workflowsRes?.data) ? (workflowsRes.data as Workflow[]) : [];
+            } catch (workflowsErr: unknown) {
+              const workflowsStatus = typeof workflowsErr === 'object' && workflowsErr !== null && 'response' in workflowsErr
+                ? (workflowsErr as { response?: { status?: number } }).response?.status
                 : undefined;
-              // Silently handle 403 errors (expected for users without sales access)
-              if (salesStatus !== 403) {
-                console.warn('Failed to fetch pending sales for approvals count:', salesErr);
+              // Skip if 403 (no access) or 500 (server error), but log other errors
+              if (workflowsStatus !== 403 && workflowsStatus !== 500) {
+                console.warn('Failed to fetch approval workflows:', workflowsErr);
               }
-              debugInfo.salesError = salesStatus === 403 ? 'No access' : 'Error';
+              debugInfo.workflowsError = workflowsStatus || 'Unknown error';
             }
+            
+            // Count pending workflows - filter by requester_id for finance admins and accountants
+            const pendingWorkflows = workflows.filter((w) => {
+              const statusRaw = typeof w.status === 'string' ? w.status : w.status?.value;
+              const status = (statusRaw ?? 'pending').toString().toLowerCase();
+              const isPending = status === 'pending';
+              
+              // For finance admins and accountants, only count workflows they requested or from their subordinates
+              if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
+                const requesterRaw = w.requester_id ?? w.requesterId;
+                const requesterId = typeof requesterRaw === 'string'
+                  ? parseInt(requesterRaw, 10)
+                  : typeof requesterRaw === 'number'
+                    ? requesterRaw
+                    : undefined;
+                return requesterId !== undefined && accessibleUserIds.includes(requesterId);
+              }
+              
+              return isPending;
+            });
+            totalPendingCount += pendingWorkflows.length;
+            debugInfo.pendingWorkflowsCount = pendingWorkflows.length;
+
+            // Collect all revenue/expense entry IDs that already have workflows
+            // This prevents duplication - if an entry has a workflow, we only count the workflow
+            const revenueIdsWithWorkflow = new Set(
+              workflows
+                .filter((w) => w.revenue_entry_id)
+                .map((w) => w.revenue_entry_id)
+            );
+            const expenseIdsWithWorkflow = new Set(
+              workflows
+                .filter((w) => w.expense_entry_id)
+                .map((w) => w.expense_entry_id)
+            );
+            debugInfo.revenueIdsWithWorkflow = revenueIdsWithWorkflow.size;
+            debugInfo.expenseIdsWithWorkflow = expenseIdsWithWorkflow.size;
+
+            // Fetch pending revenue entries - only count those WITHOUT workflows
+            // For finance admins and accountants, only count revenues created by themselves or their subordinates
+            try {
+              const revenuesRes = await apiClient.getRevenues({ is_approved: false });
+              if (Array.isArray(revenuesRes?.data)) {
+                const pendingRevenues = revenuesRes.data.filter((r: Revenue) => {
+                  // Only count if not approved AND doesn't have an existing workflow
+                  const isPending = !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
+                  
+                  // For finance admins and accountants, also check if created by them or their subordinates
+                  if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
+                    const createdByIdRaw = r.created_by_id || r.createdBy || r.created_by;
+                    if (!createdByIdRaw) return false;
+                    const createdById = typeof createdByIdRaw === 'string'
+                      ? parseInt(createdByIdRaw, 10)
+                      : Number(createdByIdRaw);
+                    return !isNaN(createdById) && accessibleUserIds.includes(createdById);
+                  }
+                  
+                  return isPending;
+                });
+                totalPendingCount += pendingRevenues.length;
+                debugInfo.pendingRevenuesCount = pendingRevenues.length;
+              }
+            } catch (revenuesErr: unknown) {
+              const revenuesStatus = typeof revenuesErr === 'object' && revenuesErr !== null && 'response' in revenuesErr
+                ? (revenuesErr as { response?: { status?: number } }).response?.status
+                : undefined;
+              // Skip if 403 (no access) or 500 (server error), but log other errors
+              if (revenuesStatus !== 403 && revenuesStatus !== 500) {
+                console.warn('Failed to fetch pending revenues:', revenuesErr);
+              }
+              debugInfo.revenuesError = revenuesStatus || 'Unknown error';
+            }
+
+            // Fetch pending expense entries - only count those WITHOUT workflows
+            // For finance admins and accountants, only count expenses created by themselves or their subordinates
+            try {
+              const expensesRes = await apiClient.getExpenses({ is_approved: false });
+              if (Array.isArray(expensesRes?.data)) {
+                const pendingExpenses = expensesRes.data.filter((e: Expense) => {
+                  // Only count if not approved AND doesn't have an existing workflow
+                  const isPending = !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
+                  
+                  // For finance admins and accountants, also check if created by them or their subordinates
+                  if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
+                    const createdByIdRaw = e.created_by_id || e.createdBy || e.created_by;
+                    if (!createdByIdRaw) return false;
+                    const createdById = typeof createdByIdRaw === 'string'
+                      ? parseInt(createdByIdRaw, 10)
+                      : Number(createdByIdRaw);
+                    return !isNaN(createdById) && accessibleUserIds.includes(createdById);
+                  }
+                  
+                  return isPending;
+                });
+                totalPendingCount += pendingExpenses.length;
+                debugInfo.pendingExpensesCount = pendingExpenses.length;
+              }
+            } catch (expensesErr: unknown) {
+              const expensesStatus = typeof expensesErr === 'object' && expensesErr !== null && 'response' in expensesErr
+                ? (expensesErr as { response?: { status?: number } }).response?.status
+                : undefined;
+              // Skip if 403 (no access) or 500 (server error), but log other errors
+              if (expensesStatus !== 403 && expensesStatus !== 500) {
+                console.warn('Failed to fetch pending expenses:', expensesErr);
+              }
+              debugInfo.expensesError = expensesStatus || 'Unknown error';
+            }
+
+            // Fetch pending sales - for accountants, finance admins, managers, and admins
+            // Sales need to be approved/posted by accountants or finance admins
+            const userRoleLower = user?.role?.toLowerCase();
+            const canViewSales = userRoleLower === 'accountant' || 
+                                userRoleLower === 'finance_manager' || 
+                                userRoleLower === 'finance_admin' || 
+                                userRoleLower === 'admin' || 
+                                userRoleLower === 'super_admin' ||
+                                userRoleLower === 'manager';
+            
+            if (canViewSales) {
+              try {
+                const salesResponse = await apiClient.getSales({ status: 'pending', limit: 1000 });
+                const salesData: Sale[] = Array.isArray(salesResponse?.data) 
+                  ? salesResponse.data 
+                  : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
+                    ? ((salesResponse.data as { data?: Sale[] }).data || []) 
+                    : []);
+                
+                // Filter for pending sales (status is 'pending' or 'PENDING')
+                // For finance admins and accountants, only count sales created by themselves or their subordinates
+                const pendingSales = (salesData || []).filter((s) => {
+                  const saleStatusRaw = typeof s.status === 'string' ? s.status : s.status?.value;
+                  const saleStatus = (saleStatusRaw ?? 'pending').toString().toLowerCase();
+                  const isPending = saleStatus === 'pending';
+                  
+                  // For finance admins and accountants, also check if sold by them or their subordinates
+                  if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
+                    const soldByIdRaw = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
+                    const soldById = typeof soldByIdRaw === 'string' 
+                      ? parseInt(soldByIdRaw, 10) 
+                      : typeof soldByIdRaw === 'number'
+                        ? soldByIdRaw
+                        : undefined;
+                    return soldById !== undefined && accessibleUserIds.includes(soldById);
+                  }
+                  
+                  return isPending;
+                });
+                
+                totalPendingCount += pendingSales.length;
+                debugInfo.pendingSalesCount = pendingSales.length;
+                setPendingSalesCount(pendingSales.length);
+                
+                // Store for adding to recent activity
+                pendingSalesForActivity = pendingSales;
+              } catch (salesErr: unknown) {
+                const salesStatus = typeof salesErr === 'object' && salesErr !== null && 'response' in salesErr
+                  ? (salesErr as { response?: { status?: number } }).response?.status
+                  : undefined;
+                // Silently handle 403 errors (expected for users without sales access)
+                if (salesStatus !== 403 && salesStatus !== 500) {
+                  console.warn('Failed to fetch pending sales for approvals count:', salesErr);
+                }
+                debugInfo.salesError = salesStatus === 403 ? 'No access' : salesStatus === 500 ? 'Server error' : 'Error';
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching pending approvals:', err);
+            // Fallback to overview count if direct fetching fails
+            // Check both team_stats (for accountants, finance admins, managers) and personal_stats (for employees)
+            const overviewCount = overviewData.pending_approvals ?? 
+                                 overviewData.team_stats?.pending_approvals ?? 
+                                 overviewData.personal_stats?.pending_approvals;
+            if (overviewCount !== undefined && overviewCount !== null) {
+              totalPendingCount = Number(overviewCount) || 0;
+            }
+            debugInfo.error = 'Failed to fetch approvals count';
           }
-        } catch (err) {
-          console.error('Error fetching pending approvals:', err);
-          // Fallback to overview count if direct fetching fails
-          // Check both team_stats (for accountants, finance admins, managers) and personal_stats (for employees)
+        } else {
+          // For employees and users without approval permissions, use overview count
           const overviewCount = overviewData.pending_approvals ?? 
                                overviewData.team_stats?.pending_approvals ?? 
                                overviewData.personal_stats?.pending_approvals;
           if (overviewCount !== undefined && overviewCount !== null) {
             totalPendingCount = Number(overviewCount) || 0;
           }
-          debugInfo.error = 'Failed to fetch approvals count';
         }
         
         setPendingApprovalsCount(Math.max(0, totalPendingCount));

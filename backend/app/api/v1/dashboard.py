@@ -297,9 +297,26 @@ def get_dashboard_overview(
                 logger.error(f"Error fetching user expense entries: {str(e)}")
                 user_expenses = []
             
-            # Filter by date range
-            user_revenue_period = [r for r in user_revenue if start_date <= r.date <= end_date]
-            user_expenses_period = [e for e in user_expenses if start_date <= e.date <= end_date]
+            # Filter by date range - handle None dates gracefully
+            user_revenue_period = []
+            for r in user_revenue:
+                try:
+                    if r.date and start_date <= r.date <= end_date:
+                        user_revenue_period.append(r)
+                except (TypeError, AttributeError):
+                    # Skip entries with invalid dates
+                    logger.warning(f"Skipping revenue entry {r.id} due to invalid date")
+                    continue
+            
+            user_expenses_period = []
+            for e in user_expenses:
+                try:
+                    if e.date and start_date <= e.date <= end_date:
+                        user_expenses_period.append(e)
+                except (TypeError, AttributeError):
+                    # Skip entries with invalid dates
+                    logger.warning(f"Skipping expense entry {e.id} due to invalid date")
+                    continue
             
             total_revenue = sum(float(r.amount) for r in user_revenue_period)
             total_expenses = sum(float(e.amount) for e in user_expenses_period)
