@@ -459,18 +459,24 @@ export default function AccountingDashboard() {
     
     // Initialize accessible user IDs based on role (for journal entries filtering)
     const initializeAccess = async () => {
-      console.log('Initializing access for role:', userRole, 'user ID:', user?.id);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Initializing access for role:', userRole, 'user ID:', user?.id);
+      }
       if (userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager') {
         // Finance Manager/Admin: Get subordinates (accountants and employees) for journal entries filtering
         if (user?.id) {
           try {
             const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-            console.log('Fetching subordinates for Finance Manager, user ID:', userId);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Fetching subordinates for Finance Manager, user ID:', userId);
+            }
             const subordinatesRes = await apiClient.getSubordinates(userId);
             const subordinates = subordinatesRes?.data || [];
-            console.log('Subordinates fetched:', subordinates.length, 'subordinates');
-            if (subordinates.length > 0) {
-              console.log('First subordinate sample:', subordinates[0]);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Subordinates fetched:', subordinates.length, 'subordinates');
+              if (subordinates.length > 0) {
+                console.log('First subordinate sample:', subordinates[0]);
+              }
             }
             const userIds = [
               userId,
@@ -480,12 +486,16 @@ export default function AccountingDashboard() {
                 return subId;
               })
             ];
-            console.log('Setting accessibleUserIds to:', userIds);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Setting accessibleUserIds to:', userIds);
+            }
             setAccessibleUserIds(userIds);
           } catch (err) {
             console.error('Failed to fetch subordinates:', err);
             const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-            console.log('Using only finance manager ID:', userId);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Using only finance manager ID:', userId);
+            }
             setAccessibleUserIds([userId]);
           }
         } else {
@@ -495,12 +505,16 @@ export default function AccountingDashboard() {
         // Accountant and Employee: Only their own data (for journal entries filtering)
         if (user?.id) {
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-          console.log('Setting accessibleUserIds for', userRole, 'to:', [userId]);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Setting accessibleUserIds for', userRole, 'to:', [userId]);
+          }
           setAccessibleUserIds([userId]);
         }
       } else {
         // Admin: See all (no filtering needed)
-        console.log('Admin role - no filtering needed');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Admin role - no filtering needed');
+        }
         setAccessibleUserIds(null);
       }
     };
@@ -570,15 +584,17 @@ export default function AccountingDashboard() {
         }
       }
       
-      console.log('Raw journal entries from API:', journalData.length);
-      if (journalData.length > 0) {
-        console.log('Sample journal entry:', {
-          id: journalData[0].id,
-          posted_by_id: journalData[0].posted_by_id,
-          posted_by_name: journalData[0].posted_by_name
-        });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Raw journal entries from API:', journalData.length);
+        if (journalData.length > 0) {
+          console.log('Sample journal entry:', {
+            id: journalData[0].id,
+            posted_by_id: journalData[0].posted_by_id,
+            posted_by_name: journalData[0].posted_by_name
+          });
+        }
+        console.log('Accessible User IDs for filtering:', accessibleUserIds);
       }
-      console.log('Accessible User IDs for filtering:', accessibleUserIds);
       
       // Apply role-based filtering for journal entries (backend doesn't filter journal entries)
       const userRole = user?.role?.toLowerCase() || '';
@@ -598,12 +614,14 @@ export default function AccountingDashboard() {
             }
             const postedByIdNum = typeof postedById === 'string' ? parseInt(postedById, 10) : postedById;
             const isIncluded = accessibleUserIds.includes(postedByIdNum);
-            if (!isIncluded) {
+            if (!isIncluded && process.env.NODE_ENV === 'development') {
               console.log(`Journal entry ${entry.id} filtered out: posted_by_id ${postedByIdNum} not in accessibleUserIds [${accessibleUserIds.join(', ')}]`);
             }
             return isIncluded;
           });
-          console.log(`Finance Manager: Filtered ${beforeCount} journal entries to ${journalData.length}`);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Finance Manager: Filtered ${beforeCount} journal entries to ${journalData.length}`);
+          }
         } else {
           console.warn('Finance Manager: accessibleUserIds is not set yet, showing no entries');
           journalData = []; // Don't show entries until accessibleUserIds is set
@@ -620,11 +638,15 @@ export default function AccountingDashboard() {
           const postedByIdNum = typeof postedById === 'string' ? parseInt(postedById, 10) : postedById;
           return accessibleUserIds.includes(postedByIdNum);
         });
-        console.log(`${isAccountant ? 'Accountant' : 'Employee'}: Filtered ${beforeCount} journal entries to ${journalData.length}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`${isAccountant ? 'Accountant' : 'Employee'}: Filtered ${beforeCount} journal entries to ${journalData.length}`);
+        }
       }
       // Admin sees all journal entries - no filtering needed
       
-      console.log('Final journal entries count:', journalData.length);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Final journal entries count:', journalData.length);
+      }
       
       // Sort by entry date (newest first) to show most recent entries at the top
       journalData.sort((a, b) => {

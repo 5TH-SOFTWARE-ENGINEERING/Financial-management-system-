@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ign
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime, timedelta
-from decimal import Decimal
 import logging
 
 from ...core.database import get_db
@@ -11,7 +10,7 @@ from ...crud.expense import expense as expense_crud
 from ...crud.user import user as user_crud
 from ...crud.approval import approval as approval_crud
 from ...models.user import User, UserRole
-from ...api.deps import get_current_active_user, require_min_role
+from ...api.deps import get_current_active_user
 
 logger = logging.getLogger(__name__)
 

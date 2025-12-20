@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks # type: ignore[import-untyped]
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
@@ -156,12 +156,40 @@ def read_revenue_entry(
 @router.post("/", response_model=RevenueOut)
 def create_revenue_entry(
     revenue_data: RevenueCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """Create new revenue entry"""
     try:
-        return revenue_crud.create(db, obj_in=revenue_data, created_by_id=current_user.id)
+        revenue = revenue_crud.create(db, obj_in=revenue_data, created_by_id=current_user.id)
+        
+        # Send notification (in background, doesn't block response)
+        try:
+            from ...services.notification_service import NotificationService
+            background_tasks.add_task(
+                NotificationService.notify_revenue_created,
+                db=db,
+                revenue_id=revenue.id,
+                revenue_title=revenue_data.description or f"Revenue #{revenue.id}",
+                amount=revenue_data.amount,
+                created_by_id=current_user.id,
+                requires_approval=not revenue.is_approved
+            )
+        except Exception as e:
+            logger.warning(f"Notification failed for revenue creation: {str(e)}")
+        
+        # Trigger auto-learning for revenue (in background, doesn't block response)
+        try:
+            from ...services.ml_auto_learn import record_new_data, trigger_auto_learn_background
+            record_new_data("revenue", count=1)
+            # Trigger auto-learning in background (won't slow down the API response)
+            background_tasks.add_task(trigger_auto_learn_background, "revenue")
+        except Exception as e:
+            # Don't fail the request if auto-learning fails
+            logger.warning(f"Auto-learning trigger failed for revenue: {str(e)}")
+        
+        return revenue
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -176,6 +204,7 @@ def create_revenue_entry(
 def update_revenue_entry(
     revenue_id: int,
     revenue_update: RevenueUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -183,6 +212,30 @@ def update_revenue_entry(
     entry = revenue_crud.get(db, id=revenue_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Revenue entry not found")
+    
+    # Send notification (in background, doesn't block response)
+    try:
+        from ...services.notification_service import NotificationService
+        background_tasks.add_task(
+            NotificationService.notify_revenue_updated,
+            db=db,
+            revenue_id=revenue_id,
+            revenue_title=entry.description or f"Revenue #{revenue_id}",
+            updated_by_id=current_user.id
+        )
+    except Exception as e:
+        logger.warning(f"Notification failed for revenue update: {str(e)}")
+    
+    # Trigger auto-learning for revenue on update (if data changed)
+    try:
+        from ...services.ml_auto_learn import record_new_data, trigger_auto_learn_background
+        # Count as new data point if amount or date changed
+        update_dict = revenue_update.dict(exclude_unset=True)
+        if 'amount' in update_dict or 'date' in update_dict:
+            record_new_data("revenue", count=1)
+            background_tasks.add_task(trigger_auto_learn_background, "revenue")
+    except Exception as e:
+        logger.warning(f"Auto-learning trigger failed for revenue update: {str(e)}")
     
     # Check permissions
     if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:

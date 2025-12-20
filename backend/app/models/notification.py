@@ -13,6 +13,18 @@ class NotificationType(str, enum.Enum):
     SYSTEM_ALERT = "system_alert"
     DEADLINE_REMINDER = "deadline_reminder"
     BUDGET_EXCEEDED = "budget_exceeded"
+    EXPENSE_CREATED = "expense_created"
+    EXPENSE_UPDATED = "expense_updated"
+    EXPENSE_APPROVED = "expense_approved"
+    REVENUE_CREATED = "revenue_created"
+    REVENUE_UPDATED = "revenue_updated"
+    REVENUE_APPROVED = "revenue_approved"
+    SALE_CREATED = "sale_created"
+    SALE_POSTED = "sale_posted"
+    FORECAST_CREATED = "forecast_created"
+    ML_TRAINING_COMPLETE = "ml_training_complete"
+    INVENTORY_LOW = "inventory_low"
+    INVENTORY_UPDATED = "inventory_updated"
 
 
 class NotificationPriority(str, enum.Enum):

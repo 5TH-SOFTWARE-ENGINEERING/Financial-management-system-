@@ -70,6 +70,22 @@ from ..crud.inventory import inventory as inventory_crud
 
 logger = logging.getLogger(__name__)
 
+# Import advanced training modules
+try:
+    from .ml_advanced_training import (
+        AdvancedEvaluationMetrics,
+        TimeSeriesCrossValidator,
+        HyperparameterOptimizer,
+        AdvancedDataPreprocessor,
+        ModelVersionManager,
+        TrainingMonitor,
+        create_advanced_callbacks
+    )
+    ADVANCED_TRAINING_AVAILABLE = True
+except ImportError as e:
+    ADVANCED_TRAINING_AVAILABLE = False
+    logger.warning(f"Advanced training modules not available: {e}. Using basic training.")
+
 # Model storage directory
 MODELS_DIR = Path("models")
 if not MODELS_DIR.exists():
@@ -243,22 +259,63 @@ class MLForecastingService:
             if len(df) < 10:
                 raise ValueError(f"Insufficient data: need at least 10 data points, got {len(df)}")
             
+            # Advanced preprocessing: outlier detection
+            if ADVANCED_TRAINING_AVAILABLE and len(df) > 20:
+                original_len = len(df)
+                df = AdvancedDataPreprocessor.detect_outliers(df, method="iqr")
+                logger.debug(f"Removed {original_len - len(df)} outliers from ARIMA training data")
+            
+            # Hyperparameter optimization if order not specified
+            if order is None and ADVANCED_TRAINING_AVAILABLE:
+                logger.info("Optimizing ARIMA hyperparameters...")
+                best_order, best_aic = HyperparameterOptimizer.optimize_arima_parameters(
+                    df['value'],
+                    p_range=[0, 1, 2],
+                    d_range=[0, 1, 2],
+                    q_range=[0, 1, 2],
+                    max_eval=15
+                )
+                order = best_order
+                logger.info(f"Optimized ARIMA order: {order}, AIC: {best_aic}")
+            elif order is None:
+                order = (1, 1, 1)
+            
             # Fit ARIMA model
             model = ARIMA(df['value'], order=order)
             fitted_model = model.fit()
             
-            # Calculate metrics
+            # Calculate metrics (use advanced metrics if available)
             predictions = fitted_model.fittedvalues
-            mae = mean_absolute_error(df['value'], predictions) if SKLEARN_AVAILABLE else None
-            rmse = np.sqrt(mean_squared_error(df['value'], predictions)) if SKLEARN_AVAILABLE else None
+            if ADVANCED_TRAINING_AVAILABLE:
+                all_metrics = AdvancedEvaluationMetrics.calculate_all_metrics(
+                    df['value'].values, predictions.values
+                )
+                mae = all_metrics.get('mae')
+                rmse = all_metrics.get('rmse')
+            else:
+                mae = mean_absolute_error(df['value'], predictions) if SKLEARN_AVAILABLE else None
+                rmse = np.sqrt(mean_squared_error(df['value'], predictions)) if SKLEARN_AVAILABLE else None
+                all_metrics = {'mae': mae, 'rmse': rmse}
             
             # Save model
             model_path = None
             if save_model:
                 model_path = MLForecastingService._get_model_path("expense", "arima", user_id)
                 joblib.dump(fitted_model, model_path)
+                
+                # Save metadata with advanced metrics
+                if ADVANCED_TRAINING_AVAILABLE:
+                    metadata = {
+                        "model_type": "arima",
+                        "metric": "expense",
+                        "order": order,
+                        "metrics": all_metrics,
+                        "data_points": len(df),
+                        "trained_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    ModelVersionManager.save_model_metadata(model_path, metadata)
             
-            return {
+            result = {
                 "model_type": "arima",
                 "metric": "expense",
                 "status": "trained",
@@ -270,6 +327,12 @@ class MLForecastingService:
                 "model_path": str(model_path) if model_path else None,
                 "trained_at": datetime.now(timezone.utc).isoformat()
             }
+            
+            # Add advanced metrics if available
+            if ADVANCED_TRAINING_AVAILABLE:
+                result.update({f"metric_{k}": v for k, v in all_metrics.items() if k not in ['mae', 'rmse']})
+            
+            return result
         except Exception as e:
             logger.error(f"ARIMA training failed: {str(e)}")
             raise
@@ -663,8 +726,17 @@ class MLForecastingService:
                 predictions = predictions_scaled
                 y_actual = y.reshape(-1, 1)
             
-            mae = mean_absolute_error(y_actual, predictions) if SKLEARN_AVAILABLE else None
-            rmse = np.sqrt(mean_squared_error(y_actual, predictions)) if SKLEARN_AVAILABLE else None
+            # Calculate advanced metrics (must be before metadata saving)
+            if ADVANCED_TRAINING_AVAILABLE:
+                all_metrics = AdvancedEvaluationMetrics.calculate_all_metrics(
+                    y_actual.flatten(), predictions.flatten()
+                )
+                mae = all_metrics.get('mae')
+                rmse = all_metrics.get('rmse')
+            else:
+                mae = mean_absolute_error(y_actual, predictions) if SKLEARN_AVAILABLE else None
+                rmse = np.sqrt(mean_squared_error(y_actual, predictions)) if SKLEARN_AVAILABLE else None
+                all_metrics = {'mae': mae, 'rmse': rmse}
             
             # Save model and scaler (Keras 3.x requires .keras extension)
             model_path = None
@@ -676,8 +748,28 @@ class MLForecastingService:
                 if scaler:
                     scaler_path = base_path.with_suffix('.scaler.pkl')
                     joblib.dump(scaler, scaler_path)
+                
+                # Save metadata with advanced metrics
+                if ADVANCED_TRAINING_AVAILABLE and 'all_metrics' in locals():
+                    metadata = {
+                        "model_type": "lstm",
+                        "metric": "revenue",
+                        "metrics": all_metrics,
+                        "data_points": len(df),
+                        "epochs": epochs,
+                        "final_loss": float(history.history['loss'][-1]),
+                        "final_val_loss": float(history.history.get('val_loss', [0])[-1]) if 'val_loss' in history.history else None,
+                        "training_history": {
+                            "loss": [float(x) for x in history.history['loss']],
+                            "val_loss": [float(x) for x in history.history.get('val_loss', [])],
+                            "mae": [float(x) for x in history.history.get('mae', [])],
+                            "val_mae": [float(x) for x in history.history.get('val_mae', [])]
+                        },
+                        "trained_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    ModelVersionManager.save_model_metadata(model_path, metadata)
             
-            return {
+            result = {
                 "model_type": "lstm",
                 "metric": "revenue",
                 "status": "trained",
@@ -689,6 +781,14 @@ class MLForecastingService:
                 "model_path": str(model_path) if model_path else None,
                 "trained_at": datetime.now(timezone.utc).isoformat()
             }
+            
+            # Add advanced metrics
+            if ADVANCED_TRAINING_AVAILABLE:
+                result.update({f"metric_{k}": v for k, v in all_metrics.items() if k not in ['mae', 'rmse']})
+                if 'val_loss' in history.history:
+                    result["final_val_loss"] = float(history.history['val_loss'][-1])
+            
+            return result
         except Exception as e:
             logger.error(f"LSTM revenue training failed: {str(e)}")
             raise
@@ -891,8 +991,17 @@ class MLForecastingService:
                 predictions = predictions_scaled
                 y_actual = y.reshape(-1, 1)
             
-            mae = mean_absolute_error(y_actual, predictions) if SKLEARN_AVAILABLE else None
-            rmse = np.sqrt(mean_squared_error(y_actual, predictions)) if SKLEARN_AVAILABLE else None
+            # Calculate advanced metrics (must be before metadata saving)
+            if ADVANCED_TRAINING_AVAILABLE:
+                all_metrics = AdvancedEvaluationMetrics.calculate_all_metrics(
+                    y_actual.flatten(), predictions.flatten()
+                )
+                mae = all_metrics.get('mae')
+                rmse = all_metrics.get('rmse')
+            else:
+                mae = mean_absolute_error(y_actual, predictions) if SKLEARN_AVAILABLE else None
+                rmse = np.sqrt(mean_squared_error(y_actual, predictions)) if SKLEARN_AVAILABLE else None
+                all_metrics = {'mae': mae, 'rmse': rmse}
             
             # Save model and scaler (Keras 3.x requires .keras extension)
             model_path = None
@@ -904,8 +1013,28 @@ class MLForecastingService:
                 if scaler:
                     scaler_path = base_path.with_suffix('.scaler.pkl')
                     joblib.dump(scaler, scaler_path)
+                
+                # Save metadata with advanced metrics
+                if ADVANCED_TRAINING_AVAILABLE and 'all_metrics' in locals():
+                    metadata = {
+                        "model_type": "lstm",
+                        "metric": "inventory",
+                        "metrics": all_metrics,
+                        "data_points": len(df),
+                        "epochs": epochs,
+                        "final_loss": float(history.history['loss'][-1]),
+                        "final_val_loss": float(history.history.get('val_loss', [0])[-1]) if 'val_loss' in history.history else None,
+                        "training_history": {
+                            "loss": [float(x) for x in history.history['loss']],
+                            "val_loss": [float(x) for x in history.history.get('val_loss', [])],
+                            "mae": [float(x) for x in history.history.get('mae', [])],
+                            "val_mae": [float(x) for x in history.history.get('val_mae', [])]
+                        },
+                        "trained_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    ModelVersionManager.save_model_metadata(model_path, metadata)
             
-            return {
+            result = {
                 "model_type": "lstm",
                 "metric": "inventory",
                 "status": "trained",
@@ -1395,6 +1524,322 @@ class MLForecastingService:
                 
         except Exception as e:
             logger.error(f"Custom data training failed: {str(e)}", exc_info=True)
+            raise
+    
+    @staticmethod
+    def train_and_forecast_from_custom_data(
+        data_points: List[Dict[str, Any]],  # List of {"date": str, "value": float}
+        model_type: str,
+        metric_name: str,
+        forecast_start_date: datetime,
+        forecast_end_date: datetime,
+        period: str = "monthly",
+        user_id: Optional[int] = None,
+        save_model: bool = False,
+        arima_order: Optional[Tuple[int, int, int]] = None,
+        sarima_order: Optional[Tuple[int, int, int]] = None,
+        sarima_seasonal_order: Optional[Tuple[int, int, int, int]] = None,
+        epochs: int = 50,
+        batch_size: int = 32
+    ) -> Dict[str, Any]:
+        """
+        Train a model from user-provided data and immediately generate a forecast
+        
+        This is a convenience method that trains a model and generates a forecast in one call.
+        Perfect for users who want to input data and get a forecast immediately.
+        
+        Args:
+            data_points: List of dictionaries with "date" (ISO format string) and "value" (float)
+            model_type: One of "arima", "sarima", "prophet", "xgboost", "lstm", "linear_regression"
+            metric_name: User-defined name for the metric
+            forecast_start_date: Start date for the forecast
+            forecast_end_date: End date for the forecast
+            period: Aggregation period ("daily", "weekly", "monthly")
+            user_id: Optional user ID for personal models
+            save_model: Whether to save the trained model for future use
+            arima_order: Optional ARIMA order tuple (p, d, q)
+            sarima_order: Optional SARIMA order tuple (p, d, q)
+            sarima_seasonal_order: Optional SARIMA seasonal order tuple (P, D, Q, s)
+            epochs: Number of epochs for LSTM
+            batch_size: Batch size for LSTM
+        
+        Returns:
+            Dictionary with training results and forecast data
+        """
+        try:
+            # First, prepare the data DataFrame (reuse logic from train_from_custom_data)
+            dates = []
+            values = []
+            
+            for point in data_points:
+                date_str = point.get("date") or point.get("Date") or point.get("ds")
+                value = point.get("value") or point.get("Value") or point.get("y")
+                
+                if not date_str or value is None:
+                    continue
+                
+                # Parse date
+                try:
+                    date = pd.to_datetime(date_str, utc=True)
+                except:
+                    try:
+                        date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                        if date.tzinfo is None:
+                            date = date.replace(tzinfo=timezone.utc)
+                    except:
+                        logger.warning(f"Could not parse date: {date_str}")
+                        continue
+                
+                dates.append(date)
+                values.append(float(value))
+            
+            if len(dates) < 3:
+                raise ValueError(f"Insufficient data: need at least 3 data points, got {len(dates)}")
+            
+            # Create DataFrame
+            df = pd.DataFrame({
+                'date': pd.to_datetime(dates, utc=True),
+                'value': values
+            }).sort_values('date').reset_index(drop=True)
+            
+            # Aggregate by period if needed
+            if period == "daily":
+                df['date_only'] = df['date'].dt.date
+                df = df.groupby('date_only')['value'].sum().reset_index()
+                df['date'] = pd.to_datetime(df['date_only'], utc=True)
+                df = df.drop('date_only', axis=1)
+            elif period == "weekly":
+                df['week'] = df['date'].dt.to_period('W')
+                df = df.groupby('week')['value'].sum().reset_index()
+                df['date'] = pd.to_datetime(df['week'].astype(str), utc=True)
+                df = df.drop('week', axis=1)
+            elif period == "monthly":
+                df['month'] = df['date'].dt.to_period('M')
+                df = df.groupby('month')['value'].sum().reset_index()
+                df['date'] = pd.to_datetime(df['month'].astype(str), utc=True)
+                df = df.drop('month', axis=1)
+            
+            df = df.sort_values('date').reset_index(drop=True)
+            
+            # Calculate forecast periods
+            if period == "monthly":
+                periods = (forecast_end_date.year - forecast_start_date.year) * 12 + \
+                         (forecast_end_date.month - forecast_start_date.month) + 1
+            elif period == "weekly":
+                periods = ((forecast_end_date - forecast_start_date).days // 7) + 1
+            else:  # daily
+                periods = (forecast_end_date - forecast_start_date).days + 1
+            
+            # Train model and generate forecast based on model type
+            forecast_data = []
+            model_path = None
+            training_result = None
+            
+            if model_type == "arima":
+                # Train ARIMA
+                training_result = MLForecastingService._train_arima_from_df(
+                    df, metric_name, user_id if save_model else None, arima_order or (1, 1, 1)
+                )
+                if save_model:
+                    model_path = Path(training_result['model_path'])
+                else:
+                    # Load model from temp location or keep in memory
+                    model_path = Path(training_result['model_path'])
+                
+                # Generate forecast
+                model = joblib.load(model_path)
+                forecast_result = model.forecast(steps=periods)
+                
+                current_date = forecast_start_date
+                for i, value in enumerate(forecast_result):
+                    if current_date > forecast_end_date:
+                        break
+                    forecast_data.append({
+                        "period": current_date.strftime("%Y-%m") if period == "monthly" else current_date.strftime("%Y-%m-%d"),
+                        "date": current_date.isoformat(),
+                        "forecasted_value": float(value),
+                        "method": "arima"
+                    })
+                    # Move to next period
+                    if period == "monthly":
+                        if current_date.month == 12:
+                            current_date = current_date.replace(year=current_date.year + 1, month=1)
+                        else:
+                            current_date = current_date.replace(month=current_date.month + 1)
+                    elif period == "weekly":
+                        current_date = current_date + timedelta(days=7)
+                    else:
+                        current_date = current_date + timedelta(days=1)
+                
+                # Clean up temp model if not saving
+                if not save_model and model_path.exists():
+                    try:
+                        model_path.unlink()
+                    except:
+                        pass
+                
+            elif model_type == "linear_regression":
+                # Train Linear Regression
+                training_result = MLForecastingService._train_linear_regression_from_df(
+                    df, metric_name, user_id if save_model else None
+                )
+                if save_model:
+                    model_path = Path(training_result['model_path'])
+                else:
+                    model_path = Path(training_result['model_path'])
+                
+                # Generate forecast
+                model = joblib.load(model_path)
+                
+                # Create time index for forecast
+                last_time_index = len(df) - 1
+                current_date = forecast_start_date
+                
+                for i in range(periods):
+                    if current_date > forecast_end_date:
+                        break
+                    time_index = last_time_index + i + 1
+                    prediction = model.predict([[time_index]])[0]
+                    
+                    forecast_data.append({
+                        "period": current_date.strftime("%Y-%m") if period == "monthly" else current_date.strftime("%Y-%m-%d"),
+                        "date": current_date.isoformat(),
+                        "forecasted_value": float(prediction),
+                        "method": "linear_regression"
+                    })
+                    
+                    # Move to next period
+                    if period == "monthly":
+                        if current_date.month == 12:
+                            current_date = current_date.replace(year=current_date.year + 1, month=1)
+                        else:
+                            current_date = current_date.replace(month=current_date.month + 1)
+                    elif period == "weekly":
+                        current_date = current_date + timedelta(days=7)
+                    else:
+                        current_date = current_date + timedelta(days=1)
+                
+                # Clean up temp model if not saving
+                if not save_model and model_path.exists():
+                    try:
+                        model_path.unlink()
+                    except:
+                        pass
+            
+            elif model_type == "prophet":
+                # Train Prophet
+                training_result = MLForecastingService._train_prophet_from_df(
+                    df, metric_name, user_id if save_model else None
+                )
+                if save_model:
+                    model_path = Path(training_result['model_path'])
+                else:
+                    model_path = Path(training_result['model_path'])
+                
+                # Generate forecast
+                model = joblib.load(model_path)
+                future = model.make_future_dataframe(periods=periods)
+                forecast_result = model.predict(future)
+                
+                # Filter to forecast period
+                forecast_future = forecast_result[
+                    (forecast_result['ds'] >= forecast_start_date) & 
+                    (forecast_result['ds'] <= forecast_end_date)
+                ]
+                
+                for _, row in forecast_future.iterrows():
+                    forecast_data.append({
+                        "period": row['ds'].strftime("%Y-%m") if period == "monthly" else row['ds'].strftime("%Y-%m-%d"),
+                        "date": row['ds'].isoformat(),
+                        "forecasted_value": float(row['yhat']),
+                        "method": "prophet",
+                        "yhat_lower": float(row['yhat_lower']),
+                        "yhat_upper": float(row['yhat_upper'])
+                    })
+                
+                # Clean up temp model if not saving
+                if not save_model and model_path.exists():
+                    try:
+                        model_path.unlink()
+                    except:
+                        pass
+            
+            elif model_type == "xgboost":
+                # Train XGBoost
+                training_result = MLForecastingService._train_xgboost_from_df(
+                    df, metric_name, user_id if save_model else None
+                )
+                if save_model:
+                    model_path = Path(training_result['model_path'])
+                else:
+                    model_path = Path(training_result['model_path'])
+                
+                # Generate forecast using last values from training data
+                model = joblib.load(model_path)
+                window_size = 3
+                last_values = df['value'].iloc[-window_size:].tolist()
+                
+                current_date = forecast_start_date
+                for i in range(periods):
+                    if current_date > forecast_end_date:
+                        break
+                    
+                    # Create features
+                    features = last_values[-window_size:].copy()
+                    features.append(np.mean(features))
+                    features.append(np.std(features) if len(features) > 1 else 0.0)
+                    features.append(current_date.month)
+                    features.append(current_date.year)
+                    
+                    prediction = model.predict([features])[0]
+                    
+                    forecast_data.append({
+                        "period": current_date.strftime("%Y-%m") if period == "monthly" else current_date.strftime("%Y-%m-%d"),
+                        "date": current_date.isoformat(),
+                        "forecasted_value": float(prediction),
+                        "method": "xgboost"
+                    })
+                    
+                    # Update last_values
+                    last_values.append(float(prediction))
+                    if len(last_values) > window_size:
+                        last_values.pop(0)
+                    
+                    # Move to next period
+                    if period == "monthly":
+                        if current_date.month == 12:
+                            current_date = current_date.replace(year=current_date.year + 1, month=1)
+                        else:
+                            current_date = current_date.replace(month=current_date.month + 1)
+                    elif period == "weekly":
+                        current_date = current_date + timedelta(days=7)
+                    else:
+                        current_date = current_date + timedelta(days=1)
+                
+                # Clean up temp model if not saving
+                if not save_model and model_path.exists():
+                    try:
+                        model_path.unlink()
+                    except:
+                        pass
+            
+            else:
+                raise ValueError(f"Forecast generation not yet implemented for {model_type} in train-and-forecast mode. Use train first, then generate forecast separately.")
+            
+            return {
+                "training_result": training_result,
+                "forecast_data": forecast_data,
+                "metric_name": metric_name,
+                "model_type": model_type,
+                "forecast_start_date": forecast_start_date.isoformat(),
+                "forecast_end_date": forecast_end_date.isoformat(),
+                "period": period,
+                "model_saved": save_model,
+                "model_path": str(model_path) if save_model and model_path else None
+            }
+            
+        except Exception as e:
+            logger.error(f"Train and forecast from custom data failed: {str(e)}", exc_info=True)
             raise
     
     @staticmethod

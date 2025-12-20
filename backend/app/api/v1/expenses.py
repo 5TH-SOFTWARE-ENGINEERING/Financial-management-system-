@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks # type: ignore[import-untyped]
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
@@ -128,12 +128,40 @@ def read_expense_entry(
 @router.post("/", response_model=ExpenseOut)
 def create_expense_entry(
     expense_data: ExpenseCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """Create new expense entry"""
     try:
-        return expense_crud.create(db, obj_in=expense_data, created_by_id=current_user.id)
+        expense = expense_crud.create(db, obj_in=expense_data, created_by_id=current_user.id)
+        
+        # Send notification (in background, doesn't block response)
+        try:
+            from ...services.notification_service import NotificationService
+            background_tasks.add_task(
+                NotificationService.notify_expense_created,
+                db=db,
+                expense_id=expense.id,
+                expense_title=expense_data.description or f"Expense #{expense.id}",
+                amount=expense_data.amount,
+                created_by_id=current_user.id,
+                requires_approval=not expense.is_approved
+            )
+        except Exception as e:
+            logger.warning(f"Notification failed for expense creation: {str(e)}")
+        
+        # Trigger auto-learning for expenses (in background, doesn't block response)
+        try:
+            from ...services.ml_auto_learn import record_new_data, trigger_auto_learn_background
+            record_new_data("expense", count=1)
+            # Trigger auto-learning in background (won't slow down the API response)
+            background_tasks.add_task(trigger_auto_learn_background, "expense")
+        except Exception as e:
+            # Don't fail the request if auto-learning fails
+            logger.warning(f"Auto-learning trigger failed for expense: {str(e)}")
+        
+        return expense
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -148,12 +176,37 @@ def create_expense_entry(
 def update_expense_entry(
     expense_id: int,
     expense_update: ExpenseUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """Update expense entry"""
     try:
         entry = expense_crud.get(db, id=expense_id)
+        
+        # Send notification (in background, doesn't block response)
+        try:
+            from ...services.notification_service import NotificationService
+            background_tasks.add_task(
+                NotificationService.notify_expense_updated,
+                db=db,
+                expense_id=expense_id,
+                expense_title=entry.description or f"Expense #{expense_id}",
+                updated_by_id=current_user.id
+            )
+        except Exception as e:
+            logger.warning(f"Notification failed for expense update: {str(e)}")
+        
+        # Trigger auto-learning for expenses on update (if data changed)
+        try:
+            from ...services.ml_auto_learn import record_new_data, trigger_auto_learn_background
+            # Count as new data point if amount or date changed
+            update_dict = expense_update.dict(exclude_unset=True)
+            if 'amount' in update_dict or 'date' in update_dict:
+                record_new_data("expense", count=1)
+                background_tasks.add_task(trigger_auto_learn_background, "expense")
+        except Exception as e:
+            logger.warning(f"Auto-learning trigger failed for expense update: {str(e)}")
         if entry is None:
             raise HTTPException(status_code=404, detail="Expense entry not found")
         

@@ -7,7 +7,7 @@ Provides endpoints for budget management, scenario planning, forecasting, and va
 from fastapi import APIRouter, Depends, HTTPException, Query, status  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import logging
 from pydantic import BaseModel  # type: ignore
@@ -26,7 +26,7 @@ from ...schemas.budget import (
     BudgetScenarioCreate, BudgetScenarioUpdate, BudgetScenarioOut,
     ForecastCreate, ForecastUpdate, ForecastOut,
     BudgetVarianceOut, ScenarioComparisonRequest, BudgetValidationResult,
-    CustomTrainingRequest
+    CustomTrainingRequest, CustomForecastRequest
 )
 from ...services.budgeting import BudgetingService
 from ...services.forecasting import ForecastingService
@@ -1018,6 +1018,19 @@ def train_inventory_lstm(
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
 
 
+@router.get("/ml/auto-learn/status")
+def get_auto_learn_status(
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get auto-learning status and statistics"""
+    try:
+        from ...services.ml_auto_learn import get_auto_learn_status
+        return get_auto_learn_status()
+    except Exception as e:
+        logger.error(f"Failed to get auto-learn status: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get auto-learn status: {str(e)}")
+
+
 @router.post("/ml/train/custom")
 def train_from_custom_data(
     training_request: CustomTrainingRequest,
@@ -1103,6 +1116,124 @@ def train_from_custom_data(
         if 'stan' in error_msg.lower() or 'cmdstan' in error_msg.lower():
             error_msg = "Prophet stan_backend error. This is a known issue on Windows/Python 3.12. Try using alternative models (ARIMA, XGBoost, LSTM) instead."
         raise HTTPException(status_code=500, detail=f"Training failed: {error_msg}")
+
+
+@router.post("/ml/forecast/custom")
+def train_and_forecast_from_custom_data(
+    forecast_request: CustomForecastRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Train a model from user-provided data and generate a forecast immediately
+    
+    This endpoint allows users to input any time series data, train a model on it,
+    and get a forecast in a single request. Perfect for quick forecasting from custom data.
+    
+    The model can optionally be saved for future use.
+    """
+    # Check permissions - allow managers, finance admins, and admins
+    if current_user.role not in [
+        UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.MANAGER
+    ]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only managers, finance admins, and admins can create custom forecasts"
+        )
+    
+    try:
+        # Parse dates
+        try:
+            forecast_start = datetime.fromisoformat(forecast_request.forecast_start_date.replace('Z', '+00:00'))
+            if forecast_start.tzinfo is None:
+                forecast_start = forecast_start.replace(tzinfo=timezone.utc)
+            forecast_end = datetime.fromisoformat(forecast_request.forecast_end_date.replace('Z', '+00:00'))
+            if forecast_end.tzinfo is None:
+                forecast_end = forecast_end.replace(tzinfo=timezone.utc)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)")
+        
+        if forecast_end <= forecast_start:
+            raise HTTPException(status_code=400, detail="Forecast end date must be after start date")
+        
+        # Convert data points to the format expected by the service
+        data_points = [{"date": point.date, "value": point.value} for point in forecast_request.training_data]
+        
+        # Parse optional parameters
+        arima_order = None
+        if forecast_request.arima_order:
+            try:
+                parts = [int(x.strip()) for x in forecast_request.arima_order.split(',')]
+                if len(parts) == 3:
+                    arima_order = tuple(parts)
+            except:
+                raise HTTPException(status_code=400, detail="Invalid ARIMA order format. Use 'p,d,q' (e.g., '1,1,1')")
+        
+        sarima_order = None
+        if forecast_request.sarima_order:
+            try:
+                parts = [int(x.strip()) for x in forecast_request.sarima_order.split(',')]
+                if len(parts) == 3:
+                    sarima_order = tuple(parts)
+            except:
+                raise HTTPException(status_code=400, detail="Invalid SARIMA order format. Use 'p,d,q' (e.g., '1,1,1')")
+        
+        sarima_seasonal_order = None
+        if forecast_request.sarima_seasonal_order:
+            try:
+                parts = [int(x.strip()) for x in forecast_request.sarima_seasonal_order.split(',')]
+                if len(parts) == 4:
+                    sarima_seasonal_order = tuple(parts)
+            except:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid SARIMA seasonal order format. Use 'P,D,Q,s' (e.g., '1,1,1,12')"
+                )
+        
+        # Train and forecast
+        result = MLForecastingService.train_and_forecast_from_custom_data(
+            data_points=data_points,
+            model_type=forecast_request.model_type,
+            metric_name=forecast_request.metric_name,
+            forecast_start_date=forecast_start,
+            forecast_end_date=forecast_end,
+            period=forecast_request.period,
+            user_id=current_user.id if forecast_request.save_model else None,
+            save_model=forecast_request.save_model,
+            arima_order=arima_order,
+            sarima_order=sarima_order,
+            sarima_seasonal_order=sarima_seasonal_order,
+            epochs=forecast_request.epochs or 50,
+            batch_size=forecast_request.batch_size or 32
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Forecast generated successfully from {len(data_points)} data points",
+            "training_metrics": result.get("training_result", {}),
+            "forecast": result.get("forecast_data", []),
+            "forecast_summary": {
+                "total_periods": len(result.get("forecast_data", [])),
+                "total_forecasted_value": sum(point.get("forecasted_value", 0) for point in result.get("forecast_data", [])),
+                "average_per_period": sum(point.get("forecasted_value", 0) for point in result.get("forecast_data", [])) / len(result.get("forecast_data", [])) if result.get("forecast_data") else 0
+            },
+            "model_saved": forecast_request.save_model,
+            "model_path": result.get("model_path")
+        }
+        
+    except ImportError as e:
+        logger.error(f"Custom forecast failed (import error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as e:
+        logger.error(f"Custom forecast failed (validation error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Custom forecast failed: {str(e)}", exc_info=True)
+        error_msg = str(e)
+        # Provide helpful message for common Prophet issues
+        if 'stan' in error_msg.lower() or 'cmdstan' in error_msg.lower():
+            error_msg = "Prophet stan_backend error. This is a known issue on Windows/Python 3.12. Try using alternative models (ARIMA, XGBoost, LSTM, Linear Regression) instead."
+        raise HTTPException(status_code=500, detail=f"Forecast generation failed: {error_msg}")
 
 
 @router.delete("/forecasts/{forecast_id}", status_code=status.HTTP_204_NO_CONTENT)

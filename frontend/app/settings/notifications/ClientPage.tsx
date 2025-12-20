@@ -331,7 +331,9 @@ export default function NotificationsSettingsPage() {
           return;
         }
       } catch (apiError) {
-        console.log('Failed to load from backend, trying localStorage:', apiError);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Failed to load from backend, trying localStorage:', apiError);
+        }
       }
       
       // Fallback to localStorage if backend fails

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
-from typing import List
+from typing import List, Optional
 import logging
 
 from ...core.database import get_db
@@ -341,4 +341,153 @@ def update_notification_preferences(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update notification preferences: {str(e)}"
+        )
+
+
+@router.post("/create")
+def create_notification(
+    user_ids: List[int] = Query(..., description="List of user IDs to notify"),
+    title: str = Query(..., description="Notification title"),
+    message: str = Query(..., description="Notification message"),
+    notification_type: str = Query("system_alert", description="Notification type"),
+    priority: str = Query("medium", description="Notification priority: low, medium, high, urgent"),
+    action_url: Optional[str] = Query(None, description="Optional action URL"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Create custom notification for any event - generic endpoint for pushing notifications for anything"""
+    try:
+        from ...models.notification import NotificationType, NotificationPriority
+        from ...services.notification_service import NotificationService
+        
+        # Validate notification type
+        try:
+            notif_type = NotificationType(notification_type)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid notification type. Allowed: {[e.value for e in NotificationType]}"
+            )
+        
+        # Validate priority
+        try:
+            notif_priority = NotificationPriority(priority.lower())
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid priority. Allowed: low, medium, high, urgent"
+            )
+        
+        # Verify users exist
+        from ...crud.user import user as user_crud
+        valid_user_ids = []
+        for user_id in user_ids:
+            user = user_crud.get(db, id=user_id)
+            if user and user.is_active:
+                valid_user_ids.append(user_id)
+        
+        if not valid_user_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="No valid active users found for the provided user IDs"
+            )
+        
+        # Create notifications
+        notifications = NotificationService.notify_custom(
+            db=db,
+            user_ids=valid_user_ids,
+            title=title,
+            message=message,
+            notification_type=notif_type,
+            priority=notif_priority,
+            action_url=action_url
+        )
+        
+        return {
+            "message": f"Notifications created successfully",
+            "notifications_sent": len(notifications),
+            "recipients": valid_user_ids
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in create_notification: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create notification: {str(e)}"
+        )
+
+
+@router.post("/create-by-role")
+def create_notification_by_role(
+    roles: List[str] = Query(..., description="List of user roles to notify"),
+    title: str = Query(..., description="Notification title"),
+    message: str = Query(..., description="Notification message"),
+    notification_type: str = Query("system_alert", description="Notification type"),
+    priority: str = Query("medium", description="Notification priority: low, medium, high, urgent"),
+    action_url: Optional[str] = Query(None, description="Optional action URL"),
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """Create notifications for all users with specific roles"""
+    try:
+        from ...models.notification import NotificationType, NotificationPriority
+        from ...models.user import UserRole
+        from ...services.notification_service import NotificationService
+        
+        # Validate notification type
+        try:
+            notif_type = NotificationType(notification_type)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid notification type. Allowed: {[e.value for e in NotificationType]}"
+            )
+        
+        # Validate priority
+        try:
+            notif_priority = NotificationPriority(priority.lower())
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid priority. Allowed: low, medium, high, urgent"
+            )
+        
+        # Convert role strings to UserRole enum
+        user_roles = []
+        for role_str in roles:
+            try:
+                role = UserRole(role_str.lower())
+                user_roles.append(role)
+            except ValueError:
+                logger.warning(f"Invalid role: {role_str}, skipping")
+        
+        if not user_roles:
+            raise HTTPException(
+                status_code=400,
+                detail="No valid roles provided"
+            )
+        
+        # Create notifications
+        NotificationService.notify_by_role(
+            db=db,
+            roles=user_roles,
+            title=title,
+            message=message,
+            notification_type=notif_type,
+            priority=notif_priority,
+            action_url=action_url
+        )
+        
+        return {
+            "message": f"Notifications sent to users with roles: {[r.value for r in user_roles]}",
+            "target_roles": [r.value for r in user_roles]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in create_notification_by_role: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create notifications: {str(e)}"
         )
