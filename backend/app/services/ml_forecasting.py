@@ -302,14 +302,27 @@ class MLForecastingService:
                 'y': df['value']
             })
             
-            # Fit Prophet model
-            model = Prophet(
-                yearly_seasonality=True,
-                weekly_seasonality=True,
-                daily_seasonality=False,
-                seasonality_mode='multiplicative'
-            )
-            model.fit(prophet_df)
+            # Fit Prophet model with error handling for stan_backend issues
+            # Note: Prophet has known issues on Windows/Python 3.12 with stan_backend
+            try:
+                model = Prophet(
+                    yearly_seasonality=True,
+                    weekly_seasonality=True,
+                    daily_seasonality=False,
+                    seasonality_mode='multiplicative'
+                )
+                model.fit(prophet_df)
+            except (AttributeError, ImportError, RuntimeError) as e:
+                error_str = str(e).lower()
+                if 'stan_backend' in error_str or 'cmdstanpy' in error_str or 'cmdstan' in error_str:
+                    # Prophet stan_backend issue - this is a known Windows/Python 3.12 issue
+                    raise ImportError(
+                        "Prophet stan_backend not available. This is a known issue on Windows/Python 3.12. "
+                        "Prophet requires cmdstanpy which may not be properly installed. "
+                        "Try: pip install cmdstanpy or use alternative models (ARIMA, XGBoost, LSTM)."
+                    )
+                else:
+                    raise
             
             # Generate in-sample predictions for metrics
             future = model.make_future_dataframe(periods=0)
@@ -430,14 +443,27 @@ class MLForecastingService:
                 'y': df['value']
             })
             
-            # Fit Prophet model
-            model = Prophet(
-                yearly_seasonality=True,
-                weekly_seasonality=True,
-                daily_seasonality=False,
-                seasonality_mode='multiplicative'
-            )
-            model.fit(prophet_df)
+            # Fit Prophet model with error handling for stan_backend issues
+            # Note: Prophet has known issues on Windows/Python 3.12 with stan_backend
+            try:
+                model = Prophet(
+                    yearly_seasonality=True,
+                    weekly_seasonality=True,
+                    daily_seasonality=False,
+                    seasonality_mode='multiplicative'
+                )
+                model.fit(prophet_df)
+            except (AttributeError, ImportError, RuntimeError) as e:
+                error_str = str(e).lower()
+                if 'stan_backend' in error_str or 'cmdstanpy' in error_str or 'cmdstan' in error_str:
+                    # Prophet stan_backend issue - this is a known Windows/Python 3.12 issue
+                    raise ImportError(
+                        "Prophet stan_backend not available. This is a known issue on Windows/Python 3.12. "
+                        "Prophet requires cmdstanpy which may not be properly installed. "
+                        "Try: pip install cmdstanpy or use alternative models (ARIMA, XGBoost, LSTM)."
+                    )
+                else:
+                    raise
             
             # Generate in-sample predictions for metrics
             future = model.make_future_dataframe(periods=0)

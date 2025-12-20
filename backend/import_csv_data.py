@@ -245,18 +245,32 @@ def import_inventory(csv_path: Path, db, admin_user):
                 
                 if buying_price <= 0 or selling_price <= 0:
                     errors += 1
-                    print(f"  [ERROR] Row {count + 1}: Invalid prices")
+                    print(f"  [ERROR] Row {row_num}: Invalid prices")
                     continue
+                
+                # Check if SKU already exists (skip if duplicate)
+                sku_val = str(row.get('sku') or '').strip() if row.get('sku') else None
+                if sku_val:
+                    from app.models.inventory import InventoryItem
+                    existing = db.query(InventoryItem).filter(InventoryItem.sku == sku_val).first()
+                    if existing:
+                        # Skip silently - item already exists
+                        continue
+                
+                # Get optional fields
+                item_name = str(row.get('item_name') or 'Untitled').strip() if row.get('item_name') else 'Untitled'
+                cat_val = str(row.get('category') or '').strip() if row.get('category') else ''
+                desc_val = str(row.get('description') or '').strip() if row.get('description') else ''
                 
                 # Create inventory item
                 inventory_data = InventoryItemCreate(
-                    item_name=(row.get('item_name') or 'Untitled').strip() if row.get('item_name') else 'Untitled',
+                    item_name=item_name,
                     buying_price=buying_price,
                     selling_price=selling_price,
                     quantity=quantity,
-                    category=(row.get('category') or '').strip() or None if row.get('category') else None,
-                    sku=(row.get('sku') or '').strip() or None if row.get('sku') else None,
-                    description=(row.get('description') or '').strip() or None if row.get('description') else None,
+                    category=cat_val if cat_val else None,
+                    sku=sku_val,
+                    description=desc_val if desc_val else None,
                     is_active=True
                 )
                 
