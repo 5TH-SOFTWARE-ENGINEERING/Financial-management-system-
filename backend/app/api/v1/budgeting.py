@@ -25,7 +25,8 @@ from ...schemas.budget import (
     BudgetItemCreate, BudgetItemUpdate, BudgetItemOut,
     BudgetScenarioCreate, BudgetScenarioUpdate, BudgetScenarioOut,
     ForecastCreate, ForecastUpdate, ForecastOut,
-    BudgetVarianceOut, ScenarioComparisonRequest, BudgetValidationResult
+    BudgetVarianceOut, ScenarioComparisonRequest, BudgetValidationResult,
+    CustomTrainingRequest
 )
 from ...services.budgeting import BudgetingService
 from ...services.forecasting import ForecastingService
@@ -1015,6 +1016,93 @@ def train_inventory_lstm(
     except Exception as e:
         logger.error(f"LSTM inventory training failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/custom")
+def train_from_custom_data(
+    training_request: CustomTrainingRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Train an AI/ML model from user-provided custom data
+    
+    Users can provide any time series data (dates and values) to train a model.
+    The data can be for any metric they want to forecast (sales, custom metrics, etc.).
+    """
+    # Check permissions - allow managers, finance admins, and admins
+    if current_user.role not in [
+        UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN, UserRole.MANAGER
+    ]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only managers, finance admins, and admins can train custom models"
+        )
+    
+    try:
+        # Convert data points to the format expected by the service
+        data_points = [{"date": point.date, "value": point.value} for point in training_request.data]
+        
+        # Parse optional parameters
+        arima_order = None
+        if training_request.arima_order:
+            try:
+                parts = [int(x.strip()) for x in training_request.arima_order.split(',')]
+                if len(parts) == 3:
+                    arima_order = tuple(parts)
+            except:
+                raise HTTPException(status_code=400, detail="Invalid ARIMA order format. Use 'p,d,q' (e.g., '1,1,1')")
+        
+        sarima_order = None
+        if training_request.sarima_order:
+            try:
+                parts = [int(x.strip()) for x in training_request.sarima_order.split(',')]
+                if len(parts) == 3:
+                    sarima_order = tuple(parts)
+            except:
+                raise HTTPException(status_code=400, detail="Invalid SARIMA order format. Use 'p,d,q' (e.g., '1,1,1')")
+        
+        sarima_seasonal_order = None
+        if training_request.sarima_seasonal_order:
+            try:
+                parts = [int(x.strip()) for x in training_request.sarima_seasonal_order.split(',')]
+                if len(parts) == 4:
+                    sarima_seasonal_order = tuple(parts)
+            except:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid SARIMA seasonal order format. Use 'P,D,Q,s' (e.g., '1,1,1,12')"
+                )
+        
+        # Train the model
+        result = MLForecastingService.train_from_custom_data(
+            data_points=data_points,
+            model_type=training_request.model_type,
+            metric_name=training_request.metric_name,
+            period=training_request.period,
+            user_id=current_user.id,
+            arima_order=arima_order,
+            sarima_order=sarima_order,
+            sarima_seasonal_order=sarima_seasonal_order,
+            epochs=training_request.epochs or 50,
+            batch_size=training_request.batch_size or 32
+        )
+        
+        return result
+        
+    except ImportError as e:
+        logger.error(f"Custom training failed (import error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as e:
+        logger.error(f"Custom training failed (validation error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Custom training failed: {str(e)}", exc_info=True)
+        error_msg = str(e)
+        # Provide helpful message for common Prophet issues
+        if 'stan' in error_msg.lower() or 'cmdstan' in error_msg.lower():
+            error_msg = "Prophet stan_backend error. This is a known issue on Windows/Python 3.12. Try using alternative models (ARIMA, XGBoost, LSTM) instead."
+        raise HTTPException(status_code=500, detail=f"Training failed: {error_msg}")
 
 
 @router.delete("/forecasts/{forecast_id}", status_code=status.HTTP_204_NO_CONTENT)

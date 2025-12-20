@@ -142,6 +142,46 @@ class ForecastCreate(BaseModel):
 
 class ForecastUpdate(BaseModel):
     name: Optional[str] = None
+
+
+class CustomTrainingDataPoint(BaseModel):
+    """Single data point for custom training"""
+    date: str  # ISO format date string
+    value: float
+
+
+class CustomTrainingRequest(BaseModel):
+    """Request to train AI model with custom user data"""
+    model_type: str  # "arima", "sarima", "prophet", "xgboost", "lstm", "linear_regression"
+    metric_name: str  # User-defined name for the metric (e.g., "sales", "custom_metric", "whatever")
+    data: List[CustomTrainingDataPoint]  # List of date-value pairs
+    period: str = "monthly"  # "daily", "weekly", "monthly" - how to aggregate data
+    # Optional model parameters
+    arima_order: Optional[str] = None  # For ARIMA: "1,1,1" format
+    sarima_order: Optional[str] = None  # For SARIMA: "1,1,1" format
+    sarima_seasonal_order: Optional[str] = None  # For SARIMA: "1,1,1,12" format
+    epochs: Optional[int] = None  # For LSTM
+    batch_size: Optional[int] = None  # For LSTM
+    
+    @validator('data')
+    def validate_data(cls, v):
+        if not v or len(v) < 3:
+            raise ValueError('At least 3 data points are required for training')
+        return v
+    
+    @validator('model_type')
+    def validate_model_type(cls, v):
+        allowed = ["arima", "sarima", "prophet", "xgboost", "lstm", "linear_regression"]
+        if v not in allowed:
+            raise ValueError(f'Model type must be one of: {", ".join(allowed)}')
+        return v
+    
+    @validator('period')
+    def validate_period(cls, v):
+        allowed = ["daily", "weekly", "monthly"]
+        if v not in allowed:
+            raise ValueError(f'Period must be one of: {", ".join(allowed)}')
+        return v
     description: Optional[str] = None
     forecast_data: Optional[List[Dict[str, Any]]] = None
 

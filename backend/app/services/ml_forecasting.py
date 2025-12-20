@@ -1272,4 +1272,421 @@ class MLForecastingService:
         except Exception as e:
             logger.error(f"Forecast generation failed: {str(e)}", exc_info=True)
             raise
+    
+    # ============================================================================
+    # CUSTOM DATA TRAINING (Train from user-provided data)
+    # ============================================================================
+    
+    @staticmethod
+    def train_from_custom_data(
+        data_points: List[Dict[str, Any]],  # List of {"date": str, "value": float}
+        model_type: str,
+        metric_name: str,
+        period: str = "monthly",
+        user_id: Optional[int] = None,
+        arima_order: Optional[Tuple[int, int, int]] = None,
+        sarima_order: Optional[Tuple[int, int, int]] = None,
+        sarima_seasonal_order: Optional[Tuple[int, int, int, int]] = None,
+        epochs: int = 50,
+        batch_size: int = 32
+    ) -> Dict[str, Any]:
+        """
+        Train a model from user-provided custom data
+        
+        Args:
+            data_points: List of dictionaries with "date" (ISO format string) and "value" (float)
+            model_type: One of "arima", "sarima", "prophet", "xgboost", "lstm", "linear_regression"
+            metric_name: User-defined name for the metric (used for model file naming)
+            period: Aggregation period ("daily", "weekly", "monthly")
+            user_id: Optional user ID for personal models
+            arima_order: Optional ARIMA order tuple (p, d, q)
+            sarima_order: Optional SARIMA order tuple (p, d, q)
+            sarima_seasonal_order: Optional SARIMA seasonal order tuple (P, D, Q, s)
+            epochs: Number of epochs for LSTM
+            batch_size: Batch size for LSTM
+        
+        Returns:
+            Dictionary with training results
+        """
+        try:
+            # Convert data points to DataFrame
+            dates = []
+            values = []
+            
+            for point in data_points:
+                date_str = point.get("date") or point.get("Date") or point.get("ds")
+                value = point.get("value") or point.get("Value") or point.get("y")
+                
+                if not date_str or value is None:
+                    continue
+                
+                # Parse date
+                try:
+                    date = pd.to_datetime(date_str, utc=True)
+                except:
+                    try:
+                        date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                        if date.tzinfo is None:
+                            date = date.replace(tzinfo=timezone.utc)
+                    except:
+                        logger.warning(f"Could not parse date: {date_str}")
+                        continue
+                
+                dates.append(date)
+                values.append(float(value))
+            
+            if len(dates) < 3:
+                raise ValueError(f"Insufficient data: need at least 3 data points, got {len(dates)}")
+            
+            # Create DataFrame
+            df = pd.DataFrame({
+                'date': pd.to_datetime(dates, utc=True),
+                'value': values
+            }).sort_values('date').reset_index(drop=True)
+            
+            # Aggregate by period if needed
+            if period == "daily":
+                df['date_only'] = df['date'].dt.date
+                df = df.groupby('date_only')['value'].sum().reset_index()
+                df['date'] = pd.to_datetime(df['date_only'], utc=True)
+                df = df.drop('date_only', axis=1)
+            elif period == "weekly":
+                df['week'] = df['date'].dt.to_period('W')
+                df = df.groupby('week')['value'].sum().reset_index()
+                df['date'] = pd.to_datetime(df['week'].astype(str), utc=True)
+                df = df.drop('week', axis=1)
+            elif period == "monthly":
+                df['month'] = df['date'].dt.to_period('M')
+                df = df.groupby('month')['value'].sum().reset_index()
+                df['date'] = pd.to_datetime(df['month'].astype(str), utc=True)
+                df = df.drop('month', axis=1)
+            
+            df = df.sort_values('date').reset_index(drop=True)
+            
+            # Train based on model type
+            if model_type == "arima":
+                return MLForecastingService._train_arima_from_df(
+                    df, metric_name, user_id, arima_order or (1, 1, 1)
+                )
+            elif model_type == "sarima":
+                return MLForecastingService._train_sarima_from_df(
+                    df, metric_name, user_id, 
+                    sarima_order or (1, 1, 1),
+                    sarima_seasonal_order or (1, 1, 1, 12)
+                )
+            elif model_type == "prophet":
+                return MLForecastingService._train_prophet_from_df(
+                    df, metric_name, user_id
+                )
+            elif model_type == "xgboost":
+                return MLForecastingService._train_xgboost_from_df(
+                    df, metric_name, user_id
+                )
+            elif model_type == "lstm":
+                return MLForecastingService._train_lstm_from_df(
+                    df, metric_name, user_id, epochs, batch_size
+                )
+            elif model_type == "linear_regression":
+                return MLForecastingService._train_linear_regression_from_df(
+                    df, metric_name, user_id
+                )
+            else:
+                raise ValueError(f"Unsupported model type: {model_type}")
+                
+        except Exception as e:
+            logger.error(f"Custom data training failed: {str(e)}", exc_info=True)
+            raise
+    
+    @staticmethod
+    def _get_custom_model_path(metric_name: str, model_type: str, user_id: Optional[int] = None) -> Path:
+        """Get path for custom model"""
+        safe_name = metric_name.lower().replace(" ", "_").replace("/", "_")
+        if user_id:
+            return MODELS_DIR / f"custom_{safe_name}_{model_type}_user_{user_id}.pkl"
+        return MODELS_DIR / f"custom_{safe_name}_{model_type}.pkl"
+    
+    @staticmethod
+    def _train_arima_from_df(
+        df: pd.DataFrame, metric_name: str, user_id: Optional[int], order: Tuple[int, int, int]
+    ) -> Dict[str, Any]:
+        """Train ARIMA from DataFrame"""
+        if not STATSMODELS_AVAILABLE:
+            raise ImportError("statsmodels is not installed")
+        
+        if len(df) < 10:
+            raise ValueError(f"Insufficient data: need at least 10 data points, got {len(df)}")
+        
+        model = ARIMA(df['value'], order=order)
+        fitted_model = model.fit()
+        
+        predictions = fitted_model.fittedvalues
+        mae = mean_absolute_error(df['value'], predictions) if SKLEARN_AVAILABLE else None
+        rmse = np.sqrt(mean_squared_error(df['value'], predictions)) if SKLEARN_AVAILABLE else None
+        
+        model_path = MLForecastingService._get_custom_model_path(metric_name, "arima", user_id)
+        joblib.dump(fitted_model, model_path)
+        
+        return {
+            "model_type": "arima",
+            "metric": metric_name,
+            "status": "trained",
+            "order": order,
+            "aic": float(fitted_model.aic),
+            "mae": float(mae) if mae else None,
+            "rmse": float(rmse) if rmse else None,
+            "data_points": len(df),
+            "model_path": str(model_path),
+            "trained_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    @staticmethod
+    def _train_sarima_from_df(
+        df: pd.DataFrame, metric_name: str, user_id: Optional[int],
+        order: Tuple[int, int, int], seasonal_order: Tuple[int, int, int, int]
+    ) -> Dict[str, Any]:
+        """Train SARIMA from DataFrame"""
+        if not STATSMODELS_AVAILABLE:
+            raise ImportError("statsmodels is not installed")
+        
+        if len(df) < 24:
+            raise ValueError(f"Insufficient data: need at least 24 data points, got {len(df)}")
+        
+        model = SARIMAX(df['value'], order=order, seasonal_order=seasonal_order)
+        fitted_model = model.fit(disp=False)
+        
+        predictions = fitted_model.fittedvalues
+        mae = mean_absolute_error(df['value'], predictions) if SKLEARN_AVAILABLE else None
+        rmse = np.sqrt(mean_squared_error(df['value'], predictions)) if SKLEARN_AVAILABLE else None
+        
+        model_path = MLForecastingService._get_custom_model_path(metric_name, "sarima", user_id)
+        joblib.dump(fitted_model, model_path)
+        
+        return {
+            "model_type": "sarima",
+            "metric": metric_name,
+            "status": "trained",
+            "order": order,
+            "seasonal_order": seasonal_order,
+            "aic": float(fitted_model.aic),
+            "mae": float(mae) if mae else None,
+            "rmse": float(rmse) if rmse else None,
+            "data_points": len(df),
+            "model_path": str(model_path),
+            "trained_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    @staticmethod
+    def _train_prophet_from_df(df: pd.DataFrame, metric_name: str, user_id: Optional[int]) -> Dict[str, Any]:
+        """Train Prophet from DataFrame"""
+        if not PROPHET_AVAILABLE:
+            raise ImportError("prophet is not installed")
+        
+        if len(df) < 36:
+            raise ValueError(f"Insufficient data: need at least 36 data points, got {len(df)}")
+        
+        prophet_df = pd.DataFrame({
+            'ds': df['date'],
+            'y': df['value']
+        })
+        
+        try:
+            model = Prophet(
+                yearly_seasonality=True,
+                weekly_seasonality=True,
+                daily_seasonality=False,
+                seasonality_mode='multiplicative'
+            )
+            model.fit(prophet_df)
+        except (AttributeError, ImportError, RuntimeError, Exception) as e:
+            error_str = str(e).lower()
+            if 'stan_backend' in error_str or 'cmdstanpy' in error_str or 'cmdstan' in error_str:
+                raise ImportError(
+                    "Prophet stan_backend error. This is a known issue on Windows/Python 3.12. "
+                    "Try using alternative models (ARIMA, XGBoost, LSTM) instead."
+                )
+            raise
+        
+        # Calculate metrics
+        future = model.make_future_dataframe(periods=0)
+        forecast = model.predict(future)
+        predictions = forecast['yhat'].iloc[:len(df)]
+        mae = mean_absolute_error(df['value'], predictions) if SKLEARN_AVAILABLE else None
+        rmse = np.sqrt(mean_squared_error(df['value'], predictions)) if SKLEARN_AVAILABLE else None
+        
+        model_path = MLForecastingService._get_custom_model_path(metric_name, "prophet", user_id)
+        joblib.dump(model, model_path)
+        
+        return {
+            "model_type": "prophet",
+            "metric": metric_name,
+            "status": "trained",
+            "mae": float(mae) if mae else None,
+            "rmse": float(rmse) if rmse else None,
+            "data_points": len(df),
+            "model_path": str(model_path),
+            "trained_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    @staticmethod
+    def _train_xgboost_from_df(df: pd.DataFrame, metric_name: str, user_id: Optional[int]) -> Dict[str, Any]:
+        """Train XGBoost from DataFrame"""
+        if not XGBOOST_AVAILABLE:
+            raise ImportError("xgboost is not installed")
+        
+        if len(df) < 10:
+            raise ValueError(f"Insufficient data: need at least 10 data points, got {len(df)}")
+        
+        # Create features: lagged values, rolling stats, time features
+        window_size = 3
+        df_features = df.copy()
+        
+        for i in range(1, window_size + 1):
+            df_features[f'lag_{i}'] = df_features['value'].shift(i)
+        
+        df_features['rolling_mean'] = df_features['value'].rolling(window=window_size).mean()
+        df_features['rolling_std'] = df_features['value'].rolling(window=window_size).std()
+        df_features['month'] = df_features['date'].dt.month
+        df_features['year'] = df_features['date'].dt.year
+        
+        df_features = df_features.dropna()
+        
+        if len(df_features) < 5:
+            raise ValueError(f"Insufficient data after feature engineering: need at least 5 data points")
+        
+        # Prepare features and target
+        feature_cols = [f'lag_{i}' for i in range(1, window_size + 1)] + ['rolling_mean', 'rolling_std', 'month', 'year']
+        X = df_features[feature_cols].values
+        y = df_features['value'].values
+        
+        model = xgb.XGBRegressor(n_estimators=100, max_depth=5, learning_rate=0.1, random_state=42)
+        model.fit(X, y)
+        
+        predictions = model.predict(X)
+        mae = mean_absolute_error(y, predictions) if SKLEARN_AVAILABLE else None
+        rmse = np.sqrt(mean_squared_error(y, predictions)) if SKLEARN_AVAILABLE else None
+        
+        model_path = MLForecastingService._get_custom_model_path(metric_name, "xgboost", user_id)
+        joblib.dump(model, model_path)
+        
+        return {
+            "model_type": "xgboost",
+            "metric": metric_name,
+            "status": "trained",
+            "mae": float(mae) if mae else None,
+            "rmse": float(rmse) if rmse else None,
+            "data_points": len(df_features),
+            "model_path": str(model_path),
+            "trained_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    @staticmethod
+    def _train_lstm_from_df(
+        df: pd.DataFrame, metric_name: str, user_id: Optional[int], epochs: int, batch_size: int
+    ) -> Dict[str, Any]:
+        """Train LSTM from DataFrame"""
+        if not TENSORFLOW_AVAILABLE:
+            raise ImportError("tensorflow is not installed")
+        
+        if len(df) < 20:
+            raise ValueError(f"Insufficient data: need at least 20 data points, got {len(df)}")
+        
+        # Prepare data for LSTM (sequences)
+        sequence_length = 3
+        values = df['value'].values.reshape(-1, 1)
+        
+        # Scale data
+        scaler = StandardScaler() if SKLEARN_AVAILABLE else None
+        if scaler:
+            values_scaled = scaler.fit_transform(values)
+        else:
+            values_scaled = values
+        
+        # Create sequences
+        X, y = [], []
+        for i in range(sequence_length, len(values_scaled)):
+            X.append(values_scaled[i-sequence_length:i, 0])
+            y.append(values_scaled[i, 0])
+        
+        X, y = np.array(X), np.array(y)
+        X = X.reshape((X.shape[0], X.shape[1], 1))
+        
+        if len(X) < 5:
+            raise ValueError(f"Insufficient data after sequence creation: need at least 5 sequences")
+        
+        # Build LSTM model
+        model = Sequential([
+            LSTM(50, activation='relu', input_shape=(sequence_length, 1)),
+            Dropout(0.2),
+            Dense(1)
+        ])
+        model.compile(optimizer='adam', loss='mse')
+        
+        # Train model
+        model.fit(X, y, epochs=epochs, batch_size=batch_size, verbose=0)
+        
+        # Calculate metrics
+        predictions_scaled = model.predict(X, verbose=0)
+        if scaler:
+            predictions = scaler.inverse_transform(predictions_scaled)
+            y_actual = scaler.inverse_transform(y.reshape(-1, 1))
+        else:
+            predictions = predictions_scaled
+            y_actual = y.reshape(-1, 1)
+        
+        mae = mean_absolute_error(y_actual, predictions) if SKLEARN_AVAILABLE else None
+        rmse = np.sqrt(mean_squared_error(y_actual, predictions)) if SKLEARN_AVAILABLE else None
+        
+        model_path = MLForecastingService._get_custom_model_path(metric_name, "lstm", user_id)
+        model.save(str(model_path))
+        
+        # Save scaler
+        if scaler:
+            scaler_path = model_path.with_suffix('.scaler.pkl')
+            joblib.dump(scaler, scaler_path)
+        
+        return {
+            "model_type": "lstm",
+            "metric": metric_name,
+            "status": "trained",
+            "mae": float(mae) if mae else None,
+            "rmse": float(rmse) if rmse else None,
+            "data_points": len(df),
+            "model_path": str(model_path),
+            "trained_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    @staticmethod
+    def _train_linear_regression_from_df(df: pd.DataFrame, metric_name: str, user_id: Optional[int]) -> Dict[str, Any]:
+        """Train Linear Regression from DataFrame"""
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not installed")
+        
+        if len(df) < 5:
+            raise ValueError(f"Insufficient data: need at least 5 data points, got {len(df)}")
+        
+        # Create time index feature
+        df['time_index'] = range(len(df))
+        X = df[['time_index']].values
+        y = df['value'].values
+        
+        model = LinearRegression()
+        model.fit(X, y)
+        
+        predictions = model.predict(X)
+        mae = mean_absolute_error(y, predictions)
+        rmse = np.sqrt(mean_squared_error(y, predictions))
+        
+        model_path = MLForecastingService._get_custom_model_path(metric_name, "linear_regression", user_id)
+        joblib.dump(model, model_path)
+        
+        return {
+            "model_type": "linear_regression",
+            "metric": metric_name,
+            "status": "trained",
+            "mae": float(mae),
+            "rmse": float(rmse),
+            "data_points": len(df),
+            "model_path": str(model_path),
+            "trained_at": datetime.now(timezone.utc).isoformat()
+        }
 
