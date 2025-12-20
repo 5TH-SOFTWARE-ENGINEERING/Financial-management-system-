@@ -25,7 +25,7 @@ from .utils.audit import AuditLogger, AuditAction
 # --- Critical imports for default admin creation ---
 from .models.user import User, UserRole        # SQLAlchemy model + Enum
 from .schemas.user import UserCreate           # Pydantic schema
-from .utils.security import get_password_hash
+from .core.security import get_password_hash   # Use core.security (bcrypt directly)
 
 # --- Import all models to ensure they're registered with Base ---
 # This ensures all tables are created when Base.metadata.create_all() is called

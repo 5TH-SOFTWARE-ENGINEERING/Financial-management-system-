@@ -462,12 +462,25 @@ def create_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_min_role(UserRole.ADMIN))
 ):
-    """Admin creates any user (including managers)"""
+    """Admin creates any user (including managers and finance admins)"""
     if current_user.role == UserRole.SUPER_ADMIN:
         pass  # Can create anyone
     elif current_user.role == UserRole.ADMIN:
-        if user_in.role not in [UserRole.MANAGER, UserRole.ACCOUNTANT, UserRole.EMPLOYEE]:
-            raise HTTPException(status_code=403, detail="Admins can only create manager, accountant, or employee")
+        # Admin can create: FINANCE_ADMIN, MANAGER, ACCOUNTANT, EMPLOYEE
+        # But NOT SUPER_ADMIN (only super admin can create super admin)
+        allowed_roles = [UserRole.FINANCE_ADMIN, UserRole.MANAGER, UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+        
+        if user_in.role == UserRole.SUPER_ADMIN:
+            raise HTTPException(status_code=403, detail="Only super admin can create super admin users")
+        
+        # Check if role is in allowed list
+        if user_in.role not in allowed_roles:
+            role_str = user_in.role.value if isinstance(user_in.role, UserRole) else str(user_in.role)
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Admins can only create finance_admin, manager, accountant, or employee. Attempted role: {role_str}"
+            )
+        
         if user_in.manager_id:
             manager = user_crud.get(db, user_in.manager_id)
             if not manager or manager.role != UserRole.MANAGER:

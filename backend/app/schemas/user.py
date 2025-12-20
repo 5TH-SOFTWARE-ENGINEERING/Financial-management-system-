@@ -39,6 +39,33 @@ class UserCreate(UserBase):
             raise ValueError('Password must be at least 8 characters long')
         return v
 
+    @field_validator('role', mode='before')
+    @classmethod
+    def validate_role(cls, v) -> UserRole:
+        """Ensure role is properly converted to UserRole enum"""
+        if isinstance(v, UserRole):
+            return v
+        if isinstance(v, str):
+            # Try to find matching enum by value
+            for role in UserRole:
+                if role.value == v or role.name == v.upper():
+                    return role
+            # If no match, try common variations
+            role_map = {
+                'finance_manager': UserRole.FINANCE_ADMIN,
+                'finance_admin': UserRole.FINANCE_ADMIN,
+                'super_admin': UserRole.SUPER_ADMIN,
+                'admin': UserRole.ADMIN,
+                'manager': UserRole.MANAGER,
+                'accountant': UserRole.ACCOUNTANT,
+                'employee': UserRole.EMPLOYEE,
+            }
+            normalized = v.lower().replace('_', '_')
+            if normalized in role_map:
+                return role_map[normalized]
+        # Default to EMPLOYEE if invalid
+        return UserRole.EMPLOYEE
+
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None

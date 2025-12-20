@@ -115,6 +115,8 @@ class ApiClient {
         // Handle 403 Forbidden - user doesn't have permission
         if (error.response?.status === 403) {
           const url = error.config?.url || '';
+          const errorDetail = error.response?.data?.detail || 'Insufficient permissions';
+          
           // Suppress warnings for expected 403s on role-restricted endpoints
           // These are handled gracefully by the calling code
           const suppressWarnings = url.includes('/inventory/summary') || 
@@ -123,8 +125,20 @@ class ApiClient {
                                    url.includes('/sales/journal-entries') ||
                                    url.includes('/backup');
           
-          if (!suppressWarnings && typeof window !== 'undefined') {
-              console.warn('Access forbidden:', error.response?.data?.detail || 'Insufficient permissions');
+          // For user endpoints, provide more helpful error messages
+          if (url.includes('/users/') && !url.includes('/users/me')) {
+            // Don't suppress warnings for user endpoints - these are important
+            if (typeof window !== 'undefined') {
+              console.warn('Access forbidden to user resource:', errorDetail);
+            }
+            // Enhance error with more context
+            error.response.data = {
+              ...error.response.data,
+              detail: errorDetail,
+              message: `You don't have permission to access this user. ${errorDetail}`,
+            };
+          } else if (!suppressWarnings && typeof window !== 'undefined') {
+            console.warn('Access forbidden:', errorDetail);
           }
         }
         
@@ -169,10 +183,44 @@ class ApiClient {
   }
 
   private normalizeResponse<T>(payload: unknown): ApiResponse<T> {
-    if (payload && typeof payload === 'object' && 'data' in payload) {
-      return payload as ApiResponse<T>;
+    // Handle different response formats from the backend
+    if (!payload) {
+      return { data: null as unknown as T };
     }
+    
+    // If payload is already in ApiResponse format
+    if (typeof payload === 'object' && payload !== null) {
+      if ('data' in payload) {
+        return payload as ApiResponse<T>;
+      }
+      // If payload is the data itself (direct response)
+      return { data: payload as T };
+    }
+    
+    // Fallback: wrap primitive values
     return { data: payload as T };
+  }
+
+  /**
+   * Extract error message from various error formats
+   */
+  private extractErrorMessage(error: unknown): string {
+    if (error && typeof error === 'object') {
+      // Axios error format
+      if ('response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string; message?: string; error?: string } } };
+        return axiosError.response?.data?.detail || 
+               axiosError.response?.data?.message || 
+               axiosError.response?.data?.error || 
+               'An error occurred';
+      }
+      // Standard Error object
+      if ('message' in error) {
+        return (error as { message: string }).message;
+      }
+    }
+    // Fallback
+    return error instanceof Error ? error.message : 'An unknown error occurred';
   }
 
   private async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
@@ -274,11 +322,43 @@ class ApiClient {
   }
 
   async getUsers(): Promise<ApiResponse<User[]>> {
-    return this.get('/users/');
+    try {
+      const response = await this.get<User[]>('/users/');
+      // Ensure we always return an array
+      if (Array.isArray(response.data)) {
+        return response;
+      }
+      return { ...response, data: [] };
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 403) {
+        // Return empty array instead of throwing for 403 on list endpoint
+        // This allows the UI to handle permission errors gracefully
+        return { data: [] };
+      }
+      throw error;
+    }
   }
 
   async getUser(userId: number): Promise<ApiResponse<User>> {
-    return this.get(`/users/${userId}`);
+    try {
+      return await this.get(`/users/${userId}`);
+    } catch (error: unknown) {
+      // Provide better error context for user fetch failures
+      const axiosError = error as { response?: { status?: number; data?: { detail?: string } } };
+      if (axiosError.response?.status === 403) {
+        const detail = axiosError.response.data?.detail || 'Insufficient permissions';
+        const enhancedError = new Error(`Cannot access user ${userId}: ${detail}`);
+        (enhancedError as unknown as { response?: unknown }).response = axiosError.response;
+        throw enhancedError;
+      }
+      if (axiosError.response?.status === 404) {
+        const enhancedError = new Error(`User ${userId} not found`);
+        (enhancedError as unknown as { response?: unknown }).response = axiosError.response;
+        throw enhancedError;
+      }
+      throw error;
+    }
   }
 
   async getSubordinates(userId: number): Promise<ApiResponse<User[]>> {
@@ -286,7 +366,25 @@ class ApiClient {
   }
 
   async createUser(userData: Partial<User>): Promise<ApiResponse<User>> {
-    return this.post('/users', userData);
+    try {
+      return await this.post('/users', userData);
+    } catch (error: unknown) {
+      // Provide better error context for user creation failures
+      const axiosError = error as { response?: { status?: number; data?: { detail?: string } } };
+      if (axiosError.response?.status === 403) {
+        const detail = axiosError.response.data?.detail || 'Insufficient permissions';
+        const enhancedError = new Error(`Cannot create user: ${detail}. You may not have permission to create users with this role.`);
+        (enhancedError as unknown as { response?: unknown }).response = axiosError.response;
+        throw enhancedError;
+      }
+      if (axiosError.response?.status === 400) {
+        const detail = axiosError.response.data?.detail || 'Invalid user data';
+        const enhancedError = new Error(`Failed to create user: ${detail}`);
+        (enhancedError as unknown as { response?: unknown }).response = axiosError.response;
+        throw enhancedError;
+      }
+      throw error;
+    }
   }
 
   /**

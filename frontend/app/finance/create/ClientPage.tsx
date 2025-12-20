@@ -114,7 +114,7 @@ const Subtitle = styled.p`
   margin-bottom: 24px;
 `;
 
-const AlertBox = styled.div<{ status: 'error' | 'success' }>`
+const AlertBox = styled.div<{ $status: 'error' | 'success' }>`
   padding: 14px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -123,13 +123,13 @@ const AlertBox = styled.div<{ status: 'error' | 'success' }>`
   align-items: center;
   gap: 8px;
 
-  background: ${({ status }) =>
-    status === 'error' ? '#FEF2F2' : '#ECFDF5'};
+  background: ${({ $status }) =>
+    $status === 'error' ? '#FEF2F2' : '#ECFDF5'};
   border: 1px solid
-    ${({ status }) =>
-      status === 'error' ? '#FECACA' : '#A7F3D0'};
-  color: ${({ status }) =>
-    status === 'error' ? '#B91C1C' : '#047857'};
+    ${({ $status }) =>
+      $status === 'error' ? '#FECACA' : '#A7F3D0'};
+  color: ${({ $status }) =>
+    $status === 'error' ? '#B91C1C' : '#047857'};
 `;
 
 const FormCard = styled.form`
@@ -327,12 +327,24 @@ export default function CreateFinancePage() {
         throw new Error('Full name is required');
       }
 
+      // Convert role to backend enum format (lowercase with underscores)
+      // Frontend uses uppercase, backend expects lowercase
+      const roleMap: Record<string, string> = {
+        'ADMIN': 'admin',
+        'FINANCE_ADMIN': 'finance_manager', // Backend uses finance_manager for FINANCE_ADMIN
+        'ACCOUNTANT': 'accountant',
+        'EMPLOYEE': 'employee',
+        'MANAGER': 'manager',
+        'SUPER_ADMIN': 'super_admin'
+      };
+      const roleValue = roleMap[data.role || 'FINANCE_ADMIN'] || 'finance_manager';
+      
       const userData = {
         full_name: trimmedFullName,
         email: trimmedEmail,
         username: trimmedUsername,
         password: data.password,
-        role: (data.role || 'FINANCE_ADMIN').toLowerCase(),
+        role: roleValue,
         phone: trimmedPhone || undefined,
         department: trimmedDepartment || undefined,
         manager_id: data.managerId ? Number(data.managerId) : undefined
@@ -351,19 +363,74 @@ export default function CreateFinancePage() {
       console.error('Error creating finance manager:', err);
       
       let errorMessage = 'Failed to create finance manager';
+      
       if (err && typeof err === 'object' && 'response' in err) {
-        const response = (err as { response?: { data?: unknown } }).response;
+        const response = (err as { response?: { data?: unknown; status?: number } }).response;
         const data = response?.data;
-        if (typeof data === 'string') {
-          errorMessage = data;
-        } else if (data && typeof data === 'object') {
-          const detail = (data as { detail?: string }).detail;
-          const message = (data as { message?: string }).message;
-          const errorText = (data as { error?: string }).error;
-          errorMessage = detail || message || errorText || errorMessage;
+        const statusCode = response?.status;
+        
+        if (statusCode === 422) {
+          // Handle Pydantic validation errors (422 Unprocessable Entity)
+          if (data && typeof data === 'object') {
+            const errorObj = data as { detail?: unknown };
+            const detail = errorObj.detail;
+            
+            if (Array.isArray(detail)) {
+              // Pydantic validation errors come as an array
+              const validationErrors = detail
+                .map((errItem: { loc?: unknown[]; msg?: string; type?: string }) => {
+                  if (Array.isArray(errItem.loc) && errItem.msg) {
+                    const field = errItem.loc.slice(-1)[0]; // Get last element (field name)
+                    return `${String(field)}: ${errItem.msg}`;
+                  }
+                  return errItem.msg || JSON.stringify(errItem);
+                })
+                .filter((msg: string) => msg && typeof msg === 'string');
+              
+              if (validationErrors.length > 0) {
+                errorMessage = validationErrors.join(', ');
+              }
+            } else if (typeof detail === 'string') {
+              errorMessage = detail;
+            } else if (detail && typeof detail === 'object' && 'msg' in detail) {
+              const msg = (detail as { msg?: string }).msg;
+              if (msg) errorMessage = msg;
+            }
+          }
+        } else {
+          // Handle other error formats
+          if (typeof data === 'string') {
+            errorMessage = data;
+          } else if (data && typeof data === 'object') {
+            const errorObj = data as { detail?: unknown; message?: string; error?: string };
+            const detail = errorObj.detail;
+            const message = errorObj.message;
+            const errorText = errorObj.error;
+            
+            // Handle array of validation errors
+            if (Array.isArray(detail)) {
+              const validationErrors = detail
+                .map((errItem: { loc?: unknown[]; msg?: string }) => {
+                  if (Array.isArray(errItem.loc) && errItem.msg) {
+                    const field = errItem.loc.slice(-1)[0];
+                    return `${String(field)}: ${errItem.msg}`;
+                  }
+                  return errItem.msg || String(errItem);
+                })
+                .filter((msg: string) => msg && typeof msg === 'string');
+              
+              errorMessage = validationErrors.length > 0 ? validationErrors.join(', ') : errorMessage;
+            } else if (typeof detail === 'string') {
+              errorMessage = detail;
+            } else {
+              errorMessage = message || errorText || errorMessage;
+            }
+          }
         }
       } else if (err instanceof Error && err.message) {
         errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
       }
 
       setError(errorMessage);
@@ -395,16 +462,16 @@ export default function CreateFinancePage() {
           <Subtitle>Add a new finance manager to your organization</Subtitle>
 
           {error && (
-            <AlertBox status="error">
+            <AlertBox $status="error">
               <AlertCircle size={18} />
-              {error}
+              <span>{error}</span>
             </AlertBox>
           )}
 
           {success && (
-            <AlertBox status="success">
+            <AlertBox $status="success">
               <CheckCircle size={18} />
-              {success}
+              <span>{success}</span>
             </AlertBox>
           )}
 

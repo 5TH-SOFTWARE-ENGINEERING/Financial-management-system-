@@ -1878,3 +1878,49 @@ python train_ai_models.py --metric revenue --model xgboost
 **Status**: ✅ System Fully Functional
 
 
+cd backend && alembic init alembic
+cd backend && alembic revision --autogenerate -m "Initial migration"
+cd backend && alembic stamp head
+   # Create a new migration
+   alembic revision --autogenerate -m "Description of changes"
+   
+   # Apply migrations
+   alembic upgrade head
+   
+   # Rollback if needed
+   alembic downgrade -1
+
+   # Create a new migration
+alembic revision --autogenerate -m "Description of changes"
+
+# Apply migrations
+alembic upgrade head
+
+# Check current status
+alembic current
+
+# View migration history
+alembic history
+
+Connected to database successfully!
+Found 22 tables:
+  - alembic_version
+  - approval_comments
+  - approval_workflows
+  - audit_logs
+  - budget_items
+  - budget_scenarios
+  - budget_variances
+  - budgets
+  - expense_entries
+  - forecasts
+  - inventory_audit_logs
+  - inventory_items
+  - journal_entries
+  - login_history
+  - notifications
+  - projects
+  - report_schedules
+  - reports
+  - revenue_entries
+  - roles
