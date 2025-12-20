@@ -268,7 +268,7 @@ const NotificationsList = styled.div`
   gap: ${theme.spacing.md};
 `;
 
-const NotificationCard = styled.div<{ $isRead: boolean; $type: string }>`
+const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string }>`
   background: ${props => props.$isRead ? theme.colors.background : theme.colors.backgroundSecondary};
   border: 1px solid ${theme.colors.border};
   border-left: 4px solid ${props => {
@@ -279,7 +279,7 @@ const NotificationCard = styled.div<{ $isRead: boolean; $type: string }>`
       warning: '#f59e0b',
       info: '#3b82f6'
     };
-    return colors[props.$type] || theme.colors.border;
+    return colors[props.$displayType] || theme.colors.border;
   }};
   border-radius: ${theme.borderRadius.md};
   padding: ${theme.spacing.lg};
@@ -297,7 +297,7 @@ const NotificationCard = styled.div<{ $isRead: boolean; $type: string }>`
         warning: '#f59e0b',
         info: '#3b82f6'
       };
-      return colors[props.$type] || PRIMARY_COLOR;
+      return colors[props.$displayType] || PRIMARY_COLOR;
     }};
   }
 `;
@@ -308,7 +308,7 @@ const NotificationContent = styled.div`
   gap: ${theme.spacing.md};
 `;
 
-const NotificationIcon = styled.div<{ $type: string }>`
+const NotificationIcon = styled.div<{ $displayType: string }>`
   flex-shrink: 0;
   margin-top: 2px;
   
@@ -321,12 +321,26 @@ const NotificationIcon = styled.div<{ $type: string }>`
     };
     return `
       svg {
-        color: ${colors[props.$type] || '#3b82f6'};
+        color: ${colors[props.$displayType] || '#3b82f6'};
         width: 20px;
         height: 20px;
       }
     `;
   }}
+`;
+
+const PriorityBadge = styled.span<{ $color: string }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px ${theme.spacing.sm};
+  font-size: ${theme.typography.fontSizes.xs};
+  font-weight: ${theme.typography.fontWeights.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 12px;
+  background: ${props => props.$color}20;
+  color: ${props => props.$color};
+  border: 1px solid ${props => props.$color}40;
 `;
 
 const NotificationDetails = styled.div`
@@ -778,7 +792,7 @@ export default function NotificationsPage() {
   const filteredNotifications = notifications.filter(notification => {
     if (filterType === 'all') return true;
     if (filterType === 'unread') return !notification.is_read;
-    return notification.type === filterType;
+    return notification.display_type === filterType;
   });
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -808,8 +822,8 @@ export default function NotificationsPage() {
     );
   }
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
+  const getNotificationIcon = (displayType?: string) => {
+    switch (displayType) {
       case 'success':
         return <CheckCircle />;
       case 'error':
@@ -820,6 +834,22 @@ export default function NotificationsPage() {
         return <Info />;
       default:
         return <Bell />;
+    }
+  };
+  
+  const getPriorityBadge = (priority: string) => {
+    const normalized = priority?.toLowerCase() || 'medium';
+    switch (normalized) {
+      case 'urgent':
+        return { text: 'Urgent', color: '#ef4444' };
+      case 'high':
+        return { text: 'High', color: '#f59e0b' };
+      case 'medium':
+        return { text: 'Medium', color: '#3b82f6' };
+      case 'low':
+        return { text: 'Low', color: '#6b7280' };
+      default:
+        return null;
     }
   };
 
@@ -959,7 +989,7 @@ export default function NotificationsPage() {
                     <NotificationCard
                       key={notification.id}
                       $isRead={notification.is_read}
-                      $type={notification.type}
+                      $displayType={notification.display_type || 'info'}
                       onClick={() => {
                         // Mark as read when clicked
                         if (!notification.is_read) {
@@ -973,8 +1003,8 @@ export default function NotificationsPage() {
                       }}
                     >
                       <NotificationContent>
-                        <NotificationIcon $type={notification.type}>
-                          {getNotificationIcon(notification.type)}
+                        <NotificationIcon $displayType={notification.display_type || 'info'}>
+                          {getNotificationIcon(notification.display_type)}
                         </NotificationIcon>
                         <NotificationDetails>
                           <NotificationHeader>
@@ -982,6 +1012,11 @@ export default function NotificationsPage() {
                               {notification.title}
                             </NotificationTitle>
                             {!notification.is_read && <NewBadge>New</NewBadge>}
+                            {getPriorityBadge(notification.priority) && (
+                              <PriorityBadge $color={getPriorityBadge(notification.priority)!.color}>
+                                {getPriorityBadge(notification.priority)!.text}
+                              </PriorityBadge>
+                            )}
                           </NotificationHeader>
                           <NotificationMessage>{notification.message}</NotificationMessage>
                           <NotificationMeta>
