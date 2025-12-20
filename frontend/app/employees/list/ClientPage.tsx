@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
-import { AlertCircle, UserPlus, Edit, Trash2, Users, Loader2, UserCheck, Shield } from 'lucide-react';
+import { AlertCircle, UserPlus, Edit, Trash2, Users, Loader2, UserCheck, Shield, Eye, EyeOff, Lock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/lib/rbac/auth-context';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -191,17 +192,14 @@ const Spinner = styled.div`
   }
 `;
 
-const ModalOverlay = styled.div`
+const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
+  display: ${props => props.$isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
   backdrop-filter: blur(4px);
 `;
 
@@ -209,17 +207,72 @@ const ModalContent = styled.div`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
   border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.xl};
-  max-width: 500px;
+  padding: ${theme.spacing.lg};
+  max-width: 600px;
   width: 90%;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: ${theme.spacing.lg};
+  padding-bottom: ${theme.spacing.md};
+  border-bottom: 1px solid ${theme.colors.border};
+  
+  h3 {
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.sm};
+  }
+  
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${TEXT_COLOR_MUTED};
+    padding: ${theme.spacing.xs};
+    border-radius: ${theme.borderRadius.sm};
+    transition: all ${theme.transitions.default};
+    
+    &:hover {
+      background: ${theme.colors.backgroundSecondary};
+      color: ${TEXT_COLOR_DARK};
+    }
+    
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
 `;
 
 const ModalTitle = styled.h3`
   font-size: ${theme.typography.fontSizes.lg};
   font-weight: ${theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
-  margin: 0 0 ${theme.spacing.md};
+  margin: 0;
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
@@ -252,41 +305,64 @@ const Label = styled.label`
   margin-bottom: ${theme.spacing.xs};
 `;
 
-const PasswordInput = styled.input`
-  width: 100%;
-  max-width: 100%;
-  padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  background: #ffffff;
-  color: #111827;
-  transition: all 0.2s ease-in-out;
-  outline: none;
-  box-sizing: border-box;
-  margin: 0;
-
-  &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+const PasswordInputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  input {
+    width: 100%;
+    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    padding-right: 48px;
+    border: 1px solid ${theme.colors.border};
+    border-radius: ${theme.borderRadius.md};
+    background: ${theme.colors.background};
+    font-size: ${theme.typography.fontSizes.md};
+    color: ${TEXT_COLOR_DARK};
+    transition: all ${theme.transitions.default};
+    
+    &:focus {
+      outline: none;
+      border-color: ${PRIMARY_COLOR};
+      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    }
+    
+    &::placeholder {
+      color: ${TEXT_COLOR_MUTED};
+      opacity: 0.5;
+    }
+    
+    &:disabled {
+      background-color: ${theme.colors.backgroundSecondary};
+      color: ${TEXT_COLOR_MUTED};
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
   }
-
-  &:hover:not(:disabled) {
-    border-color: #d1d5db;
-  }
-
-  &::placeholder {
-    color: #9ca3af;
-  }
-
-  &:disabled {
-    background-color: #f9fafb;
-    color: #6b7280;
-    cursor: not-allowed;
-    opacity: 0.7;
-    border-color: #e5e7eb;
+  
+  button {
+    position: absolute;
+    right: ${theme.spacing.sm};
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${TEXT_COLOR_MUTED};
+    padding: ${theme.spacing.xs};
+    border-radius: ${theme.borderRadius.sm};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all ${theme.transitions.default};
+    
+    &:hover {
+      color: ${TEXT_COLOR_DARK};
+      background: ${theme.colors.backgroundSecondary};
+    }
+    
+    svg {
+      width: 18px;
+      height: 18px;
+    }
   }
 `;
 
@@ -357,6 +433,7 @@ interface ApiUser {
 }
 
 export default function EmployeeListPage() {
+  const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -365,6 +442,8 @@ export default function EmployeeListPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -412,11 +491,33 @@ export default function EmployeeListPage() {
     }
   };
 
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      // Use login endpoint to verify password
+      const identifier = user.email || '';
+      await apiClient.request({
+        method: 'POST',
+        url: '/auth/login-json',
+        data: {
+          username: identifier,
+          password: password
+        }
+      });
+      return true;
+    } catch (err: unknown) {
+      // If login fails, password is incorrect
+      return false;
+    }
+  };
+
   const handleDeleteClick = (employee: Employee) => {
     setEmployeeToDelete(employee);
     setShowDeleteModal(true);
     setDeletePassword('');
     setDeletePasswordError(null);
+    setShowDeletePassword(false);
   };
 
   const handleDeleteCancel = () => {
@@ -424,6 +525,7 @@ export default function EmployeeListPage() {
     setDeletePassword('');
     setDeletePasswordError(null);
     setEmployeeToDelete(null);
+    setShowDeletePassword(false);
   };
 
   const handleDelete = async () => {
@@ -434,16 +536,27 @@ export default function EmployeeListPage() {
       return;
     }
 
-    setDeleting(true);
+    setVerifyingPassword(true);
     setDeletePasswordError(null);
-    setError(null);
 
     try {
+      // First verify password
+      const isValid = await verifyPassword(deletePassword.trim());
+      
+      if (!isValid) {
+        setDeletePasswordError('Incorrect password. Please try again.');
+        setVerifyingPassword(false);
+        return;
+      }
+
+      // Password is correct, proceed with deletion
+      setDeleting(true);
       await apiClient.deleteUser(employeeToDelete.id, deletePassword.trim());
       toast.success('Employee deleted successfully');
       setShowDeleteModal(false);
       setEmployeeToDelete(null);
       setDeletePassword('');
+      setShowDeletePassword(false);
       loadEmployees();
     } catch (err: unknown) {
       const errorMessage =
@@ -454,6 +567,7 @@ export default function EmployeeListPage() {
       toast.error(errorMessage);
     } finally {
       setDeleting(false);
+      setVerifyingPassword(false);
     }
   };
 
@@ -710,86 +824,105 @@ export default function EmployeeListPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && employeeToDelete && (
-        <ModalOverlay onClick={handleDeleteCancel}>
+        <ModalOverlay $isOpen={showDeleteModal} onClick={handleDeleteCancel}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>
-              <Trash2 size={20} style={{ color: '#ef4444' }} />
-              Delete Employee
-            </ModalTitle>
+            <ModalHeader>
+              <ModalTitle>
+                <Trash2 size={20} style={{ color: '#ef4444' }} />
+                Delete Employee
+              </ModalTitle>
+              <button onClick={handleDeleteCancel} title="Close" type="button">
+                <XCircle />
+              </button>
+            </ModalHeader>
+            
             <WarningBox>
               <p>
                 <strong>Warning:</strong> This action cannot be undone. All data associated with this employee will be permanently deleted.
+                Please enter <strong>your own password</strong> to verify this action.
               </p>
             </WarningBox>
 
             <div style={{
-              background: '#f9fafb',
-              border: '1px solid #e5e7eb',
+              background: theme.colors.backgroundSecondary,
+              border: '1px solid ' + theme.colors.border,
               borderRadius: theme.borderRadius.md,
-              padding: theme.spacing.md,
+              padding: theme.spacing.lg,
               marginBottom: theme.spacing.lg
             }}>
               <h4 style={{
-                fontSize: theme.typography.fontSizes.sm,
+                fontSize: theme.typography.fontSizes.md,
                 fontWeight: theme.typography.fontWeights.bold,
                 color: TEXT_COLOR_DARK,
-                margin: `0 0 ${theme.spacing.md} 0`
+                margin: `0 0 ${theme.spacing.md} 0`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.sm
               }}>
-                Employee Details to be Deleted:
+                <Users size={18} />
+                Employee Details to be Deleted
               </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
-                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                    {employeeToDelete.full_name || 'N/A'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Email:</strong>
-                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                    {employeeToDelete.email}
-                  </span>
-                </div>
-                {employeeToDelete.username && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Username:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                      {employeeToDelete.username}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 200px' }}>
+                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
+                      {employeeToDelete.full_name || 'N/A'}
                     </span>
                   </div>
-                )}
-                {employeeToDelete.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Phone:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                      {employeeToDelete.phone}
+                  <div style={{ flex: '1 1 200px' }}>
+                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK }}>
+                      {employeeToDelete.email}
                     </span>
                   </div>
-                )}
-                {employeeToDelete.department && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Department:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                      {employeeToDelete.department}
-                    </span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
-                  <Badge $variant={getRoleBadgeVariant(employeeToDelete.role)}>
-                    {getRoleDisplayName(employeeToDelete.role)}
-                  </Badge>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
-                  <Badge $variant={employeeToDelete.is_active ? 'active' : 'inactive'}>
-                    {employeeToDelete.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
+                {(employeeToDelete.username || employeeToDelete.phone) && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                    {employeeToDelete.username && (
+                      <div style={{ flex: '1 1 200px' }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Username</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                          {employeeToDelete.username}
+                        </span>
+                      </div>
+                    )}
+                    {employeeToDelete.phone && (
+                      <div style={{ flex: '1 1 200px' }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                          {employeeToDelete.phone}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                  {employeeToDelete.department && (
+                    <div>
+                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                        {employeeToDelete.department}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Role</strong>
+                    <Badge $variant={getRoleBadgeVariant(employeeToDelete.role)}>
+                      {getRoleDisplayName(employeeToDelete.role)}
+                    </Badge>
+                  </div>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</strong>
+                    <Badge $variant={employeeToDelete.is_active ? 'active' : 'inactive'}>
+                      {employeeToDelete.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
                 </div>
                 {employeeToDelete.manager_id && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Manager ID:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                  <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Manager ID</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
                       {employeeToDelete.manager_id}
                     </span>
                   </div>
@@ -799,24 +932,36 @@ export default function EmployeeListPage() {
 
             <FormGroup>
               <Label htmlFor="delete-password">
-                Enter your password to confirm deletion:
+                <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                Enter <strong>your own password</strong> to confirm deletion of <strong>{employeeToDelete.full_name || 'this employee'}</strong>:
               </Label>
-              <PasswordInput
-                id="delete-password"
-                type="password"
-                value={deletePassword}
-                onChange={(e) => {
-                  setDeletePassword(e.target.value);
-                  setDeletePasswordError(null);
-                }}
-                placeholder="Enter your password"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && deletePassword.trim()) {
-                    handleDelete();
-                  }
-                }}
-              />
+              <PasswordInputWrapper>
+                <input
+                  id="delete-password"
+                  type={showDeletePassword ? 'text' : 'password'}
+                  value={deletePassword}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setDeletePassword(e.target.value);
+                    setDeletePasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  autoFocus
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword && !deleting) {
+                      handleDelete();
+                    }
+                  }}
+                  disabled={verifyingPassword || deleting}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDeletePassword(!showDeletePassword)}
+                  title={showDeletePassword ? 'Hide password' : 'Show password'}
+                  disabled={verifyingPassword || deleting}
+                >
+                  {showDeletePassword ? <EyeOff /> : <Eye />}
+                </button>
+              </PasswordInputWrapper>
               {deletePasswordError && (
                 <ErrorText>{deletePasswordError}</ErrorText>
               )}
@@ -826,16 +971,21 @@ export default function EmployeeListPage() {
               <Button
                 variant="outline"
                 onClick={handleDeleteCancel}
-                disabled={deleting}
+                disabled={deleting || verifyingPassword}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleDelete}
-                disabled={!deletePassword.trim() || deleting}
+                disabled={!deletePassword.trim() || deleting || verifyingPassword}
               >
-                {deleting ? (
+                {verifyingPassword ? (
+                  <>
+                    <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                    Verifying...
+                  </>
+                ) : deleting ? (
                   <>
                     <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
                     Deleting...
@@ -854,7 +1004,7 @@ export default function EmployeeListPage() {
 
       {/* Activate Confirmation Modal */}
       {showActivateModal && employeeToActivate && (
-        <ModalOverlay onClick={handleActivateCancel}>
+        <ModalOverlay $isOpen={showActivateModal} onClick={handleActivateCancel}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
               <UserCheck size={20} style={{ color: '#16a34a' }} />
@@ -869,24 +1019,28 @@ export default function EmployeeListPage() {
 
             <FormGroup>
               <Label htmlFor="activate-password">
+                <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
                 Enter <strong>your own password</strong> to confirm activation of <strong>{employeeToActivate.full_name}</strong>:
               </Label>
-              <PasswordInput
-                id="activate-password"
-                type="password"
-                value={activatePassword}
-                onChange={(e) => {
-                  setActivatePassword(e.target.value);
-                  setActivatePasswordError(null);
-                }}
-                placeholder="Enter your password"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && activatePassword.trim()) {
-                    handleActivate();
-                  }
-                }}
-              />
+              <PasswordInputWrapper>
+                <input
+                  id="activate-password"
+                  type="password"
+                  value={activatePassword}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setActivatePassword(e.target.value);
+                    setActivatePasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  autoFocus
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter' && activatePassword.trim()) {
+                      handleActivate();
+                    }
+                  }}
+                  disabled={togglingId === employeeToActivate.id}
+                />
+              </PasswordInputWrapper>
               {activatePasswordError && (
                 <ErrorText>{activatePasswordError}</ErrorText>
               )}
@@ -924,7 +1078,7 @@ export default function EmployeeListPage() {
 
       {/* Deactivate Confirmation Modal */}
       {showDeactivateModal && employeeToDeactivate && (
-        <ModalOverlay onClick={handleDeactivateCancel}>
+        <ModalOverlay $isOpen={showDeactivateModal} onClick={handleDeactivateCancel}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
               <Shield size={20} style={{ color: '#dc2626' }} />
@@ -1014,24 +1168,28 @@ export default function EmployeeListPage() {
 
             <FormGroup>
               <Label htmlFor="deactivate-password">
-                Enter your password to confirm deactivation:
+                <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                Enter <strong>your own password</strong> to confirm deactivation of <strong>{employeeToDeactivate.full_name}</strong>:
               </Label>
-              <PasswordInput
-                id="deactivate-password"
-                type="password"
-                value={deactivatePassword}
-                onChange={(e) => {
-                  setDeactivatePassword(e.target.value);
-                  setDeactivatePasswordError(null);
-                }}
-                placeholder="Enter your password"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && deactivatePassword.trim()) {
-                    handleDeactivate();
-                  }
-                }}
-              />
+              <PasswordInputWrapper>
+                <input
+                  id="deactivate-password"
+                  type="password"
+                  value={deactivatePassword}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setDeactivatePassword(e.target.value);
+                    setDeactivatePasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  autoFocus
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter' && deactivatePassword.trim()) {
+                      handleDeactivate();
+                    }
+                  }}
+                  disabled={togglingId === employeeToDeactivate.id}
+                />
+              </PasswordInputWrapper>
               {deactivatePasswordError && (
                 <ErrorText>{deactivatePasswordError}</ErrorText>
               )}
