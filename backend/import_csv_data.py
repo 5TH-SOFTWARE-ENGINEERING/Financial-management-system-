@@ -25,7 +25,7 @@ from app.crud.expense import expense as expense_crud
 from app.crud.inventory import inventory as inventory_crud
 from app.schemas.revenue import RevenueCreate
 from app.schemas.expense import ExpenseCreate
-from app.schemas.inventory import InventoryItemCreate
+from app.schemas.inventory import InventoryItemCreate, InventoryItemUpdate
 from app.models.user import User, UserRole
 from app.models.revenue import RevenueCategory
 from app.models.expense import ExpenseCategory
@@ -52,14 +52,17 @@ def import_revenue(csv_path: Path, db, admin_user):
         reader = csv.DictReader(f)
         count = 0
         errors = 0
+        row_num = 0
         
         for row in reader:
+            row_num += 1
             try:
-                # Parse date
-                date_str = row.get('date', '').strip()
+                # Parse date - handle None values
+                date_value = row.get('date')
+                date_str = (date_value or '').strip() if date_value else ''
                 if not date_str:
                     errors += 1
-                    print(f"  [ERROR] Row {count + 1}: Missing date")
+                    print(f"  [ERROR] Row {row_num}: Missing date")
                     continue
                 
                 try:
@@ -70,14 +73,14 @@ def import_revenue(csv_path: Path, db, admin_user):
                         date = datetime.strptime(date_str, '%Y-%m-%d')
                     except ValueError:
                         errors += 1
-                        print(f"  [ERROR] Row {count + 1}: Invalid date format: {date_str}")
+                        print(f"  [ERROR] Row {row_num}: Invalid date format: {date_str}")
                         continue
                 
                 # Parse amount
                 amount = Decimal(str(row.get('amount', '0')).strip())
                 if amount <= 0:
                     errors += 1
-                    print(f"  [ERROR] Row {count + 1}: Invalid amount: {amount}")
+                    print(f"  [ERROR] Row {row_num}: Invalid amount: {amount}")
                     continue
                 
                 # Parse category
@@ -133,14 +136,17 @@ def import_expenses(csv_path: Path, db, admin_user):
         reader = csv.DictReader(f)
         count = 0
         errors = 0
+        row_num = 0
         
         for row in reader:
+            row_num += 1
             try:
-                # Parse date
-                date_str = row.get('date', '').strip()
+                # Parse date - handle None values
+                date_value = row.get('date')
+                date_str = (date_value or '').strip() if date_value else ''
                 if not date_str:
                     errors += 1
-                    print(f"  [ERROR] Row {count + 1}: Missing date")
+                    print(f"  [ERROR] Row {row_num}: Missing date")
                     continue
                 
                 try:
@@ -150,11 +156,12 @@ def import_expenses(csv_path: Path, db, admin_user):
                         date = datetime.strptime(date_str, '%Y-%m-%d')
                     except ValueError:
                         errors += 1
-                        print(f"  [ERROR] Row {count + 1}: Invalid date format: {date_str}")
+                        print(f"  [ERROR] Row {row_num}: Invalid date format: {date_str}")
                         continue
                 
                 # Parse amount
-                amount_str = str(row.get('amount') or '0').strip() if row.get('amount') else '0'
+                amount_value = row.get('amount')
+                amount_str = str(amount_value or '0').strip() if amount_value else '0'
                 try:
                     amount = Decimal(amount_str)
                 except (ValueError, TypeError):
@@ -219,6 +226,7 @@ def import_inventory(csv_path: Path, db, admin_user):
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         count = 0
+        updated = 0
         errors = 0
         row_num = 0
         
@@ -248,44 +256,58 @@ def import_inventory(csv_path: Path, db, admin_user):
                     print(f"  [ERROR] Row {row_num}: Invalid prices")
                     continue
                 
-                # Check if SKU already exists (skip if duplicate)
-                sku_val = str(row.get('sku') or '').strip() if row.get('sku') else None
-                if sku_val:
-                    from app.models.inventory import InventoryItem
-                    existing = db.query(InventoryItem).filter(InventoryItem.sku == sku_val).first()
-                    if existing:
-                        # Skip silently - item already exists
-                        continue
-                
                 # Get optional fields
                 item_name = str(row.get('item_name') or 'Untitled').strip() if row.get('item_name') else 'Untitled'
                 cat_val = str(row.get('category') or '').strip() if row.get('category') else ''
                 desc_val = str(row.get('description') or '').strip() if row.get('description') else ''
+                sku_val = str(row.get('sku') or '').strip() if row.get('sku') else None
                 
-                # Create inventory item
-                inventory_data = InventoryItemCreate(
-                    item_name=item_name,
-                    buying_price=buying_price,
-                    selling_price=selling_price,
-                    quantity=quantity,
-                    category=cat_val if cat_val else None,
-                    sku=sku_val,
-                    description=desc_val if desc_val else None,
-                    is_active=True
-                )
+                # Check if SKU already exists - update instead of skip
+                from app.models.inventory import InventoryItem
+                existing = None
+                if sku_val:
+                    existing = db.query(InventoryItem).filter(InventoryItem.sku == sku_val).first()
                 
-                inventory_crud.create(db, inventory_data, admin_user.id)
+                if existing:
+                    # Update existing item
+                    update_data = InventoryItemUpdate(
+                        item_name=item_name,
+                        buying_price=buying_price,
+                        selling_price=selling_price,
+                        quantity=quantity,
+                        category=cat_val if cat_val else None,
+                        description=desc_val if desc_val else None,
+                        is_active=True
+                    )
+                    inventory_crud.update(db, existing, update_data, admin_user.id)
+                    updated += 1
+                else:
+                    # Create new inventory item
+                    inventory_data = InventoryItemCreate(
+                        item_name=item_name,
+                        buying_price=buying_price,
+                        selling_price=selling_price,
+                        quantity=quantity,
+                        category=cat_val if cat_val else None,
+                        sku=sku_val,
+                        description=desc_val if desc_val else None,
+                        is_active=True
+                    )
+                    inventory_crud.create(db, inventory_data, admin_user.id)
+                    count += 1
+                
                 db.commit()
-                
-                count += 1
                 
             except Exception as e:
                 errors += 1
                 print(f"  [ERROR] Row {row_num}: {str(e)}")
                 db.rollback()
         
-        print(f"  [OK] Imported {count} inventory items ({errors} errors)")
-        return count
+        if updated > 0:
+            print(f"  [OK] Imported {count} new inventory items, updated {updated} existing items ({errors} errors)")
+        else:
+            print(f"  [OK] Imported {count} inventory items ({errors} errors)")
+        return count + updated
 
 
 def main():

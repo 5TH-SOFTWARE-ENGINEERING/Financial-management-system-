@@ -6,27 +6,33 @@ Automatically retrains AI models on a schedule
 
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, Any
 from sqlalchemy.orm import Session  # type: ignore[import-untyped]
+
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore[import-untyped]
 
 try:
     from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore[import-untyped]
     from apscheduler.triggers.cron import CronTrigger  # type: ignore[import-untyped]
     APSCHEDULER_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     APSCHEDULER_AVAILABLE = False
+    BackgroundScheduler = Any  # type: ignore[assignment, misc]
+    CronTrigger = Any  # type: ignore[assignment, misc]
+    logger.warning(f"APScheduler import failed: {e}. Scheduled training will be disabled.")
 
 from ..core.database import SessionLocal
 from ..models.user import UserRole
 from .ml_forecasting import MLForecastingService
 
-logger = logging.getLogger(__name__)
-
 # Global scheduler instance
-_scheduler: Optional[BackgroundScheduler] = None
+_scheduler: Optional[Any] = None
 
 
-def get_scheduler() -> Optional[BackgroundScheduler]:
+def get_scheduler() -> Optional[Any]:
     """Get or create the global scheduler instance"""
     global _scheduler
     
