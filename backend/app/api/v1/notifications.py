@@ -23,6 +23,26 @@ def read_notifications(
 ):
     """Get current user's notifications"""
     try:
+        # Check for pending approvals and notify approvers periodically
+        try:
+            from ...services.notification_service import NotificationService
+            from ...crud.approval import approval as approval_crud
+            from ...models.approval import ApprovalStatus
+            
+            # Only check for managers, finance admins, and admins
+            if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+                pending_approvals = approval_crud.get_pending(db, current_user.id, 0, 100)
+                if pending_approvals:
+                    # Check if we've already notified about these approvals recently
+                    # (This is a simple check - in production, you might want to track last notification time)
+                    NotificationService.notify_pending_approvals(
+                        db=db,
+                        approver_id=current_user.id,
+                        pending_count=len(pending_approvals)
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to check pending approvals: {str(e)}")
+        
         if unread_only:
             notifications = notification_crud.get_unread(db, current_user.id, skip, limit)
         else:

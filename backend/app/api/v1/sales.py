@@ -106,6 +106,26 @@ def create_sale(
     
     try:
         sale = sale_crud.create(db, sale_data, current_user.id)
+        
+        # Send notification about sale creation
+        try:
+            from ...services.notification_service import NotificationService
+            # Get item name for notification
+            from ...models.inventory import InventoryItem
+            item = db.query(InventoryItem).filter(InventoryItem.id == sale.item_id).first()
+            item_name = item.item_name if item else f"Item #{sale.item_id}"
+            
+            NotificationService.notify_sale_created(
+                db=db,
+                sale_id=sale.id,
+                item_name=item_name,
+                quantity=sale.quantity_sold,
+                total_amount=float(sale.total_sale),
+                created_by_id=current_user.id
+            )
+        except Exception as e:
+            logger.warning(f"Notification failed for sale creation: {str(e)}")
+        
         return _format_sale_output(sale, current_user)
     except HTTPException:
         raise
@@ -337,6 +357,26 @@ def post_sale(
             )
         
         sale = sale_crud.post_sale(db, sale_id, post_data, current_user.id)
+        
+        # Send notification about sale posting
+        try:
+            from ...services.notification_service import NotificationService
+            # Get item name for notification
+            from ...models.inventory import InventoryItem
+            item = db.query(InventoryItem).filter(InventoryItem.id == sale.item_id).first()
+            item_name = item.item_name if item else f"Item #{sale.item_id}"
+            
+            NotificationService.notify_sale_posted(
+                db=db,
+                sale_id=sale.id,
+                item_name=item_name,
+                total_amount=float(sale.total_sale),
+                posted_by_id=current_user.id,
+                sold_by_id=sale.sold_by_id
+            )
+        except Exception as e:
+            logger.warning(f"Notification failed for sale posting: {str(e)}")
+        
         return _format_sale_output(sale, current_user)
     except HTTPException:
         raise

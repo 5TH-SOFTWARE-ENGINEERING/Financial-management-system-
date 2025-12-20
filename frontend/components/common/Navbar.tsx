@@ -804,10 +804,12 @@ interface Notification {
   id: number;
   message: string;
   type: string;
+  priority?: string;
   is_read: boolean;
   created_at: string;
   title?: string;
   action_url?: string;
+  display_type?: 'success' | 'error' | 'warning' | 'info';
 }
 
 export default function Navbar() {
@@ -940,12 +942,54 @@ export default function Navbar() {
         if (newCount > oldCount) {
           try {
             const notifResponse = await apiClient.getNotifications(true);
-            const latestNotifs = (notifResponse.data || []) as Notification[];
+            // Handle both direct array response and wrapped response
+            const notificationsData = Array.isArray(notifResponse?.data)
+              ? notifResponse.data
+              : (notifResponse?.data && typeof notifResponse.data === 'object' && notifResponse.data !== null && 'data' in notifResponse.data 
+                  ? (notifResponse.data as { data: unknown[] }).data 
+                  : []);
+            
+            const latestNotifs = (notificationsData || []).map((notif: unknown) => {
+              const notification = notif as { 
+                id?: number; 
+                message?: string; 
+                type?: string; 
+                priority?: string;
+                is_read?: boolean; 
+                created_at?: string; 
+                title?: string; 
+                action_url?: string;
+              };
+              return {
+                id: notification.id || 0,
+                message: notification.message || '',
+                type: notification.type || 'system_alert',
+                priority: notification.priority || 'medium',
+                is_read: notification.is_read || false,
+                created_at: notification.created_at || new Date().toISOString(),
+                title: notification.title,
+                action_url: notification.action_url,
+              } as Notification;
+            });
+            
             const newNotifs = latestNotifs.filter((n) => !lastNotificationIdsRef.current.has(n.id));
             
             newNotifs.forEach((notification: Notification) => {
               lastNotificationIdsRef.current.add(notification.id);
-              const toastId = toast.info(notification.title || notification.message, {
+              
+              // Determine toast type based on notification type
+              const notifType = notification.type?.toLowerCase() || '';
+              let toastType: 'success' | 'error' | 'warning' | 'info' = 'info';
+              
+              if (notifType.includes('approved') || notifType.includes('completed') || notifType.includes('created') && notifType.includes('user')) {
+                toastType = 'success';
+              } else if (notifType.includes('rejected') || notifType.includes('error') || notifType.includes('failed')) {
+                toastType = 'error';
+              } else if (notifType.includes('request') || notifType.includes('pending') || notifType.includes('alert')) {
+                toastType = 'warning';
+              }
+              
+              const toastOptions = {
                 description: notification.message,
                 duration: 5000,
                 action: {
@@ -953,12 +997,23 @@ export default function Navbar() {
                   onClick: () => {
                     setIsNotificationPanelOpen(true);
                     if (notification.action_url) {
-                      router.push(notification.action_url);
+                      const url = notification.action_url.startsWith('/') 
+                        ? notification.action_url 
+                        : `/${notification.action_url}`;
+                      router.push(url);
                     }
                     toast.dismiss(toastId);
                   }
                 }
-              });
+              };
+              
+              const toastId = toastType === 'success' 
+                ? toast.success(notification.title || notification.message, toastOptions)
+                : toastType === 'error'
+                ? toast.error(notification.title || notification.message, toastOptions)
+                : toastType === 'warning'
+                ? toast.warning(notification.title || notification.message, toastOptions)
+                : toast.info(notification.title || notification.message, toastOptions);
             });
             if (latestNotifs.length > 0) {
               lastNotificationIdsRef.current = new Set(latestNotifs.map((n) => n.id));
@@ -1089,7 +1144,41 @@ export default function Navbar() {
         setLoadingNotifications(true);
         try {
           const response = await apiClient.getNotifications(false); 
-          const notifs = (response.data || []) as Notification[];
+          // Handle both direct array response and wrapped response
+          const notificationsData = Array.isArray(response?.data)
+            ? response.data
+            : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data 
+                ? (response.data as { data: unknown[] }).data 
+                : []);
+          
+          const notifs = (notificationsData || []).map((notif: unknown) => {
+            const notification = notif as { 
+              id?: number; 
+              message?: string; 
+              type?: string; 
+              priority?: string;
+              is_read?: boolean; 
+              created_at?: string; 
+              title?: string; 
+              action_url?: string;
+            };
+            return {
+              id: notification.id || 0,
+              message: notification.message || '',
+              type: notification.type || 'system_alert',
+              priority: notification.priority || 'medium',
+              is_read: notification.is_read || false,
+              created_at: notification.created_at || new Date().toISOString(),
+              title: notification.title,
+              action_url: notification.action_url,
+            } as Notification;
+          });
+          
+          // Sort by created_at (newest first)
+          notifs.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          
           setNotifications(notifs);
           const unreadCountFromList = notifs.filter((n) => !n.is_read).length;
           setUnreadCount(unreadCountFromList);
@@ -1159,7 +1248,16 @@ export default function Navbar() {
       }
     }
     setIsNotificationPanelOpen(false);
-    router.push('/notifications');
+    
+    // Navigate to action URL if available, otherwise to notifications page
+    if (notification.action_url) {
+      const url = notification.action_url.startsWith('/') 
+        ? notification.action_url 
+        : `/${notification.action_url}`;
+      router.push(url);
+    } else {
+      router.push('/notifications');
+    }
   };
 
   const formatNotificationDate = (dateString: string) => {
@@ -1450,11 +1548,23 @@ export default function Navbar() {
                       key={notification.id}
                       $isRead={notification.is_read}
                       onClick={() => handleNotificationClick(notification)}
+                      title={notification.action_url ? 'Click to view details' : 'Click to view all notifications'}
                     >
                       <NotificationItemContent>
                         <NotificationText $isRead={notification.is_read}>
                           <p>{notification.title || notification.message}</p>
                           <span>{formatNotificationDate(notification.created_at)}</span>
+                          {notification.action_url && (
+                            <span style={{ 
+                              display: 'block', 
+                              marginTop: '4px', 
+                              fontSize: '11px', 
+                              color: PRIMARY_ACCENT,
+                              opacity: 0.8 
+                            }}>
+                              View details →
+                            </span>
+                          )}
                         </NotificationText>
                       </NotificationItemContent>
                     </NotificationItem>

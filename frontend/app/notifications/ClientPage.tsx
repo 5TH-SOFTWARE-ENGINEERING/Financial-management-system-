@@ -630,7 +630,7 @@ export default function NotificationsPage() {
   const mapNotificationType = (type: string): 'success' | 'error' | 'warning' | 'info' => {
     const normalized = type?.toLowerCase() || 'system_alert';
     
-    // Success types
+    // Success types - positive outcomes
     if (
       normalized === 'approval_decision' ||
       normalized === 'expense_approved' ||
@@ -640,14 +640,17 @@ export default function NotificationsPage() {
       normalized === 'ml_training_complete' ||
       normalized.includes('approved') ||
       normalized.includes('completed') ||
-      normalized.includes('confirmed')
+      normalized.includes('confirmed') ||
+      normalized.includes('created') && (normalized.includes('user') || normalized.includes('welcome'))
     ) {
       return 'success';
     }
     
-    // Error types
+    // Error types - negative outcomes that need attention
     if (
       normalized === 'budget_exceeded' ||
+      normalized === 'expense_rejected' ||
+      normalized === 'revenue_rejected' ||
       normalized.includes('rejected') ||
       normalized.includes('error') ||
       normalized.includes('failed') ||
@@ -667,18 +670,21 @@ export default function NotificationsPage() {
       normalized === 'sale_created' ||
       normalized.includes('pending') ||
       normalized.includes('reminder') ||
-      normalized.includes('alert')
+      normalized.includes('alert') ||
+      normalized.includes('required')
     ) {
       return 'warning';
     }
     
-    // Info types - general system updates
+    // Info types - general system updates and informational messages
     if (
       normalized === 'system_alert' ||
       normalized === 'expense_updated' ||
       normalized === 'revenue_updated' ||
       normalized === 'inventory_updated' ||
-      normalized === 'report_ready'
+      normalized === 'report_ready' ||
+      normalized.includes('updated') ||
+      normalized.includes('profile')
     ) {
       return 'info';
     }
@@ -696,6 +702,18 @@ export default function NotificationsPage() {
       }, 30000);
       return () => clearInterval(interval);
     }
+  }, [isAuthenticated, user, fetchNotifications]);
+
+  // Auto-refresh when window regains focus (user returns to tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isAuthenticated && user) {
+        fetchNotifications(false);
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [isAuthenticated, user, fetchNotifications]);
 
   const markAsRead = async (notificationId: number) => {
@@ -822,7 +840,25 @@ export default function NotificationsPage() {
     );
   }
 
-  const getNotificationIcon = (displayType?: string) => {
+  const getNotificationIcon = (displayType?: string, notificationType?: string) => {
+    // Use notification type for more specific icons
+    const type = notificationType?.toLowerCase() || '';
+    
+    // Specific icons for certain notification types
+    if (type.includes('user') || type.includes('welcome')) {
+      return <CheckCircle />;
+    }
+    if (type.includes('approval') && type.includes('request')) {
+      return <AlertCircle />;
+    }
+    if (type.includes('expense') || type.includes('revenue')) {
+      return <FileText />;
+    }
+    if (type.includes('inventory')) {
+      return <AlertCircle />;
+    }
+    
+    // Fallback to display type
     switch (displayType) {
       case 'success':
         return <CheckCircle />;
@@ -998,13 +1034,17 @@ export default function NotificationsPage() {
                         
                         // Navigate to action URL if available
                         if (notification.action_url) {
-                          router.push(notification.action_url);
+                          // Handle both relative and absolute URLs
+                          const url = notification.action_url.startsWith('/') 
+                            ? notification.action_url 
+                            : `/${notification.action_url}`;
+                          router.push(url);
                         }
                       }}
                     >
                       <NotificationContent>
                         <NotificationIcon $displayType={notification.display_type || 'info'}>
-                          {getNotificationIcon(notification.display_type)}
+                          {getNotificationIcon(notification.display_type, notification.type)}
                         </NotificationIcon>
                         <NotificationDetails>
                           <NotificationHeader>
@@ -1029,7 +1069,11 @@ export default function NotificationsPage() {
                                   if (!notification.is_read) {
                                     markAsRead(notification.id);
                                   }
-                                  router.push(notification.action_url!);
+                                  // Handle both relative and absolute URLs
+                                  const url = notification.action_url!.startsWith('/') 
+                                    ? notification.action_url! 
+                                    : `/${notification.action_url!}`;
+                                  router.push(url);
                                 }}
                               >
                                 View Details

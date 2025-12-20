@@ -323,6 +323,168 @@ class NotificationService:
             logger.error(f"Failed to send inventory low notification: {str(e)}", exc_info=True)
     
     @staticmethod
+    def notify_inventory_created(
+        db: Session,
+        item_id: int,
+        item_name: str,
+        quantity: int,
+        created_by_id: int
+    ):
+        """Notify when inventory item is created"""
+        try:
+            # Notify the creator
+            NotificationService.create_notification(
+                db=db,
+                user_id=created_by_id,
+                title="Inventory Item Created",
+                message=f"Inventory item '{item_name}' (Quantity: {quantity}) has been created successfully.",
+                notification_type=NotificationType.INVENTORY_UPDATED,
+                priority=NotificationPriority.LOW,
+                action_url=f"/inventory/manage?item_id={item_id}"
+            )
+            
+            # Notify finance admins about new inventory
+            finance_admins = db.query(User).filter(
+                User.role.in_([UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                User.is_active == True,
+                User.id != created_by_id
+            ).all()
+            
+            for admin in finance_admins:
+                NotificationService.create_notification(
+                    db=db,
+                    user_id=admin.id,
+                    title="New Inventory Item",
+                    message=f"A new inventory item '{item_name}' has been added to the system.",
+                    notification_type=NotificationType.INVENTORY_UPDATED,
+                    priority=NotificationPriority.LOW,
+                    action_url=f"/inventory/manage?item_id={item_id}"
+                )
+        except Exception as e:
+            logger.error(f"Failed to send inventory creation notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_inventory_updated(
+        db: Session,
+        item_id: int,
+        item_name: str,
+        updated_by_id: int,
+        changes: List[str] = None
+    ):
+        """Notify when inventory item is updated"""
+        try:
+            changes_text = ", ".join(changes) if changes else "updated"
+            NotificationService.create_notification(
+                db=db,
+                user_id=updated_by_id,
+                title="Inventory Item Updated",
+                message=f"Inventory item '{item_name}' has been {changes_text}.",
+                notification_type=NotificationType.INVENTORY_UPDATED,
+                priority=NotificationPriority.LOW,
+                action_url=f"/inventory/manage?item_id={item_id}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send inventory update notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_sale_created(
+        db: Session,
+        sale_id: int,
+        item_name: str,
+        quantity: int,
+        total_amount: float,
+        created_by_id: int
+    ):
+        """Notify when a sale is created"""
+        try:
+            # Notify the creator
+            NotificationService.create_notification(
+                db=db,
+                user_id=created_by_id,
+                title="Sale Created",
+                message=f"Sale for {quantity}x {item_name} (${total_amount:,.2f}) has been created successfully.",
+                notification_type=NotificationType.SALE_CREATED,
+                priority=NotificationPriority.MEDIUM,
+                action_url=f"/sales/accounting?sale_id={sale_id}"
+            )
+            
+            # Notify accountants about pending sale
+            accountants = db.query(User).filter(
+                User.role.in_([UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                User.is_active == True
+            ).all()
+            
+            for accountant in accountants:
+                NotificationService.create_notification(
+                    db=db,
+                    user_id=accountant.id,
+                    title="New Sale Pending",
+                    message=f"New sale for {quantity}x {item_name} (${total_amount:,.2f}) is pending posting to ledger.",
+                    notification_type=NotificationType.SALE_CREATED,
+                    priority=NotificationPriority.HIGH,
+                    action_url=f"/sales/accounting?sale_id={sale_id}"
+                )
+        except Exception as e:
+            logger.error(f"Failed to send sale creation notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_sale_posted(
+        db: Session,
+        sale_id: int,
+        item_name: str,
+        total_amount: float,
+        posted_by_id: int,
+        sold_by_id: int
+    ):
+        """Notify when a sale is posted to ledger"""
+        try:
+            # Notify the person who posted
+            NotificationService.create_notification(
+                db=db,
+                user_id=posted_by_id,
+                title="Sale Posted to Ledger",
+                message=f"Sale for {item_name} (${total_amount:,.2f}) has been posted to the accounting ledger.",
+                notification_type=NotificationType.SALE_POSTED,
+                priority=NotificationPriority.MEDIUM,
+                action_url=f"/sales/accounting"
+            )
+            
+            # Notify the original seller if different
+            if sold_by_id != posted_by_id:
+                NotificationService.create_notification(
+                    db=db,
+                    user_id=sold_by_id,
+                    title="Sale Posted to Ledger",
+                    message=f"Your sale for {item_name} (${total_amount:,.2f}) has been posted to the accounting ledger.",
+                    notification_type=NotificationType.SALE_POSTED,
+                    priority=NotificationPriority.MEDIUM,
+                    action_url=f"/sales/accounting"
+                )
+        except Exception as e:
+            logger.error(f"Failed to send sale posted notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_pending_approvals(
+        db: Session,
+        approver_id: int,
+        pending_count: int
+    ):
+        """Notify approvers about pending approvals"""
+        try:
+            if pending_count > 0:
+                NotificationService.create_notification(
+                    db=db,
+                    user_id=approver_id,
+                    title="Pending Approvals",
+                    message=f"You have {pending_count} pending approval{'s' if pending_count > 1 else ''} requiring your attention.",
+                    notification_type=NotificationType.APPROVAL_REQUEST,
+                    priority=NotificationPriority.HIGH,
+                    action_url="/approvals"
+                )
+        except Exception as e:
+            logger.error(f"Failed to send pending approvals notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
     def notify_user_created(
         db: Session,
         new_user_id: int,

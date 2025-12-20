@@ -11,6 +11,7 @@ from fastapi import Request # type: ignore[import-untyped]
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
+import logging
 
 from ...core.database import get_db
 from ...api.deps import get_current_active_user
@@ -26,6 +27,7 @@ from ...core.security import verify_password
 from pydantic import BaseModel # type: ignore[import-untyped]
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _is_finance_admin(user_role: UserRole) -> bool:
@@ -112,6 +114,19 @@ def create_inventory_item(
 
     # Create item
     item = inventory_crud.create(db, item_data, current_user.id)
+    
+    # Send notification about inventory creation
+    try:
+        from ...services.notification_service import NotificationService
+        NotificationService.notify_inventory_created(
+            db=db,
+            item_id=item.id,
+            item_name=item.item_name,
+            quantity=item.quantity,
+            created_by_id=current_user.id
+        )
+    except Exception as e:
+        logger.warning(f"Notification failed for inventory creation: {str(e)}")
     
     # Return with role-based filtering
     item_dict = {
@@ -248,8 +263,49 @@ def update_inventory_item(
                 detail="You do not have permission to modify cost fields"
             )
     
+    # Track changes for notification
+    changes = []
+    if item_update.quantity is not None and item_update.quantity != item.quantity:
+        changes.append(f"quantity: {item.quantity} → {item_update.quantity}")
+    if item_update.selling_price is not None and item_update.selling_price != item.selling_price:
+        changes.append(f"selling price: ${item.selling_price:,.2f} → ${item_update.selling_price:,.2f}")
+    if item_update.item_name is not None and item_update.item_name != item.item_name:
+        changes.append(f"name: {item.item_name} → {item_update.item_name}")
+    
     # Update item
     updated_item = inventory_crud.update(db, item, item_update, current_user.id)
+    
+    # Send notification about inventory update
+    try:
+        from ...services.notification_service import NotificationService
+        NotificationService.notify_inventory_updated(
+            db=db,
+            item_id=updated_item.id,
+            item_name=updated_item.item_name,
+            updated_by_id=current_user.id,
+            changes=changes if changes else None
+        )
+        
+        # Check for low stock after update
+        if updated_item.quantity is not None and updated_item.quantity <= 10:  # Threshold for low stock
+            # Notify finance admins about low stock
+            finance_admins = db.query(User).filter(
+                User.role.in_([UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]),
+                User.is_active == True
+            ).all()
+            
+            admin_ids = [admin.id for admin in finance_admins]
+            if admin_ids:
+                NotificationService.notify_inventory_low(
+                    db=db,
+                    item_id=updated_item.id,
+                    item_name=updated_item.item_name,
+                    current_quantity=updated_item.quantity,
+                    min_quantity=10,
+                    user_ids=admin_ids
+                )
+    except Exception as e:
+        logger.warning(f"Notification failed for inventory update: {str(e)}")
     
     # Return with role-based filtering
     item_dict = {
