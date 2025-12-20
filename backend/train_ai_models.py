@@ -17,9 +17,23 @@ from datetime import datetime, timedelta, timezone
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from app.core.database import SessionLocal
+from app.core.database import SessionLocal, engine, Base
 from app.services.ml_forecasting import MLForecastingService
 from app.models.user import UserRole
+# Import all models to ensure they're registered with Base
+from app.models import (  # noqa: F401
+    User, UserRole, Role,
+    RevenueEntry, ExpenseEntry,
+    ApprovalWorkflow, ApprovalComment,
+    Report, ReportSchedule,
+    AuditLog, Notification,
+    Project, LoginHistory,
+    Budget, BudgetItem, BudgetScenario, Forecast, BudgetVariance,
+    BudgetType, BudgetPeriod, BudgetStatus,
+    InventoryItem,
+    Sale, SaleStatus, JournalEntry,
+    InventoryAuditLog, InventoryChangeType
+)
 import argparse
 
 
@@ -27,6 +41,14 @@ def train_all_models():
     """Train all models for all metrics"""
     print("Starting AI Model Training...")
     print("=" * 60)
+    
+    # Ensure database tables exist
+    print("Initializing database tables...")
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database tables initialized successfully\n")
+    except Exception as e:
+        print(f"Warning: Failed to create database tables: {e}\n")
     
     db = SessionLocal()
     try:
