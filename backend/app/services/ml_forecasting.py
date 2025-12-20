@@ -67,6 +67,7 @@ from ..models.user import UserRole
 from ..crud.revenue import revenue as revenue_crud
 from ..crud.expense import expense as expense_crud
 from ..crud.inventory import inventory as inventory_crud
+from ..crud.sale import sale as sale_crud
 
 logger = logging.getLogger(__name__)
 
@@ -183,13 +184,104 @@ class MLForecastingService:
         
         # Get inventory data
         if metric == "inventory":
-            # Get inventory items and their quantities over time
-            items = inventory_crud.get_multi(db, 0, 1000)
-            for item in items:
-                if item.is_active:
-                    # Use current quantity as data point (in production, track historical quantities)
-                    data_points.append(float(item.quantity))
-                    dates.append(item.updated_at if item.updated_at else item.created_at)
+            # Use sales data to create a time series of total inventory value
+            # Work backwards from current inventory to reconstruct monthly values
+            try:
+                # Get all inventory items to calculate current inventory value
+                items = inventory_crud.get_multi(db, 0, 1000)
+                current_inventory_value = sum(
+                    float(item.quantity) * float(item.selling_price) 
+                    for item in items 
+                    if item.is_active
+                )
+                
+                # Get all sales in the date range (including up to end_date)
+                all_sales = sale_crud.get_multi(
+                    db, 
+                    skip=0, 
+                    limit=10000,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                
+                # Group sales by month
+                monthly_sales = {}
+                for sale in all_sales:
+                    if sale.created_at:
+                        sale_date = sale.created_at.replace(tzinfo=timezone.utc) if sale.created_at.tzinfo is None else sale.created_at
+                        month_key = sale_date.strftime('%Y-%m')
+                        if month_key not in monthly_sales:
+                            monthly_sales[month_key] = 0.0
+                        # Add back the sold value (working backwards)
+                        monthly_sales[month_key] += float(sale.quantity_sold) * float(sale.selling_price)
+                
+                # Build monthly inventory value time series (working backwards from current)
+                monthly_data = {}
+                current_date = end_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                running_value = current_inventory_value
+                
+                # Work backwards month by month, adding sales to reconstruct historical inventory
+                months_to_process = []
+                check_date = current_date
+                while check_date >= start_date.replace(day=1):
+                    months_to_process.append(check_date)
+                    if check_date.month == 1:
+                        check_date = check_date.replace(year=check_date.year - 1, month=12)
+                    else:
+                        check_date = check_date.replace(month=check_date.month - 1)
+                
+                # Process months in forward chronological order
+                for month_date in sorted(months_to_process):
+                    month_key = month_date.strftime('%Y-%m')
+                    # Add back sales from this month to get inventory value at start of month
+                    if month_key in monthly_sales:
+                        running_value += monthly_sales[month_key]
+                    
+                    monthly_data[month_key] = {
+                        'date': month_date,
+                        'total_value': running_value
+                    }
+                
+                # Convert to data_points and dates in chronological order
+                for month_key in sorted(monthly_data.keys()):
+                    month_data = monthly_data[month_key]
+                    data_points.append(max(0, month_data['total_value']))  # Ensure non-negative
+                    dates.append(month_data['date'])
+                    
+                # If we don't have enough data points, supplement with current inventory
+                if len(data_points) < 12:
+                    # Add additional months with estimated values
+                    logger.warning(f"Insufficient inventory time series data: {len(data_points)} months. Supplementing with current inventory value.")
+                    if len(data_points) == 0:
+                        # No sales data, use current inventory value for each month
+                        current_date = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                        while current_date <= end_date:
+                            data_points.append(current_inventory_value)
+                            dates.append(current_date)
+                            if current_date.month == 12:
+                                current_date = current_date.replace(year=current_date.year + 1, month=1)
+                            else:
+                                current_date = current_date.replace(month=current_date.month + 1)
+                    
+            except Exception as e:
+                logger.warning(f"Failed to prepare inventory time series from sales data: {e}")
+                # Fallback: Create time series using current inventory value distributed over months
+                items = inventory_crud.get_multi(db, 0, 1000)
+                current_inventory_value = sum(
+                    float(item.quantity) * float(item.selling_price) 
+                    for item in items 
+                    if item.is_active
+                )
+                
+                # Create monthly data points with current inventory value
+                current_date = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                while current_date <= end_date:
+                    data_points.append(current_inventory_value)
+                    dates.append(current_date)
+                    if current_date.month == 12:
+                        current_date = current_date.replace(year=current_date.year + 1, month=1)
+                    else:
+                        current_date = current_date.replace(month=current_date.month + 1)
         
         if not data_points or not dates:
             return pd.DataFrame()

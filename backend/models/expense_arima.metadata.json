@@ -1,0 +1,22 @@
+{
+  "model_type": "arima",
+  "metric": "expense",
+  "order": [
+    1,
+    1,
+    1
+  ],
+  "metrics": {
+    "mae": 4649.861249101044,
+    "rmse": 6163.1653907380305,
+    "r2": 0.6227340026366821,
+    "max_error": 15443.804188128312,
+    "median_ae": 3953.311710146678,
+    "mape": 23.736182188494436,
+    "directional_accuracy": 37.5,
+    "mean_error": -1594.9645024996696,
+    "within_10pct_error": 32.0
+  },
+  "data_points": 25,
+  "trained_at": "2025-12-20T21:22:21.332399+00:00"
+}
