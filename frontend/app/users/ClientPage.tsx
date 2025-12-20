@@ -21,6 +21,9 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  EyeOff,
+  Lock,
+  XCircle,
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { formatDate } from '@/lib/utils';
@@ -423,14 +426,14 @@ const SubordinateList = styled.div`
   margin-top: ${theme.spacing.xs};
 `;
 
-const ModalOverlay = styled.div`
+const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
+  display: ${props => props.$isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
   backdrop-filter: blur(4px);
 `;
 
@@ -438,17 +441,60 @@ const ModalContent = styled.div`
   background: ${theme.colors.background};
   border-radius: ${theme.borderRadius.md};
   border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.xl};
-  max-width: 500px;
+  padding: ${theme.spacing.lg};
+  max-width: 600px;
   width: 90%;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: ${theme.spacing.lg};
+  padding-bottom: ${theme.spacing.md};
+  border-bottom: 1px solid ${theme.colors.border};
+  
+  h3 {
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.sm};
+  }
+  
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${TEXT_COLOR_MUTED};
+    padding: ${theme.spacing.xs};
+    border-radius: ${theme.borderRadius.sm};
+    transition: all ${theme.transitions.default};
+    
+    &:hover {
+      background: ${theme.colors.backgroundSecondary};
+      color: ${TEXT_COLOR_DARK};
+    }
+    
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
 `;
 
 const ModalTitle = styled.h3`
   font-size: ${theme.typography.fontSizes.lg};
   font-weight: ${theme.typography.fontWeights.bold};
-  color: #111827;
-  margin: 0 0 ${theme.spacing.md};
+  color: ${TEXT_COLOR_DARK};
+  margin: 0;
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
@@ -481,41 +527,64 @@ const Label = styled.label`
   margin-bottom: ${theme.spacing.xs};
 `;
 
-const PasswordInput = styled.input`
-  width: 100%;
-  max-width: 100%;
-  padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  background: #ffffff;
-  color: #111827;
-  transition: all 0.2s ease-in-out;
-  outline: none;
-  box-sizing: border-box;
-  margin: 0;
-
-  &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+const PasswordInputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  input {
+    width: 100%;
+    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    padding-right: 48px;
+    border: 1px solid ${theme.colors.border};
+    border-radius: ${theme.borderRadius.md};
+    background: ${theme.colors.background};
+    font-size: ${theme.typography.fontSizes.md};
+    color: ${TEXT_COLOR_DARK};
+    transition: all ${theme.transitions.default};
+    
+    &:focus {
+      outline: none;
+      border-color: ${PRIMARY_COLOR};
+      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    }
+    
+    &::placeholder {
+      color: ${TEXT_COLOR_MUTED};
+      opacity: 0.5;
+    }
+    
+    &:disabled {
+      background-color: ${theme.colors.backgroundSecondary};
+      color: ${TEXT_COLOR_MUTED};
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
   }
-
-  &:hover:not(:disabled) {
-    border-color: #d1d5db;
-  }
-
-  &::placeholder {
-    color: #9ca3af;
-  }
-
-  &:disabled {
-    background-color: #f9fafb;
-    color: #6b7280;
-    cursor: not-allowed;
-    opacity: 0.7;
-    border-color: #e5e7eb;
+  
+  button {
+    position: absolute;
+    right: ${theme.spacing.sm};
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${TEXT_COLOR_MUTED};
+    padding: ${theme.spacing.xs};
+    border-radius: ${theme.borderRadius.sm};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all ${theme.transitions.default};
+    
+    &:hover {
+      color: ${TEXT_COLOR_DARK};
+      background: ${theme.colors.backgroundSecondary};
+    }
+    
+    svg {
+      width: 18px;
+      height: 18px;
+    }
   }
 `;
 
@@ -544,6 +613,7 @@ export default function UsersPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [activatingUserId, setActivatingUserId] = useState<number | null>(null);
   const [deactivatingUserId, setDeactivatingUserId] = useState<number | null>(null);
   const [showActivateModal, setShowActivateModal] = useState(false);
@@ -584,6 +654,28 @@ export default function UsersPage() {
     setUserToDelete(null);
     setDeletePassword('');
     setDeletePasswordError(null);
+    setShowDeletePassword(false);
+  };
+
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      // Use login endpoint to verify password
+      const identifier = user.email || '';
+      await apiClient.request({
+        method: 'POST',
+        url: '/auth/login-json',
+        data: {
+          username: identifier,
+          password: password
+        }
+      });
+      return true;
+    } catch (err: unknown) {
+      // If login fails, password is incorrect
+      return false;
+    }
   };
 
   const handleDelete = async () => {
@@ -596,11 +688,22 @@ export default function UsersPage() {
     setDeletePasswordError(null);
 
     try {
+      // First verify password
+      const isValid = await verifyPassword(deletePassword.trim());
+      
+      if (!isValid) {
+        setDeletePasswordError('Incorrect password. Please try again.');
+        setDeleting(false);
+        return;
+      }
+
+      // Password is correct, proceed with deletion
       await apiClient.deleteUser(userToDelete.id, deletePassword.trim());
       toast.success('User deleted successfully');
       setShowDeleteModal(false);
       setUserToDelete(null);
       setDeletePassword('');
+      setShowDeletePassword(false);
       fetchAllUsers();
     } catch (err: unknown) {
       const errorMessage =
@@ -1198,12 +1301,17 @@ export default function UsersPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && userToDelete && (
-        <ModalOverlay onClick={handleDeleteCancel}>
+        <ModalOverlay $isOpen={showDeleteModal} onClick={handleDeleteCancel}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>
-              <AlertCircle size={20} style={{ color: '#dc2626' }} />
-              Delete User
-            </ModalTitle>
+            <ModalHeader>
+              <ModalTitle>
+                <AlertCircle size={20} style={{ color: '#dc2626' }} />
+                Delete User
+              </ModalTitle>
+              <button onClick={handleDeleteCancel} title="Close" type="button">
+                <XCircle />
+              </button>
+            </ModalHeader>
 
             <WarningBox>
               <p>
@@ -1281,24 +1389,36 @@ export default function UsersPage() {
 
             <FormGroup>
               <Label htmlFor="delete-password">
+                <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
                 Enter <strong>your own password</strong> to confirm deletion of <strong>{userToDelete.name}</strong>:
               </Label>
-              <PasswordInput
-                id="delete-password"
-                type="password"
-                value={deletePassword}
-                onChange={(e) => {
-                  setDeletePassword(e.target.value);
-                  setDeletePasswordError(null);
-                }}
-                placeholder="Enter your password"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && deletePassword.trim()) {
-                    handleDelete();
-                  }
-                }}
-              />
+              <PasswordInputWrapper>
+                <input
+                  id="delete-password"
+                  type={showDeletePassword ? 'text' : 'password'}
+                  value={deletePassword}
+                  onChange={(e) => {
+                    setDeletePassword(e.target.value);
+                    setDeletePasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && deletePassword.trim() && !deleting) {
+                      handleDelete();
+                    }
+                  }}
+                  disabled={deleting}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDeletePassword(!showDeletePassword)}
+                  title={showDeletePassword ? 'Hide password' : 'Show password'}
+                  disabled={deleting}
+                >
+                  {showDeletePassword ? <EyeOff /> : <Eye />}
+                </button>
+              </PasswordInputWrapper>
               {deletePasswordError && (
                 <ErrorText>{deletePasswordError}</ErrorText>
               )}
@@ -1336,7 +1456,7 @@ export default function UsersPage() {
 
       {/* Activate Confirmation Modal */}
       {showActivateModal && userToActivate && (
-        <ModalOverlay onClick={handleActivateCancel}>
+        <ModalOverlay $isOpen={showActivateModal} onClick={handleActivateCancel}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
               <UserCheck size={20} style={{ color: '#16a34a' }} />
@@ -1351,24 +1471,28 @@ export default function UsersPage() {
 
             <FormGroup>
               <Label htmlFor="activate-password">
+                <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
                 Enter <strong>your own password</strong> to confirm activation of <strong>{userToActivate.name}</strong>:
               </Label>
-              <PasswordInput
-                id="activate-password"
-                type="password"
-                value={activatePassword}
-                onChange={(e) => {
-                  setActivatePassword(e.target.value);
-                  setActivatePasswordError(null);
-                }}
-                placeholder="Enter your password"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && activatePassword.trim()) {
-                    handleActivate();
-                  }
-                }}
-              />
+              <PasswordInputWrapper>
+                <input
+                  id="activate-password"
+                  type="password"
+                  value={activatePassword}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setActivatePassword(e.target.value);
+                    setActivatePasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  autoFocus
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter' && activatePassword.trim()) {
+                      handleActivate();
+                    }
+                  }}
+                  disabled={activatingUserId === userToActivate.id}
+                />
+              </PasswordInputWrapper>
               {activatePasswordError && (
                 <ErrorText>{activatePasswordError}</ErrorText>
               )}
@@ -1406,7 +1530,7 @@ export default function UsersPage() {
 
       {/* Deactivate Confirmation Modal */}
       {showDeactivateModal && userToDeactivate && (
-        <ModalOverlay onClick={handleDeactivateCancel}>
+        <ModalOverlay $isOpen={showDeactivateModal} onClick={handleDeactivateCancel}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
               <Shield size={20} style={{ color: '#dc2626' }} />
@@ -1502,24 +1626,28 @@ export default function UsersPage() {
 
             <FormGroup>
               <Label htmlFor="deactivate-password">
-                Enter your password to confirm deactivation:
+                <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                Enter <strong>your own password</strong> to confirm deactivation of <strong>{userToDeactivate.name}</strong>:
               </Label>
-              <PasswordInput
-                id="deactivate-password"
-                type="password"
-                value={deactivatePassword}
-                onChange={(e) => {
-                  setDeactivatePassword(e.target.value);
-                  setDeactivatePasswordError(null);
-                }}
-                placeholder="Enter your password"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && deactivatePassword.trim()) {
-                    handleDeactivate();
-                  }
-                }}
-              />
+              <PasswordInputWrapper>
+                <input
+                  id="deactivate-password"
+                  type="password"
+                  value={deactivatePassword}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setDeactivatePassword(e.target.value);
+                    setDeactivatePasswordError(null);
+                  }}
+                  placeholder="Enter your password"
+                  autoFocus
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter' && deactivatePassword.trim()) {
+                      handleDeactivate();
+                    }
+                  }}
+                  disabled={deactivatingUserId === userToDeactivate.id}
+                />
+              </PasswordInputWrapper>
               {deactivatePasswordError && (
                 <ErrorText>{deactivatePasswordError}</ErrorText>
               )}
