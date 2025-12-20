@@ -694,9 +694,10 @@ const NotificationPanelHeader = styled.div`
 const NotificationPanelBody = styled.div`
   flex: 1;
   overflow-y: auto;
-  max-height: 520px;
+  max-height: 480px;
   padding: 12px;
   background: #ffffff;
+  scroll-behavior: smooth;
   
   /* Custom scrollbar */
   &::-webkit-scrollbar {
@@ -767,7 +768,7 @@ const CollapseButton = styled.button`
   justify-content: center;
   gap: 6px;
   padding: 10px 16px;
-  margin: 10px 12px 0;
+  margin: 0;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
@@ -776,6 +777,7 @@ const CollapseButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
   
   &:hover {
     background: ${PRIMARY_ACCENT}10;
@@ -794,6 +796,7 @@ const CollapseButton = styled.button`
     height: 14px;
     transition: transform 0.2s;
     stroke-width: 2.5;
+    flex-shrink: 0;
   }
 `;
 
@@ -895,6 +898,10 @@ const NotificationPanelFooter = styled.div`
   background: #f8fafc;
   display: flex;
   justify-content: center;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 `;
 
 const ViewAllButton = styled.button`
@@ -908,6 +915,7 @@ const ViewAllButton = styled.button`
   border-radius: 8px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: -0.01em;
+  white-space: nowrap;
   
   &:hover {
     background: ${PRIMARY_ACCENT};
@@ -1471,6 +1479,20 @@ export default function Navbar() {
     }
   };
 
+  const handleExpandNotifications = () => {
+    setNotificationsExpanded(!notificationsExpanded);
+    // Scroll to bottom after a brief delay to ensure DOM update
+    setTimeout(() => {
+      const panelBody = notificationPanelRef.current?.querySelector('[data-notification-body]');
+      if (panelBody && !notificationsExpanded) {
+        panelBody.scrollTo({
+          top: panelBody.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+  };
+
   const handleViewAllNotifications = () => {
     setIsNotificationPanelOpen(false);
     router.push('/notifications');
@@ -1774,7 +1796,7 @@ export default function Navbar() {
                   <span>{unreadCount} unread</span>
                 )}
               </NotificationPanelHeader>
-              <NotificationPanelBody>
+              <NotificationPanelBody data-notification-body>
                 {loadingNotifications ? (
                   <LoadingNotifications>
                     <p>Loading notifications...</p>
@@ -1829,11 +1851,26 @@ export default function Navbar() {
               </NotificationPanelBody>
               {notifications.length > 0 && (
                 <NotificationPanelFooter>
-                  <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '10px', 
+                    width: '100%', 
+                    alignItems: 'stretch',
+                    justifyContent: 'center'
+                  }}>
                     {notifications.length > 4 && (
                       <CollapseButton
-                        onClick={() => setNotificationsExpanded(!notificationsExpanded)}
-                        style={{ flex: 1, margin: 0 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleExpandNotifications();
+                        }}
+                        style={{ 
+                          flex: '0 1 auto',
+                          margin: 0,
+                          minWidth: '140px',
+                          maxWidth: '200px'
+                        }}
                       >
                         {notificationsExpanded ? (
                           <>
@@ -1842,15 +1879,23 @@ export default function Navbar() {
                           </>
                         ) : (
                           <>
-                            <span>Show {notifications.length - 4} More</span>
                             <ChevronDown size={14} />
+                            <span>Show {notifications.length - 4} More</span>
                           </>
                         )}
                       </CollapseButton>
                     )}
                     <ViewAllButton 
-                      onClick={handleViewAllNotifications}
-                      style={{ flex: notifications.length > 4 ? 1 : 'none' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleViewAllNotifications();
+                      }}
+                      style={{ 
+                        flex: notifications.length > 4 ? '0 1 auto' : 'none',
+                        minWidth: '160px',
+                        maxWidth: notifications.length > 4 ? '200px' : 'none'
+                      }}
                     >
                       View All Notifications
                     </ViewAllButton>
