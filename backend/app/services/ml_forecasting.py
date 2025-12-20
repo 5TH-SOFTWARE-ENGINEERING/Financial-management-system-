@@ -293,8 +293,8 @@ class MLForecastingService:
                 db, "expense", start_date, end_date, user_id, user_role, "daily"
             )
             
-            if len(df) < 48:  # Allow slightly less for monthly data
-                raise ValueError(f"Insufficient data: need at least 48 data points, got {len(df)}")
+            if len(df) < 36:  # Reduced for monthly data (Prophet can work with less)
+                raise ValueError(f"Insufficient data: need at least 36 data points, got {len(df)}")
             
             # Prophet requires 'ds' and 'y' columns
             prophet_df = pd.DataFrame({
@@ -434,8 +434,8 @@ class MLForecastingService:
                 db, "revenue", start_date, end_date, user_id, user_role, "daily"
             )
             
-            if len(df) < 48:  # Allow slightly less for monthly data
-                raise ValueError(f"Insufficient data: need at least 48 data points, got {len(df)}")
+            if len(df) < 36:  # Reduced for monthly data (Prophet can work with less)
+                raise ValueError(f"Insufficient data: need at least 36 data points, got {len(df)}")
             
             # Prophet requires 'ds' and 'y' columns
             prophet_df = pd.DataFrame({
@@ -513,8 +513,8 @@ class MLForecastingService:
                 db, "revenue", start_date, end_date, user_id, user_role, "monthly"
             )
             
-            if len(df) < 20:
-                raise ValueError(f"Insufficient data: need at least 20 data points, got {len(df)}")
+            if len(df) < 12:  # Reduced for monthly data (was 20)
+                raise ValueError(f"Insufficient data: need at least 12 data points, got {len(df)}")
             
             # Create features (lagged values, rolling statistics)
             window_size = 3
@@ -589,8 +589,8 @@ class MLForecastingService:
                 db, "revenue", start_date, end_date, user_id, user_role, "monthly"
             )
             
-            if len(df) < 30:
-                raise ValueError(f"Insufficient data: need at least 30 data points, got {len(df)}")
+            if len(df) < 12:  # Reduced for monthly data (was 30)
+                raise ValueError(f"Insufficient data: need at least 12 data points, got {len(df)}")
             
             # Normalize data
             scaler = StandardScaler() if SKLEARN_AVAILABLE else None
@@ -636,13 +636,15 @@ class MLForecastingService:
             mae = mean_absolute_error(y_actual, predictions) if SKLEARN_AVAILABLE else None
             rmse = np.sqrt(mean_squared_error(y_actual, predictions)) if SKLEARN_AVAILABLE else None
             
-            # Save model and scaler
+            # Save model and scaler (Keras 3.x requires .keras extension)
             model_path = None
             if save_model:
-                model_path = MLForecastingService._get_model_path("revenue", "lstm", user_id)
+                base_path = MLForecastingService._get_model_path("revenue", "lstm", user_id)
+                # Change extension to .keras for Keras 3.x compatibility
+                model_path = Path(str(base_path).replace('.pkl', '.keras'))
                 model.save(str(model_path))
                 if scaler:
-                    scaler_path = model_path.with_suffix('.scaler.pkl')
+                    scaler_path = base_path.with_suffix('.scaler.pkl')
                     joblib.dump(scaler, scaler_path)
             
             return {
@@ -740,8 +742,8 @@ class MLForecastingService:
                 db, "inventory", start_date, end_date, user_id, user_role, "monthly"
             )
             
-            if len(df) < 20:
-                raise ValueError(f"Insufficient data: need at least 20 data points, got {len(df)}")
+            if len(df) < 12:  # Reduced for monthly data (was 20)
+                raise ValueError(f"Insufficient data: need at least 12 data points, got {len(df)}")
             
             # Create features
             window_size = 3
@@ -815,8 +817,8 @@ class MLForecastingService:
                 db, "inventory", start_date, end_date, user_id, user_role, "monthly"
             )
             
-            if len(df) < 30:
-                raise ValueError(f"Insufficient data: need at least 30 data points, got {len(df)}")
+            if len(df) < 12:  # Reduced for monthly data (was 30)
+                raise ValueError(f"Insufficient data: need at least 12 data points, got {len(df)}")
             
             # Normalize data
             scaler = StandardScaler() if SKLEARN_AVAILABLE else None
@@ -862,13 +864,15 @@ class MLForecastingService:
             mae = mean_absolute_error(y_actual, predictions) if SKLEARN_AVAILABLE else None
             rmse = np.sqrt(mean_squared_error(y_actual, predictions)) if SKLEARN_AVAILABLE else None
             
-            # Save model and scaler
+            # Save model and scaler (Keras 3.x requires .keras extension)
             model_path = None
             if save_model:
-                model_path = MLForecastingService._get_model_path("inventory", "lstm", user_id)
+                base_path = MLForecastingService._get_model_path("inventory", "lstm", user_id)
+                # Change extension to .keras for Keras 3.x compatibility
+                model_path = Path(str(base_path).replace('.pkl', '.keras'))
                 model.save(str(model_path))
                 if scaler:
-                    scaler_path = model_path.with_suffix('.scaler.pkl')
+                    scaler_path = base_path.with_suffix('.scaler.pkl')
                     joblib.dump(scaler, scaler_path)
             
             return {
@@ -926,7 +930,8 @@ class MLForecastingService:
         except Exception as e:
             error_msg = str(e)
             results["errors"].append(f"Expenses Prophet: {error_msg}")
-            if "Insufficient data" not in error_msg:
+            # Don't show traceback for known Prophet issues or insufficient data
+            if "Insufficient data" not in error_msg and "Prophet stan_backend" not in error_msg and "cmdstanpy" not in error_msg:
                 logger.error(f"Expenses Prophet training error: {error_msg}", exc_info=True)
         
         try:
@@ -947,7 +952,8 @@ class MLForecastingService:
         except Exception as e:
             error_msg = str(e)
             results["errors"].append(f"Revenue Prophet: {error_msg}")
-            if "Insufficient data" not in error_msg:
+            # Don't show traceback for known Prophet issues or insufficient data
+            if "Insufficient data" not in error_msg and "Prophet stan_backend" not in error_msg and "cmdstanpy" not in error_msg:
                 logger.error(f"Revenue Prophet training error: {error_msg}", exc_info=True)
         
         try:
