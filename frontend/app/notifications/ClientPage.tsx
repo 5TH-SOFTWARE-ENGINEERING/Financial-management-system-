@@ -15,7 +15,10 @@ import {
   Settings,
   RefreshCw,
   FileText,
-  Loader2
+  Loader2,
+  Eye,
+  EyeOff,
+  Lock
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -502,6 +505,224 @@ const Spinner = styled(Loader2)`
   }
 `;
 
+const ModalOverlay = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: ${props => props.$isOpen ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+`;
+
+const ModalContainer = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.div`
+  padding: ${theme.spacing.lg};
+  border-bottom: 1px solid ${theme.colors.border};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+  h2 {
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0;
+  }
+  
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${TEXT_COLOR_MUTED};
+    padding: ${theme.spacing.xs};
+    border-radius: ${theme.borderRadius.sm};
+    transition: all ${theme.transitions.default};
+    
+    &:hover {
+      background: ${theme.colors.backgroundSecondary};
+      color: ${TEXT_COLOR_DARK};
+    }
+    
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: ${theme.spacing.lg};
+  flex: 1;
+`;
+
+const NotificationDetailSection = styled.div`
+  margin-bottom: ${theme.spacing.lg};
+  
+  h3 {
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0 0 ${theme.spacing.sm};
+  }
+  
+  p {
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
+    margin: 0;
+    line-height: 1.6;
+  }
+`;
+
+const DetailRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.md};
+  
+  strong {
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+    min-width: 100px;
+  }
+  
+  span {
+    color: ${TEXT_COLOR_MUTED};
+    flex: 1;
+  }
+`;
+
+const PasswordInputContainer = styled.div`
+  margin-top: ${theme.spacing.lg};
+  
+  label {
+    display: block;
+    font-size: ${theme.typography.fontSizes.sm};
+    font-weight: ${theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_DARK};
+    margin-bottom: ${theme.spacing.sm};
+  }
+  
+  .password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    
+    input {
+      width: 100%;
+      padding: ${theme.spacing.sm} ${theme.spacing.md};
+      padding-right: 48px;
+      border: 1px solid ${theme.colors.border};
+      border-radius: ${theme.borderRadius.md};
+      background: ${theme.colors.background};
+      font-size: ${theme.typography.fontSizes.md};
+      color: ${TEXT_COLOR_DARK};
+      transition: all ${theme.transitions.default};
+      
+      &:focus {
+        outline: none;
+        border-color: ${PRIMARY_COLOR};
+        box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+      }
+      
+      &::placeholder {
+        color: ${TEXT_COLOR_MUTED};
+        opacity: 0.5;
+      }
+    }
+    
+    button {
+      position: absolute;
+      right: ${theme.spacing.sm};
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: ${TEXT_COLOR_MUTED};
+      padding: ${theme.spacing.xs};
+      border-radius: ${theme.borderRadius.sm};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all ${theme.transitions.default};
+      
+      &:hover {
+        color: ${TEXT_COLOR_DARK};
+        background: ${theme.colors.backgroundSecondary};
+      }
+      
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+  
+  .error-message {
+    margin-top: ${theme.spacing.xs};
+    font-size: ${theme.typography.fontSizes.xs};
+    color: #ef4444;
+  }
+`;
+
+const ModalFooter = styled.div`
+  padding: ${theme.spacing.lg};
+  border-top: 1px solid ${theme.colors.border};
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: ${theme.spacing.md};
+  
+  button {
+    padding: ${theme.spacing.sm} ${theme.spacing.lg};
+    font-size: ${theme.typography.fontSizes.md};
+    font-weight: ${theme.typography.fontWeights.medium};
+    border-radius: ${theme.borderRadius.md};
+    border: none;
+    cursor: pointer;
+    transition: all ${theme.transitions.default};
+    
+    &.cancel {
+      background: ${theme.colors.backgroundSecondary};
+      color: ${TEXT_COLOR_DARK};
+      
+      &:hover:not(:disabled) {
+        background: ${theme.colors.border};
+      }
+    }
+    
+    &.delete {
+      background: #ef4444;
+      color: white;
+      
+      &:hover:not(:disabled) {
+        background: #dc2626;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+      }
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+`;
+
 interface Notification {
   id: number;
   user_id: number;
@@ -529,6 +750,12 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [notificationToDelete, setNotificationToDelete] = useState<Notification | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
 
   // Role-based access control - all authenticated users can access notifications
   useEffect(() => {
@@ -793,34 +1020,103 @@ export default function NotificationsPage() {
     }
   };
 
+  const openDeleteModal = (notification: Notification) => {
+    setNotificationToDelete(notification);
+    setDeleteModalOpen(true);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+    setShowDeletePassword(false);
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setNotificationToDelete(null);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+    setShowDeletePassword(false);
+  };
+
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      // Use login endpoint to verify password
+      // We'll catch the error if password is wrong, but won't actually log in
+      // Get identifier from user - email is always available
+      const identifier = user.email || '';
+      await apiClient.request({
+        method: 'POST',
+        url: '/auth/login-json',
+        data: {
+          username: identifier,
+          password: password
+        }
+      });
+      return true;
+    } catch (err: unknown) {
+      // If login fails, password is incorrect
+      return false;
+    }
+  };
+
+  const handleDeleteWithPassword = async () => {
+    if (!notificationToDelete || !deletePassword.trim()) {
+      setDeletePasswordError('Please enter your password');
+      return;
+    }
+
+    setVerifyingPassword(true);
+    setDeletePasswordError(null);
+
+    try {
+      // Verify password
+      const isValid = await verifyPassword(deletePassword);
+      
+      if (!isValid) {
+        setDeletePasswordError('Incorrect password. Please try again.');
+        setVerifyingPassword(false);
+        return;
+      }
+
+      // Password is correct, proceed with deletion
+      const notificationId = notificationToDelete.id;
+      setProcessingIds(prev => new Set(prev).add(notificationId));
+      
+      try {
+        await apiClient.deleteNotification(notificationId);
+        
+        setNotifications(prev => 
+          prev.filter(notification => notification.id !== notificationId)
+        );
+        
+        toast.success('Notification deleted successfully');
+        closeDeleteModal();
+      } catch (err: unknown) {
+        const error = err as ErrorWithDetails;
+        const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to delete notification';
+        toast.error(errorMessage);
+        await fetchNotifications();
+      } finally {
+        setProcessingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(notificationId);
+          return newSet;
+        });
+      }
+    } catch (err: unknown) {
+      setDeletePasswordError('Failed to verify password. Please try again.');
+      console.error('Password verification error:', err);
+    } finally {
+      setVerifyingPassword(false);
+    }
+  };
+
   const deleteNotification = async (notificationId: number) => {
     if (processingIds.has(notificationId)) return;
     
-    if (!confirm('Are you sure you want to delete this notification?')) {
-      return;
-    }
-    
-    setProcessingIds(prev => new Set(prev).add(notificationId));
-    
-    try {
-      await apiClient.deleteNotification(notificationId);
-      
-      setNotifications(prev => 
-        prev.filter(notification => notification.id !== notificationId)
-      );
-      
-      toast.success('Notification deleted');
-    } catch (err: unknown) {
-      const error = err as ErrorWithDetails;
-      const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to delete notification';
-      toast.error(errorMessage);
-      await fetchNotifications();
-    } finally {
-      setProcessingIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(notificationId);
-        return newSet;
-      });
+    const notification = notifications.find(n => n.id === notificationId);
+    if (notification) {
+      openDeleteModal(notification);
     }
   };
 
@@ -1144,7 +1440,7 @@ export default function NotificationsPage() {
                               deleteNotification(notification.id);
                             }}
                             disabled={processingIds.has(notification.id)}
-                            title="Delete"
+                            title="Delete notification"
                           >
                             <Trash2 />
                           </IconButton>
@@ -1169,6 +1465,103 @@ export default function NotificationsPage() {
           )}
         </ContentContainer>
       </PageContainer>
+
+      {/* Delete Confirmation Modal */}
+      <ModalOverlay $isOpen={deleteModalOpen} onClick={closeDeleteModal}>
+        <ModalContainer onClick={(e) => e.stopPropagation()}>
+          <ModalHeader>
+            <h2>Delete Notification</h2>
+            <button onClick={closeDeleteModal} title="Close" type="button">
+              <XCircle />
+            </button>
+          </ModalHeader>
+          <ModalBody>
+            {notificationToDelete && (
+              <>
+                <NotificationDetailSection>
+                  <h3>Notification Details</h3>
+                  <DetailRow>
+                    <strong>Title:</strong>
+                    <span>{notificationToDelete.title}</span>
+                  </DetailRow>
+                  <DetailRow>
+                    <strong>Message:</strong>
+                    <span>{notificationToDelete.message}</span>
+                  </DetailRow>
+                  <DetailRow>
+                    <strong>Type:</strong>
+                    <span>{notificationToDelete.type}</span>
+                  </DetailRow>
+                  <DetailRow>
+                    <strong>Priority:</strong>
+                    <span style={{ textTransform: 'capitalize' }}>{notificationToDelete.priority}</span>
+                  </DetailRow>
+                  <DetailRow>
+                    <strong>Created:</strong>
+                    <span>{formatDate(notificationToDelete.created_at)}</span>
+                  </DetailRow>
+                  {notificationToDelete.action_url && (
+                    <DetailRow>
+                      <strong>Action URL:</strong>
+                      <span>{notificationToDelete.action_url}</span>
+                    </DetailRow>
+                  )}
+                </NotificationDetailSection>
+
+                <PasswordInputContainer>
+                  <label htmlFor="delete-password">
+                    <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                    Enter your password to confirm deletion
+                  </label>
+                  <div className="password-input-wrapper">
+                    <input
+                      id="delete-password"
+                      type={showDeletePassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={deletePassword}
+                      onChange={(e) => {
+                        setDeletePassword(e.target.value);
+                        setDeletePasswordError(null);
+                      }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword) {
+                            handleDeleteWithPassword();
+                          }
+                        }}
+                      />
+                    <button
+                      type="button"
+                      onClick={() => setShowDeletePassword(!showDeletePassword)}
+                      title={showDeletePassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showDeletePassword ? <EyeOff /> : <Eye />}
+                    </button>
+                  </div>
+                  {deletePasswordError && (
+                    <div className="error-message">{deletePasswordError}</div>
+                  )}
+                </PasswordInputContainer>
+              </>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <button
+              className="cancel"
+              onClick={closeDeleteModal}
+              disabled={verifyingPassword}
+            >
+              Cancel
+            </button>
+            <button
+              className="delete"
+              onClick={handleDeleteWithPassword}
+              disabled={!deletePassword.trim() || verifyingPassword || processingIds.has(notificationToDelete?.id || -1)}
+            >
+              {verifyingPassword ? 'Verifying...' : 'Delete Notification'}
+            </button>
+          </ModalFooter>
+        </ModalContainer>
+      </ModalOverlay>
     </Layout>
   );
 }
