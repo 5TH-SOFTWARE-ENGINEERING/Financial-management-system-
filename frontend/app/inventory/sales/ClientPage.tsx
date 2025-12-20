@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import {
@@ -485,7 +485,7 @@ export default function SalesPage() {
       // Admin: See all items (no filtering needed)
       if (userRole === 'admin' || userRole === 'super_admin') {
         setAccessibleUserIds(null);
-        loadItems();
+        // loadItems will be called by the second useEffect when accessibleUserIds is set
         return;
       }
       
@@ -579,14 +579,38 @@ export default function SalesPage() {
     };
     
     initializeAccess();
-  }, [user, storeUser, router, loadItems]);
+  }, [user, storeUser, router]); // Removed loadItems to prevent infinite loop
 
-  // Reload items when accessibleUserIds changes (for Finance Admin, Accountant, Employee)
+  // Track previous accessibleUserIds to only reload when it actually changes
+  const prevAccessibleUserIdsRef = useRef<string>('');
+  const userIdRef = useRef<string | number | undefined>(undefined);
+  
+  // Reload items when accessibleUserIds changes
   useEffect(() => {
-    if (user && accessibleUserIds !== null) {
-      loadItems();
+    if (!user) return;
+    
+    // Track user ID separately to detect user changes
+    const currentUserId = user.id;
+    const userIdChanged = userIdRef.current !== currentUserId;
+    userIdRef.current = currentUserId;
+    
+    // Create a stable string representation of accessibleUserIds for comparison
+    const currentIdsKey = accessibleUserIds === null 
+      ? 'null' 
+      : accessibleUserIds.length === 0 
+        ? 'empty'
+        : accessibleUserIds.sort((a, b) => a - b).join(',');
+    
+    // Only reload if accessibleUserIds has actually changed or user changed
+    if (currentIdsKey !== prevAccessibleUserIdsRef.current || userIdChanged) {
+      prevAccessibleUserIdsRef.current = currentIdsKey;
+      // Use a small delay to ensure state has settled
+      const timer = setTimeout(() => {
+        loadItems();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [accessibleUserIds, loadItems, user]);
+  }, [accessibleUserIds, user?.id]); // Use user?.id instead of user object to keep array size constant
   
 
   const handleAddToSale = () => {
