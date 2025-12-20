@@ -490,14 +490,19 @@ const Spinner = styled(Loader2)`
 
 interface Notification {
   id: number;
-  type: 'success' | 'error' | 'warning' | 'info';
+  user_id: number;
   title: string;
   message: string;
+  type: string; // Backend notification type (approval_request, expense_created, etc.)
+  priority: string; // low, medium, high, urgent
   is_read: boolean;
-  created_at: string;
+  is_email_sent?: boolean;
   action_url?: string | null;
-  notification_type?: string;
-  priority?: string;
+  created_at: string;
+  read_at?: string | null;
+  expires_at?: string | null;
+  // Computed display type for UI
+  display_type?: 'success' | 'error' | 'warning' | 'info';
 }
 
 export default function NotificationsPage() {
@@ -553,17 +558,35 @@ export default function NotificationsPage() {
         : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data ? (response.data as { data: unknown[] }).data : []);
       
       const apiNotifications = (notificationsData || []).map((notif: unknown) => {
-        const notification = notif as { id?: number; message?: string; type?: string; created_at?: string; is_read?: boolean; user_id?: number; title?: string; data?: unknown };
+        const notification = notif as { 
+          id?: number; 
+          user_id?: number;
+          message?: string; 
+          type?: string; 
+          priority?: string;
+          created_at?: string; 
+          read_at?: string | null;
+          expires_at?: string | null;
+          is_read?: boolean; 
+          is_email_sent?: boolean;
+          title?: string; 
+          action_url?: string | null;
+        };
+        const notificationType = notification.type || 'system_alert';
         return {
           id: notification.id || 0,
-          type: mapNotificationType(notification.type || 'info'),
+          user_id: notification.user_id || 0,
+          type: notificationType,
+          priority: notification.priority || 'medium',
           title: notification.title || 'Notification',
           message: notification.message || '',
           is_read: notification.is_read || false,
+          is_email_sent: notification.is_email_sent || false,
           created_at: notification.created_at || new Date().toISOString(),
-          action_url: null,
-          notification_type: notification.type || 'info',
-          priority: 'normal',
+          read_at: notification.read_at || null,
+          expires_at: notification.expires_at || null,
+          action_url: notification.action_url || null,
+          display_type: mapNotificationType(notificationType),
         };
       });
       
@@ -591,48 +614,62 @@ export default function NotificationsPage() {
   }, []);
 
   const mapNotificationType = (type: string): 'success' | 'error' | 'warning' | 'info' => {
-    const normalized = type?.toLowerCase() || 'info';
+    const normalized = type?.toLowerCase() || 'system_alert';
     
     // Success types
-    if (normalized.includes('approval_decision') || 
-        normalized.includes('approved') || 
-        normalized.includes('success') ||
-        normalized.includes('posted') ||
-        normalized.includes('sale_completed') ||
-        normalized.includes('inventory_created') ||
-        normalized === 'system_alert' ||
-        normalized.includes('completed') ||
-        normalized.includes('confirmed')) {
+    if (
+      normalized === 'approval_decision' ||
+      normalized === 'expense_approved' ||
+      normalized === 'revenue_approved' ||
+      normalized === 'sale_posted' ||
+      normalized === 'forecast_created' ||
+      normalized === 'ml_training_complete' ||
+      normalized.includes('approved') ||
+      normalized.includes('completed') ||
+      normalized.includes('confirmed')
+    ) {
       return 'success';
     }
     
     // Error types
-    if (normalized.includes('rejected') || 
-        normalized.includes('error') || 
-        normalized.includes('failed') || 
-        normalized.includes('budget_exceeded') ||
-        normalized.includes('sale_cancelled') ||
-        normalized.includes('inventory_error') ||
-        normalized.includes('low_stock') ||
-        normalized.includes('cancelled') ||
-        normalized.includes('denied')) {
+    if (
+      normalized === 'budget_exceeded' ||
+      normalized.includes('rejected') ||
+      normalized.includes('error') ||
+      normalized.includes('failed') ||
+      normalized.includes('cancelled') ||
+      normalized.includes('denied')
+    ) {
       return 'error';
     }
     
-    // Warning types
-    if (normalized.includes('approval_request') || 
-        normalized.includes('pending') || 
-        normalized.includes('warning') || 
-        normalized.includes('deadline') ||
-        normalized.includes('sale_pending') ||
-        normalized.includes('inventory_low') ||
-        normalized.includes('stock_alert') ||
-        normalized.includes('reminder') ||
-        normalized.includes('alert')) {
+    // Warning types - high priority items that need attention
+    if (
+      normalized === 'approval_request' ||
+      normalized === 'deadline_reminder' ||
+      normalized === 'inventory_low' ||
+      normalized === 'expense_created' ||
+      normalized === 'revenue_created' ||
+      normalized === 'sale_created' ||
+      normalized.includes('pending') ||
+      normalized.includes('reminder') ||
+      normalized.includes('alert')
+    ) {
       return 'warning';
     }
     
-    // Default to info
+    // Info types - general system updates
+    if (
+      normalized === 'system_alert' ||
+      normalized === 'expense_updated' ||
+      normalized === 'revenue_updated' ||
+      normalized === 'inventory_updated' ||
+      normalized === 'report_ready'
+    ) {
+      return 'info';
+    }
+    
+    // Default to info for unknown types
     return 'info';
   };
 
