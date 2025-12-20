@@ -547,7 +547,8 @@ def create_forecast(
         try:
             periods = (end_date - start_date).days // 30
             forecast_values = MLForecastingService.generate_forecast_with_trained_model(
-                "expense", "arima", start_date, end_date, current_user.id, periods
+                "expense", "arima", start_date, end_date, current_user.id, periods,
+                db=db, user_role=current_user.role
             )
         except Exception as e:
             logger.error(f"ARIMA forecast failed: {str(e)}")
@@ -556,7 +557,8 @@ def create_forecast(
         try:
             periods = (end_date - start_date).days
             forecast_values = MLForecastingService.generate_forecast_with_trained_model(
-                forecast_type, "prophet", start_date, end_date, current_user.id, periods
+                forecast_type, "prophet", start_date, end_date, current_user.id, periods,
+                db=db, user_role=current_user.role
             )
         except Exception as e:
             logger.error(f"Prophet forecast failed: {str(e)}")
@@ -565,7 +567,8 @@ def create_forecast(
         try:
             periods = (end_date - start_date).days // 30
             forecast_values = MLForecastingService.generate_forecast_with_trained_model(
-                forecast_type, "xgboost", start_date, end_date, current_user.id, periods
+                forecast_type, "xgboost", start_date, end_date, current_user.id, periods,
+                db=db, user_role=current_user.role
             )
         except Exception as e:
             logger.error(f"XGBoost forecast failed: {str(e)}")
@@ -574,7 +577,8 @@ def create_forecast(
         try:
             periods = (end_date - start_date).days // 30
             forecast_values = MLForecastingService.generate_forecast_with_trained_model(
-                forecast_type, "lstm", start_date, end_date, current_user.id, periods
+                forecast_type, "lstm", start_date, end_date, current_user.id, periods,
+                db=db, user_role=current_user.role
             )
         except Exception as e:
             logger.error(f"LSTM forecast failed: {str(e)}")
@@ -583,7 +587,8 @@ def create_forecast(
         try:
             periods = (end_date - start_date).days // 30
             forecast_values = MLForecastingService.generate_forecast_with_trained_model(
-                "expense", "linear_regression", start_date, end_date, current_user.id, periods
+                "expense", "linear_regression", start_date, end_date, current_user.id, periods,
+                db=db, user_role=current_user.role
             )
         except Exception as e:
             logger.error(f"Linear Regression forecast failed: {str(e)}")
@@ -592,7 +597,8 @@ def create_forecast(
         try:
             periods = (end_date - start_date).days // 30
             forecast_values = MLForecastingService.generate_forecast_with_trained_model(
-                "inventory", "sarima", start_date, end_date, current_user.id, periods
+                "inventory", "sarima", start_date, end_date, current_user.id, periods,
+                db=db, user_role=current_user.role
             )
         except Exception as e:
             logger.error(f"SARIMA forecast failed: {str(e)}")

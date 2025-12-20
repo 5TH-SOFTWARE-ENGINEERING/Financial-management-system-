@@ -1021,7 +1021,9 @@ class MLForecastingService:
         start_date: datetime,
         end_date: datetime,
         user_id: Optional[int] = None,
-        periods: int = 12
+        periods: int = 12,
+        db: Optional[Session] = None,
+        user_role: Optional[UserRole] = None
     ) -> List[Dict[str, Any]]:
         """Generate forecast using a trained model"""
         model_path = MLForecastingService._get_model_path(metric, model_type, user_id)
@@ -1075,15 +1077,74 @@ class MLForecastingService:
                 return forecast_data
             
             elif model_type == "xgboost":
-                # XGBoost requires historical data to create features
-                # This is a simplified version - in production, you'd need to pass historical data
+                if not XGBOOST_AVAILABLE:
+                    raise ImportError("xgboost is not installed")
+                if db is None:
+                    raise ValueError("Database session required for XGBoost forecast generation")
+                
+                # Load model
                 model = joblib.load(model_path)
-                # Note: XGBoost forecast generation needs feature engineering
-                # This would require historical data context
-                raise NotImplementedError("XGBoost forecast generation requires historical data context")
+                
+                # Fetch historical data to create features (need window_size + 1 months)
+                window_size = 3
+                historical_end = start_date - timedelta(days=1)
+                historical_start = historical_end - timedelta(days=365)  # Get ~12 months of history
+                
+                df = MLForecastingService._prepare_time_series_data(
+                    db, metric, historical_start, historical_end, user_id, user_role, "monthly"
+                )
+                
+                if len(df) < window_size:
+                    raise ValueError(f"Insufficient historical data for XGBoost: need at least {window_size} data points, got {len(df)}")
+                
+                # Use last window_size values as starting point
+                last_values = df['value'].iloc[-window_size:].tolist()
+                last_dates = df['date'].iloc[-window_size:].tolist()
+                
+                # Generate forecast
+                forecast_data = []
+                current_date = start_date
+                prediction_index = 0
+                
+                while current_date <= end_date and prediction_index < periods:
+                    # Create features from last window_size values (same as training)
+                    features = last_values[-window_size:].copy()
+                    features.append(np.mean(features))
+                    features.append(np.std(features) if len(features) > 1 else 0.0)
+                    features.append(current_date.month)
+                    features.append(current_date.year)
+                    
+                    # Predict next value
+                    prediction = model.predict([features])[0]
+                    
+                    forecast_data.append({
+                        "period": current_date.strftime("%Y-%m"),
+                        "date": current_date.isoformat(),
+                        "forecasted_value": float(prediction),
+                        "method": "xgboost"
+                    })
+                    
+                    # Update last_values for next iteration (rolling window)
+                    last_values.append(float(prediction))
+                    if len(last_values) > window_size:
+                        last_values.pop(0)
+                    
+                    # Move to next month
+                    if current_date.month == 12:
+                        current_date = current_date.replace(year=current_date.year + 1, month=1)
+                    else:
+                        current_date = current_date.replace(month=current_date.month + 1)
+                    prediction_index += 1
+                
+                return forecast_data
             
             elif model_type == "lstm":
-                # LSTM requires historical data to create sequences
+                if not TENSORFLOW_AVAILABLE:
+                    raise ImportError("tensorflow is not installed")
+                if db is None:
+                    raise ValueError("Database session required for LSTM forecast generation")
+                
+                # Load model and scaler
                 model = keras.models.load_model(str(model_path))
                 scaler_path = model_path.with_suffix('.scaler.pkl')
                 
@@ -1092,8 +1153,64 @@ class MLForecastingService:
                 else:
                     scaler = None
                 
-                # Note: LSTM forecast generation needs historical data context
-                raise NotImplementedError("LSTM forecast generation requires historical data context")
+                # Fetch historical data to create sequences
+                sequence_length = 3
+                historical_end = start_date - timedelta(days=1)
+                historical_start = historical_end - timedelta(days=365)  # Get ~12 months of history
+                
+                df = MLForecastingService._prepare_time_series_data(
+                    db, metric, historical_start, historical_end, user_id, user_role, "monthly"
+                )
+                
+                if len(df) < sequence_length:
+                    raise ValueError(f"Insufficient historical data for LSTM: need at least {sequence_length} data points, got {len(df)}")
+                
+                # Use last sequence_length values as starting sequence
+                last_sequence = df['value'].iloc[-sequence_length:].values.reshape(-1, 1)
+                
+                # Normalize if scaler was used
+                if scaler:
+                    last_sequence_scaled = scaler.transform(last_sequence)
+                else:
+                    last_sequence_scaled = last_sequence
+                
+                # Generate forecast
+                forecast_data = []
+                current_date = start_date
+                prediction_index = 0
+                current_sequence = last_sequence_scaled.copy()
+                
+                while current_date <= end_date and prediction_index < periods:
+                    # Reshape for LSTM input: (1, sequence_length, 1)
+                    sequence_input = current_sequence.reshape(1, sequence_length, 1)
+                    
+                    # Predict next value
+                    prediction_scaled = model.predict(sequence_input, verbose=0)[0, 0]
+                    
+                    # Denormalize if scaler was used
+                    if scaler:
+                        prediction = scaler.inverse_transform([[prediction_scaled]])[0, 0]
+                    else:
+                        prediction = prediction_scaled
+                    
+                    forecast_data.append({
+                        "period": current_date.strftime("%Y-%m"),
+                        "date": current_date.isoformat(),
+                        "forecasted_value": float(prediction),
+                        "method": "lstm"
+                    })
+                    
+                    # Update sequence for next iteration (rolling window)
+                    current_sequence = np.append(current_sequence[1:], [[prediction_scaled]], axis=0)
+                    
+                    # Move to next month
+                    if current_date.month == 12:
+                        current_date = current_date.replace(year=current_date.year + 1, month=1)
+                    else:
+                        current_date = current_date.replace(month=current_date.month + 1)
+                    prediction_index += 1
+                
+                return forecast_data
             
             elif model_type == "linear_regression":
                 model = joblib.load(model_path)
