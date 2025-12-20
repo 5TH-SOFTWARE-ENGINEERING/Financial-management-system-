@@ -600,7 +600,7 @@ export default function NotificationsPage() {
           read_at: notification.read_at || null,
           expires_at: notification.expires_at || null,
           action_url: notification.action_url || null,
-          display_type: mapNotificationType(notificationType),
+          display_type: mapNotificationType(notificationType, notification.title, notification.message),
         };
       });
       
@@ -627,8 +627,10 @@ export default function NotificationsPage() {
     }
   }, []);
 
-  const mapNotificationType = (type: string): 'success' | 'error' | 'warning' | 'info' => {
+  const mapNotificationType = (type: string, title?: string, message?: string): 'success' | 'error' | 'warning' | 'info' => {
     const normalized = type?.toLowerCase() || 'system_alert';
+    const titleLower = (title || '').toLowerCase();
+    const messageLower = (message || '').toLowerCase();
     
     // Success types - positive outcomes
     if (
@@ -638,10 +640,15 @@ export default function NotificationsPage() {
       normalized === 'sale_posted' ||
       normalized === 'forecast_created' ||
       normalized === 'ml_training_complete' ||
+      normalized === 'inventory_created' ||
       normalized.includes('approved') ||
       normalized.includes('completed') ||
       normalized.includes('confirmed') ||
-      normalized.includes('created') && (normalized.includes('user') || normalized.includes('welcome'))
+      normalized.includes('posted') ||
+      // Check title/message for user creation (uses SYSTEM_ALERT but indicates success)
+      (normalized === 'system_alert' && (titleLower.includes('welcome') || titleLower.includes('user created') || messageLower.includes('welcome'))) ||
+      // Check for approved in approval_decision
+      (normalized === 'approval_decision' && (titleLower.includes('approved') || messageLower.includes('approved')))
     ) {
       return 'success';
     }
@@ -655,7 +662,9 @@ export default function NotificationsPage() {
       normalized.includes('error') ||
       normalized.includes('failed') ||
       normalized.includes('cancelled') ||
-      normalized.includes('denied')
+      normalized.includes('denied') ||
+      // Check for rejection in approval_decision type
+      (normalized === 'approval_decision' && (titleLower.includes('rejected') || messageLower.includes('rejected')))
     ) {
       return 'error';
     }
@@ -670,8 +679,11 @@ export default function NotificationsPage() {
       normalized === 'sale_created' ||
       normalized.includes('pending') ||
       normalized.includes('reminder') ||
-      normalized.includes('alert') ||
-      normalized.includes('required')
+      normalized.includes('required') ||
+      // Check for approval requests in title/message
+      (normalized === 'system_alert' && (titleLower.includes('approval required') || messageLower.includes('approval required'))) ||
+      // Pending approvals notification
+      (normalized === 'system_alert' && (titleLower.includes('pending approval') || messageLower.includes('pending approval')))
     ) {
       return 'warning';
     }
@@ -682,9 +694,14 @@ export default function NotificationsPage() {
       normalized === 'expense_updated' ||
       normalized === 'revenue_updated' ||
       normalized === 'inventory_updated' ||
+      normalized === 'inventory_created' ||
       normalized === 'report_ready' ||
       normalized.includes('updated') ||
-      normalized.includes('profile')
+      normalized.includes('profile') ||
+      // User updates are info
+      (normalized === 'system_alert' && (titleLower.includes('profile updated') || titleLower.includes('user updated') || messageLower.includes('updated'))) ||
+      // New user created notification for admins (info, not success)
+      (normalized === 'system_alert' && titleLower.includes('new user created') && !titleLower.includes('welcome'))
     ) {
       return 'info';
     }
@@ -840,22 +857,49 @@ export default function NotificationsPage() {
     );
   }
 
-  const getNotificationIcon = (displayType?: string, notificationType?: string) => {
+  const getNotificationIcon = (displayType?: string, notificationType?: string, title?: string, message?: string) => {
     // Use notification type for more specific icons
     const type = notificationType?.toLowerCase() || '';
+    const titleLower = (title || '').toLowerCase();
+    const messageLower = (message || '').toLowerCase();
     
     // Specific icons for certain notification types
-    if (type.includes('user') || type.includes('welcome')) {
+    if (type.includes('user') || type.includes('welcome') || titleLower.includes('welcome') || messageLower.includes('welcome')) {
       return <CheckCircle />;
     }
-    if (type.includes('approval') && type.includes('request')) {
+    if (type === 'approval_request' || (type.includes('approval') && titleLower.includes('approval required'))) {
       return <AlertCircle />;
+    }
+    if (type === 'approval_decision') {
+      // Check if it's approved or rejected
+      if (titleLower.includes('rejected') || messageLower.includes('rejected')) {
+        return <XCircle />;
+      }
+      return <CheckCircle />;
     }
     if (type.includes('expense') || type.includes('revenue')) {
       return <FileText />;
     }
     if (type.includes('inventory')) {
+      if (type === 'inventory_low') {
+        return <AlertCircle />;
+      }
+      if (type === 'inventory_created') {
+        return <CheckCircle />;
+      }
+      return <Info />;
+    }
+    if (type === 'sale_created' || type === 'sale_posted') {
+      return <CheckCircle />;
+    }
+    if (type === 'budget_exceeded') {
+      return <XCircle />;
+    }
+    if (type === 'deadline_reminder') {
       return <AlertCircle />;
+    }
+    if (type === 'report_ready' || type === 'forecast_created' || type === 'ml_training_complete') {
+      return <CheckCircle />;
     }
     
     // Fallback to display type
@@ -1044,7 +1088,7 @@ export default function NotificationsPage() {
                     >
                       <NotificationContent>
                         <NotificationIcon $displayType={notification.display_type || 'info'}>
-                          {getNotificationIcon(notification.display_type, notification.type)}
+                          {getNotificationIcon(notification.display_type, notification.type, notification.title, notification.message)}
                         </NotificationIcon>
                         <NotificationDetails>
                           <NotificationHeader>

@@ -939,6 +939,19 @@ export default function Navbar() {
         const response = await apiClient.getUnreadCount();
         const newCount = response.data?.unread_count || 0;
         const oldCount = previousUnreadCountRef.current;
+        
+        // Also trigger a check for pending approvals on the backend
+        // This will create notifications for users with pending approvals
+        try {
+          await apiClient.request({
+            method: 'POST',
+            url: '/notifications/check-pending-approvals'
+          });
+          // Silently handle - this is just a trigger
+        } catch (e) {
+          // Silently fail - this is just a trigger, not critical
+        }
+        
         if (newCount > oldCount) {
           try {
             const notifResponse = await apiClient.getNotifications(true);
@@ -977,15 +990,63 @@ export default function Navbar() {
             newNotifs.forEach((notification: Notification) => {
               lastNotificationIdsRef.current.add(notification.id);
               
-              // Determine toast type based on notification type
+              // Determine toast type based on notification type, title, and message (context-aware)
               const notifType = notification.type?.toLowerCase() || '';
+              const titleLower = (notification.title || '').toLowerCase();
+              const messageLower = (notification.message || '').toLowerCase();
               let toastType: 'success' | 'error' | 'warning' | 'info' = 'info';
               
-              if (notifType.includes('approved') || notifType.includes('completed') || notifType.includes('created') && notifType.includes('user')) {
+              // Success types - positive outcomes
+              if (
+                notifType === 'approval_decision' ||
+                notifType === 'expense_approved' ||
+                notifType === 'revenue_approved' ||
+                notifType === 'sale_posted' ||
+                notifType === 'forecast_created' ||
+                notifType === 'ml_training_complete' ||
+                notifType === 'inventory_created' ||
+                notifType.includes('approved') ||
+                notifType.includes('completed') ||
+                notifType.includes('confirmed') ||
+                notifType.includes('posted') ||
+                // Check title/message for user creation (uses SYSTEM_ALERT but indicates success)
+                (notifType === 'system_alert' && (titleLower.includes('welcome') || titleLower.includes('user created') || messageLower.includes('welcome'))) ||
+                // Check for approved in approval_decision
+                (notifType === 'approval_decision' && (titleLower.includes('approved') || messageLower.includes('approved')))
+              ) {
                 toastType = 'success';
-              } else if (notifType.includes('rejected') || notifType.includes('error') || notifType.includes('failed')) {
+              } 
+              // Error types - negative outcomes
+              else if (
+                notifType === 'budget_exceeded' ||
+                notifType === 'expense_rejected' ||
+                notifType === 'revenue_rejected' ||
+                notifType.includes('rejected') ||
+                notifType.includes('error') ||
+                notifType.includes('failed') ||
+                notifType.includes('cancelled') ||
+                notifType.includes('denied') ||
+                // Check for rejection in approval_decision type
+                (notifType === 'approval_decision' && (titleLower.includes('rejected') || messageLower.includes('rejected')))
+              ) {
                 toastType = 'error';
-              } else if (notifType.includes('request') || notifType.includes('pending') || notifType.includes('alert')) {
+              } 
+              // Warning types - need attention
+              else if (
+                notifType === 'approval_request' ||
+                notifType === 'deadline_reminder' ||
+                notifType === 'inventory_low' ||
+                notifType === 'expense_created' ||
+                notifType === 'revenue_created' ||
+                notifType === 'sale_created' ||
+                notifType.includes('pending') ||
+                notifType.includes('reminder') ||
+                notifType.includes('required') ||
+                // Check for approval requests in title/message
+                (notifType === 'system_alert' && (titleLower.includes('approval required') || messageLower.includes('approval required'))) ||
+                // Pending approvals notification
+                (notifType === 'system_alert' && (titleLower.includes('pending approval') || messageLower.includes('pending approval')))
+              ) {
                 toastType = 'warning';
               }
               
@@ -1062,10 +1123,39 @@ export default function Navbar() {
       const initializeNotifications = async () => {
         try {
           const notifResponse = await apiClient.getNotifications(true);
-          const initialNotifs = (notifResponse.data || []) as Notification[];
+          // Handle both direct array response and wrapped response
+          const notificationsData = Array.isArray(notifResponse?.data)
+            ? notifResponse.data
+            : (notifResponse?.data && typeof notifResponse.data === 'object' && notifResponse.data !== null && 'data' in notifResponse.data 
+                ? (notifResponse.data as { data: unknown[] }).data 
+                : []);
+          
+          const initialNotifs = (notificationsData || []).map((notif: unknown) => {
+            const notification = notif as { 
+              id?: number; 
+              message?: string; 
+              type?: string; 
+              priority?: string;
+              is_read?: boolean; 
+              created_at?: string; 
+              title?: string; 
+              action_url?: string;
+            };
+            return {
+              id: notification.id || 0,
+              message: notification.message || '',
+              type: notification.type || 'system_alert',
+              priority: notification.priority || 'medium',
+              is_read: notification.is_read || false,
+              created_at: notification.created_at || new Date().toISOString(),
+              title: notification.title,
+              action_url: notification.action_url,
+            } as Notification;
+          });
+          
           if (initialNotifs.length > 0) {
             lastNotificationIdsRef.current = new Set(initialNotifs.map((n) => n.id));
-            previousUnreadCountRef.current = initialNotifs.length;
+            previousUnreadCountRef.current = initialNotifs.filter(n => !n.is_read).length;
           } else {
             previousUnreadCountRef.current = 0;
           }
@@ -1553,7 +1643,31 @@ export default function Navbar() {
                       <NotificationItemContent>
                         <NotificationText $isRead={notification.is_read}>
                           <p>{notification.title || notification.message}</p>
-                          <span>{formatNotificationDate(notification.created_at)}</span>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            marginTop: '4px',
+                            flexWrap: 'wrap'
+                          }}>
+                            <span>{formatNotificationDate(notification.created_at)}</span>
+                            {notification.priority && notification.priority !== 'medium' && (
+                              <span style={{ 
+                                display: 'inline-block',
+                                padding: '2px 6px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                                borderRadius: '4px',
+                                backgroundColor: notification.priority === 'urgent' ? '#ef444420' : 
+                                               notification.priority === 'high' ? '#f59e0b20' : '#3b82f620',
+                                color: notification.priority === 'urgent' ? '#ef4444' : 
+                                       notification.priority === 'high' ? '#f59e0b' : '#3b82f6',
+                              }}>
+                                {notification.priority}
+                              </span>
+                            )}
+                          </div>
                           {notification.action_url && (
                             <span style={{ 
                               display: 'block', 
