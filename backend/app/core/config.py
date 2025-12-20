@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     )
     
     # Database
-    DATABASE_URL: str = "postgresql://postgres:amare@localhost/finance_db"
+    DATABASE_URL: str = "postgresql://postgres:amare@localhost/projectai"
     
     # Security
     SECRET_KEY: str = "your-secret-key-here"
