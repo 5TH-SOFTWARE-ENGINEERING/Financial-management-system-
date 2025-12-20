@@ -544,7 +544,32 @@ def update_user(
 
     # Admin and Super Admin can update any user
     if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-        return user_crud.update(db, db_obj=db_user, obj_in=user_update)
+        updated_user = user_crud.update(db, db_obj=db_user, obj_in=user_update)
+        
+        # Send notification about user update
+        try:
+            from ...services.notification_service import NotificationService
+            changes = []
+            if user_update.email and user_update.email != db_user.email:
+                changes.append("email")
+            if user_update.role and user_update.role != db_user.role:
+                changes.append("role")
+            if user_update.is_active is not None and user_update.is_active != db_user.is_active:
+                changes.append("active status")
+            
+            if changes:
+                NotificationService.notify_user_updated(
+                    db=db,
+                    updated_user_id=updated_user.id,
+                    updated_user_email=updated_user.email,
+                    updated_by_id=current_user.id,
+                    updated_by_name=current_user.full_name or current_user.username,
+                    changes=changes
+                )
+        except Exception as e:
+            logger.warning(f"Notification failed for user update: {str(e)}")
+        
+        return updated_user
     
     # Finance Manager (Manager or Finance Admin) can update their subordinates (accountants and employees)
     if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:

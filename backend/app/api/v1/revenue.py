@@ -407,6 +407,21 @@ def approve_revenue_entry(
             )
         
         revenue_crud.approve(db, id=revenue_id, approved_by_id=current_user.id)
+        
+        # Send notification about revenue approval
+        try:
+            from ...services.notification_service import NotificationService
+            revenue_title = entry.description or f"Revenue #{revenue_id}"
+            NotificationService.notify_revenue_approved(
+                db=db,
+                revenue_id=revenue_id,
+                revenue_title=revenue_title,
+                approver_id=current_user.id,
+                requester_id=created_by_id
+            )
+        except Exception as e:
+            logger.warning(f"Notification failed for revenue approval: {str(e)}")
+        
         return {"message": "Revenue entry approved successfully"}
     except HTTPException:
         raise

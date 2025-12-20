@@ -315,12 +315,184 @@ class NotificationService:
                     user_id=user_id,
                     title="Low Inventory Alert",
                     message=f"Inventory item '{item_name}' is low: {current_quantity} remaining (minimum: {min_quantity}).",
-                    notification_type=NotificationType.SYSTEM_ALERT,
+                    notification_type=NotificationType.INVENTORY_LOW,
                     priority=NotificationPriority.HIGH,
                     action_url=f"/inventory/manage?item_id={item_id}"
                 )
         except Exception as e:
             logger.error(f"Failed to send inventory low notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_user_created(
+        db: Session,
+        new_user_id: int,
+        new_user_email: str,
+        new_user_role: UserRole,
+        created_by_id: int,
+        created_by_name: str
+    ):
+        """Notify when a new user is created"""
+        try:
+            # Notify the newly created user
+            NotificationService.create_notification(
+                db=db,
+                user_id=new_user_id,
+                title="Welcome to the System",
+                message=f"Your account has been created by {created_by_name}. Welcome aboard!",
+                notification_type=NotificationType.SYSTEM_ALERT,
+                priority=NotificationPriority.MEDIUM,
+                action_url="/users/me"
+            )
+            
+            # Notify admins about new user creation
+            admins = db.query(User).filter(
+                User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                User.is_active == True,
+                User.id != created_by_id  # Don't notify the creator
+            ).all()
+            
+            for admin in admins:
+                NotificationService.create_notification(
+                    db=db,
+                    user_id=admin.id,
+                    title="New User Created",
+                    message=f"A new {new_user_role.value} user '{new_user_email}' has been created by {created_by_name}.",
+                    notification_type=NotificationType.SYSTEM_ALERT,
+                    priority=NotificationPriority.LOW,
+                    action_url=f"/users/{new_user_id}"
+                )
+        except Exception as e:
+            logger.error(f"Failed to send user creation notifications: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_user_updated(
+        db: Session,
+        updated_user_id: int,
+        updated_user_email: str,
+        updated_by_id: int,
+        updated_by_name: str,
+        changes: List[str] = None
+    ):
+        """Notify when a user is updated"""
+        try:
+            changes_text = ", ".join(changes) if changes else "your profile"
+            
+            # Notify the updated user
+            NotificationService.create_notification(
+                db=db,
+                user_id=updated_user_id,
+                title="Profile Updated",
+                message=f"Your account has been updated by {updated_by_name}. Changes: {changes_text}.",
+                notification_type=NotificationType.SYSTEM_ALERT,
+                priority=NotificationPriority.LOW,
+                action_url="/users/me"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send user update notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_expense_rejected(
+        db: Session,
+        expense_id: int,
+        expense_title: str,
+        rejected_by_id: int,
+        requester_id: int,
+        rejection_reason: str = None
+    ):
+        """Notify when an expense is rejected"""
+        try:
+            reason_text = f" Reason: {rejection_reason}" if rejection_reason else ""
+            NotificationService.create_notification(
+                db=db,
+                user_id=requester_id,
+                title="Expense Rejected",
+                message=f"Your expense '{expense_title}' has been rejected.{reason_text}",
+                notification_type=NotificationType.APPROVAL_DECISION,
+                priority=NotificationPriority.HIGH,
+                action_url=f"/expenses/{expense_id}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send expense rejection notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_revenue_approved(
+        db: Session,
+        revenue_id: int,
+        revenue_title: str,
+        approver_id: int,
+        requester_id: int
+    ):
+        """Notify when revenue is approved"""
+        try:
+            NotificationService.create_notification(
+                db=db,
+                user_id=requester_id,
+                title="Revenue Approved",
+                message=f"Your revenue entry '{revenue_title}' has been approved.",
+                notification_type=NotificationType.APPROVAL_DECISION,
+                priority=NotificationPriority.MEDIUM,
+                action_url=f"/revenue/{revenue_id}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send revenue approval notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_revenue_rejected(
+        db: Session,
+        revenue_id: int,
+        revenue_title: str,
+        rejected_by_id: int,
+        requester_id: int,
+        rejection_reason: str = None
+    ):
+        """Notify when revenue is rejected"""
+        try:
+            reason_text = f" Reason: {rejection_reason}" if rejection_reason else ""
+            NotificationService.create_notification(
+                db=db,
+                user_id=requester_id,
+                title="Revenue Rejected",
+                message=f"Your revenue entry '{revenue_title}' has been rejected.{reason_text}",
+                notification_type=NotificationType.APPROVAL_DECISION,
+                priority=NotificationPriority.HIGH,
+                action_url=f"/revenue/{revenue_id}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send revenue rejection notification: {str(e)}", exc_info=True)
+    
+    @staticmethod
+    def notify_approval_decision(
+        db: Session,
+        approval_id: int,
+        approval_title: str,
+        decision: str,  # "approved" or "rejected"
+        approver_id: int,
+        requester_id: int,
+        rejection_reason: str = None
+    ):
+        """Notify when an approval workflow is decided"""
+        try:
+            if decision.lower() == "approved":
+                title = "Approval Granted"
+                message = f"Your approval request '{approval_title}' has been approved."
+                priority = NotificationPriority.MEDIUM
+            else:
+                title = "Approval Rejected"
+                reason_text = f" Reason: {rejection_reason}" if rejection_reason else ""
+                message = f"Your approval request '{approval_title}' has been rejected.{reason_text}"
+                priority = NotificationPriority.HIGH
+            
+            NotificationService.create_notification(
+                db=db,
+                user_id=requester_id,
+                title=title,
+                message=message,
+                notification_type=NotificationType.APPROVAL_DECISION,
+                priority=priority,
+                action_url=f"/approvals/{approval_id}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send approval decision notification: {str(e)}", exc_info=True)
     
     @staticmethod
     def notify_custom(

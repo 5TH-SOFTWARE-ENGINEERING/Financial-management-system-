@@ -193,6 +193,20 @@ def approve_approval(
         from ...crud.expense import expense as expense_crud
         expense_crud.approve(db, approved_approval.expense_entry_id, current_user.id)
     
+    # Send notification about approval decision
+    try:
+        from ...services.notification_service import NotificationService
+        NotificationService.notify_approval_decision(
+            db=db,
+            approval_id=approval_id,
+            approval_title=approved_approval.title,
+            decision="approved",
+            approver_id=current_user.id,
+            requester_id=approved_approval.requester_id
+        )
+    except Exception as e:
+        logger.warning(f"Notification failed for approval: {str(e)}")
+    
     return {"message": "Approval approved successfully"}
 
 
@@ -250,7 +264,23 @@ def reject_approval(
         if approval.requester_id not in subordinate_ids:
             raise HTTPException(status_code=403, detail="Not enough permissions to reject this request")
     
-    approval_crud.reject(db, approval_id, current_user.id, reject_request.rejection_reason)
+    rejected_approval = approval_crud.reject(db, approval_id, current_user.id, reject_request.rejection_reason)
+    
+    # Send notification about rejection
+    try:
+        from ...services.notification_service import NotificationService
+        NotificationService.notify_approval_decision(
+            db=db,
+            approval_id=approval_id,
+            approval_title=rejected_approval.title,
+            decision="rejected",
+            approver_id=current_user.id,
+            requester_id=rejected_approval.requester_id,
+            rejection_reason=reject_request.rejection_reason
+        )
+    except Exception as e:
+        logger.warning(f"Notification failed for approval rejection: {str(e)}")
+    
     return {"message": "Approval rejected successfully"}
 
 

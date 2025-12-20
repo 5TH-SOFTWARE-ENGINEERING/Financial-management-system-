@@ -401,6 +401,21 @@ def approve_expense_entry(
             )
         
         expense_crud.approve(db, id=expense_id, approved_by_id=current_user.id)
+        
+        # Send notification about expense approval
+        try:
+            from ...services.notification_service import NotificationService
+            expense_title = entry.description or f"Expense #{expense_id}"
+            NotificationService.notify_expense_approved(
+                db=db,
+                expense_id=expense_id,
+                expense_title=expense_title,
+                approver_id=current_user.id,
+                requester_id=created_by_id
+            )
+        except Exception as e:
+            logger.warning(f"Notification failed for expense approval: {str(e)}")
+        
         return {"message": "Expense entry approved successfully"}
     except HTTPException:
         raise
