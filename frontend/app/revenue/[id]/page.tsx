@@ -980,8 +980,8 @@ export default function RevenueDetailPage() {
           </ModalOverlay>
         )}
 
-        {/* Delete Modal with Password Verification */}
-        {showDeleteModal && (
+        {/* Delete Modal with Password Verification and Details */}
+        {showDeleteModal && revenue && (
           <ModalOverlay onClick={() => {
             setShowDeleteModal(false);
             setDeletePassword('');
@@ -999,6 +999,76 @@ export default function RevenueDetailPage() {
                   This action cannot be undone. Please enter your password to confirm this deletion.
                 </p>
               </WarningBox>
+
+              {/* Revenue Entry Details to be Deleted */}
+              <div style={{
+                background: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: theme.borderRadius.md,
+                padding: theme.spacing.md,
+                marginBottom: theme.spacing.lg
+              }}>
+                <h4 style={{
+                  fontSize: theme.typography.fontSizes.sm,
+                  fontWeight: theme.typography.fontWeights.bold,
+                  color: TEXT_COLOR_DARK,
+                  margin: `0 0 ${theme.spacing.md} 0`
+                }}>
+                  Revenue Entry Details to be Deleted:
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Title:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {revenue.title || 'N/A'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Amount:</strong>
+                    <span style={{ 
+                      fontSize: theme.typography.fontSizes.sm, 
+                      fontWeight: theme.typography.fontWeights.bold, 
+                      color: PRIMARY_COLOR
+                    }}>
+                      {formatCurrency(revenue.amount)}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Category:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {getCategoryDisplayName(revenue.category)}
+                    </span>
+                  </div>
+                  {revenue.source && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Source:</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                        {revenue.source}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Date:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      {formatDateTime(revenue.date)}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                    <StatusBadge $status={revenue.is_approved}>
+                      {revenue.is_approved ? 'APPROVED' : 'PENDING'}
+                    </StatusBadge>
+                  </div>
+                  {revenue.description && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+                      <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Description:</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, flex: 1 }}>
+                        {revenue.description}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <FormGroup>
                 <Label htmlFor="delete-password">
