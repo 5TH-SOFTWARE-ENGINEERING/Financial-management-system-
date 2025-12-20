@@ -63,7 +63,7 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 30000, // Increased timeout for large data requests (30 seconds)
+      timeout: 300000, // 5 minutes timeout for ML training requests (can take longer)
       headers: { 'Content-Type': 'application/json' },
     });
 
@@ -1254,7 +1254,8 @@ class ApiClient {
     return this.request({
       method: 'POST',
       url: '/budgeting/ml/train/expenses/arima',
-      params: { start_date: startDate, end_date: endDate, order }
+      params: { start_date: startDate, end_date: endDate, order },
+      timeout: 120000 // 2 minutes for ARIMA
     });
   }
 
@@ -1265,7 +1266,8 @@ class ApiClient {
     return this.request({
       method: 'POST',
       url: '/budgeting/ml/train/expenses/prophet',
-      params: { start_date: startDate, end_date: endDate }
+      params: { start_date: startDate, end_date: endDate },
+      timeout: 180000 // 3 minutes for Prophet
     });
   }
 
@@ -1276,7 +1278,8 @@ class ApiClient {
     return this.request({
       method: 'POST',
       url: '/budgeting/ml/train/expenses/linear-regression',
-      params: { start_date: startDate, end_date: endDate }
+      params: { start_date: startDate, end_date: endDate },
+      timeout: 120000 // 2 minutes
     });
   }
 
@@ -1287,7 +1290,8 @@ class ApiClient {
     return this.request({
       method: 'POST',
       url: '/budgeting/ml/train/revenue/prophet',
-      params: { start_date: startDate, end_date: endDate }
+      params: { start_date: startDate, end_date: endDate },
+      timeout: 180000 // 3 minutes for Prophet
     });
   }
 
@@ -1298,7 +1302,8 @@ class ApiClient {
     return this.request({
       method: 'POST',
       url: '/budgeting/ml/train/revenue/xgboost',
-      params: { start_date: startDate, end_date: endDate }
+      params: { start_date: startDate, end_date: endDate },
+      timeout: 180000 // 3 minutes for XGBoost
     });
   }
 
@@ -1309,7 +1314,8 @@ class ApiClient {
     return this.request({
       method: 'POST',
       url: '/budgeting/ml/train/revenue/lstm',
-      params: { start_date: startDate, end_date: endDate, epochs, batch_size: batchSize }
+      params: { start_date: startDate, end_date: endDate, epochs, batch_size: batchSize },
+      timeout: 300000 // 5 minutes for LSTM (can take longer)
     });
   }
 
@@ -1320,7 +1326,8 @@ class ApiClient {
     return this.request({
       method: 'POST',
       url: '/budgeting/ml/train/inventory/sarima',
-      params: { start_date: startDate, end_date: endDate, order, seasonal_order: seasonalOrder }
+      params: { start_date: startDate, end_date: endDate, order, seasonal_order: seasonalOrder },
+      timeout: 180000 // 3 minutes for SARIMA
     });
   }
 
@@ -1331,7 +1338,8 @@ class ApiClient {
     return this.request({
       method: 'POST',
       url: '/budgeting/ml/train/inventory/xgboost',
-      params: { start_date: startDate, end_date: endDate }
+      params: { start_date: startDate, end_date: endDate },
+      timeout: 180000 // 3 minutes for XGBoost
     });
   }
 
@@ -1342,7 +1350,8 @@ class ApiClient {
     return this.request({
       method: 'POST',
       url: '/budgeting/ml/train/inventory/lstm',
-      params: { start_date: startDate, end_date: endDate, epochs, batch_size: batchSize }
+      params: { start_date: startDate, end_date: endDate, epochs, batch_size: batchSize },
+      timeout: 300000 // 5 minutes for LSTM (can take longer)
     });
   }
 

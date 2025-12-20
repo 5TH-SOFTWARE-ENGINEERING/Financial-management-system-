@@ -407,7 +407,29 @@ const MLTrainingPage: React.FC = () => {
         throw new Error(responseData?.detail || responseData?.message || 'Training failed');
       }
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || error?.data?.detail || error?.message || 'Training failed';
+      // Extract error message from various response formats
+      let errorMessage = 'Training failed';
+      
+      if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.data?.detail) {
+        errorMessage = error.data.detail;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      // Provide helpful context for common errors
+      const errorLower = errorMessage.toLowerCase();
+      if (errorLower.includes('stan_backend') || errorLower.includes('cmdstanpy') || errorLower.includes('cmdstan')) {
+        errorMessage = 'Prophet requires cmdstanpy which is not available. This is a known issue on Windows/Python 3.12. Use alternative models (ARIMA, XGBoost, LSTM) instead.';
+      } else if (errorLower.includes('insufficient data') || errorLower.includes('not enough data')) {
+        errorMessage = 'Insufficient historical data for training. Please import more data or select a different date range.';
+      }
+
       setModels(prev => prev.map(m => 
         m.id === modelId ? { ...m, status: 'error', error: errorMessage } : m
       ));
@@ -472,9 +494,52 @@ const MLTrainingPage: React.FC = () => {
 
       toast.success(`Training completed! ${trainedCount} models trained successfully`);
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Training failed';
-      toast.error(`Training failed: ${errorMessage}`);
-      setModels(prev => prev.map(m => ({ ...m, status: 'error', error: errorMessage })));
+      // Extract error message from various response formats
+      let errorMessage = 'Training failed';
+      
+      if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.data?.detail) {
+        errorMessage = error.data.detail;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      // For train all, we might have partial results, so check if we have results structure
+      if (error?.response?.data?.results) {
+        const results = error.response.data.results;
+        // Update models based on partial results
+        setModels(prev => prev.map(model => {
+          const metricKey = model.metric === 'expense' ? 'expenses' : 
+                           model.metric === 'revenue' ? 'revenue' : 'inventory';
+          const methodKey = model.id.includes('arima') ? 'arima' :
+                           model.id.includes('prophet') ? 'prophet' :
+                           model.id.includes('linear-regression') ? 'linear_regression' :
+                           model.id.includes('xgboost') ? 'xgboost' :
+                           model.id.includes('lstm') ? 'lstm' :
+                           model.id.includes('sarima') ? 'sarima' : '';
+          
+          const modelResult = results[metricKey]?.[methodKey];
+          if (modelResult?.status === 'trained') {
+            return {
+              ...model,
+              status: 'trained',
+              metrics: {
+                mae: modelResult.mae,
+                rmse: modelResult.rmse,
+                dataPoints: modelResult.data_points,
+                modelPath: modelResult.model_path
+              }
+            };
+          }
+          return model;
+        }));
+      }
+
+      toast.error(`Training completed with errors: ${errorMessage}`);
+      // Don't set all models to error, only those that failed (handled above)
     } finally {
       setTrainingAll(false);
     }
@@ -608,15 +673,19 @@ const MLTrainingPage: React.FC = () => {
 
                 {model.error && (
                   <div style={{
-                    padding: theme.spacing.sm,
+                    padding: theme.spacing.md,
                     background: '#fee2e2',
                     border: '1px solid #fecaca',
                     borderRadius: theme.borderRadius.sm,
                     marginBottom: theme.spacing.md,
-                    fontSize: theme.typography.fontSizes.xs,
-                    color: '#991b1b'
+                    fontSize: theme.typography.fontSizes.sm,
+                    color: '#991b1b',
+                    lineHeight: '1.5'
                   }}>
-                    {model.error}
+                    <div style={{ fontWeight: theme.typography.fontWeights.medium, marginBottom: theme.spacing.xs }}>
+                      Error:
+                    </div>
+                    <div>{model.error}</div>
                   </div>
                 )}
 
