@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import styled, { keyframes, css } from 'styled-components';
 import {
   Search, Plus, Bell, FileSpreadsheet, Globe, User, Users, LogOut, Settings, HelpCircle,
-  Clock
+  Clock, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -643,56 +643,158 @@ const NotificationPanel = styled.div<{ $isOpen: boolean }>`
   position: absolute;
   top: calc(100% + ${theme.spacing.sm});
   right: 0;
-  width: 420px;
-  max-height: 600px;
+  width: 480px;
+  max-height: 640px;
   background: ${theme.colors.background};
   border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
   z-index: 1000;
   opacity: ${props => (props.$isOpen ? 1 : 0)};
   visibility: ${props => (props.$isOpen ? 'visible' : 'hidden')};
   transform: ${props => (props.$isOpen ? 'translateY(0)' : 'translateY(-8px)')};
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(20px);
   
   ${props => props.$isOpen && css`
-    animation: ${slideDown} 0.2s ease-out;
+    animation: ${slideDown} 0.25s ease-out;
   `}
 `;
 
 const NotificationPanelHeader = styled.div`
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  padding: 16px 20px;
   border-bottom: 1px solid ${theme.colors.border};
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, ${theme.colors.backgroundSecondary} 0%, ${theme.colors.background} 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   
   h3 {
-    font-size: ${theme.typography.fontSizes.md};
-    font-weight: ${theme.typography.fontWeights.bold};
-    color: ${theme.colors.textSecondary};
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
     margin: 0;
+    letter-spacing: -0.01em;
   }
   
   span {
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: 12px;
     color: ${PRIMARY_ACCENT};
-    font-weight: ${theme.typography.fontWeights.medium};
-    padding: 4px 12px;
-    background: ${PRIMARY_ACCENT}15;
-    border-radius: ${theme.borderRadius.sm};
+    font-weight: 600;
+    padding: 5px 12px;
+    background: ${PRIMARY_ACCENT}12;
+    border-radius: 12px;
+    border: 1px solid ${PRIMARY_ACCENT}25;
   }
 `;
 
 const NotificationPanelBody = styled.div`
   flex: 1;
   overflow-y: auto;
-  max-height: 500px;
+  max-height: 520px;
+  padding: 12px;
+  background: #ffffff;
+  
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+    
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+`;
+
+const NotificationList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+`;
+
+const NotificationListItem = styled.div<{ $isRead: boolean }>`
+  padding: 14px 16px;
+  border: 1.5px solid ${props => props.$isRead ? '#e2e8f0' : `${PRIMARY_ACCENT}30`};
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: ${props => props.$isRead 
+    ? '#ffffff' 
+    : `linear-gradient(135deg, rgba(6, 182, 212, 0.06) 0%, rgba(6, 182, 212, 0.02) 100%)`};
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: ${props => props.$isRead 
+    ? '0 1px 3px rgba(0, 0, 0, 0.06)' 
+    : '0 2px 6px rgba(6, 182, 212, 0.12)'};
+  
+  &:hover {
+    background: ${props => props.$isRead ? '#f8fafc' : 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.04) 100%)'};
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: ${PRIMARY_ACCENT};
+  }
+  
+  ${props => !props.$isRead && `
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, ${PRIMARY_ACCENT} 0%, ${PRIMARY_HOVER} 100%);
+      border-radius: 10px 0 0 10px;
+    }
+  `}
+`;
+
+const CollapseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  margin: 10px 12px 0;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  color: ${PRIMARY_ACCENT};
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    background: ${PRIMARY_ACCENT}10;
+    border-color: ${PRIMARY_ACCENT};
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px ${PRIMARY_ACCENT}20;
+    color: ${PRIMARY_HOVER};
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s;
+    stroke-width: 2.5;
+  }
 `;
 
 const NotificationItem = styled.div<{ $isRead: boolean }>`
@@ -750,53 +852,98 @@ const NotificationText = styled.div<{ $isRead?: boolean }>`
   }
 `;
 
+const NotificationListText = styled.div<{ $isRead?: boolean }>`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  
+  p {
+    font-size: 14px;
+    color: ${props => props.$isRead ? '#64748b' : '#1e293b'};
+    margin: 0;
+    line-height: 1.5;
+    font-weight: ${props => props.$isRead ? 500 : 600};
+    letter-spacing: -0.01em;
+  }
+  
+  .notification-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .notification-time {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  
+  span {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+`;
+
 const NotificationPanelFooter = styled.div`
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
-  border-top: 1px solid ${theme.colors.border};
-  background: ${theme.colors.backgroundSecondary};
+  padding: 14px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
   display: flex;
   justify-content: center;
 `;
 
 const ViewAllButton = styled.button`
-  padding: ${theme.spacing.sm} ${theme.spacing.lg};
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.medium};
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 600;
   color: ${PRIMARY_ACCENT};
   background: transparent;
-  border: 1px solid ${PRIMARY_ACCENT};
+  border: 1.5px solid ${PRIMARY_ACCENT};
   cursor: pointer;
-  border-radius: ${theme.borderRadius.md};
+  border-radius: 8px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: -0.01em;
   
   &:hover {
     background: ${PRIMARY_ACCENT};
     color: white;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px ${PRIMARY_ACCENT}30;
+    box-shadow: 0 4px 12px ${PRIMARY_ACCENT}35;
+  }
+  
+  &:active {
+    transform: translateY(0);
   }
 `;
 
 const EmptyNotifications = styled.div`
-  padding: ${theme.spacing.xl};
+  padding: 48px 24px;
   text-align: center;
-  color: ${theme.colors.textSecondary};
+  color: #94a3b8;
   
   p {
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: 14px;
     margin: 0;
-    opacity: 0.7;
+    font-weight: 500;
+    color: #64748b;
   }
 `;
 
 const LoadingNotifications = styled.div`
-  padding: ${theme.spacing.xl};
+  padding: 48px 24px;
   text-align: center;
-  color: ${theme.colors.textSecondary};
+  color: #94a3b8;
   
   p {
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: 14px;
     margin: 0;
+    font-weight: 500;
+    color: #64748b;
   }
 `;
 
@@ -824,6 +971,7 @@ export default function Navbar() {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isOnline, setIsOnline] = useState(true);
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [notificationsExpanded, setNotificationsExpanded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationPanelRef = useRef<HTMLDivElement>(null);
   const notificationBadgeRef = useRef<HTMLDivElement>(null);
@@ -1317,7 +1465,10 @@ export default function Navbar() {
 
   const handleNotificationsClick = () => {
     setIsNotificationPanelOpen(!isNotificationPanelOpen);
-    setIsDropdownOpen(false); 
+    setIsDropdownOpen(false);
+    if (isNotificationPanelOpen) {
+      setNotificationsExpanded(false);
+    }
   };
 
   const handleViewAllNotifications = () => {
@@ -1633,63 +1784,77 @@ export default function Navbar() {
                     <p>No notifications</p>
                   </EmptyNotifications>
                 ) : (
-                  notifications.slice(0, 5).map((notification) => (
-                    <NotificationItem
-                      key={notification.id}
-                      $isRead={notification.is_read}
-                      onClick={() => handleNotificationClick(notification)}
-                      title={notification.action_url ? 'Click to view details' : 'Click to view all notifications'}
-                    >
-                      <NotificationItemContent>
-                        <NotificationText $isRead={notification.is_read}>
-                          <p>{notification.title || notification.message}</p>
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px', 
-                            marginTop: '4px',
-                            flexWrap: 'wrap'
-                          }}>
-                            <span>{formatNotificationDate(notification.created_at)}</span>
+                  <>
+                    <NotificationList>
+                      {(notificationsExpanded ? notifications : notifications.slice(0, 4)).map((notification) => (
+                        <NotificationListItem
+                          key={notification.id}
+                          $isRead={notification.is_read}
+                          onClick={() => handleNotificationClick(notification)}
+                          title={notification.action_url ? 'Click to view details' : 'Click to view all notifications'}
+                        >
+                          <NotificationListText $isRead={notification.is_read}>
+                            <div className="notification-meta">
+                              <p style={{ flex: 1, margin: 0 }}>{notification.title || notification.message}</p>
+                              <span className="notification-time">{formatNotificationDate(notification.created_at)}</span>
+                            </div>
                             {notification.priority && notification.priority !== 'medium' && (
-                              <span style={{ 
-                                display: 'inline-block',
-                                padding: '2px 6px',
-                                fontSize: '10px',
-                                fontWeight: 'bold',
-                                textTransform: 'uppercase',
-                                borderRadius: '4px',
-                                backgroundColor: notification.priority === 'urgent' ? '#ef444420' : 
-                                               notification.priority === 'high' ? '#f59e0b20' : '#3b82f620',
-                                color: notification.priority === 'urgent' ? '#ef4444' : 
-                                       notification.priority === 'high' ? '#f59e0b' : '#3b82f6',
-                              }}>
-                                {notification.priority}
-                              </span>
+                              <div style={{ marginTop: '4px' }}>
+                                <span style={{ 
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  padding: '3px 7px',
+                                  fontSize: '10px',
+                                  fontWeight: '600',
+                                  textTransform: 'uppercase',
+                                  borderRadius: '4px',
+                                  backgroundColor: notification.priority === 'urgent' ? '#fee2e2' : 
+                                                 notification.priority === 'high' ? '#fef3c7' : '#dbeafe',
+                                  color: notification.priority === 'urgent' ? '#dc2626' : 
+                                         notification.priority === 'high' ? '#d97706' : '#2563eb',
+                                  border: `1px solid ${notification.priority === 'urgent' ? '#fecaca' : 
+                                                    notification.priority === 'high' ? '#fde68a' : '#bfdbfe'}`,
+                                  letterSpacing: '0.025em',
+                                }}>
+                                  {notification.priority}
+                                </span>
+                              </div>
                             )}
-                          </div>
-                          {notification.action_url && (
-                            <span style={{ 
-                              display: 'block', 
-                              marginTop: '4px', 
-                              fontSize: '11px', 
-                              color: PRIMARY_ACCENT,
-                              opacity: 0.8 
-                            }}>
-                              View details →
-                            </span>
-                          )}
-                        </NotificationText>
-                      </NotificationItemContent>
-                    </NotificationItem>
-                  ))
+                          </NotificationListText>
+                        </NotificationListItem>
+                      ))}
+                    </NotificationList>
+                  </>
                 )}
               </NotificationPanelBody>
               {notifications.length > 0 && (
                 <NotificationPanelFooter>
-                  <ViewAllButton onClick={handleViewAllNotifications}>
-                    View All Notifications
-                  </ViewAllButton>
+                  <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                    {notifications.length > 4 && (
+                      <CollapseButton
+                        onClick={() => setNotificationsExpanded(!notificationsExpanded)}
+                        style={{ flex: 1, margin: 0 }}
+                      >
+                        {notificationsExpanded ? (
+                          <>
+                            <ChevronUp size={14} />
+                            <span>Show Less</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Show {notifications.length - 4} More</span>
+                            <ChevronDown size={14} />
+                          </>
+                        )}
+                      </CollapseButton>
+                    )}
+                    <ViewAllButton 
+                      onClick={handleViewAllNotifications}
+                      style={{ flex: notifications.length > 4 ? 1 : 'none' }}
+                    >
+                      View All Notifications
+                    </ViewAllButton>
+                  </div>
                 </NotificationPanelFooter>
               )}
               </NotificationPanel>
