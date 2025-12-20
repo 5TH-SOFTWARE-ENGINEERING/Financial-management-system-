@@ -20,7 +20,8 @@ import {
   BarChart3,
   AlertCircle,
   ShoppingCart,
-  Package
+  Package,
+  LineChart
 } from 'lucide-react';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -479,6 +480,27 @@ interface SalesSummary {
   period_end?: string;
 }
 
+interface ForecastDataPoint {
+  period?: string;
+  date?: string;
+  forecasted_value?: number;
+  method?: string;
+}
+
+interface Forecast {
+  id: number;
+  name: string;
+  description?: string;
+  forecast_type: string;
+  period_type: string;
+  start_date: string;
+  end_date: string;
+  method: string;
+  method_params?: Record<string, unknown>;
+  forecast_data?: ForecastDataPoint[];
+  created_at: string;
+}
+
 export default function ReportPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -501,6 +523,7 @@ export default function ReportPage() {
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
   const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
   const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
+  const [forecasts, setForecasts] = useState<Forecast[]>([]);
 
   // Helper function to safely convert values to numbers, handling NaN, null, undefined
   const safeNumber = (value: unknown): number => {
@@ -610,9 +633,16 @@ export default function ReportPage() {
                                   user?.role === 'super_admin' ||
                                   user?.role === 'manager';
       
+      // Check if user can view forecasts (Admin, Finance Admin, Manager)
+      const canViewForecasts = user?.role === 'finance_manager' || 
+                               user?.role === 'finance_admin' || 
+                               user?.role === 'admin' || 
+                               user?.role === 'super_admin' ||
+                               user?.role === 'manager';
+      
       // Note: Backend APIs (getFinancialSummary, getIncomeStatement, getCashFlow) should already filter
       // data by user role. The frontend trusts these responses. Sales data is filtered above.
-      const [summaryResult, incomeResult, cashFlowResult, inventoryResult, salesSummaryResult] = await Promise.allSettled([
+      const [summaryResult, incomeResult, cashFlowResult, inventoryResult, salesSummaryResult, forecastsResult] = await Promise.allSettled([
         apiClient.getFinancialSummary(dateParams.startDate, dateParams.endDate),
         apiClient.getIncomeStatement(dateParams.startDate, dateParams.endDate),
         apiClient.getCashFlow(dateParams.startDate, dateParams.endDate),
@@ -635,6 +665,14 @@ export default function ReportPage() {
           }
           throw err;
         }) : Promise.resolve({ data: null }),
+        canViewForecasts ? apiClient.getForecasts({ limit: 100 }).catch((err: unknown) => {
+          // Silently handle 403 errors (expected for non-authorized users)
+          const error = err as ErrorWithDetails;
+          if (error.response?.status === 403) {
+            return { data: [] };
+          }
+          throw err;
+        }) : Promise.resolve({ data: [] }),
       ]);
       
       // Filter to only include POSTED sales for revenue/profit calculations
@@ -930,6 +968,38 @@ export default function ReportPage() {
           console.warn('Failed to load sales summary:', salesSummaryResult.reason);
         }
         setSalesSummary(null);
+      }
+      
+      // Process forecasts result
+      if (forecastsResult.status === 'fulfilled') {
+        const forecastsData = forecastsResult.value?.data || forecastsResult.value || [];
+        const forecastsArray = Array.isArray(forecastsData) ? forecastsData : [];
+        // Parse forecast data if it's a string
+        const parsedForecasts = forecastsArray.map((f: unknown) => {
+          const forecast = f as Forecast;
+          if (typeof forecast.forecast_data === 'string') {
+            try {
+              forecast.forecast_data = JSON.parse(forecast.forecast_data) as ForecastDataPoint[];
+            } catch {
+              forecast.forecast_data = [];
+            }
+          }
+          if (typeof forecast.method_params === 'string') {
+            try {
+              forecast.method_params = JSON.parse(forecast.method_params) as Record<string, unknown>;
+            } catch {
+              forecast.method_params = {};
+            }
+          }
+          return forecast;
+        });
+        setForecasts(parsedForecasts);
+      } else {
+        // Only log error if it's not a 403 (permission denied)
+        if (forecastsResult.reason?.response?.status !== 403) {
+          console.warn('Failed to load forecasts:', forecastsResult.reason);
+        }
+        setForecasts([]);
       }
       
       if (summaryResult.status === 'rejected' && incomeResult.status === 'rejected' && cashFlowResult.status === 'rejected') {
@@ -1819,6 +1889,192 @@ export default function ReportPage() {
                       <Package size={48} />
                       <h3>No inventory data available</h3>
                       <p>Inventory summary is only available to Finance Admin, Admin, and Manager roles.</p>
+                    </EmptyState>
+                  )}
+                </ReportCard>
+              </ReportSection>
+            )}
+
+            {/* Forecast Report Section - For Admin, Finance Admin, and Manager */}
+            {(user?.role === 'finance_manager' || user?.role === 'finance_admin' || user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'manager') && (
+              <ReportSection>
+                <ReportCard>
+                  <ReportHeader>
+                    <div>
+                      <h2>
+                        <LineChart />
+                        Forecast Report
+                      </h2>
+                      <p>
+                        View and analyze all financial forecasts
+                      </p>
+                    </div>
+                  </ReportHeader>
+
+                  {forecasts && forecasts.length > 0 ? (
+                    <>
+                      <SummaryGrid>
+                        <SummaryCard>
+                          <div className="label">
+                            <LineChart size={16} />
+                            Total Forecasts
+                          </div>
+                          <div className="value">{forecasts.length}</div>
+                          <div className="sub-value">
+                            Active forecasts
+                          </div>
+                        </SummaryCard>
+                        <SummaryCard $type="revenue">
+                          <div className="label">
+                            <TrendingUp size={16} />
+                            Revenue Forecasts
+                          </div>
+                          <div className="value">
+                            {forecasts.filter(f => f.forecast_type === 'revenue').length}
+                          </div>
+                          <div className="sub-value">
+                            Revenue forecasting models
+                          </div>
+                        </SummaryCard>
+                        <SummaryCard $type="expense">
+                          <div className="label">
+                            <ArrowDownRight size={16} />
+                            Expense Forecasts
+                          </div>
+                          <div className="value">
+                            {forecasts.filter(f => f.forecast_type === 'expense').length}
+                          </div>
+                          <div className="sub-value">
+                            Expense forecasting models
+                          </div>
+                        </SummaryCard>
+                        <SummaryCard $type="profit">
+                          <div className="label">
+                            <BarChart3 size={16} />
+                            AI Models
+                          </div>
+                          <div className="value">
+                            {forecasts.filter(f => 
+                              f.method === 'arima' || 
+                              f.method === 'prophet' || 
+                              f.method === 'xgboost' || 
+                              f.method === 'lstm' || 
+                              f.method === 'linear_regression' || 
+                              f.method === 'sarima'
+                            ).length}
+                          </div>
+                          <div className="sub-value">
+                            Machine learning forecasts
+                          </div>
+                        </SummaryCard>
+                      </SummaryGrid>
+
+                      <div style={{ marginTop: theme.spacing.xl }}>
+                        <SectionTitle>All Forecasts</SectionTitle>
+                        <CategoryTable>
+                          <thead>
+                            <tr>
+                              <th>Forecast Name</th>
+                              <th>Type</th>
+                              <th>Method</th>
+                              <th>Period</th>
+                              <th style={{ textAlign: 'right' }}>Total Forecasted</th>
+                              <th>Data Points</th>
+                              <th>Created</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {forecasts.map((forecast) => {
+                              const forecastData = forecast.forecast_data || [];
+                              const totalForecasted = forecastData.reduce((sum, point) => sum + (point.forecasted_value || 0), 0);
+                              const isAIModel = forecast.method === 'arima' || 
+                                               forecast.method === 'prophet' || 
+                                               forecast.method === 'xgboost' || 
+                                               forecast.method === 'lstm' || 
+                                               forecast.method === 'linear_regression' || 
+                                               forecast.method === 'sarima';
+                              
+                              return (
+                                <tr key={forecast.id}>
+                                  <td>
+                                    <strong>{forecast.name}</strong>
+                                    {forecast.description && (
+                                      <div style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginTop: theme.spacing.xs }}>
+                                        {forecast.description}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <span style={{ textTransform: 'capitalize' }}>
+                                      {forecast.forecast_type}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span style={{ textTransform: 'capitalize' }}>
+                                      {forecast.method.replace(/_/g, ' ')}
+                                      {isAIModel && ' (AI)'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {formatDate(forecast.start_date)} - {formatDate(forecast.end_date)}
+                                  </td>
+                                  <td style={{ textAlign: 'right', fontWeight: theme.typography.fontWeights.bold }}>
+                                    {formatCurrency(totalForecasted)}
+                                  </td>
+                                  <td>{forecastData.length}</td>
+                                  <td>{formatDate(forecast.created_at)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </CategoryTable>
+                      </div>
+
+                      <div style={{ marginTop: theme.spacing.xl }}>
+                        <SectionTitle>Forecast Summary by Type</SectionTitle>
+                        <CategoryTable>
+                          <thead>
+                            <tr>
+                              <th>Forecast Type</th>
+                              <th style={{ textAlign: 'right' }}>Count</th>
+                              <th style={{ textAlign: 'right' }}>Total Forecasted Value</th>
+                              <th style={{ textAlign: 'right' }}>Average per Forecast</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {['revenue', 'expense', 'profit', 'inventory'].map((type) => {
+                              const typeForecasts = forecasts.filter(f => f.forecast_type === type);
+                              if (typeForecasts.length === 0) return null;
+                              
+                              const totalValue = typeForecasts.reduce((sum, f) => {
+                                const data = f.forecast_data || [];
+                                return sum + data.reduce((s, p) => s + (p.forecasted_value || 0), 0);
+                              }, 0);
+                              
+                              return (
+                                <tr key={type}>
+                                  <td style={{ textTransform: 'capitalize', fontWeight: theme.typography.fontWeights.medium }}>
+                                    {type}
+                                  </td>
+                                  <td style={{ textAlign: 'right' }}>{typeForecasts.length}</td>
+                                  <td style={{ textAlign: 'right', fontWeight: theme.typography.fontWeights.bold }}>
+                                    {formatCurrency(totalValue)}
+                                  </td>
+                                  <td style={{ textAlign: 'right' }}>
+                                    {formatCurrency(totalValue / typeForecasts.length)}
+                                  </td>
+                                </tr>
+                              );
+                            }).filter(Boolean)}
+                          </tbody>
+                        </CategoryTable>
+                      </div>
+                    </>
+                  ) : (
+                    <EmptyState>
+                      <LineChart size={48} />
+                      <h3>No forecasts available</h3>
+                      <p>Forecast reports are only available to Finance Admin, Admin, and Manager roles. Create forecasts to see them here.</p>
                     </EmptyState>
                   )}
                 </ReportCard>
