@@ -92,7 +92,7 @@ const HeaderContainer = styled.header`
 const SearchContainer = styled.div`
   position: relative;
   flex: 1;
-  max-width: 440px;
+  max-width: 400px;
   margin: 0 ${theme.spacing.lg};
 `;
 

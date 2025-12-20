@@ -9,7 +9,10 @@ from sqlalchemy.orm import Session  # type: ignore
 from typing import List, Optional
 from datetime import datetime, timedelta
 import json
+import logging
 from pydantic import BaseModel  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 from ...core.database import get_db
 from ...core.security import verify_password
@@ -26,6 +29,7 @@ from ...schemas.budget import (
 )
 from ...services.budgeting import BudgetingService
 from ...services.forecasting import ForecastingService
+from ...services.ml_forecasting import MLForecastingService
 from ...services.variance import VarianceAnalysisService
 
 router = APIRouter()
@@ -538,6 +542,61 @@ def create_forecast(
             user_id=current_user.id,
             user_role=current_user.role
         )
+    # AI/ML Methods
+    elif method == "arima" and forecast_type == "expense":
+        try:
+            periods = (end_date - start_date).days // 30
+            forecast_values = MLForecastingService.generate_forecast_with_trained_model(
+                "expense", "arima", start_date, end_date, current_user.id, periods
+            )
+        except Exception as e:
+            logger.error(f"ARIMA forecast failed: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"ARIMA forecast failed: {str(e)}")
+    elif method == "prophet":
+        try:
+            periods = (end_date - start_date).days
+            forecast_values = MLForecastingService.generate_forecast_with_trained_model(
+                forecast_type, "prophet", start_date, end_date, current_user.id, periods
+            )
+        except Exception as e:
+            logger.error(f"Prophet forecast failed: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Prophet forecast failed: {str(e)}")
+    elif method == "xgboost":
+        try:
+            periods = (end_date - start_date).days // 30
+            forecast_values = MLForecastingService.generate_forecast_with_trained_model(
+                forecast_type, "xgboost", start_date, end_date, current_user.id, periods
+            )
+        except Exception as e:
+            logger.error(f"XGBoost forecast failed: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"XGBoost forecast failed: {str(e)}")
+    elif method == "lstm":
+        try:
+            periods = (end_date - start_date).days // 30
+            forecast_values = MLForecastingService.generate_forecast_with_trained_model(
+                forecast_type, "lstm", start_date, end_date, current_user.id, periods
+            )
+        except Exception as e:
+            logger.error(f"LSTM forecast failed: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"LSTM forecast failed: {str(e)}")
+    elif method == "linear_regression" and forecast_type == "expense":
+        try:
+            periods = (end_date - start_date).days // 30
+            forecast_values = MLForecastingService.generate_forecast_with_trained_model(
+                "expense", "linear_regression", start_date, end_date, current_user.id, periods
+            )
+        except Exception as e:
+            logger.error(f"Linear Regression forecast failed: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Linear Regression forecast failed: {str(e)}")
+    elif method == "sarima" and forecast_type == "inventory":
+        try:
+            periods = (end_date - start_date).days // 30
+            forecast_values = MLForecastingService.generate_forecast_with_trained_model(
+                "inventory", "sarima", start_date, end_date, current_user.id, periods
+            )
+        except Exception as e:
+            logger.error(f"SARIMA forecast failed: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"SARIMA forecast failed: {str(e)}")
     else:
         forecast_values = []
     
@@ -633,6 +692,297 @@ def update_forecast(
         updated_forecast.forecast_data = json.loads(updated_forecast.forecast_data)
     
     return updated_forecast
+
+
+# ============================================================================
+# AI/ML MODEL TRAINING
+# ============================================================================
+
+@router.post("/ml/train/all")
+def train_all_models(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train all AI/ML models for all metrics"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    try:
+        results = MLForecastingService.train_all_models(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role
+        )
+        return {
+            "status": "success",
+            "message": "Model training completed",
+            "results": results
+        }
+    except Exception as e:
+        logger.error(f"Model training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/expenses/arima")
+def train_expenses_arima(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    order: str = Query("1,1,1", description="ARIMA order (p,d,q)"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train ARIMA model for expenses"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+        order_tuple = tuple(map(int, order.split(',')))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date or order format")
+    
+    try:
+        result = MLForecastingService.train_arima_expenses(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role, order_tuple
+        )
+        return result
+    except Exception as e:
+        logger.error(f"ARIMA training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/expenses/prophet")
+def train_expenses_prophet(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train Prophet model for expenses"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    try:
+        result = MLForecastingService.train_prophet_expenses(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Prophet training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/expenses/linear-regression")
+def train_expenses_linear_regression(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train Linear Regression model for expenses"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    try:
+        result = MLForecastingService.train_linear_regression_expenses(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Linear Regression training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/revenue/prophet")
+def train_revenue_prophet(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train Prophet model for revenue"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    try:
+        result = MLForecastingService.train_prophet_revenue(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Prophet revenue training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/revenue/xgboost")
+def train_revenue_xgboost(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train XGBoost model for revenue"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    try:
+        result = MLForecastingService.train_xgboost_revenue(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role
+        )
+        return result
+    except Exception as e:
+        logger.error(f"XGBoost revenue training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/revenue/lstm")
+def train_revenue_lstm(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    epochs: int = Query(50, ge=1, le=500),
+    batch_size: int = Query(32, ge=1, le=128),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train LSTM model for revenue"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    try:
+        result = MLForecastingService.train_lstm_revenue(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role,
+            epochs=epochs, batch_size=batch_size
+        )
+        return result
+    except Exception as e:
+        logger.error(f"LSTM revenue training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/inventory/sarima")
+def train_inventory_sarima(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    order: str = Query("1,1,1", description="ARIMA order (p,d,q)"),
+    seasonal_order: str = Query("1,1,1,12", description="Seasonal order (P,D,Q,s)"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train SARIMA model for inventory"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+        order_tuple = tuple(map(int, order.split(',')))
+        seasonal_order_tuple = tuple(map(int, seasonal_order.split(',')))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date or order format")
+    
+    try:
+        result = MLForecastingService.train_sarima_inventory(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role,
+            order_tuple, seasonal_order_tuple
+        )
+        return result
+    except Exception as e:
+        logger.error(f"SARIMA training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/inventory/xgboost")
+def train_inventory_xgboost(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train XGBoost model for inventory"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    try:
+        result = MLForecastingService.train_xgboost_inventory(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role
+        )
+        return result
+    except Exception as e:
+        logger.error(f"XGBoost inventory training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+@router.post("/ml/train/inventory/lstm")
+def train_inventory_lstm(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    epochs: int = Query(50, ge=1, le=500),
+    batch_size: int = Query(32, ge=1, le=128),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Train LSTM model for inventory"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can train models")
+    
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    try:
+        result = MLForecastingService.train_lstm_inventory(
+            db, start_date_dt, end_date_dt, current_user.id, current_user.role,
+            epochs=epochs, batch_size=batch_size
+        )
+        return result
+    except Exception as e:
+        logger.error(f"LSTM inventory training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
 
 
 @router.delete("/forecasts/{forecast_id}", status_code=status.HTTP_204_NO_CONTENT)

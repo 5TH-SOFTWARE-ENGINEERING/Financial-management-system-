@@ -169,10 +169,27 @@ async def lifespan(app: FastAPI):
     # 3. **Create default admin** (replaces @app.on_event)
     create_default_admin()
 
+    # 4. Start ML model training scheduler (optional)
+    try:
+        from .services.ml_scheduler import start_scheduler
+        if start_scheduler():
+            logger.info("ML model training scheduler started")
+        else:
+            logger.warning("ML model training scheduler not available (APScheduler not installed)")
+    except Exception as e:
+        logger.warning(f"Failed to start ML training scheduler: {e}")
+
     yield
 
     # -------------------- SHUTDOWN --------------------
     logger.info("Shutting down Finance Management System Backend")
+    
+    # Stop ML training scheduler
+    try:
+        from .services.ml_scheduler import stop_scheduler
+        stop_scheduler()
+    except Exception as e:
+        logger.warning(f"Failed to stop ML training scheduler: {e}")
 
 
 # ------------------------------------------------------------------
