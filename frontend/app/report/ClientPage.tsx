@@ -1283,7 +1283,8 @@ export default function ReportPage() {
     });
   };
 
-  const capitalize = (str: string): string => {
+  const capitalize = (str: string | null | undefined): string => {
+    if (!str || typeof str !== 'string') return '';
     return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ');
   };
 
@@ -2208,7 +2209,7 @@ export default function ReportPage() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
                               <SectionTitle>
                                 {capitalize(metric)} Forecast & Insights
-                                {insight.model_type && (
+                                {insight.model_type && typeof insight.model_type === 'string' && (
                                   <span style={{ 
                                     fontSize: theme.typography.fontSizes.sm, 
                                     fontWeight: 400,
@@ -2238,16 +2239,18 @@ export default function ReportPage() {
                                   Trend Analysis
                                 </div>
                                 <div style={{ display: 'flex', gap: theme.spacing.md, flexWrap: 'wrap' }}>
-                                  <TrendBadge $direction={trend.direction as any}>
-                                    {trend.direction === 'increasing' ? <ArrowUpRight size={14} /> : 
-                                     trend.direction === 'decreasing' ? <ArrowDownRight size={14} /> : 
+                                  <TrendBadge $direction={(trend?.direction || 'stable') as any}>
+                                    {trend?.direction === 'increasing' ? <ArrowUpRight size={14} /> : 
+                                     trend?.direction === 'decreasing' ? <ArrowDownRight size={14} /> : 
                                      <TrendingUp size={14} />}
-                                    {capitalize(trend.direction)} {trend.percentage !== undefined && `(${Math.abs(trend.percentage).toFixed(1)}%)`}
+                                    {capitalize(trend?.direction || 'stable')} {trend?.percentage !== undefined && trend.percentage !== null && `(${Math.abs(trend.percentage).toFixed(1)}%)`}
                                   </TrendBadge>
                                   <span style={{ color: TEXT_COLOR_MUTED, fontSize: theme.typography.fontSizes.sm }}>
-                                    Avg: {formatCurrency(trend.average)} | 
-                                    Max: {formatCurrency(trend.max)} | 
-                                    Min: {formatCurrency(trend.min)}
+                                    {trend?.average !== undefined && `Avg: ${formatCurrency(trend.average)}`}
+                                    {trend?.average !== undefined && (trend?.max !== undefined || trend?.min !== undefined) && ' | '}
+                                    {trend?.max !== undefined && `Max: ${formatCurrency(trend.max)}`}
+                                    {(trend?.max !== undefined && trend?.min !== undefined) && ' | '}
+                                    {trend?.min !== undefined && `Min: ${formatCurrency(trend.min)}`}
                                   </span>
                                 </div>
                               </div>
@@ -2271,7 +2274,7 @@ export default function ReportPage() {
                                   lineHeight: '1.6'
                                 }}>
                                   <Lightbulb size={16} style={{ marginTop: '2px', flexShrink: 0 }} />
-                                  <div>{insight.summary}</div>
+                                  <div>{insight.summary || 'No summary available'}</div>
                                 </div>
                               </div>
                             )}
@@ -2282,12 +2285,15 @@ export default function ReportPage() {
                                 <SectionTitle style={{ fontSize: theme.typography.fontSizes.md, marginBottom: theme.spacing.sm }}>
                                   Alerts
                                 </SectionTitle>
-                                {alerts.map((alert: any, index: number) => (
-                                  <AlertCard key={index} $severity={alert.severity}>
-                                    <AlertCircle className="alert-icon" size={18} />
-                                    <div className="alert-message">{alert.message}</div>
-                                  </AlertCard>
-                                ))}
+                                {alerts.map((alert: any, index: number) => {
+                                  if (!alert || typeof alert !== 'object') return null;
+                                  return (
+                                    <AlertCard key={index} $severity={alert.severity || 'low'}>
+                                      <AlertCircle className="alert-icon" size={18} />
+                                      <div className="alert-message">{alert.message || 'No message'}</div>
+                                    </AlertCard>
+                                  );
+                                })}
                               </div>
                             )}
 
@@ -2297,38 +2303,42 @@ export default function ReportPage() {
                                 <SectionTitle style={{ fontSize: theme.typography.fontSizes.md, marginBottom: theme.spacing.sm }}>
                                   Recommendations
                                 </SectionTitle>
-                                {advice.map((rec: any, index: number) => (
-                                  <InsightCard 
-                                    key={index} 
-                                    $priority={rec.priority === 'high' ? 'high' : rec.priority === 'medium' ? 'medium' : 'low'}
-                                  >
-                                    <div className="insight-header">
-                                      <Target size={18} />
-                                      <h4>{rec.title}</h4>
-                                      <PriorityBadge $priority={rec.priority === 'high' ? 'high' : rec.priority === 'medium' ? 'medium' : 'low'}>
-                                        {rec.priority}
-                                      </PriorityBadge>
-                                    </div>
-                                    <div className="insight-message">{rec.message}</div>
-                                    {rec.actions && rec.actions.length > 0 && (
-                                      <div className="insight-actions">
-                                        <strong style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                                          Recommended Actions:
-                                        </strong>
-                                        <ul>
-                                          {rec.actions.map((action: string, actionIndex: number) => (
-                                            <li key={actionIndex}>{action}</li>
-                                          ))}
-                                        </ul>
+                                {advice.map((rec: any, index: number) => {
+                                  if (!rec || typeof rec !== 'object') return null;
+                                  const priority = rec.priority === 'high' ? 'high' : rec.priority === 'medium' ? 'medium' : 'low';
+                                  return (
+                                    <InsightCard 
+                                      key={index} 
+                                      $priority={priority}
+                                    >
+                                      <div className="insight-header">
+                                        <Target size={18} />
+                                        <h4>{rec.title || 'Recommendation'}</h4>
+                                        <PriorityBadge $priority={priority}>
+                                          {rec.priority || 'low'}
+                                        </PriorityBadge>
                                       </div>
-                                    )}
-                                  </InsightCard>
-                                ))}
+                                      <div className="insight-message">{rec.message || 'No message available'}</div>
+                                      {rec.actions && Array.isArray(rec.actions) && rec.actions.length > 0 && (
+                                        <div className="insight-actions">
+                                          <strong style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                                            Recommended Actions:
+                                          </strong>
+                                          <ul>
+                                            {rec.actions.map((action: any, actionIndex: number) => (
+                                              <li key={actionIndex}>{typeof action === 'string' ? action : 'Action item'}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </InsightCard>
+                                  );
+                                })}
                               </div>
                             )}
 
                             {/* Forecast Preview */}
-                            {insight.forecast && insight.forecast.length > 0 && (
+                            {insight.forecast && Array.isArray(insight.forecast) && insight.forecast.length > 0 && (
                               <div>
                                 <SectionTitle style={{ fontSize: theme.typography.fontSizes.md, marginBottom: theme.spacing.sm }}>
                                   Forecast Preview ({insight.forecast.length} periods)
@@ -2341,15 +2351,20 @@ export default function ReportPage() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {insight.forecast.slice(0, 6).map((point: any, index: number) => (
-                                      <tr key={index}>
-                                        <td>{point.period || formatDate(point.date)}</td>
-                                        <td style={{ textAlign: 'right', fontWeight: theme.typography.fontWeights.bold }}>
-                                          {formatCurrency(point.forecasted_value || point.value)}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                    {insight.forecast.length > 6 && (
+                                    {Array.isArray(insight.forecast) && insight.forecast.slice(0, 6).map((point: any, index: number) => {
+                                      if (!point || typeof point !== 'object') return null;
+                                      const period = point.period || (point.date ? formatDate(point.date) : `Period ${index + 1}`);
+                                      const value = point.forecasted_value !== undefined ? point.forecasted_value : (point.value !== undefined ? point.value : 0);
+                                      return (
+                                        <tr key={index}>
+                                          <td>{period}</td>
+                                          <td style={{ textAlign: 'right', fontWeight: theme.typography.fontWeights.bold }}>
+                                            {formatCurrency(value)}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                    {Array.isArray(insight.forecast) && insight.forecast.length > 6 && (
                                       <tr>
                                         <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED, fontStyle: 'italic' }}>
                                           ... and {insight.forecast.length - 6} more periods
