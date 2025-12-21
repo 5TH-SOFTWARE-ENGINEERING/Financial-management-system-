@@ -1,20 +1,21 @@
 //app/layout
 'use client';
 
-import { Inter } from 'next/font/google';
-import styled, { ThemeProvider } from 'styled-components';
+import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { theme } from '@/components/common/theme';
 import StyledComponentsRegistry from '@/lib/registry';
 import { AuthProvider } from '@/lib/rbac/auth-context'; 
 import { Toaster } from '@/components/ui/sonner';
 
-const inter = Inter({ 
-  subsets: ['latin'],
-  display: 'swap',
-  fallback: ['system-ui', 'arial'],
-  adjustFontFallback: true,
-  preload: false,
-});
+// Use system fonts instead of Google Fonts to avoid download warnings
+// This provides better performance and no external dependencies
+const GlobalStyle = createGlobalStyle`
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+`;
 
 const LayoutContainer = styled.div`
   min-height: 100vh;
@@ -39,7 +40,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
+        <GlobalStyle />
         <StyledComponentsRegistry>
           <ThemeProvider theme={theme}>
             <AuthProvider> 
