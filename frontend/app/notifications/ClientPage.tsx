@@ -801,6 +801,126 @@ export default function NotificationsPage() {
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [userCache, setUserCache] = useState<Map<number, { name: string; email: string }>>(new Map());
+  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
+  const [isAccessibleUserIdsReady, setIsAccessibleUserIdsReady] = useState(false);
+
+  // Initialize accessible user IDs based on role
+  useEffect(() => {
+    const initializeAccessibleUsers = async () => {
+      if (!user) {
+        setAccessibleUserIds(null);
+        setIsAccessibleUserIdsReady(false);
+        return;
+      }
+
+      const userRole = user?.role?.toLowerCase() || '';
+      const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager';
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      const isAccountant = userRole === 'accountant';
+      const isEmployee = userRole === 'employee';
+
+      if (isAdmin) {
+        // Admin sees all - no filtering needed
+        setAccessibleUserIds(null);
+        setIsAccessibleUserIdsReady(true);
+        return;
+      }
+
+      if (isFinanceAdmin && user?.id) {
+        // Finance Admin/Manager: Get their own subordinates ONLY (accountants and employees)
+        // Exclude other Finance Admins, Managers, and their subordinates
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        try {
+          const subordinatesRes = await apiClient.getSubordinates(userId);
+          const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
+          
+          // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+          const validSubordinateIds = subordinates
+            .map((sub: { id?: number | string; role?: string }) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+              const subRole = (sub.role || '').toLowerCase();
+              
+              // Only include accountants and employees, exclude Finance Admins and Managers
+              if (typeof subId === 'number' && 
+                  (subRole === 'accountant' || subRole === 'employee')) {
+                return subId;
+              }
+              return null;
+            })
+            .filter((id): id is number => id !== null);
+          
+          // Create accessible user IDs: Finance Admin's own ID + their valid subordinates only
+          const userIds = [userId, ...validSubordinateIds];
+          setAccessibleUserIds(userIds);
+          setIsAccessibleUserIdsReady(true);
+        } catch (err) {
+          console.error('Failed to fetch subordinates for Finance Admin:', err);
+          // Fallback: only see own notifications
+          setAccessibleUserIds([userId]);
+          setIsAccessibleUserIdsReady(true);
+        }
+      } else if (isAccountant && user?.id) {
+        // Accountant: See their own notifications + employees' notifications (from their Finance Admin's team)
+        const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+        const managerId = storeUser?.managerId 
+          ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
+          : null;
+        
+        if (managerId) {
+          try {
+            // Get the Finance Admin's subordinates (employees)
+            const subordinatesRes = await apiClient.getSubordinates(managerId);
+            const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
+            
+            // Filter to ONLY include employees (exclude accountants and Finance Admins)
+            const employeeIds = subordinates
+              .map((sub: { id?: number | string; role?: string }) => {
+                const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+                const subRole = (sub.role || '').toLowerCase() || '';
+                // Only include employees
+                if (!Number.isNaN(subId) && subRole === 'employee') {
+                  return subId;
+                }
+                return undefined;
+              })
+              .filter((id): id is number => id !== undefined);
+            
+            // Include: Accountant themselves + employees from Finance Admin's team
+            setAccessibleUserIds([accountantId, ...employeeIds]);
+            setIsAccessibleUserIdsReady(true);
+          } catch (err) {
+            console.warn('Failed to fetch Finance Admin subordinates for accountant, using only accountant ID:', err);
+            setAccessibleUserIds([accountantId]);
+            setIsAccessibleUserIdsReady(true);
+          }
+        } else {
+          // No manager - only see own notifications
+          setAccessibleUserIds([accountantId]);
+          setIsAccessibleUserIdsReady(true);
+        }
+      } else if (isEmployee && user?.id) {
+        // Employee: See their own notifications + Finance Admin's notifications (their manager)
+        const employeeId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+        const managerId = storeUser?.managerId 
+          ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
+          : null;
+        
+        if (managerId) {
+          setAccessibleUserIds([employeeId, managerId]);
+        } else {
+          setAccessibleUserIds([employeeId]);
+        }
+        setIsAccessibleUserIdsReady(true);
+      } else {
+        // Other roles: only see own notifications
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        setAccessibleUserIds(userId ? [userId] : null);
+        setIsAccessibleUserIdsReady(true);
+      }
+    };
+
+    initializeAccessibleUsers();
+  }, [user, storeUser]);
 
   // Role-based access control - all authenticated users can access notifications
   useEffect(() => {
@@ -894,6 +1014,11 @@ export default function NotificationsPage() {
   }, [user, userCache]);
 
   const fetchNotifications = useCallback(async (showLoading: boolean = true) => {
+    // Wait for accessibleUserIds to be ready (unless admin)
+    if (!isAccessibleUserIdsReady) {
+      return;
+    }
+
     if (showLoading) {
       setLoading(true);
     }
@@ -906,7 +1031,42 @@ export default function NotificationsPage() {
         ? response.data
         : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data ? (response.data as { data: unknown[] }).data : []);
       
-      const apiNotifications = (notificationsData || []).map((notif: unknown) => {
+      // Get current user info for filtering
+      const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
+      const userRole = user?.role?.toLowerCase() || '';
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      
+      // Filter notifications based on accessibleUserIds
+      const filteredNotificationsData = (notificationsData || []).filter((notif: unknown) => {
+        const notification = notif as { user_id?: number };
+        const notifUserId = notification.user_id;
+        
+        // Admin sees all
+        if (isAdmin) {
+          return true;
+        }
+        
+        // If accessibleUserIds is null, it means we're still loading or it's an admin
+        // For safety, if we're not admin and accessibleUserIds is null, only show own notifications
+        if (accessibleUserIds === null) {
+          return notifUserId === currentUserId;
+        }
+        
+        // If notification has no user_id, skip it for non-admin roles
+        if (notifUserId === undefined || notifUserId === null) {
+          return false;
+        }
+        
+        // Check if notification's user_id is in accessibleUserIds
+        if (accessibleUserIds.length > 0) {
+          return accessibleUserIds.includes(notifUserId);
+        }
+        
+        // Fallback: only show own notifications
+        return notifUserId === currentUserId;
+      });
+      
+      const apiNotifications = (filteredNotificationsData || []).map((notif: unknown) => {
         const notification = notif as { 
           id?: number; 
           user_id?: number;
@@ -1027,7 +1187,7 @@ export default function NotificationsPage() {
         setLoading(false);
       }
     }
-  }, [user]);
+  }, [user, accessibleUserIds, isAccessibleUserIdsReady]);
 
   const mapNotificationType = (type: string, title?: string, message?: string): 'success' | 'error' | 'warning' | 'info' => {
     const normalized = type?.toLowerCase() || 'system_alert';
@@ -1113,7 +1273,7 @@ export default function NotificationsPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && isAccessibleUserIdsReady) {
       fetchNotifications(true);
       // Set up real-time updates every 30 seconds (reduced frequency to avoid excessive requests)
       const interval = setInterval(() => {
@@ -1121,7 +1281,7 @@ export default function NotificationsPage() {
       }, 30000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, user, fetchNotifications]);
+  }, [isAuthenticated, user, fetchNotifications, isAccessibleUserIdsReady]);
   
   // Update user cache when user changes
   useEffect(() => {

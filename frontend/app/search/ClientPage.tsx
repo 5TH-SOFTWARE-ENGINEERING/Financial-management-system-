@@ -7,6 +7,7 @@ import Link from 'next/link';
 import styled from 'styled-components';
 import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
+import { useAuth } from '@/lib/rbac/auth-context';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
 import { Input } from '@/components/ui/input';
@@ -282,15 +283,129 @@ const SearchInput = styled(Input)`
   }
 `;
 
+type Subordinate = { id?: number | string; role?: string };
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated, user: storeUser } = useUserStore();
+  const { user: authUser } = useAuth();
+  const user = storeUser || authUser;
   const initialQuery = searchParams.get('q') || '';
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
+  const [isAccessibleUserIdsReady, setIsAccessibleUserIdsReady] = useState(false);
+
+  // Initialize accessible user IDs based on role
+  useEffect(() => {
+    const initializeAccessibleUsers = async () => {
+      if (!user) {
+        setAccessibleUserIds(null);
+        setIsAccessibleUserIdsReady(false);
+        return;
+      }
+
+      const userRole = user?.role?.toLowerCase() || '';
+      const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager';
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      const isAccountant = userRole === 'accountant';
+      const isEmployee = userRole === 'employee';
+
+      if (isAdmin) {
+        // Admin sees all - no filtering needed
+        setAccessibleUserIds(null);
+        setIsAccessibleUserIdsReady(true);
+        return;
+      }
+
+      if (isFinanceAdmin && user?.id) {
+        // Finance Admin/Manager: Get their own subordinates ONLY (accountants and employees)
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        try {
+          const subordinatesRes = await apiClient.getSubordinates(userId);
+          const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
+          
+          // Filter subordinates to ONLY include accountants and employees
+          const validSubordinateIds = subordinates
+            .map((sub: Subordinate) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+              const subRole = (sub.role || '').toLowerCase();
+              
+              if (typeof subId === 'number' && 
+                  (subRole === 'accountant' || subRole === 'employee')) {
+                return subId;
+              }
+              return null;
+            })
+            .filter((id): id is number => id !== null);
+          
+          setAccessibleUserIds([userId, ...validSubordinateIds]);
+          setIsAccessibleUserIdsReady(true);
+        } catch (err) {
+          console.error('Failed to fetch subordinates for Finance Admin:', err);
+          setAccessibleUserIds([userId]);
+          setIsAccessibleUserIdsReady(true);
+        }
+      } else if (isAccountant && user?.id) {
+        // Accountant: See their own + employees' data (from their Finance Admin's team)
+        const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+        const managerId = storeUser?.managerId 
+          ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
+          : null;
+        
+        if (managerId) {
+          try {
+            const subordinatesRes = await apiClient.getSubordinates(managerId);
+            const subordinates: Subordinate[] = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
+            
+            const employeeIds = subordinates
+              .map((sub) => {
+                const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+                const subRole = (sub.role || '').toLowerCase() || '';
+                if (!Number.isNaN(subId) && subRole === 'employee') {
+                  return subId;
+                }
+                return undefined;
+              })
+              .filter((id): id is number => id !== undefined);
+            
+            setAccessibleUserIds([accountantId, ...employeeIds]);
+            setIsAccessibleUserIdsReady(true);
+          } catch (err) {
+            console.warn('Failed to fetch Finance Admin subordinates for accountant:', err);
+            setAccessibleUserIds([accountantId]);
+            setIsAccessibleUserIdsReady(true);
+          }
+        } else {
+          setAccessibleUserIds([accountantId]);
+          setIsAccessibleUserIdsReady(true);
+        }
+      } else if (isEmployee && user?.id) {
+        // Employee: See their own + Finance Admin's data (their manager)
+        const employeeId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+        const managerId = storeUser?.managerId 
+          ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
+          : null;
+        
+        if (managerId) {
+          setAccessibleUserIds([employeeId, managerId]);
+        } else {
+          setAccessibleUserIds([employeeId]);
+        }
+        setIsAccessibleUserIdsReady(true);
+      } else {
+        // Other roles: only see own data
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        setAccessibleUserIds(userId ? [userId] : null);
+        setIsAccessibleUserIdsReady(true);
+      }
+    };
+
+    initializeAccessibleUsers();
+  }, [user, storeUser]);
 
   // Update query from URL params on mount
   useEffect(() => {
@@ -321,6 +436,11 @@ export default function SearchPage() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const performSearch = useCallback(async (searchQuery: string) => {
+    // Wait for accessibleUserIds to be ready (unless admin)
+    if (!isAccessibleUserIdsReady) {
+      return;
+    }
+
     setLoading(true);
     try {
       // Search across multiple resources
@@ -334,37 +454,79 @@ export default function SearchPage() {
 
       const allResults: SearchResult[] = [];
       const lowerQuery = searchQuery.toLowerCase();
+      
+      // Get current user info for filtering
+      const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
+      const userRole = user?.role?.toLowerCase() || '';
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
-      // Filter and add results
-      (users.data || []).forEach((user: unknown) => {
-        const userData = user as { id: number; full_name?: string; name?: string; email?: string };
+      // Helper function to check if a user ID is accessible
+      const isAccessibleUserId = (userId: number | undefined | null): boolean => {
+        if (userId === undefined || userId === null) {
+          return false; // No user ID means not accessible for non-admin
+        }
+        if (isAdmin) {
+          return true; // Admin sees all
+        }
+        if (accessibleUserIds === null) {
+          return userId === currentUserId; // Fallback: only own data
+        }
+        return accessibleUserIds.includes(userId);
+      };
+
+      // Filter and add results - Users
+      (users.data || []).forEach((userItem: unknown) => {
+        const userData = userItem as { id: number; full_name?: string; name?: string; email?: string };
+        // Only show users that are accessible
+        if (!isAccessibleUserId(userData.id)) {
+          return;
+        }
         const name = userData.full_name || userData.name || userData.email || '';
         if (name.toLowerCase().includes(lowerQuery) || userData.email?.toLowerCase().includes(lowerQuery)) {
           allResults.push({ type: 'user', data: userData, title: name, subtitle: userData.email });
         }
       });
 
+      // Filter and add results - Revenues
       (revenues.data || []).forEach((revenue: unknown) => {
-        const revenueData = revenue as { id: number; title?: string; description?: string; amount?: number };
+        const revenueData = revenue as { id: number; title?: string; description?: string; amount?: number; created_by_id?: number; user_id?: number };
+        // Check if revenue is accessible (created_by_id or user_id)
+        const revenueUserId = revenueData.created_by_id || revenueData.user_id;
+        if (!isAccessibleUserId(revenueUserId)) {
+          return;
+        }
         if (revenueData.title?.toLowerCase().includes(lowerQuery) || revenueData.description?.toLowerCase().includes(lowerQuery)) {
           allResults.push({ type: 'revenue', data: revenueData, title: revenueData.title || '', subtitle: `$${revenueData.amount || 0}` });
         }
       });
 
+      // Filter and add results - Expenses
       (expenses.data || []).forEach((expense: unknown) => {
-        const expenseData = expense as { id: number; title?: string; description?: string; amount?: number };
+        const expenseData = expense as { id: number; title?: string; description?: string; amount?: number; created_by_id?: number; user_id?: number };
+        // Check if expense is accessible (created_by_id or user_id)
+        const expenseUserId = expenseData.created_by_id || expenseData.user_id;
+        if (!isAccessibleUserId(expenseUserId)) {
+          return;
+        }
         if (expenseData.title?.toLowerCase().includes(lowerQuery) || expenseData.description?.toLowerCase().includes(lowerQuery)) {
           allResults.push({ type: 'expense', data: expenseData, title: expenseData.title || '', subtitle: `$${expenseData.amount || 0}` });
         }
       });
 
+      // Filter and add results - Projects
       (projects.data || []).forEach((project: unknown) => {
-        const projectData = project as { id: number; name?: string; description?: string; department_name?: string };
+        const projectData = project as { id: number; name?: string; description?: string; department_name?: string; created_by_id?: number; user_id?: number };
+        // Check if project is accessible (created_by_id or user_id)
+        const projectUserId = projectData.created_by_id || projectData.user_id;
+        if (!isAccessibleUserId(projectUserId)) {
+          return;
+        }
         if (projectData.name?.toLowerCase().includes(lowerQuery) || projectData.description?.toLowerCase().includes(lowerQuery)) {
           allResults.push({ type: 'project', data: projectData, title: projectData.name || '', subtitle: projectData.department_name });
         }
       });
 
+      // Departments are shared resources - all authenticated users can see all departments
       (departments.data || []).forEach((dept: unknown) => {
         const deptData = dept as { id: number; name?: string; description?: string };
         if (deptData.name?.toLowerCase().includes(lowerQuery) || deptData.description?.toLowerCase().includes(lowerQuery)) {
@@ -378,17 +540,17 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user, accessibleUserIds, isAccessibleUserIdsReady]);
 
   // Trigger search when query changes
   useEffect(() => {
-    if (query && isAuthenticated) {
+    if (query && isAuthenticated && isAccessibleUserIdsReady) {
       performSearch(query);
     } else if (!query) {
       setResults([]);
       setLoading(false);
     }
-  }, [query, isAuthenticated, performSearch]);
+  }, [query, isAuthenticated, performSearch, isAccessibleUserIdsReady]);
 
   // Handle input change
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
