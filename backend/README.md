@@ -643,7 +643,28 @@ docker-compose down
 **Status**: ✅ Production Ready
 
 All core features are fully functional and tested. The API is ready for deployment and use.
-python -m pytest tests/test_hierarchy_runner.py
+
+## 🤖 AI/ML Forecasting
+
+The system includes advanced AI/ML-powered forecasting capabilities. For detailed documentation, see:
+
+- **[ML Forecasting Guide](docs/ML_FORECASTING.md)** - Complete guide to ML forecasting methods
+- **[ML Training Guide](docs/ML_TRAINING.md)** - How to train AI models
+- **[ML Data Requirements](docs/ML_DATA_REQUIREMENTS.md)** - Data requirements for training
+- **[CSV Pipeline Guide](docs/CSV_PIPELINE.md)** - CSV to model training pipeline
+- **[ML Libraries](docs/ML_LIBRARIES.md)** - Library verification and requirements
+
+### Quick Start for ML Training
+
+```bash
+# Train all models from CSV data
+python train_from_csv.py --all
+
+# Or train from database
+python train_ai_models.py --all
+```
+
+### Available Models
 
 | Metric    | Model             | Library      |
 | --------- | ----------------- | ------------ |
@@ -656,9 +677,6 @@ python -m pytest tests/test_hierarchy_runner.py
 | Inventory | SARIMA            | statsmodels  |
 | Inventory | XGBoost           | xgboost      |
 | Inventory | LSTM              | tensorflow   |
-
-cd backend
-python train_ai_models.py --all
 
 # AI/ML Forecasting Guide
 ## Adding Machine Learning to Your Forecasting System
