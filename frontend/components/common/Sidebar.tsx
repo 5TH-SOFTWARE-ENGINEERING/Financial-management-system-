@@ -523,7 +523,7 @@ const Sidebar: React.FC = () => {
                                 <NavIcon $active={pathname === '/expenses/items'} $collapsed={collapsed} $size={16} $iconType="calculator">
                                     <Calculator />
                                 </NavIcon>
-                                {!collapsed && 'Expense-Calcu'}
+                                {!collapsed && 'Cal-Expense'}
                             </NavItem>
                         </ComponentGate>
                     </SubMenu>
@@ -568,7 +568,7 @@ const Sidebar: React.FC = () => {
                                 <NavIcon $active={pathname === '/inventory/manage'} $collapsed={collapsed} $size={16} $iconType="package">
                                     <Package />
                                 </NavIcon>
-                                {!collapsed && 'Manage Inventory'}
+                                {!collapsed && 'item Manage'}
                             </NavItem>
                         )}
                         {/* Inventory View - Accountant (view only) */}
@@ -706,7 +706,7 @@ const Sidebar: React.FC = () => {
                                     <NavIcon $active={pathname === '/scenarios/create'} $collapsed={collapsed} $size={16} $iconType="plus">
                                         <Plus />
                                     </NavIcon>
-                                    {!collapsed && 'new scenario'}
+                                    {!collapsed && 'new scenarios'}
                                 </NavItem>
                             </ComponentGate>
                             <ComponentGate componentId={ComponentId.SCENARIO_LIST}>
