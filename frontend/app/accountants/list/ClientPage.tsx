@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
-import { AlertCircle, Edit, Trash2, UserPlus, Loader2, UserCheck, Shield, Eye, EyeOff, Lock, XCircle } from 'lucide-react';
+import { AlertCircle, Edit, Trash2, UserPlus, Loader2, UserCheck, Shield, Eye, EyeOff, Lock, XCircle, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Switch } from '@/components/ui/switch';
@@ -441,6 +441,100 @@ const ModalActions = styled.div`
   margin-top: ${theme.spacing.lg};
 `;
 
+const SearchContainer = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  margin-bottom: ${theme.spacing.lg};
+  align-items: center;
+`;
+
+const SearchInputWrapper = styled.div`
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  
+  input {
+    width: 100%;
+    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    padding-left: 40px;
+    padding-right: 40px;
+    border: 1px solid ${theme.colors.border};
+    border-radius: ${theme.borderRadius.md};
+    background: ${theme.colors.background};
+    font-size: ${theme.typography.fontSizes.md};
+    color: ${TEXT_COLOR_DARK};
+    transition: all ${theme.transitions.default};
+    
+    &:focus {
+      outline: none;
+      border-color: ${PRIMARY_COLOR};
+      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    }
+    
+    &::placeholder {
+      color: ${TEXT_COLOR_MUTED};
+      opacity: 0.5;
+    }
+  }
+  
+  .search-icon {
+    position: absolute;
+    left: ${theme.spacing.sm};
+    color: ${TEXT_COLOR_MUTED};
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+  }
+  
+  .clear-button {
+    position: absolute;
+    right: ${theme.spacing.sm};
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${TEXT_COLOR_MUTED};
+    padding: ${theme.spacing.xs};
+    border-radius: ${theme.borderRadius.sm};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all ${theme.transitions.default};
+    
+    &:hover {
+      color: ${TEXT_COLOR_DARK};
+      background: ${theme.colors.backgroundSecondary};
+    }
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+`;
+
+const SearchButton = styled(Button)`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const SearchResultsInfo = styled.div`
+  font-size: ${theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_MUTED};
+  margin-bottom: ${theme.spacing.md};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  background: ${theme.colors.backgroundSecondary};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+`;
+
 const Badge = styled.span<{ $variant: 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
   display: inline-flex;
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
@@ -499,10 +593,57 @@ function AccountantListPageInner() {
   const [deactivatePassword, setDeactivatePassword] = useState('');
   const [activatePasswordError, setActivatePasswordError] = useState<string | null>(null);
   const [deactivatePasswordError, setDeactivatePasswordError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredAccountants, setFilteredAccountants] = useState<Accountant[]>([]);
 
   useEffect(() => {
     loadAccountants();
   }, []);
+
+  useEffect(() => {
+    filterAccountants();
+  }, [accountants, searchQuery]);
+
+  const filterAccountants = () => {
+    if (!searchQuery.trim()) {
+      setFilteredAccountants(accountants);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = accountants.filter((accountant) => {
+      const fullName = (accountant.full_name || '').toLowerCase();
+      const email = (accountant.email || '').toLowerCase();
+      const username = (accountant.username || '').toLowerCase();
+      const phone = (accountant.phone || '').toLowerCase();
+      const department = (accountant.department || '').toLowerCase();
+
+      return (
+        fullName.includes(query) ||
+        email.includes(query) ||
+        username.includes(query) ||
+        phone.includes(query) ||
+        department.includes(query)
+      );
+    });
+
+    setFilteredAccountants(filtered);
+  };
+
+  const handleSearch = () => {
+    filterAccountants();
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setFilteredAccountants(accountants);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const loadAccountants = async () => {
     setLoading(true);
@@ -752,6 +893,42 @@ function AccountantListPageInner() {
             </ErrorBanner>
           )}
 
+          {!loading && accountants.length > 0 && (
+            <SearchContainer>
+              <SearchInputWrapper>
+                <Search className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, username, phone, or department..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="clear-button"
+                    onClick={handleClearSearch}
+                    title="Clear search"
+                  >
+                    <X />
+                  </button>
+                )}
+              </SearchInputWrapper>
+              <SearchButton onClick={handleSearch}>
+                <Search size={16} />
+                Search
+              </SearchButton>
+            </SearchContainer>
+          )}
+
+          {!loading && searchQuery && (
+            <SearchResultsInfo>
+              Showing {filteredAccountants.length} of {accountants.length} accountant{accountants.length !== 1 ? 's' : ''}
+              {searchQuery && ` matching "${searchQuery}"`}
+            </SearchResultsInfo>
+          )}
+
           {loading ? (
             <LoadingContainer>
               <Spinner />
@@ -759,7 +936,18 @@ function AccountantListPageInner() {
             </LoadingContainer>
           ) : (
             <Card>
-              {accountants.length === 0 ? (
+              {filteredAccountants.length === 0 && searchQuery ? (
+                <EmptyState>
+                  <p>No accountants found matching "{searchQuery}".</p>
+                  <Button
+                    variant="outline"
+                    onClick={handleClearSearch}
+                    className="mt-4"
+                  >
+                    Clear Search
+                  </Button>
+                </EmptyState>
+              ) : accountants.length === 0 ? (
                 <EmptyState>
                   <p>No accountants found.</p>
                   <Link href="/accountants/create">
@@ -784,7 +972,7 @@ function AccountantListPageInner() {
                       </tr>
                     </TableHeader>
                     <TableBody>
-                      {accountants.map((accountant) => (
+                      {filteredAccountants.map((accountant) => (
                         <tr key={accountant.id}>
                           <td>{accountant.full_name || 'N/A'}</td>
                           <td>{accountant.email}</td>
