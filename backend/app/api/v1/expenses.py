@@ -32,8 +32,8 @@ def read_expense_entries(
     db: Session = Depends(get_db)
 ):
     """Get expense entries with optional filtering"""
-    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-        # Admins and Finance Managers can see all entries
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        # Admins can see all entries
         # For reports, allow fetching all data by using a very high limit
         effective_limit = limit if limit <= 10000 else 10000
         if start_date and end_date:
@@ -44,6 +44,33 @@ def read_expense_entries(
             entries = expense_crud.get_by_vendor(db, vendor, skip, effective_limit)
         else:
             entries = expense_crud.get_multi(db, skip, effective_limit)
+    elif current_user.role == UserRole.FINANCE_ADMIN:
+        # Finance Admin: See only their own entries and their subordinates' entries
+        # IMPORTANT: Only include accountants and employees, NOT other Finance Admins
+        from ...crud.user import user as user_crud
+        try:
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+            valid_subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            subordinate_ids = [current_user.id] + valid_subordinate_ids
+        except Exception as e:
+            logger.error(f"Error fetching hierarchy for Finance Admin: {str(e)}")
+            subordinate_ids = [current_user.id]
+        
+        if start_date and end_date:
+            all_entries = expense_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+        elif category:
+            all_entries = expense_crud.get_by_category(db, category, 0, 1000)
+        elif vendor:
+            all_entries = expense_crud.get_by_vendor(db, vendor, 0, 1000)
+        else:
+            all_entries = expense_crud.get_multi(db, 0, 1000)
+        
+        entries = [entry for entry in all_entries if entry.created_by_id in subordinate_ids]
+        entries = entries[skip:skip + limit]
     elif current_user.role == UserRole.MANAGER:
         # Managers can see their own entries and their subordinates' entries
         subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]

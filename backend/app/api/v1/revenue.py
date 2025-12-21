@@ -32,8 +32,8 @@ def read_revenue_entries(
 ):
     """Get revenue entries with optional filtering"""
     try:
-        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
-            # Admins and Finance Managers can see all entries
+        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            # Admins can see all entries
             # For reports, allow fetching all data by using a very high limit
             effective_limit = limit if limit <= 10000 else 10000
             try:
@@ -49,6 +49,38 @@ def read_revenue_entries(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=f"Failed to retrieve revenue entries: {str(e)}"
                 )
+        elif current_user.role == UserRole.FINANCE_ADMIN:
+            # Finance Admin: See only their own entries and their subordinates' entries
+            # IMPORTANT: Only include accountants and employees, NOT other Finance Admins
+            from ...crud.user import user as user_crud
+            try:
+                subordinates = user_crud.get_hierarchy(db, current_user.id)
+                # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+                valid_subordinate_ids = [
+                    sub.id for sub in subordinates 
+                    if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+                ]
+                subordinate_ids = [current_user.id] + valid_subordinate_ids
+            except Exception as e:
+                logger.error(f"Error fetching hierarchy for Finance Admin: {str(e)}")
+                subordinate_ids = [current_user.id]
+            
+            try:
+                if start_date and end_date:
+                    all_entries = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+                elif category:
+                    all_entries = revenue_crud.get_by_category(db, category, 0, 1000)
+                else:
+                    all_entries = revenue_crud.get_multi(db, 0, 1000)
+            except Exception as e:
+                logger.error(f"Error fetching revenue entries for Finance Admin: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to retrieve revenue entries: {str(e)}"
+                )
+            
+            entries = [entry for entry in all_entries if entry.created_by_id in subordinate_ids]
+            entries = entries[skip:skip + limit]
         elif current_user.role == UserRole.MANAGER:
             # Managers can see their own entries and their subordinates' entries
             try:

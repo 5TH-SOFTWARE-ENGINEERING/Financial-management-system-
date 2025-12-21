@@ -163,12 +163,62 @@ def get_inventory_items(
     db: Session = Depends(get_db)
 ):
     """Get inventory items (role-based visibility)"""
-    items = inventory_crud.get_multi(
-        db, skip=skip, limit=limit, 
+    # Filter by user role before fetching
+    user_ids = None
+    if current_user.role == UserRole.FINANCE_ADMIN:
+        # Finance Admin: See only their own items and their subordinates' items
+        # IMPORTANT: Only include accountants and employees, NOT other Finance Admins
+        from ...crud.user import user as user_crud
+        try:
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+            valid_subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            user_ids = [current_user.id] + valid_subordinate_ids
+        except Exception as e:
+            logger.error(f"Error fetching hierarchy for Finance Admin: {str(e)}")
+            user_ids = [current_user.id]
+    elif current_user.role == UserRole.ACCOUNTANT:
+        # Accountant: See items from their Finance Admin (manager) and their Finance Admin's team
+        from ...crud.user import user as user_crud
+        manager_id = current_user.manager_id
+        if manager_id:
+            try:
+                subordinates = user_crud.get_hierarchy(db, manager_id)
+                # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+                valid_subordinate_ids = [
+                    sub.id for sub in subordinates 
+                    if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+                ]
+                user_ids = [manager_id] + valid_subordinate_ids
+            except Exception as e:
+                logger.error(f"Error fetching Finance Admin hierarchy for accountant: {str(e)}")
+                user_ids = [manager_id] if manager_id else [current_user.id]
+        else:
+            user_ids = [current_user.id]
+    elif current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        # Admin/Super Admin: See all items
+        user_ids = None
+    else:
+        # Employee and others: See only their own items
+        user_ids = [current_user.id]
+    
+    # Get all items first (we'll filter by user_ids if needed)
+    all_items = inventory_crud.get_multi(
+        db, skip=0, limit=10000,  # Get all items, we'll filter and paginate after
         category=category, is_active=is_active, search=search
     )
     
-    # Filter items based on role
+    # Filter items by user_ids if specified
+    if user_ids is not None:
+        all_items = [item for item in all_items if item.created_by_id in user_ids]
+    
+    # Apply pagination after filtering
+    items = all_items[skip:skip + limit]
+    
+    # Filter items based on role (field visibility)
     result = []
     for item in items:
         item_dict = {

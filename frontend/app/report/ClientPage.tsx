@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import Layout from '@/components/layout';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
+import useUserStore from '@/store/userStore';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import {
@@ -684,6 +685,7 @@ interface ForecastWithAdvice {
 
 export default function ReportPage() {
   const { user } = useAuth();
+  const storeUser = useUserStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -733,29 +735,128 @@ export default function ReportPage() {
       const isAccountant = userRole === 'accountant';
       const isEmployee = userRole === 'employee';
 
-      // Get accessible user IDs for Finance Admin (themselves + subordinates)
+      // Get accessible user IDs based on role
+      // Admin/Super Admin: See all (no filtering)
+      // Finance Admin: See their own + subordinates (ONLY accountants and employees, NOT other Finance Admins)
+      // Accountant: See their own + their Finance Admin's team (ONLY accountants and employees, NOT other Finance Admins)
+      // Employee: See only their own
       let accessibleUserIds: number[] | null = null;
-      if (isFinanceAdmin && user?.id) {
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      
+      if (isAdmin) {
+        // Admin can see all - no filtering needed
+        accessibleUserIds = null;
+      } else if (isFinanceAdmin && user?.id) {
         try {
+          // Finance Admin: Get their own subordinates ONLY (accountants and employees)
+          // Exclude other Finance Admins, Managers, and their subordinates
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
           const subordinatesRes = await apiClient.getSubordinates(userId);
           const subordinates = subordinatesRes?.data || [];
-          accessibleUserIds = [userId, ...subordinates.map((sub: unknown) => {
-            const subordinate = sub as { id: number | string };
-            const subId = typeof subordinate.id === 'string' ? parseInt(subordinate.id, 10) : subordinate.id;
-            return subId;
-          })];
+          
+          // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+          const validSubordinateIds = subordinates
+            .map((sub: { id?: number | string; role?: string }) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+              const subRole = (sub.role || '').toLowerCase();
+              
+              // Only include accountants and employees, exclude Finance Admins and Managers
+              if (!Number.isNaN(subId) && (subRole === 'accountant' || subRole === 'employee')) {
+                return subId;
+              }
+              return undefined;
+            })
+            .filter((id): id is number => id !== undefined);
+          
+          // Include the finance admin themselves + their valid subordinates only
+          accessibleUserIds = [userId, ...validSubordinateIds];
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Finance Admin - Accessible User IDs for Reports:', {
+              userId: userId,
+              subordinatesCount: subordinates.length,
+              validSubordinateIds: validSubordinateIds,
+              accessibleUserIds: accessibleUserIds
+            });
+          }
         } catch (err: unknown) {
           console.warn('Failed to fetch subordinates, using only finance admin ID:', err);
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
           accessibleUserIds = [userId];
         }
-      } else if ((isAccountant || isEmployee) && user?.id) {
-        // Accountant and Employee can only see their own
+      } else if (isAccountant && user?.id) {
+        // Accountant: Get their Finance Admin's (manager's) subordinates
+        const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        let managerId: number | null = null;
+        
+        // Try to get managerId from storeUser first
+        const managerIdStr = storeUser?.managerId;
+        if (managerIdStr) {
+          managerId = typeof managerIdStr === 'string' ? parseInt(managerIdStr, 10) : Number(managerIdStr);
+        } else {
+          // If not in storeUser, try to fetch current user profile from API
+          try {
+            const currentUserRes = await apiClient.getCurrentUser();
+            const currentUserData = currentUserRes?.data;
+            if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
+              managerId = typeof currentUserData.manager_id === 'string' 
+                ? parseInt(currentUserData.manager_id, 10) 
+                : Number(currentUserData.manager_id);
+            }
+          } catch (err) {
+            console.warn('Failed to fetch current user profile for manager_id:', err);
+          }
+        }
+        
+        if (managerId) {
+          try {
+            const financeAdminId = managerId;
+            
+            // Get all subordinates of the Finance Admin
+            const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
+            const subordinates = subordinatesRes?.data || [];
+            
+            // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+            const validSubordinateIds = subordinates
+              .map((sub: { id?: number | string; role?: string }) => {
+                const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+                const subRole = (sub.role || '').toLowerCase();
+                
+                // Only include accountants and employees, exclude Finance Admins and Managers
+                if (!Number.isNaN(subId) && (subRole === 'accountant' || subRole === 'employee')) {
+                  return subId;
+                }
+                return undefined;
+              })
+              .filter((id): id is number => id !== undefined);
+            
+            // Include the Finance Admin themselves and their valid subordinates only
+            accessibleUserIds = [financeAdminId, ...validSubordinateIds];
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Accountant - Accessible User IDs for Reports (from Finance Admin):', {
+                accountantId: accountantId,
+                financeAdminId: financeAdminId,
+                subordinatesCount: subordinates.length,
+                validSubordinateIds: validSubordinateIds,
+                accessibleUserIds: accessibleUserIds
+              });
+            }
+          } catch (err) {
+            console.error('Failed to fetch Finance Admin subordinates for accountant:', err);
+            // Fallback: if we can't get subordinates, at least try to show data from the Finance Admin
+            accessibleUserIds = [managerId];
+          }
+        } else {
+          // Accountant has no manager assigned - fallback to just themselves
+          console.warn('Accountant has no manager (Finance Admin) assigned - using only accountant ID');
+          accessibleUserIds = [accountantId];
+        }
+      } else if (isEmployee && user?.id) {
+        // Employee: Can only see their own data
         const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
         accessibleUserIds = [userId];
       }
-      // Admin can see all - no filtering needed
 
       const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
       
@@ -776,27 +877,21 @@ export default function ReportPage() {
         salesData = salesArray || [];
 
         // Apply role-based filtering to sales data
-        if (isFinanceAdmin && accessibleUserIds && accessibleUserIds.length > 0) {
-          // Finance Admin: filter to only their team's sales
+        // Admin/Super Admin: See all (no filtering)
+        // Finance Admin: Filter to only their team's sales (themselves + subordinates who are accountants/employees)
+        // Accountant: Filter to only their Finance Admin's team sales (Finance Admin + subordinates who are accountants/employees)
+        // Employee: Filter to only their own sales
+        if (!isAdmin && accessibleUserIds && accessibleUserIds.length > 0) {
+          // Finance Admin, Accountant, or Employee: filter based on accessibleUserIds
           salesData = salesData.filter((s: unknown) => {
             const sale = s as { sold_by_id?: unknown; soldBy?: unknown; sold_by?: unknown; created_by_id?: unknown; createdBy?: unknown };
             const soldById = sale.sold_by_id || sale.soldBy || sale.sold_by || sale.created_by_id || sale.createdBy;
             if (!soldById) return false;
             const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : (typeof soldById === 'number' ? soldById : NaN);
-            return accessibleUserIds!.includes(soldByIdNum);
-          });
-        } else if (isAccountant || isEmployee) {
-          // Accountant and Employee: filter to only their own sales
-          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-          salesData = salesData.filter((s: unknown) => {
-            const sale = s as { sold_by_id?: unknown; soldBy?: unknown; sold_by?: unknown; created_by_id?: unknown; createdBy?: unknown };
-            const soldById = sale.sold_by_id || sale.soldBy || sale.sold_by || sale.created_by_id || sale.createdBy;
-            if (!soldById) return false;
-            const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
-            return soldByIdNum === userId;
+            return !isNaN(soldByIdNum) && accessibleUserIds!.includes(soldByIdNum);
           });
         }
-        // Admin sees all - no filtering needed
+        // Admin/Super Admin sees all - no filtering needed
       } catch (err: unknown) {
         console.warn('Failed to fetch detailed sales data for reports:', err);
         // Continue without sales data - we'll use sales summary API instead
@@ -1244,7 +1339,7 @@ export default function ReportPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, startDate, endDate]);
+  }, [user, storeUser?.managerId, startDate, endDate]);
 
   useEffect(() => {
     if (user) {

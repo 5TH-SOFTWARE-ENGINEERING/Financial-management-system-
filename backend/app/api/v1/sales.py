@@ -179,27 +179,36 @@ def get_sales(
             # Employees can only see their own sales
             sold_by_id = current_user.id
         elif current_user.role == UserRole.ACCOUNTANT:
-            # Accountants can see ALL sales from Finance Admin and Employee for revenue posting
-            # They need to see all sales transactions to record revenue properly
-            # Filter to show sales from Finance Admin, Manager, and Employee roles only
+            # Accountant: See sales from their Finance Admin (manager) and their Finance Admin's team
+            # IMPORTANT: Only include accountants and employees, NOT other Finance Admins
             from ...crud.user import user as user_crud
-            # Get all users with Finance Admin, Manager, or Employee roles
-            finance_admins = db.query(User).filter(
-                User.role.in_([UserRole.FINANCE_ADMIN, UserRole.MANAGER])
-            ).all()
-            employees = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()
-            
-            # Combine all user IDs that accountants should see sales from
-            user_ids = [u.id for u in finance_admins] + [u.id for u in employees]
-            
-            # If no users found, return empty list (no sales to show)
-            # Don't set to None - we want to filter, not show all
+            manager_id = current_user.manager_id
+            if manager_id:
+                try:
+                    subordinates = user_crud.get_hierarchy(db, manager_id)
+                    # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+                    valid_subordinate_ids = [
+                        sub.id for sub in subordinates 
+                        if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+                    ]
+                    user_ids = [manager_id] + valid_subordinate_ids
+                except Exception as e:
+                    logger.error(f"Error fetching Finance Admin hierarchy for accountant: {str(e)}")
+                    user_ids = [manager_id] if manager_id else [current_user.id]
+            else:
+                # Accountant has no manager - only see their own sales
+                user_ids = [current_user.id]
         elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
             # Finance Admin/Manager: See only their team's sales (subordinates)
+            # IMPORTANT: Only include accountants and employees, NOT other Finance Admins/Managers
             from ...crud.user import user as user_crud
-            subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-            subordinate_ids.append(current_user.id)  # Include themselves
-            user_ids = subordinate_ids
+            subordinates = user_crud.get_hierarchy(db, current_user.id)
+            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+            valid_subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            user_ids = [current_user.id] + valid_subordinate_ids
         
         # If user_ids is set, we need to filter by multiple user IDs
         # Fetch all matching sales and filter by user_ids in Python
