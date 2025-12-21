@@ -180,7 +180,7 @@ def train_specific_model(metric: str, model_type: str):
         
     except Exception as e:
         # Restore stderr for error messages
-        sys.stderr = old_stderr
+        sys.stderr = old_stderr #type: ignore
         error_msg = str(e)
         if "Insufficient data" not in error_msg:
             print(f"\n[ERROR] Training failed: {error_msg}")
@@ -190,7 +190,7 @@ def train_specific_model(metric: str, model_type: str):
             print(f"\n[ERROR] Training failed: {error_msg}")
         return None
     finally:
-        sys.stderr = old_stderr
+        sys.stderr = old_stderr #type: ignore
         db.close()
 
 

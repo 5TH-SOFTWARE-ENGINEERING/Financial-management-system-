@@ -683,6 +683,8 @@ python train_ai_models.py --all
 ### Using Alembic
 
 ```bash
+alembic current
+alembic stamp head
 # Create a new migration
 alembic revision --autogenerate -m "Description of changes"
 
