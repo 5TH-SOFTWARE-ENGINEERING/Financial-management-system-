@@ -356,13 +356,20 @@ const CompleteSaleButton = styled(Button).withConfig({
 interface InventoryItem {
   id: number;
   item_name: string;
-  selling_price: number;
-  quantity: number;
-  category?: string;
-  sku?: string;
-  created_by_id?: number;
-  createdBy?: number;
-  created_by?: number;
+  selling_price: number | string;
+  quantity: number | string;
+  category?: string | null;
+  sku?: string | null;
+  description?: string | null;
+  is_active?: boolean;
+  created_by_id?: number | string;
+  createdBy?: number | string;
+  created_by?: number | string;
+  buying_price?: number | null;
+  expense_amount?: number | null;
+  total_cost?: number | null;
+  profit_per_unit?: number | null;
+  profit_margin?: number | null;
 }
 
 interface SaleItem {
@@ -405,52 +412,55 @@ export default function SalesPage() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
 
   const loadItems = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
     try {
-      const response = await apiClient.getInventoryItems({ limit: 1000, is_active: true });
-      const rawData = response?.data as unknown;
+      // Use backend search parameter if searchTerm exists, otherwise fetch all active items
+      // Backend already handles role-based filtering, so we don't need to filter by created_by_id
+      const params: {
+        limit: number;
+        is_active: boolean;
+        search?: string;
+      } = {
+        limit: 1000,
+        is_active: true,
+      };
+      
+      // Add search parameter if user has entered a search term
+      if (searchTerm.trim()) {
+        params.search = searchTerm.trim();
+      }
+      
+      const response = await apiClient.getInventoryItems(params);
+      
+      // Backend returns List[InventoryItemOut] directly (array), not wrapped
       let itemsData: InventoryItem[] = [];
-
-      if (Array.isArray(rawData)) {
-        itemsData = rawData as InventoryItem[];
-      } else if (rawData && typeof rawData === 'object' && Array.isArray((rawData as { data?: unknown }).data)) {
-        itemsData = (rawData as { data: InventoryItem[] }).data;
+      
+      if (Array.isArray(response?.data)) {
+        itemsData = response.data as InventoryItem[];
+      } else if (response?.data && typeof response.data === 'object' && 'data' in response.data && Array.isArray((response.data as { data?: unknown }).data)) {
+        // Fallback: handle wrapped response if backend changes
+        itemsData = (response.data as { data: InventoryItem[] }).data;
       }
       
-      // Apply role-based filtering
-      const userRole = user?.role?.toLowerCase() || '';
-      const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
-      const isAccountant = userRole === 'accountant';
-      const isEmployee = userRole === 'employee';
-      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+      // Filter out inactive items (backend should already filter, but add safety check)
+      itemsData = itemsData.filter(item => item.quantity !== undefined && item.quantity !== null);
       
-      if (isAdmin) {
-        // Admin sees all items - no filtering needed
-      } else if (isFinanceAdmin && accessibleUserIds && accessibleUserIds.length > 0) {
-        // Finance Admin: See items created by themselves and their subordinates
-        itemsData = itemsData.filter((item: InventoryItem) => {
-          const createdById = item.created_by_id || item.createdBy || item.created_by;
-          if (!createdById) return false;
-          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return accessibleUserIds.includes(createdByIdNum);
-        });
-      } else if ((isAccountant || isEmployee) && accessibleUserIds && accessibleUserIds.length > 0) {
-        // Employee/Accountant: See items created by their Finance Admin's team (Finance Admin + all subordinates)
-        itemsData = itemsData.filter((item: InventoryItem) => {
-          const createdById = item.created_by_id || item.createdBy || item.created_by;
-          if (!createdById) return false;
-          const createdByIdNum = typeof createdById === 'string' ? parseInt(createdById, 10) : createdById;
-          return accessibleUserIds.includes(createdByIdNum);
-        });
-      } else if (isAccountant || isEmployee) {
-        // Employee/Accountant without manager or accessibleUserIds: See no items
-        itemsData = [];
-      }
+      // Normalize item data structure
+      itemsData = itemsData.map((item: InventoryItem) => ({
+        id: item.id,
+        item_name: item.item_name || '',
+        selling_price: Number(item.selling_price) || 0,
+        quantity: Number(item.quantity) || 0,
+        category: item.category || '',
+        sku: item.sku || '',
+        created_by_id: item.created_by_id,
+        createdBy: item.createdBy,
+        created_by: item.created_by,
+      }));
       
       setItems(itemsData);
     } catch (err: unknown) {
@@ -460,10 +470,12 @@ export default function SalesPage() {
           : undefined) || (err instanceof Error ? err.message : 'Failed to load items');
       toast.error(errorMessage);
       console.error('Error loading items:', err);
+      // Set empty array on error to prevent showing stale data
+      setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [accessibleUserIds, user]);
+  }, [user, searchTerm]); // Remove accessibleUserIds dependency - backend handles role-based filtering
 
   useEffect(() => {
     if (!user) {
@@ -480,137 +492,33 @@ export default function SalesPage() {
       return;
     }
     
-    // Initialize accessible user IDs based on role
-    const initializeAccess = async () => {
-      // Admin: See all items (no filtering needed)
-      if (userRole === 'admin' || userRole === 'super_admin') {
-        setAccessibleUserIds(null);
-        // loadItems will be called by the second useEffect when accessibleUserIds is set
-        return;
-      }
-      
-      // Finance Admin/Manager: Get their own subordinates
-      if (userRole === 'finance_manager' || userRole === 'finance_admin') {
-        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-        try {
-          const subordinatesRes = await apiClient.getSubordinates(userId);
-          const subordinates = Array.isArray(subordinatesRes?.data) ? (subordinatesRes.data as Subordinate[]) : [];
-          const userIds = [userId, ...subordinates.map((sub) => {
-            const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
-            return subId;
-          })];
-          setAccessibleUserIds(userIds);
-        } catch (err) {
-          console.error('Failed to fetch subordinates for Finance Admin:', err);
-          setAccessibleUserIds([userId]);
-        }
-        return;
-      }
-      
-      // Employee/Accountant: Get their Finance Admin's (manager's) subordinates
-      if (userRole === 'employee' || userRole === 'accountant') {
-        const employeeId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-        let managerIdValue: number | null = null;
-        
-        // Try to get managerId from storeUser first
-        const managerIdStr = storeUser?.managerId;
-        if (managerIdStr) {
-          managerIdValue = typeof managerIdStr === 'string' ? parseInt(managerIdStr, 10) : Number(managerIdStr);
-        } else {
-          // If not in storeUser, try to fetch current user profile from API
-          try {
-            const currentUserRes = await apiClient.getCurrentUser();
-            const currentUserData = currentUserRes?.data;
-            if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
-              managerIdValue = typeof currentUserData.manager_id === 'string' 
-                ? parseInt(currentUserData.manager_id, 10) 
-                : Number(currentUserData.manager_id);
-            }
-          } catch (err) {
-            console.warn('Failed to fetch current user profile for manager_id:', err);
-          }
-        }
-        
-        if (managerIdValue) {
-          try {
-            const financeAdminId = managerIdValue;
-            
-            // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
-            const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
-            const subordinates = Array.isArray(subordinatesRes?.data) ? (subordinatesRes.data as Subordinate[]) : [];
-            
-            // Include the Finance Admin themselves and all their subordinates
-            const userIds = [financeAdminId, ...subordinates.map((sub) => {
-              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
-              return subId;
-            })];
-            
-            setAccessibleUserIds(userIds);
-            
-            if (process.env.NODE_ENV === 'development') {
-              console.log(`${userRole === 'employee' ? 'Employee' : 'Accountant'} - Accessible User IDs (from Finance Admin):`, {
-                userId: employeeId,
-                financeAdminId: financeAdminId,
-                subordinatesCount: subordinates.length,
-                accessibleUserIds: userIds
-              });
-            }
-          } catch (err) {
-            console.error(`Failed to fetch Finance Admin subordinates for ${userRole}:`, err);
-            // Fallback: if we can't get subordinates, at least try to show items from the Finance Admin
-            const fallbackUserIds = [managerIdValue];
-            setAccessibleUserIds(fallbackUserIds);
-            
-            if (process.env.NODE_ENV === 'development') {
-              console.log(`${userRole === 'employee' ? 'Employee' : 'Accountant'} - Using fallback (Finance Admin only):`, {
-                userId: employeeId,
-                financeAdminId: managerIdValue,
-                accessibleUserIds: fallbackUserIds
-              });
-            }
-          }
-        } else {
-          // Employee/Accountant has no manager assigned - show no items
-          console.warn(`${userRole === 'employee' ? 'Employee' : 'Accountant'} has no manager (Finance Admin) assigned`);
-          setAccessibleUserIds([]);
-        }
-        return;
-      }
-    };
-    
-    initializeAccess();
-  }, [user, storeUser, router]); // Removed loadItems to prevent infinite loop
+    // Backend handles role-based filtering, so we just need to load items
+    // Items will be filtered by backend based on user's role
+  }, [user, router]);
 
-  // Track previous accessibleUserIds to only reload when it actually changes
-  const prevAccessibleUserIdsRef = useRef<string>('');
-  const userIdRef = useRef<string | number | undefined>(undefined);
+  // Debounce search to avoid too many API calls
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Reload items when accessibleUserIds changes
+  // Load items when user or search term changes
   useEffect(() => {
     if (!user) return;
     
-    // Track user ID separately to detect user changes
-    const currentUserId = user.id;
-    const userIdChanged = userIdRef.current !== currentUserId;
-    userIdRef.current = currentUserId;
-    
-    // Create a stable string representation of accessibleUserIds for comparison
-    const currentIdsKey = accessibleUserIds === null 
-      ? 'null' 
-      : accessibleUserIds.length === 0 
-        ? 'empty'
-        : accessibleUserIds.sort((a, b) => a - b).join(',');
-    
-    // Only reload if accessibleUserIds has actually changed or user changed
-    if (currentIdsKey !== prevAccessibleUserIdsRef.current || userIdChanged) {
-      prevAccessibleUserIdsRef.current = currentIdsKey;
-      // Use a small delay to ensure state has settled
-      const timer = setTimeout(() => {
-        loadItems();
-      }, 100);
-      return () => clearTimeout(timer);
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
-  }, [accessibleUserIds, user?.id]); // Use user?.id instead of user object to keep array size constant
+    
+    // Debounce search - wait 300ms after user stops typing
+    searchTimeoutRef.current = setTimeout(() => {
+      loadItems();
+    }, 300);
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [user, searchTerm, loadItems]);
   
 
   const handleAddToSale = () => {
@@ -625,8 +533,9 @@ export default function SalesPage() {
       return;
     }
 
-    if (qty > selectedItem.quantity) {
-      toast.error(`Only ${selectedItem.quantity} units available`);
+    const selectedItemQty = Number(selectedItem.quantity || 0);
+    if (qty > selectedItemQty) {
+      toast.error(`Only ${selectedItemQty} units available`);
       return;
     }
 
@@ -666,8 +575,9 @@ export default function SalesPage() {
     }
     
     const item = items.find(i => i.id === itemId);
-    if (item && newQuantity > item.quantity) {
-      toast.error(`Only ${item.quantity} units available`);
+    const itemQty = Number(item?.quantity || 0);
+    if (item && newQuantity > itemQty) {
+      toast.error(`Only ${itemQty} units available`);
       return;
     }
 
@@ -753,10 +663,15 @@ export default function SalesPage() {
 
   const totalSale = saleItems.reduce((sum, item) => sum + item.total, 0);
 
-  const filteredItems = items.filter(item =>
-    item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Items are already filtered by backend search parameter, so we use items directly
+  // Additional client-side filtering only if needed for immediate UI responsiveness
+  // Note: Backend handles the search, but we keep client-side filter as fallback for immediate feedback
+  const filteredItems = items.filter(item => {
+    if (!searchTerm.trim()) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return item.item_name.toLowerCase().includes(searchLower) ||
+           (item.sku || '').toLowerCase().includes(searchLower);
+  });
 
   // Allow Admin, Finance Admin, Accountant, and Employee to access sales page
   const userRole = user?.role?.toLowerCase() || '';
@@ -784,12 +699,28 @@ export default function SalesPage() {
         <TwoColumnLayout>
           <Card>
             <CardTitle>Available Items</CardTitle>
-            <StyledInput
-              type="text"
-              placeholder="Search items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+              <StyledInput
+                type="text"
+                placeholder="Search items by name or SKU..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                variant="outline"
+                onClick={() => loadItems()}
+                disabled={loading}
+                title="Refresh items"
+                style={{ minWidth: 'auto', padding: `${theme.spacing.sm} ${theme.spacing.md}` }}
+              >
+                {loading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <span style={{ fontSize: theme.typography.fontSizes.sm }}>Refresh</span>
+                )}
+              </Button>
+            </div>
             {loading ? (
               <div style={{ textAlign: 'center', padding: theme.spacing.xxl }}>
                 <Loader2 size={32} className="animate-spin" style={{ color: PRIMARY_COLOR, margin: '0 auto' }} />
@@ -807,16 +738,21 @@ export default function SalesPage() {
                       key={item.id}
                       selected={selectedItem?.id === item.id}
                       onClick={() => {
-                        if (item.quantity > 0) {
-                          setSelectedItem(item);
+                        const itemQty = Number(item.quantity || 0);
+                        if (itemQty > 0) {
+                          setSelectedItem({
+                            ...item,
+                            quantity: itemQty,
+                            selling_price: Number(item.selling_price || 0),
+                          });
                           setQuantity('1');
                         } else {
                           toast.error('This item is out of stock');
                         }
                       }}
                       style={{ 
-                        opacity: item.quantity === 0 ? 0.6 : 1,
-                        cursor: item.quantity === 0 ? 'not-allowed' : 'pointer'
+                        opacity: Number(item.quantity || 0) === 0 ? 0.6 : 1,
+                        cursor: Number(item.quantity || 0) === 0 ? 'not-allowed' : 'pointer'
                       }}
                     >
                     <ItemInfoRow>
@@ -826,14 +762,24 @@ export default function SalesPage() {
                       </ItemPrice>
                       <ItemStock>
                         <span>Stock:</span>
-                        <Badge $variant={item.quantity < 10 ? 'danger' : item.quantity < 50 ? 'warning' : 'success'}>
-                          {item.quantity}
+                        <Badge $variant={Number(item.quantity || 0) < 10 ? 'danger' : Number(item.quantity || 0) < 50 ? 'warning' : 'success'}>
+                          {Number(item.quantity || 0)}
                         </Badge>
                       </ItemStock>
                     </ItemInfoRow>
-                    {item.quantity === 0 && (
+                    {Number(item.quantity || 0) === 0 && (
                       <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: '#dc2626' }}>
                         Out of Stock
+                      </div>
+                    )}
+                    {item.category && (
+                      <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                        {item.category}
+                      </div>
+                    )}
+                    {item.sku && (
+                      <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                        SKU: {item.sku}
                       </div>
                     )}
                   </ItemCard>
@@ -899,7 +845,7 @@ export default function SalesPage() {
                             <StyledInput
                               type="number"
                               min="1"
-                              max={items.find(i => i.id === item.item_id)?.quantity || item.quantity}
+                              max={Number(items.find(i => i.id === item.item_id)?.quantity || item.quantity || 0)}
                               value={item.quantity}
                               onChange={(e) => handleUpdateQuantity(item.item_id, parseInt(e.target.value) || 1)}
                               style={{ width: '80px', padding: theme.spacing.xs }}
