@@ -80,6 +80,7 @@ try:
         AdvancedDataPreprocessor,
         ModelVersionManager,
         TrainingMonitor,
+        ModelValidator,
         create_advanced_callbacks
     )
     ADVANCED_TRAINING_AVAILABLE = True
