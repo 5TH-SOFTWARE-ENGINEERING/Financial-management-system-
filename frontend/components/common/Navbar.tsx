@@ -1118,7 +1118,10 @@ export default function Navbar() {
                   ? (notifResponse.data as { data: unknown[] }).data 
                   : []);
             
-            const latestNotifs = (notificationsData || []).map((notif: unknown) => {
+            // Use Map to deduplicate by ID
+            const notifsMap = new Map<number, Notification>();
+            
+            (notificationsData || []).forEach((notif: unknown) => {
               const notification = notif as { 
                 id?: number; 
                 message?: string; 
@@ -1129,18 +1132,25 @@ export default function Navbar() {
                 title?: string; 
                 action_url?: string;
               };
-              return {
-                id: notification.id || 0,
-                message: notification.message || '',
-                type: notification.type || 'system_alert',
-                priority: notification.priority || 'medium',
-                is_read: notification.is_read || false,
-                created_at: notification.created_at || new Date().toISOString(),
-                title: notification.title,
-                action_url: notification.action_url,
-              } as Notification;
+              
+              const notifId = notification.id || 0;
+              
+              // Only add if we haven't seen this ID yet (deduplicate)
+              if (notifId > 0 && !notifsMap.has(notifId)) {
+                notifsMap.set(notifId, {
+                  id: notifId,
+                  message: notification.message || '',
+                  type: notification.type || 'system_alert',
+                  priority: notification.priority || 'medium',
+                  is_read: notification.is_read || false,
+                  created_at: notification.created_at || new Date().toISOString(),
+                  title: notification.title,
+                  action_url: notification.action_url,
+                } as Notification);
+              }
             });
             
+            const latestNotifs = Array.from(notifsMap.values());
             const newNotifs = latestNotifs.filter((n) => !lastNotificationIdsRef.current.has(n.id));
             
             newNotifs.forEach((notification: Notification) => {
@@ -1286,7 +1296,10 @@ export default function Navbar() {
                 ? (notifResponse.data as { data: unknown[] }).data 
                 : []);
           
-          const initialNotifs = (notificationsData || []).map((notif: unknown) => {
+          // Use Map to deduplicate by ID
+          const initialNotifsMap = new Map<number, Notification>();
+          
+          (notificationsData || []).forEach((notif: unknown) => {
             const notification = notif as { 
               id?: number; 
               message?: string; 
@@ -1297,17 +1310,25 @@ export default function Navbar() {
               title?: string; 
               action_url?: string;
             };
-            return {
-              id: notification.id || 0,
-              message: notification.message || '',
-              type: notification.type || 'system_alert',
-              priority: notification.priority || 'medium',
-              is_read: notification.is_read || false,
-              created_at: notification.created_at || new Date().toISOString(),
-              title: notification.title,
-              action_url: notification.action_url,
-            } as Notification;
+            
+            const notifId = notification.id || 0;
+            
+            // Only add if we haven't seen this ID yet (deduplicate)
+            if (notifId > 0 && !initialNotifsMap.has(notifId)) {
+              initialNotifsMap.set(notifId, {
+                id: notifId,
+                message: notification.message || '',
+                type: notification.type || 'system_alert',
+                priority: notification.priority || 'medium',
+                is_read: notification.is_read || false,
+                created_at: notification.created_at || new Date().toISOString(),
+                title: notification.title,
+                action_url: notification.action_url,
+              } as Notification);
+            }
           });
+          
+          const initialNotifs = Array.from(initialNotifsMap.values());
           
           if (initialNotifs.length > 0) {
             lastNotificationIdsRef.current = new Set(initialNotifs.map((n) => n.id));
@@ -1397,7 +1418,10 @@ export default function Navbar() {
                 ? (response.data as { data: unknown[] }).data 
                 : []);
           
-          const notifs = (notificationsData || []).map((notif: unknown) => {
+          const notifsMap = new Map<number, Notification>();
+          
+          // Process and deduplicate notifications by ID
+          (notificationsData || []).forEach((notif: unknown) => {
             const notification = notif as { 
               id?: number; 
               message?: string; 
@@ -1408,25 +1432,34 @@ export default function Navbar() {
               title?: string; 
               action_url?: string;
             };
-            return {
-              id: notification.id || 0,
-              message: notification.message || '',
-              type: notification.type || 'system_alert',
-              priority: notification.priority || 'medium',
-              is_read: notification.is_read || false,
-              created_at: notification.created_at || new Date().toISOString(),
-              title: notification.title,
-              action_url: notification.action_url,
-            } as Notification;
+            
+            const notifId = notification.id || 0;
+            
+            // Only add if we haven't seen this ID yet (deduplicate)
+            if (notifId > 0 && !notifsMap.has(notifId)) {
+              notifsMap.set(notifId, {
+                id: notifId,
+                message: notification.message || '',
+                type: notification.type || 'system_alert',
+                priority: notification.priority || 'medium',
+                is_read: notification.is_read || false,
+                created_at: notification.created_at || new Date().toISOString(),
+                title: notification.title,
+                action_url: notification.action_url,
+              } as Notification);
+            }
           });
           
-          // Sort by created_at (newest first)
-          notifs.sort((a, b) => 
+          // Convert map values to array and sort by created_at (newest first)
+          const uniqueNotifs = Array.from(notifsMap.values()).sort((a, b) => 
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           );
           
-          setNotifications(notifs);
-          const unreadCountFromList = notifs.filter((n) => !n.is_read).length;
+          // Update last seen notification IDs
+          lastNotificationIdsRef.current = new Set(uniqueNotifs.map(n => n.id));
+          
+          setNotifications(uniqueNotifs);
+          const unreadCountFromList = uniqueNotifs.filter((n) => !n.is_read).length;
           setUnreadCount(unreadCountFromList);
         } catch (err: unknown) {
           console.error('Failed to load notifications:', err);
@@ -1808,7 +1841,12 @@ export default function Navbar() {
                 ) : (
                   <>
                     <NotificationList>
-                      {(notificationsExpanded ? notifications : notifications.slice(0, 4)).map((notification) => (
+                      {(notificationsExpanded ? notifications : notifications.slice(0, 4))
+                        .filter((notification, index, self) => 
+                          // Additional deduplication check - keep only first occurrence of each ID
+                          index === self.findIndex(n => n.id === notification.id)
+                        )
+                        .map((notification) => (
                         <NotificationListItem
                           key={notification.id}
                           $isRead={notification.is_read}
