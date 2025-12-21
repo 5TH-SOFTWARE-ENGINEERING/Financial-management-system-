@@ -977,20 +977,20 @@ const MLTrainingPage: React.FC = () => {
                   </div>
                   {model.metrics && (
                     <div className="model-metrics">
-                      {model.metrics.mae !== undefined && (
-                        <span><strong>MAE:</strong> {model.metrics.mae.toFixed(2)}</span>
+                      {model.metrics.mae !== undefined && model.metrics.mae !== null && (
+                        <span><strong>MAE:</strong> {typeof model.metrics.mae === 'number' ? model.metrics.mae.toFixed(2) : model.metrics.mae}</span>
                       )}
-                      {model.metrics.rmse !== undefined && (
-                        <span><strong>RMSE:</strong> {model.metrics.rmse.toFixed(2)}</span>
+                      {model.metrics.rmse !== undefined && model.metrics.rmse !== null && (
+                        <span><strong>RMSE:</strong> {typeof model.metrics.rmse === 'number' ? model.metrics.rmse.toFixed(2) : model.metrics.rmse}</span>
                       )}
-                      {model.metrics.r2 !== undefined && (
-                        <span><strong>R²:</strong> {model.metrics.r2.toFixed(3)}</span>
+                      {model.metrics.r2 !== undefined && model.metrics.r2 !== null && (
+                        <span><strong>R²:</strong> {typeof model.metrics.r2 === 'number' ? model.metrics.r2.toFixed(3) : model.metrics.r2}</span>
                       )}
                     </div>
                   )}
                   {model.trained_at && (
                     <div style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginTop: theme.spacing.xs }}>
-                      Trained: {new Date(model.trained_at).toLocaleString()}
+                      Trained: {model.trained_at ? new Date(model.trained_at).toLocaleString() : 'N/A'}
                     </div>
                   )}
                 </TrainedModelCard>
@@ -1072,23 +1072,27 @@ const MLTrainingPage: React.FC = () => {
 
                 {model.metrics && (
                   <ModelMetrics>
-                    {model.metrics.mae !== undefined && (
+                    {model.metrics.mae !== undefined && model.metrics.mae !== null && (
                       <MetricItem>
                         <div className="label">MAE</div>
                         <div className="value">
-                          {model.metrics.mae.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          {typeof model.metrics.mae === 'number' 
+                            ? model.metrics.mae.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                            : String(model.metrics.mae)}
                         </div>
                       </MetricItem>
                     )}
-                    {model.metrics.rmse !== undefined && (
+                    {model.metrics.rmse !== undefined && model.metrics.rmse !== null && (
                       <MetricItem>
                         <div className="label">RMSE</div>
                         <div className="value">
-                          {model.metrics.rmse.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          {typeof model.metrics.rmse === 'number'
+                            ? model.metrics.rmse.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                            : String(model.metrics.rmse)}
                         </div>
                       </MetricItem>
                     )}
-                    {model.metrics.dataPoints !== undefined && (
+                    {model.metrics.dataPoints !== undefined && model.metrics.dataPoints !== null && (
                       <MetricItem>
                         <div className="label">Data Points</div>
                         <div className="value">{model.metrics.dataPoints}</div>
