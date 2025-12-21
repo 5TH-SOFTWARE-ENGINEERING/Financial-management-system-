@@ -44,7 +44,7 @@ except ImportError:
 
 try:
     from tensorflow import keras
-    from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+    from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau #type: ignore
     TENSORFLOW_AVAILABLE = True
 except ImportError:
     TENSORFLOW_AVAILABLE = False
@@ -467,9 +467,9 @@ class HyperparameterOptimizer:
         
         for units, dropout in combinations:
             try:
-                from tensorflow.keras.models import Sequential
-                from tensorflow.keras.layers import LSTM, Dense, Dropout as KerasDropout
-                from tensorflow.keras.optimizers import Adam
+                from tensorflow.keras.models import Sequential #type: ignore
+                from tensorflow.keras.layers import LSTM, Dense, Dropout as KerasDropout #type: ignore
+                from tensorflow.keras.optimizers import Adam #type: ignore
                 
                 model = Sequential([
                     LSTM(units, activation='relu', input_shape=(X_train.shape[1], X_train.shape[2])),
