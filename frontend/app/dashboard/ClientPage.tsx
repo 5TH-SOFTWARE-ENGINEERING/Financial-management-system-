@@ -743,38 +743,16 @@ const AdminDashboard: React.FC = () => {
             accessibleUserIds = [userId];
           }
         } else if (isAccountantRole && user?.id) {
-          // Accountant: See ONLY their own data AND employees' data (for posting sales)
-          // Accountants do NOT see Finance Admin's data or other accountants' data
+          // Accountant: See ONLY their own data
+          // Accountants do NOT see Finance Admin's data, other accountants' data, or employees' data
           const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-          try {
-            // Get all subordinates (this includes accountants and employees)
-            const subordinatesRes = await apiClient.getSubordinates(accountantId);
-            const subordinates: Subordinate[] = subordinatesRes?.data || [];
-            
-            // Filter to ONLY include employees (exclude accountants and Finance Admins)
-            // We need to fetch user details to check roles, but for now we'll get all subordinates
-            // and filter on the backend. For frontend, we'll include accountant + all subordinates
-            // The backend will filter correctly by role
-            const subordinateIds = subordinates
-              .map((sub) => {
-                const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
-                return Number.isNaN(subId) ? undefined : subId;
-              })
-              .filter((id): id is number => id !== undefined);
-            
-            // Include: Accountant themselves + subordinates (backend will filter to employees only)
-            accessibleUserIds = [accountantId, ...subordinateIds];
-            
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Accountant - Accessible User IDs (themselves + employees):', {
-                accountantId: accountantId,
-                subordinatesCount: subordinates.length,
-                accessibleUserIds: accessibleUserIds
-              });
-            }
-          } catch (err) {
-            console.warn('Failed to fetch subordinates for accountant, using only accountant ID:', err);
-            accessibleUserIds = [accountantId];
+          accessibleUserIds = [accountantId];  // Only themselves
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Accountant - Accessible User IDs (themselves only):', {
+              accountantId: accountantId,
+              accessibleUserIds: accessibleUserIds
+            });
           }
         } else if (user?.id) {
           // For other roles, they can only see their own data

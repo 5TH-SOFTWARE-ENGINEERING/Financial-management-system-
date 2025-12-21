@@ -179,22 +179,9 @@ def get_sales(
             # Employees can only see their own sales
             sold_by_id = current_user.id
         elif current_user.role == UserRole.ACCOUNTANT:
-            # Accountant: See ONLY their own sales AND employees' sales (for posting sales)
-            # Accountants do NOT see Finance Admin's sales or other accountants' sales
-            from ...crud.user import user as user_crud
-            try:
-                # Get all subordinates (this includes accountants and employees)
-                all_subordinates = user_crud.get_hierarchy(db, current_user.id)
-                # Filter to ONLY include employees (exclude accountants and Finance Admins)
-                employee_ids = [
-                    sub.id for sub in all_subordinates 
-                    if sub.role == UserRole.EMPLOYEE
-                ]
-                # Include: Accountant themselves + employees only
-                user_ids = [current_user.id] + employee_ids
-            except Exception as e:
-                logger.error(f"Error fetching subordinates for accountant: {str(e)}")
-                user_ids = [current_user.id]  # Fallback to just themselves
+            # Accountant: See ONLY their own sales
+            # Accountants do NOT see Finance Admin's sales, other accountants' sales, or employees' sales
+            user_ids = [current_user.id]  # Only themselves
         elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
             # Finance Admin/Manager: See only their team's sales (subordinates)
             # IMPORTANT: Only include accountants and employees, NOT other Finance Admins/Managers
@@ -468,22 +455,9 @@ def get_sales_summary(
             subordinate_ids.append(current_user.id)  # Include themselves
             user_ids = subordinate_ids
         elif current_user.role == UserRole.ACCOUNTANT:
-            # Accountant: See ONLY their own sales AND employees' sales (for posting sales)
-            # Accountants do NOT see Finance Admin's sales or other accountants' sales
-            from ...crud.user import user as user_crud
-            try:
-                # Get all subordinates (this includes accountants and employees)
-                all_subordinates = user_crud.get_hierarchy(db, current_user.id)
-                # Filter to ONLY include employees (exclude accountants and Finance Admins)
-                employee_ids = [
-                    sub.id for sub in all_subordinates 
-                    if sub.role == UserRole.EMPLOYEE
-                ]
-                # Include: Accountant themselves + employees only
-                user_ids = [current_user.id] + employee_ids
-            except Exception as e:
-                logger.error(f"Error fetching subordinates for accountant sales summary: {str(e)}")
-                user_ids = [current_user.id]  # Fallback to just themselves
+            # Accountant: See ONLY their own sales
+            # Accountants do NOT see Finance Admin's sales, other accountants' sales, or employees' sales
+            user_ids = [current_user.id]  # Only themselves
         
         summary = sale_crud.get_sales_summary(db, start_date_dt, end_date_dt, user_ids=user_ids)
         return summary

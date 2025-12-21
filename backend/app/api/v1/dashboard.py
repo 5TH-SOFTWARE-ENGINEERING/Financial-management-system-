@@ -85,11 +85,17 @@ def get_dashboard_overview(
             }
     
         elif current_user.role == UserRole.FINANCE_ADMIN:
-            # Finance Admin overview - includes ONLY their team's data (subordinates: accountants and employees)
+            # Finance Admin overview - includes ONLY their own data AND their subordinates' data (accountants and employees)
             # They CANNOT see other finance admins' data
             try:
-                subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-                subordinate_ids.append(current_user.id)
+                subordinates = user_crud.get_hierarchy(db, current_user.id)
+                # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+                valid_subordinate_ids = [
+                    sub.id for sub in subordinates 
+                    if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+                ]
+                # Include: Finance Admin themselves + their team (accountants and employees only)
+                subordinate_ids = [current_user.id] + valid_subordinate_ids
             except Exception as e:
                 logger.error(f"Error fetching user hierarchy for Finance Admin {current_user.id}: {str(e)}")
                 subordinate_ids = [current_user.id]  # Fallback to just themselves
@@ -211,21 +217,9 @@ def get_dashboard_overview(
             }
     
         elif current_user.role == UserRole.ACCOUNTANT:
-            # Accountant overview - includes ONLY their own data AND employees' data (for posting sales)
-            # Accountants do NOT see Finance Admin's data or other accountants' data
-            try:
-                # Get all subordinates (this includes accountants and employees)
-                all_subordinates = user_crud.get_hierarchy(db, current_user.id)
-                # Filter to ONLY include employees (exclude accountants and Finance Admins)
-                employee_ids = [
-                    sub.id for sub in all_subordinates 
-                    if sub.role == UserRole.EMPLOYEE
-                ]
-                # Include: Accountant themselves + employees only
-                subordinate_ids = [current_user.id] + employee_ids
-            except Exception as e:
-                logger.error(f"Error fetching user hierarchy for Accountant {current_user.id}: {str(e)}")
-                subordinate_ids = [current_user.id]  # Fallback to just themselves
+            # Accountant overview - includes ONLY their own data
+            # Accountants do NOT see Finance Admin's data, other accountants' data, or employees' data
+            subordinate_ids = [current_user.id]  # Only themselves
             
             # Get all revenue and expenses for the period
             try:
@@ -570,10 +564,17 @@ def get_recent_activity(
                 logger.error(f"Error adding approval entries to activities: {str(e)}")
         
         elif current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN]:
-            # Managers can see their team's activities
+            # Finance Admin/Manager: See only their team's activities (subordinates: accountants and employees)
+            # IMPORTANT: Only include accountants and employees, NOT other Finance Admins/Managers
             try:
-                subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-                subordinate_ids.append(current_user.id)
+                subordinates = user_crud.get_hierarchy(db, current_user.id)
+                # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+                valid_subordinate_ids = [
+                    sub.id for sub in subordinates 
+                    if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+                ]
+                # Include: Finance Admin/Manager themselves + their team (accountants and employees only)
+                subordinate_ids = [current_user.id] + valid_subordinate_ids
             except Exception as e:
                 logger.error(f"Error fetching user hierarchy: {str(e)}")
                 subordinate_ids = [current_user.id]
@@ -670,21 +671,9 @@ def get_recent_activity(
                 logger.error(f"Error adding team approval entries: {str(e)}")
         
         elif current_user.role == UserRole.ACCOUNTANT:
-            # Accountant: See ONLY their own activities AND employees' activities (for posting sales)
-            # Accountants do NOT see Finance Admin's activities or other accountants' activities
-            try:
-                # Get all subordinates (this includes accountants and employees)
-                all_subordinates = user_crud.get_hierarchy(db, current_user.id)
-                # Filter to ONLY include employees (exclude accountants and Finance Admins)
-                employee_ids = [
-                    sub.id for sub in all_subordinates 
-                    if sub.role == UserRole.EMPLOYEE
-                ]
-                # Include: Accountant themselves + employees only
-                accessible_user_ids = [current_user.id] + employee_ids
-            except Exception as e:
-                logger.error(f"Error fetching subordinates for accountant activities: {str(e)}")
-                accessible_user_ids = [current_user.id]  # Fallback to just themselves
+            # Accountant: See ONLY their own activities
+            # Accountants do NOT see Finance Admin's activities, other accountants' activities, or employees' activities
+            accessible_user_ids = [current_user.id]  # Only themselves
             
             # Get all revenue and expenses for the period
             try:
