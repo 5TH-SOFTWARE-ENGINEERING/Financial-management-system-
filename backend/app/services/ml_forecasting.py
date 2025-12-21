@@ -87,10 +87,22 @@ except ImportError as e:
     ADVANCED_TRAINING_AVAILABLE = False
     logger.warning(f"Advanced training modules not available: {e}. Using basic training.")
 
-# Model storage directory
-MODELS_DIR = Path("models")
-if not MODELS_DIR.exists():
-    MODELS_DIR.mkdir(exist_ok=True)
+# Model storage directory - use backend/model if running from backend/, otherwise use models/
+_backend_model_dir = Path(__file__).parent.parent.parent / "model"
+if _backend_model_dir.exists():
+    MODELS_DIR = _backend_model_dir
+else:
+    MODELS_DIR = Path("model")  # Fallback to relative path
+    if not MODELS_DIR.exists():
+        MODELS_DIR = Path("models")  # Another fallback
+        if not MODELS_DIR.exists():
+            MODELS_DIR.mkdir(exist_ok=True)
+
+# Store directory for model metadata
+STORE_DIR = Path(__file__).parent.parent.parent / "store"
+if not STORE_DIR.exists():
+    STORE_DIR = Path("store")
+STORE_DIR.mkdir(exist_ok=True)
 
 
 class MLForecastingService:
@@ -102,6 +114,156 @@ class MLForecastingService:
         if user_id:
             return MODELS_DIR / f"{metric}_{model_type}_user_{user_id}.pkl"
         return MODELS_DIR / f"{metric}_{model_type}.pkl"
+    
+    @staticmethod
+    def get_trained_models(metric: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get list of all trained models from the store and model directory
+        
+        Args:
+            metric: Optional filter by metric (revenue, expense, inventory)
+        
+        Returns:
+            Dictionary with model information
+        """
+        models_info = {}
+        
+        # Check store directory for metadata
+        if STORE_DIR.exists():
+            for store_file in STORE_DIR.glob("*.json"):
+                try:
+                    with open(store_file, 'r', encoding='utf-8') as f:
+                        model_info = json.load(f)
+                    
+                    model_metric = model_info.get('metric')
+                    if metric and model_metric != metric:
+                        continue
+                    
+                    model_type = model_info.get('model_type')
+                    key = f"{model_metric}_{model_type}"
+                    
+                    # Verify model file exists (check path from store or try standard locations)
+                    model_path_str = model_info.get('model_path', '')
+                    if model_path_str:
+                        model_path = Path(model_path_str)
+                        if not model_path.exists():
+                            # Try relative to MODELS_DIR
+                            model_path = MODELS_DIR / Path(model_path_str).name
+                    else:
+                        # Try standard paths
+                        model_path = MLForecastingService._get_model_path(model_metric, model_type)
+                        if not model_path.exists():
+                            model_path = MLForecastingService._get_custom_model_path(model_metric, model_type)
+                    
+                    models_info[key] = {
+                        **model_info,
+                        'model_path': str(model_path),
+                        'exists': model_path.exists() if isinstance(model_path, Path) else Path(model_info.get('model_path', '')).exists()
+                    }
+                except Exception as e:
+                    logger.warning(f"Failed to read store file {store_file}: {e}")
+                    continue
+        
+        # Also check MODELS_DIR directly for models not in store
+        if MODELS_DIR.exists():
+            for model_file in MODELS_DIR.glob("*"):
+                if model_file.is_file() and not model_file.name.endswith('.metadata.json') and not model_file.name.endswith('.scaler.pkl'):
+                    # Parse filename - handle both standard and custom naming
+                    name = model_file.stem
+                    if name.startswith('custom_'):
+                        parts = name.replace('custom_', '').split('_')
+                    else:
+                        parts = name.split('_')
+                    
+                    if len(parts) >= 2:
+                        # Handle user models (e.g., expense_arima_user_1)
+                        if len(parts) >= 4 and parts[-2] == 'user':
+                            model_metric = parts[0]
+                            model_type = '_'.join(parts[1:-2])
+                            user_id = parts[-1]
+                            key = f"{model_metric}_{model_type}_user_{user_id}"
+                        else:
+                            model_metric = parts[0]
+                            model_type = '_'.join(parts[1:])
+                            key = f"{model_metric}_{model_type}"
+                        
+                        if metric and model_metric != metric:
+                            continue
+                        
+                        if key not in models_info:
+                            # Try to load metadata if available
+                            metadata_file = model_file.with_suffix('.metadata.json')
+                            metadata = {}
+                            if metadata_file.exists():
+                                try:
+                                    with open(metadata_file, 'r', encoding='utf-8') as f:
+                                        metadata = json.load(f)
+                                except Exception:
+                                    pass
+                            
+                            models_info[key] = {
+                                'metric': model_metric,
+                                'model_type': model_type,
+                                'model_path': str(model_file),
+                                'exists': True,
+                                'trained_at': metadata.get('trained_at', 'unknown'),
+                                'metrics': metadata.get('metrics', {}),
+                                'source': metadata.get('source', 'unknown')
+                            }
+        
+        return models_info
+    
+    @staticmethod
+    def load_trained_model(metric: str, model_type: str, user_id: Optional[int] = None):
+        """
+        Load a trained model from disk (tries both standard and custom paths)
+        
+        Args:
+            metric: Metric name (revenue, expense, inventory)
+            model_type: Model type (arima, sarima, prophet, xgboost, lstm, linear_regression)
+            user_id: Optional user ID for personal models
+        
+        Returns:
+            Loaded model object
+        """
+        # Try standard path first
+        model_path = MLForecastingService._get_model_path(metric, model_type, user_id)
+        
+        # If not found, try custom path (for CSV-trained models)
+        if not model_path.exists():
+            custom_path = MLForecastingService._get_custom_model_path(metric, model_type, user_id)
+            if custom_path.exists():
+                model_path = custom_path
+            else:
+                # Check for .keras extension for LSTM models
+                if model_type == "lstm":
+                    keras_path = model_path.with_suffix('.keras')
+                    if keras_path.exists():
+                        model_path = keras_path
+                    else:
+                        keras_custom = custom_path.with_suffix('.keras')
+                        if keras_custom.exists():
+                            model_path = keras_custom
+        
+        if not model_path.exists():
+            raise FileNotFoundError(f"Trained model not found for {metric}_{model_type}. Checked standard and custom paths.")
+        
+        try:
+            if model_type in ["arima", "sarima", "linear_regression"]:
+                return joblib.load(model_path)
+            elif model_type == "prophet":
+                return joblib.load(model_path)
+            elif model_type == "xgboost":
+                return joblib.load(model_path)
+            elif model_type == "lstm":
+                if not TENSORFLOW_AVAILABLE:
+                    raise ImportError("tensorflow is not installed")
+                return keras.models.load_model(str(model_path))
+            else:
+                raise ValueError(f"Unsupported model type: {model_type}")
+        except Exception as e:
+            logger.error(f"Failed to load model from {model_path}: {e}")
+            raise
     
     @staticmethod
     def _prepare_time_series_data(
@@ -1277,10 +1439,38 @@ class MLForecastingService:
         user_role: Optional[UserRole] = None
     ) -> List[Dict[str, Any]]:
         """Generate forecast using a trained model"""
+        # Try standard path first
         model_path = MLForecastingService._get_model_path(metric, model_type, user_id)
         
+        # If not found, try custom path (for CSV-trained models)
         if not model_path.exists():
-            raise FileNotFoundError(f"Trained model not found: {model_path}")
+            custom_path = MLForecastingService._get_custom_model_path(metric, model_type, user_id)
+            if custom_path.exists():
+                model_path = custom_path
+            else:
+                # Also check for .keras extension for LSTM models
+                if model_type == "lstm":
+                    keras_path = model_path.with_suffix('.keras')
+                    if keras_path.exists():
+                        model_path = keras_path
+                    else:
+                        keras_custom = custom_path.with_suffix('.keras')
+                        if keras_custom.exists():
+                            model_path = keras_custom
+                        else:
+                            raise FileNotFoundError(
+                                f"Trained model not found. Checked:\n"
+                                f"  - {model_path}\n"
+                                f"  - {custom_path}\n"
+                                f"  - {keras_path if 'keras_path' in locals() else 'N/A'}\n"
+                                f"  - {keras_custom if 'keras_custom' in locals() else 'N/A'}"
+                            )
+                else:
+                    raise FileNotFoundError(
+                        f"Trained model not found. Checked:\n"
+                        f"  - {model_path}\n"
+                        f"  - {custom_path}"
+                    )
         
         try:
             if model_type in ["arima", "sarima"]:
@@ -1395,9 +1585,21 @@ class MLForecastingService:
                 if db is None:
                     raise ValueError("Database session required for LSTM forecast generation")
                 
-                # Load model and scaler
+                # Load model and scaler - handle .keras extension
+                if model_path.suffix != '.keras':
+                    # Try .keras extension
+                    keras_path = model_path.with_suffix('.keras')
+                    if keras_path.exists():
+                        model_path = keras_path
+                
                 model = keras.models.load_model(str(model_path))
+                
+                # Look for scaler file with same base name
                 scaler_path = model_path.with_suffix('.scaler.pkl')
+                # If not found, try without .keras extension
+                if not scaler_path.exists() and model_path.suffix == '.keras':
+                    base_name = model_path.stem
+                    scaler_path = model_path.parent / f"{base_name}.scaler.pkl"
                 
                 if scaler_path.exists():
                     scaler = joblib.load(scaler_path)
@@ -1943,6 +2145,46 @@ class MLForecastingService:
         return MODELS_DIR / f"custom_{safe_name}_{model_type}.pkl"
     
     @staticmethod
+    def generate_forecast_from_trained(
+        metric: str,
+        model_type: str,
+        periods: int = 12,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        user_id: Optional[int] = None,
+        db: Optional[Session] = None,
+        user_role: Optional[UserRole] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate forecast from a trained model (simplified interface)
+        
+        This function loads a trained model and generates forecasts without requiring
+        all the parameters of generate_forecast_with_trained_model.
+        """
+        if start_date is None:
+            start_date = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if end_date is None:
+            # Calculate end_date based on periods and start_date
+            current = start_date
+            for _ in range(periods - 1):
+                if current.month == 12:
+                    current = current.replace(year=current.year + 1, month=1)
+                else:
+                    current = current.replace(month=current.month + 1)
+            end_date = current
+        
+        return MLForecastingService.generate_forecast_with_trained_model(
+            metric=metric,
+            model_type=model_type,
+            start_date=start_date,
+            end_date=end_date,
+            user_id=user_id,
+            periods=periods,
+            db=db,
+            user_role=user_role
+        )
+    
+    @staticmethod
     def _train_arima_from_df(
         df: pd.DataFrame, metric_name: str, user_id: Optional[int], order: Tuple[int, int, int]
     ) -> Dict[str, Any]:
@@ -2193,6 +2435,46 @@ class MLForecastingService:
         }
     
     @staticmethod
+    def generate_forecast_from_trained(
+        metric: str,
+        model_type: str,
+        periods: int = 12,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        user_id: Optional[int] = None,
+        db: Optional[Session] = None,
+        user_role: Optional[UserRole] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate forecast from a trained model (simplified interface)
+        
+        This function loads a trained model and generates forecasts without requiring
+        all the parameters of generate_forecast_with_trained_model.
+        """
+        if start_date is None:
+            start_date = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if end_date is None:
+            # Calculate end_date based on periods and start_date
+            current = start_date
+            for _ in range(periods - 1):
+                if current.month == 12:
+                    current = current.replace(year=current.year + 1, month=1)
+                else:
+                    current = current.replace(month=current.month + 1)
+            end_date = current
+        
+        return MLForecastingService.generate_forecast_with_trained_model(
+            metric=metric,
+            model_type=model_type,
+            start_date=start_date,
+            end_date=end_date,
+            user_id=user_id,
+            periods=periods,
+            db=db,
+            user_role=user_role
+        )
+    
+    @staticmethod
     def _train_linear_regression_from_df(df: pd.DataFrame, metric_name: str, user_id: Optional[int]) -> Dict[str, Any]:
         """Train Linear Regression from DataFrame"""
         if not SKLEARN_AVAILABLE:
@@ -2225,5 +2507,347 @@ class MLForecastingService:
             "data_points": len(df),
             "model_path": str(model_path),
             "trained_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    # ============================================================================
+    # ADVISORY AND RECOMMENDATIONS
+    # ============================================================================
+    
+    @staticmethod
+    def generate_forecast_with_advice(
+        metric: str,
+        model_type: str,
+        periods: int = 12,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        user_id: Optional[int] = None,
+        db: Optional[Session] = None,
+        user_role: Optional[UserRole] = None,
+        historical_periods: int = 12
+    ) -> Dict[str, Any]:
+        """
+        Generate forecast with actionable advice and recommendations
+        
+        This combines forecasting with intelligent analysis to provide users with
+        actionable insights and recommendations.
+        """
+        # Generate forecast
+        forecast_data = MLForecastingService.generate_forecast_from_trained(
+            metric=metric,
+            model_type=model_type,
+            periods=periods,
+            start_date=start_date,
+            end_date=end_date,
+            user_id=user_id,
+            db=db,
+            user_role=user_role
+        )
+        
+        if not forecast_data:
+            return {
+                "forecast": [],
+                "advice": [],
+                "summary": "No forecast data available",
+                "alerts": []
+            }
+        
+        # Get historical data for comparison
+        if db:
+            historical_start = (start_date or datetime.now(timezone.utc)) - timedelta(days=historical_periods * 30)
+            historical_end = (start_date or datetime.now(timezone.utc)) - timedelta(days=1)
+            
+            historical_df = MLForecastingService._prepare_time_series_data(
+                db, metric, historical_start, historical_end, user_id, user_role, "monthly"
+            )
+        else:
+            historical_df = pd.DataFrame()
+        
+        # Analyze and generate advice
+        advice = MLForecastingService._analyze_forecast_and_generate_advice(
+            forecast_data, historical_df, metric
+        )
+        
+        return {
+            "forecast": forecast_data,
+            "advice": advice["recommendations"],
+            "summary": advice["summary"],
+            "alerts": advice["alerts"],
+            "trend_analysis": advice["trend_analysis"],
+            "risk_assessment": advice["risk_assessment"]
+        }
+    
+    @staticmethod
+    def _analyze_forecast_and_generate_advice(
+        forecast_data: List[Dict[str, Any]],
+        historical_df: pd.DataFrame,
+        metric: str
+    ) -> Dict[str, Any]:
+        """Analyze forecast and generate actionable advice"""
+        if not forecast_data:
+            return {
+                "recommendations": [],
+                "summary": "No forecast data to analyze",
+                "alerts": [],
+                "trend_analysis": {},
+                "risk_assessment": {}
+            }
+        
+        recommendations = []
+        alerts = []
+        trend_analysis = {}
+        risk_assessment = {}
+        
+        # Extract forecast values
+        forecast_values = [item.get('forecasted_value', 0) for item in forecast_data]
+        if not forecast_values:
+            return {
+                "recommendations": [],
+                "summary": "Invalid forecast data",
+                "alerts": [],
+                "trend_analysis": {},
+                "risk_assessment": {}
+            }
+        
+        # Calculate statistics
+        avg_forecast = np.mean(forecast_values)
+        max_forecast = np.max(forecast_values)
+        min_forecast = np.min(forecast_values)
+        first_value = forecast_values[0]
+        last_value = forecast_values[-1]
+        
+        # Calculate trend
+        if len(forecast_values) > 1:
+            trend = (last_value - first_value) / first_value * 100 if first_value != 0 else 0
+        else:
+            trend = 0
+        
+        trend_analysis = {
+            "average": float(avg_forecast),
+            "maximum": float(max_forecast),
+            "minimum": float(min_forecast),
+            "trend_percentage": float(trend),
+            "trend_direction": "increasing" if trend > 5 else "decreasing" if trend < -5 else "stable"
+        }
+        
+        # Compare with historical data
+        historical_avg = None
+        if not historical_df.empty and len(historical_df) > 0:
+            historical_avg = float(historical_df['value'].mean())
+            historical_std = float(historical_df['value'].std())
+            
+            # Compare forecast average with historical
+            if historical_avg > 0:
+                change_from_historical = ((avg_forecast - historical_avg) / historical_avg) * 100
+                
+                if abs(change_from_historical) > 20:
+                    if change_from_historical > 20:
+                        alerts.append({
+                            "type": "significant_increase" if metric in ["revenue", "inventory"] else "cost_spike",
+                            "severity": "medium",
+                            "message": f"Forecast shows {abs(change_from_historical):.1f}% {'increase' if change_from_historical > 0 else 'decrease'} compared to historical average",
+                            "metric": metric
+                        })
+                    else:
+                        alerts.append({
+                            "type": "significant_decrease" if metric in ["revenue", "inventory"] else "cost_reduction",
+                            "severity": "medium",
+                            "message": f"Forecast shows {abs(change_from_historical):.1f}% decrease compared to historical average",
+                            "metric": metric
+                        })
+        
+        # Generate metric-specific advice
+        if metric == "expense":
+            if trend > 10:
+                recommendations.append({
+                    "priority": "high",
+                    "category": "cost_control",
+                    "title": "Expense Trend Warning",
+                    "message": f"Expenses are forecasted to increase by {trend:.1f}% over the forecast period. Review and optimize spending.",
+                    "actions": [
+                        "Review major expense categories",
+                        "Identify cost reduction opportunities",
+                        "Consider renegotiating vendor contracts",
+                        "Implement expense approval workflows"
+                    ]
+                })
+                alerts.append({
+                    "type": "expense_increase",
+                    "severity": "high",
+                    "message": f"Expenses increasing at {trend:.1f}% rate",
+                    "metric": metric
+                })
+            
+            if avg_forecast > 0 and historical_avg and avg_forecast > historical_avg * 1.15:
+                recommendations.append({
+                    "priority": "medium",
+                    "category": "budgeting",
+                    "title": "Budget Review Recommended",
+                    "message": "Forecasted expenses exceed historical average by more than 15%. Consider budget adjustments.",
+                    "actions": [
+                        "Update budget forecasts",
+                        "Allocate additional reserves",
+                        "Plan for higher expense levels"
+                    ]
+                })
+            
+            if min_forecast < avg_forecast * 0.8:
+                recommendations.append({
+                    "priority": "low",
+                    "category": "planning",
+                    "title": "Variable Expense Planning",
+                    "message": "Significant variation in forecasted expenses. Plan for both high and low expense scenarios.",
+                    "actions": [
+                        "Create best-case and worst-case scenarios",
+                        "Maintain flexible budget reserves",
+                        "Monitor expenses closely"
+                    ]
+                })
+        
+        elif metric == "revenue":
+            if trend < -10:
+                recommendations.append({
+                    "priority": "high",
+                    "category": "revenue_growth",
+                    "title": "Revenue Decline Warning",
+                    "message": f"Revenue is forecasted to decrease by {abs(trend):.1f}%. Take action to reverse the trend.",
+                    "actions": [
+                        "Review sales strategies and pipelines",
+                        "Focus on customer retention",
+                        "Explore new revenue streams",
+                        "Optimize pricing strategies"
+                    ]
+                })
+                alerts.append({
+                    "type": "revenue_decline",
+                    "severity": "high",
+                    "message": f"Revenue declining at {abs(trend):.1f}% rate",
+                    "metric": metric
+                })
+            
+            if trend > 10:
+                recommendations.append({
+                    "priority": "low",
+                    "category": "growth_planning",
+                    "title": "Strong Growth Opportunity",
+                    "message": f"Revenue is forecasted to grow by {trend:.1f}%. Capitalize on this positive trend.",
+                    "actions": [
+                        "Scale operations to support growth",
+                        "Invest in capacity expansion",
+                        "Hire additional staff if needed",
+                        "Plan for increased inventory needs"
+                    ]
+                })
+            
+            if historical_avg and avg_forecast < historical_avg * 0.9:
+                recommendations.append({
+                    "priority": "medium",
+                    "category": "performance",
+                    "title": "Revenue Below Expectations",
+                    "message": "Forecasted revenue is below historical average. Investigate causes and implement improvements.",
+                    "actions": [
+                        "Analyze market conditions",
+                        "Review sales team performance",
+                        "Assess competitive landscape",
+                        "Improve marketing and sales efforts"
+                    ]
+                })
+        
+        elif metric == "inventory":
+            # Check for inventory depletion risk
+            if min_forecast < avg_forecast * 0.5:
+                recommendations.append({
+                    "priority": "high",
+                    "category": "inventory_management",
+                    "title": "Low Inventory Risk",
+                    "message": "Forecast shows potential inventory depletion. Plan restocking to avoid stockouts.",
+                    "actions": [
+                        "Schedule inventory replenishment",
+                        "Review reorder points",
+                        "Consider safety stock levels",
+                        "Monitor fast-moving items closely"
+                    ]
+                })
+                alerts.append({
+                    "type": "inventory_low",
+                    "severity": "medium",
+                    "message": "Potential inventory depletion forecasted",
+                    "metric": metric
+                })
+            
+            if trend < -15:
+                recommendations.append({
+                    "priority": "medium",
+                    "category": "inventory_optimization",
+                    "title": "Rapid Inventory Decline",
+                    "message": f"Inventory value declining at {abs(trend):.1f}% rate. Review inventory turnover.",
+                    "actions": [
+                        "Analyze inventory turnover rates",
+                        "Review sales velocity",
+                        "Adjust purchasing schedules",
+                        "Optimize inventory levels"
+                    ]
+                })
+            
+            if trend > 20:
+                recommendations.append({
+                    "priority": "low",
+                    "category": "capital_management",
+                    "title": "High Inventory Build-up",
+                    "message": f"Inventory increasing at {trend:.1f}% rate. Monitor for overstocking.",
+                    "actions": [
+                        "Review inventory holding costs",
+                        "Plan for storage capacity",
+                        "Assess cash flow impact",
+                        "Consider promotional sales if needed"
+                    ]
+                })
+        
+        # General recommendations based on volatility
+        if len(forecast_values) > 1:
+            volatility = np.std(forecast_values) / avg_forecast * 100 if avg_forecast > 0 else 0
+            if volatility > 20:
+                recommendations.append({
+                    "priority": "medium",
+                    "category": "planning",
+                    "title": "High Forecast Volatility",
+                    "message": f"High volatility ({volatility:.1f}%) in forecast. Use scenario planning.",
+                    "actions": [
+                        "Create multiple forecast scenarios",
+                        "Maintain flexible planning",
+                        "Monitor actuals closely",
+                        "Update forecasts regularly"
+                    ]
+                })
+                
+                risk_assessment = {
+                    "volatility": float(volatility),
+                    "risk_level": "high" if volatility > 30 else "medium",
+                    "recommendation": "Use conservative estimates and maintain reserves"
+                }
+            else:
+                risk_assessment = {
+                    "volatility": float(volatility),
+                    "risk_level": "low",
+                    "recommendation": "Forecast is relatively stable"
+                }
+        
+        # Generate summary
+        summary = f"Forecast analysis for {metric}: "
+        if trend_analysis["trend_direction"] == "increasing":
+            summary += f"Trending upward ({trend:.1f}% increase). "
+        elif trend_analysis["trend_direction"] == "decreasing":
+            summary += f"Trending downward ({abs(trend):.1f}% decrease). "
+        else:
+            summary += "Trending stable. "
+        
+        summary += f"Average forecast: {avg_forecast:.2f}. "
+        summary += f"{len(alerts)} alert(s) and {len(recommendations)} recommendation(s) generated."
+        
+        return {
+            "recommendations": recommendations,
+            "summary": summary,
+            "alerts": alerts,
+            "trend_analysis": trend_analysis,
+            "risk_assessment": risk_assessment
         }
 

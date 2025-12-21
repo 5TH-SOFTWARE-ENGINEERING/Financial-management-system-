@@ -1,0 +1,14 @@
+{
+  "metric": "inventory",
+  "model_type": "sarima",
+  "status": "trained",
+  "model_path": "C:\\Users\\ASHROCK\\Desktop\\pro+\\project3\\projectai\\backend\\model\\custom_inventory_sarima.pkl",
+  "metrics": {
+    "mae": 32557.000000000004,
+    "rmse": 118881.35536463796,
+    "data_points": 24
+  },
+  "trained_at": "2025-12-21T04:31:58.771926+00:00",
+  "source": "csv",
+  "last_updated": "2025-12-21T04:31:58.776509+00:00"
+}
