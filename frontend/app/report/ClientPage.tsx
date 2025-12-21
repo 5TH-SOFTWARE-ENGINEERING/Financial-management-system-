@@ -21,7 +21,12 @@ import {
   AlertCircle,
   ShoppingCart,
   Package,
-  LineChart
+  LineChart,
+  Brain,
+  Zap,
+  Lightbulb,
+  Target,
+  CheckCircle2
 } from 'lucide-react';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -414,6 +419,135 @@ const TwoColumnGrid = styled.div`
   }
 `;
 
+const InsightCard = styled.div<{ $priority?: 'high' | 'medium' | 'low' }>`
+  background: ${(p) => {
+    if (p.$priority === 'high') return '#fef2f2';
+    if (p.$priority === 'medium') return '#fffbeb';
+    return '#f0fdf4';
+  }};
+  border: 1px solid ${(p) => {
+    if (p.$priority === 'high') return '#fecaca';
+    if (p.$priority === 'medium') return '#fde68a';
+    return '#bbf7d0';
+  }};
+  border-left: 4px solid ${(p) => {
+    if (p.$priority === 'high') return '#dc2626';
+    if (p.$priority === 'medium') return '#d97706';
+    return PRIMARY_COLOR;
+  }};
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.md};
+  
+  .insight-header {
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.sm};
+    margin-bottom: ${theme.spacing.sm};
+    
+    h4 {
+      font-size: ${theme.typography.fontSizes.md};
+      font-weight: ${theme.typography.fontWeights.bold};
+      color: ${TEXT_COLOR_DARK};
+      margin: 0;
+    }
+    
+  }
+  
+  .insight-message {
+    color: ${TEXT_COLOR_DARK};
+    margin-bottom: ${theme.spacing.sm};
+    line-height: 1.6;
+  }
+  
+  .insight-actions {
+    margin-top: ${theme.spacing.md};
+    padding-top: ${theme.spacing.md};
+    border-top: 1px solid ${theme.colors.border};
+    
+    ul {
+      margin: 0;
+      padding-left: ${theme.spacing.lg};
+      color: ${TEXT_COLOR_MUTED};
+      font-size: ${theme.typography.fontSizes.sm};
+    }
+  }
+`;
+
+const AlertCard = styled.div<{ $severity?: 'high' | 'medium' | 'low' }>`
+  background: ${(p) => {
+    if (p.$severity === 'high') return '#fef2f2';
+    if (p.$severity === 'medium') return '#fffbeb';
+    return '#eff6ff';
+  }};
+  border: 1px solid ${(p) => {
+    if (p.$severity === 'high') return '#fecaca';
+    if (p.$severity === 'medium') return '#fde68a';
+    return '#bfdbfe';
+  }};
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.sm};
+  display: flex;
+  align-items: flex-start;
+  gap: ${theme.spacing.sm};
+  
+  .alert-icon {
+    color: ${(p) => {
+      if (p.$severity === 'high') return '#dc2626';
+      if (p.$severity === 'medium') return '#d97706';
+      return '#2563eb';
+    }};
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  
+  .alert-message {
+    color: ${TEXT_COLOR_DARK};
+    font-size: ${theme.typography.fontSizes.sm};
+    line-height: 1.5;
+  }
+`;
+
+const TrendBadge = styled.span<{ $direction?: 'increasing' | 'decreasing' | 'stable' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+  padding: 6px 12px;
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
+  background: ${(p) => {
+    if (p.$direction === 'increasing') return '#d1fae5';
+    if (p.$direction === 'decreasing') return '#fee2e2';
+    return '#f3f4f6';
+  }};
+  color: ${(p) => {
+    if (p.$direction === 'increasing') return '#065f46';
+    if (p.$direction === 'decreasing') return '#991b1b';
+    return TEXT_COLOR_MUTED;
+  }};
+`;
+
+const PriorityBadge = styled.span<{ $priority?: 'high' | 'medium' | 'low' }>`
+  font-size: ${theme.typography.fontSizes.xs};
+  padding: 4px 8px;
+  border-radius: ${theme.borderRadius.sm};
+  text-transform: uppercase;
+  font-weight: ${theme.typography.fontWeights.bold};
+  background: ${(p) => {
+    if (p.$priority === 'high') return '#dc2626';
+    if (p.$priority === 'medium') return '#d97706';
+    return PRIMARY_COLOR;
+  }};
+  color: white;
+`;
+
+const QuickForecastButton = styled(Button)`
+  margin-top: ${theme.spacing.md};
+  width: 100%;
+`;
+
 interface IncomeStatement {
   period: { start_date?: string; end_date?: string };
   revenue: {
@@ -501,6 +635,53 @@ interface Forecast {
   created_at: string;
 }
 
+interface MLInsight {
+  metric: string;
+  forecast?: any[];
+  advice?: Array<{
+    priority: string;
+    title: string;
+    message: string;
+    actions: string[];
+  }>;
+  alerts?: Array<{
+    severity: string;
+    message: string;
+  }>;
+  summary?: string;
+  trend_analysis?: {
+    direction: string;
+    percentage: number;
+    average: number;
+    max: number;
+    min: number;
+  };
+}
+
+interface ForecastWithAdvice {
+  metric: string;
+  model_type: string;
+  forecast: ForecastDataPoint[];
+  advice: Array<{
+    priority: string;
+    title: string;
+    message: string;
+    actions: string[];
+  }>;
+  alerts: Array<{
+    severity: string;
+    message: string;
+  }>;
+  summary: string;
+  trend_analysis: {
+    direction: string;
+    percentage: number;
+    average: number;
+    max: number;
+    min: number;
+  };
+}
+
 export default function ReportPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -524,6 +705,9 @@ export default function ReportPage() {
   const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
   const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
+  const [mlInsights, setMlInsights] = useState<any>(null);
+  const [loadingMLInsights, setLoadingMLInsights] = useState(false);
+  const [generatingForecast, setGeneratingForecast] = useState<string | null>(null);
 
   // Helper function to safely convert values to numbers, handling NaN, null, undefined
   const safeNumber = (value: unknown): number => {
@@ -1101,6 +1285,85 @@ export default function ReportPage() {
 
   const capitalize = (str: string): string => {
     return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ');
+  };
+
+  // Generate ML forecast with advice
+  const generateMLForecast = async (metric: 'expense' | 'revenue' | 'inventory', modelType: string) => {
+    setGeneratingForecast(`${metric}-${modelType}`);
+    try {
+      const response = await apiClient.generateForecastWithAdvice(metric, modelType as any, 12);
+      const responseData = (response as any)?.data || response;
+      
+      if (responseData?.status === 'success') {
+        // Update ML insights state
+        setMlInsights((prev: any) => ({
+          ...prev,
+          [metric]: {
+            ...responseData,
+            model_type: modelType,
+            generated_at: new Date().toISOString()
+          }
+        }));
+        toast.success(`${capitalize(metric)} forecast with AI advice generated successfully!`);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to generate forecast';
+      toast.error(errorMessage);
+    } finally {
+      setGeneratingForecast(null);
+    }
+  };
+
+  // Load ML insights for all metrics
+  const loadMLInsights = async () => {
+    if (!user || (user?.role !== 'admin' && user?.role !== 'super_admin' && 
+                  user?.role !== 'finance_admin' && user?.role !== 'finance_manager' && 
+                  user?.role !== 'manager')) {
+      return;
+    }
+
+    setLoadingMLInsights(true);
+    try {
+      // Try to generate forecasts with advice for all metrics using best available models
+      const metrics = ['expense', 'revenue', 'inventory'] as const;
+      const insights: Record<string, any> = {};
+      
+      // Try common models for each metric
+      const modelMap = {
+        expense: ['arima', 'linear_regression'],
+        revenue: ['xgboost', 'prophet'],
+        inventory: ['sarima', 'xgboost']
+      };
+
+      for (const metric of metrics) {
+        const models = modelMap[metric as keyof typeof modelMap];
+        for (const modelType of models) {
+          try {
+            const response = await apiClient.generateForecastWithAdvice(metric, modelType as any, 12);
+            const responseData = (response as any)?.data || response;
+            
+            if (responseData?.status === 'success') {
+              insights[metric] = {
+                ...responseData,
+                model_type: modelType,
+                generated_at: new Date().toISOString()
+              };
+              break; // Use first successful model
+            }
+          } catch (e) {
+            // Try next model
+            continue;
+          }
+        }
+      }
+      
+      setMlInsights(insights);
+    } catch (error) {
+      console.error('Failed to load ML insights:', error);
+      // Don't show error toast as this is optional enhancement
+    } finally {
+      setLoadingMLInsights(false);
+    }
   };
 
   if (!user) {
@@ -1889,6 +2152,254 @@ export default function ReportPage() {
                       <Package size={48} />
                       <h3>No inventory data available</h3>
                       <p>Inventory summary is only available to Finance Admin, Admin, and Manager roles.</p>
+                    </EmptyState>
+                  )}
+                </ReportCard>
+              </ReportSection>
+            )}
+
+            {/* ML AI Insights Section - For Admin, Finance Admin, and Manager */}
+            {(user?.role === 'finance_manager' || user?.role === 'finance_admin' || user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'manager') && (
+              <ReportSection>
+                <ReportCard>
+                  <ReportHeader>
+                    <div>
+                      <h2>
+                        <Brain />
+                        AI-Powered Insights & Recommendations
+                      </h2>
+                      <p>
+                        Get intelligent forecasts and actionable advice based on ML analysis
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadMLInsights}
+                        disabled={loadingMLInsights}
+                      >
+                        {loadingMLInsights ? (
+                          <>
+                            <Loader2 size={14} style={{ marginRight: theme.spacing.xs, animation: 'spin 1s linear infinite' }} />
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw size={14} style={{ marginRight: theme.spacing.xs }} />
+                            Generate Insights
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </ReportHeader>
+
+                  {mlInsights && Object.keys(mlInsights).length > 0 ? (
+                    <>
+                      {Object.entries(mlInsights).map(([metric, insight]: [string, any]) => {
+                        if (!insight || !insight.forecast) return null;
+                        
+                        const trend = insight.trend_analysis;
+                        const advice = insight.advice || [];
+                        const alerts = insight.alerts || [];
+                        
+                        return (
+                          <div key={metric} style={{ marginBottom: theme.spacing.xl }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+                              <SectionTitle>
+                                {capitalize(metric)} Forecast & Insights
+                                {insight.model_type && (
+                                  <span style={{ 
+                                    fontSize: theme.typography.fontSizes.sm, 
+                                    fontWeight: 400,
+                                    color: TEXT_COLOR_MUTED,
+                                    marginLeft: theme.spacing.sm
+                                  }}>
+                                    (Model: {insight.model_type.toUpperCase()})
+                                  </span>
+                                )}
+                              </SectionTitle>
+                            </div>
+
+                            {/* Trend Analysis */}
+                            {trend && (
+                              <div style={{ 
+                                background: theme.colors.backgroundSecondary, 
+                                padding: theme.spacing.lg, 
+                                borderRadius: theme.borderRadius.md,
+                                marginBottom: theme.spacing.md
+                              }}>
+                                <div style={{ 
+                                  fontSize: theme.typography.fontSizes.sm, 
+                                  fontWeight: theme.typography.fontWeights.medium,
+                                  color: TEXT_COLOR_MUTED,
+                                  marginBottom: theme.spacing.sm
+                                }}>
+                                  Trend Analysis
+                                </div>
+                                <div style={{ display: 'flex', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+                                  <TrendBadge $direction={trend.direction as any}>
+                                    {trend.direction === 'increasing' ? <ArrowUpRight size={14} /> : 
+                                     trend.direction === 'decreasing' ? <ArrowDownRight size={14} /> : 
+                                     <TrendingUp size={14} />}
+                                    {capitalize(trend.direction)} {trend.percentage !== undefined && `(${Math.abs(trend.percentage).toFixed(1)}%)`}
+                                  </TrendBadge>
+                                  <span style={{ color: TEXT_COLOR_MUTED, fontSize: theme.typography.fontSizes.sm }}>
+                                    Avg: {formatCurrency(trend.average)} | 
+                                    Max: {formatCurrency(trend.max)} | 
+                                    Min: {formatCurrency(trend.min)}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Summary */}
+                            {insight.summary && (
+                              <div style={{
+                                background: '#eff6ff',
+                                border: '1px solid #bfdbfe',
+                                borderRadius: theme.borderRadius.md,
+                                padding: theme.spacing.md,
+                                marginBottom: theme.spacing.md
+                              }}>
+                                <div style={{ 
+                                  display: 'flex', 
+                                  gap: theme.spacing.sm, 
+                                  alignItems: 'flex-start',
+                                  color: '#1e40af',
+                                  fontSize: theme.typography.fontSizes.sm,
+                                  lineHeight: '1.6'
+                                }}>
+                                  <Lightbulb size={16} style={{ marginTop: '2px', flexShrink: 0 }} />
+                                  <div>{insight.summary}</div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Alerts */}
+                            {alerts.length > 0 && (
+                              <div style={{ marginBottom: theme.spacing.md }}>
+                                <SectionTitle style={{ fontSize: theme.typography.fontSizes.md, marginBottom: theme.spacing.sm }}>
+                                  Alerts
+                                </SectionTitle>
+                                {alerts.map((alert: any, index: number) => (
+                                  <AlertCard key={index} $severity={alert.severity}>
+                                    <AlertCircle className="alert-icon" size={18} />
+                                    <div className="alert-message">{alert.message}</div>
+                                  </AlertCard>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Recommendations */}
+                            {advice.length > 0 && (
+                              <div style={{ marginBottom: theme.spacing.md }}>
+                                <SectionTitle style={{ fontSize: theme.typography.fontSizes.md, marginBottom: theme.spacing.sm }}>
+                                  Recommendations
+                                </SectionTitle>
+                                {advice.map((rec: any, index: number) => (
+                                  <InsightCard 
+                                    key={index} 
+                                    $priority={rec.priority === 'high' ? 'high' : rec.priority === 'medium' ? 'medium' : 'low'}
+                                  >
+                                    <div className="insight-header">
+                                      <Target size={18} />
+                                      <h4>{rec.title}</h4>
+                                      <PriorityBadge $priority={rec.priority === 'high' ? 'high' : rec.priority === 'medium' ? 'medium' : 'low'}>
+                                        {rec.priority}
+                                      </PriorityBadge>
+                                    </div>
+                                    <div className="insight-message">{rec.message}</div>
+                                    {rec.actions && rec.actions.length > 0 && (
+                                      <div className="insight-actions">
+                                        <strong style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                                          Recommended Actions:
+                                        </strong>
+                                        <ul>
+                                          {rec.actions.map((action: string, actionIndex: number) => (
+                                            <li key={actionIndex}>{action}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </InsightCard>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Forecast Preview */}
+                            {insight.forecast && insight.forecast.length > 0 && (
+                              <div>
+                                <SectionTitle style={{ fontSize: theme.typography.fontSizes.md, marginBottom: theme.spacing.sm }}>
+                                  Forecast Preview ({insight.forecast.length} periods)
+                                </SectionTitle>
+                                <CategoryTable>
+                                  <thead>
+                                    <tr>
+                                      <th>Period</th>
+                                      <th style={{ textAlign: 'right' }}>Forecasted Value</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {insight.forecast.slice(0, 6).map((point: any, index: number) => (
+                                      <tr key={index}>
+                                        <td>{point.period || formatDate(point.date)}</td>
+                                        <td style={{ textAlign: 'right', fontWeight: theme.typography.fontWeights.bold }}>
+                                          {formatCurrency(point.forecasted_value || point.value)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                    {insight.forecast.length > 6 && (
+                                      <tr>
+                                        <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED, fontStyle: 'italic' }}>
+                                          ... and {insight.forecast.length - 6} more periods
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </CategoryTable>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <EmptyState>
+                      <Brain size={48} />
+                      <h3>No ML insights available</h3>
+                      <p>Click "Generate Insights" to get AI-powered forecasts and recommendations</p>
+                      <div style={{ marginTop: theme.spacing.lg, display: 'flex', gap: theme.spacing.sm, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {(['expense', 'revenue', 'inventory'] as const).map((metric) => (
+                          <div key={metric} style={{ marginBottom: theme.spacing.sm }}>
+                            <QuickForecastButton
+                              variant="outline"
+                              onClick={() => {
+                                const modelMap: Record<string, string[]> = {
+                                  expense: ['arima', 'linear_regression'],
+                                  revenue: ['xgboost', 'prophet'],
+                                  inventory: ['sarima', 'xgboost']
+                                };
+                                const modelType = modelMap[metric]?.[0] || 'arima';
+                                generateMLForecast(metric, modelType);
+                              }}
+                              disabled={generatingForecast === `${metric}-arima` || generatingForecast === `${metric}-xgboost` || generatingForecast === `${metric}-sarima` || generatingForecast === `${metric}-linear_regression` || generatingForecast === `${metric}-prophet`}
+                            >
+                              {generatingForecast?.startsWith(metric) ? (
+                                <>
+                                  <Loader2 size={14} style={{ marginRight: theme.spacing.xs, animation: 'spin 1s linear infinite' }} />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Zap size={14} style={{ marginRight: theme.spacing.xs }} />
+                                  Quick {capitalize(metric)} Forecast
+                                </>
+                              )}
+                            </QuickForecastButton>
+                          </div>
+                        ))}
+                      </div>
                     </EmptyState>
                   )}
                 </ReportCard>
