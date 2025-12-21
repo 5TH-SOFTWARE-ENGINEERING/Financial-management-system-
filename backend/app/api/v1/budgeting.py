@@ -1024,11 +1024,184 @@ def get_auto_learn_status(
 ):
     """Get auto-learning status and statistics"""
     try:
-        from ...services.ml_auto_learn import get_auto_learn_status
-        return get_auto_learn_status()
+        from ...services.ml_auto_learn import get_auto_learn_status, get_training_statistics
+        status = get_auto_learn_status()
+        stats = get_training_statistics()
+        return {
+            "status": status,
+            "statistics": stats
+        }
     except Exception as e:
         logger.error(f"Failed to get auto-learn status: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to get auto-learn status: {str(e)}")
+
+
+@router.post("/ml/auto-learn/trigger/{metric}")
+def trigger_auto_learn_manual(
+    metric: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually trigger auto-learning for a specific metric
+    
+    This endpoint allows admins to manually trigger model retraining.
+    """
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only admins and finance admins can manually trigger auto-learning"
+        )
+    
+    if metric not in ["expense", "revenue", "inventory"]:
+        raise HTTPException(status_code=400, detail=f"Invalid metric: {metric}. Must be 'expense', 'revenue', or 'inventory'")
+    
+    try:
+        from ...services.ml_auto_learn import trigger_auto_learn
+        result = trigger_auto_learn(metric, db=db)
+        
+        if result:
+            return {
+                "status": "success",
+                "metric": metric,
+                "models_trained": len(result.get('trained_models', [])),
+                "best_model": result.get('best_model_type'),
+                "best_rmse": result.get('best_model', {}).get('rmse') if result.get('best_model') else None,
+                "model_saved": result.get('model_saved', False),
+                "details": result
+            }
+        else:
+            return {
+                "status": "skipped",
+                "metric": metric,
+                "message": "Auto-learning conditions not met (not enough data or too soon since last training)"
+            }
+    except Exception as e:
+        logger.error(f"Failed to trigger auto-learn for {metric}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Auto-learning failed: {str(e)}")
+
+
+@router.get("/ml/models")
+def list_trained_models(
+    metric: Optional[str] = Query(None, description="Filter by metric (expense, revenue, inventory)"),
+    current_user: User = Depends(get_current_active_user),
+):
+    """List all trained ML models"""
+    try:
+        models = MLForecastingService.get_trained_models(metric=metric)
+        
+        # Format response
+        formatted_models = []
+        for key, info in models.items():
+            formatted_models.append({
+                "model_key": key,
+                "metric": info.get('metric'),
+                "model_type": info.get('model_type'),
+                "model_path": info.get('model_path'),
+                "exists": info.get('exists', False),
+                "trained_at": info.get('trained_at'),
+                "metrics": info.get('metrics', {}),
+                "source": info.get('source', 'unknown')
+            })
+        
+        return {
+            "total_models": len(formatted_models),
+            "models": formatted_models
+        }
+    except Exception as e:
+        logger.error(f"Failed to list trained models: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to list models: {str(e)}")
+
+
+@router.get("/ml/scheduler/status")
+def get_scheduler_status(
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get ML training scheduler status and scheduled jobs"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only admins and finance admins can view scheduler status"
+        )
+    
+    try:
+        from ...services.ml_scheduler import get_scheduler_status
+        return get_scheduler_status()
+    except Exception as e:
+        logger.error(f"Failed to get scheduler status: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get scheduler status: {str(e)}")
+
+
+@router.post("/ml/forecast/with-advice")
+def generate_forecast_with_advice(
+    metric: str = Query(..., description="Metric to forecast (expense, revenue, inventory)"),
+    model_type: str = Query(..., description="Model type (arima, sarima, prophet, xgboost, lstm, linear_regression)"),
+    periods: int = Query(12, ge=1, le=60, description="Number of periods to forecast"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate forecast with AI-powered advice and recommendations
+    
+    This endpoint uses the enhanced ML forecasting service to generate forecasts
+    along with actionable advice, alerts, and trend analysis.
+    """
+    if metric not in ["expense", "revenue", "inventory"]:
+        raise HTTPException(status_code=400, detail="Invalid metric. Must be 'expense', 'revenue', or 'inventory'")
+    
+    if model_type not in ["arima", "sarima", "prophet", "xgboost", "lstm", "linear_regression"]:
+        raise HTTPException(status_code=400, detail="Invalid model type")
+    
+    try:
+        # Calculate forecast dates
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date + timedelta(days=1)
+        forecast_end = start_date + timedelta(days=periods * 30)  # Assuming monthly periods
+        
+        # Check if generate_forecast_with_advice method exists
+        if hasattr(MLForecastingService, 'generate_forecast_with_advice'):
+            result = MLForecastingService.generate_forecast_with_advice(
+                metric=metric,
+                model_type=model_type,
+                periods=periods,
+                db=db,
+                user_role=current_user.role,
+                user_id=current_user.id if current_user.role != UserRole.ADMIN else None
+            )
+        else:
+            # Fallback to standard forecast
+            forecast_data = MLForecastingService.generate_forecast_from_trained(
+                metric=metric,
+                model_type=model_type,
+                periods=periods,
+                db=db,
+                user_role=current_user.role,
+                user_id=current_user.id if current_user.role != UserRole.ADMIN else None
+            )
+            result = {
+                "forecast": forecast_data,
+                "advice": [],
+                "alerts": [],
+                "summary": "Forecast generated successfully",
+                "trend_analysis": {}
+            }
+        
+        return {
+            "status": "success",
+            "metric": metric,
+            "model_type": model_type,
+            "periods": periods,
+            "forecast": result.get("forecast", []),
+            "advice": result.get("advice", []),
+            "alerts": result.get("alerts", []),
+            "summary": result.get("summary", ""),
+            "trend_analysis": result.get("trend_analysis", {})
+        }
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"Trained model not found. Please train a model first: {str(e)}")
+    except Exception as e:
+        logger.error(f"Failed to generate forecast with advice: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Forecast generation failed: {str(e)}")
 
 
 @router.post("/ml/train/custom")
