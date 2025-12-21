@@ -14,6 +14,7 @@ from .budget import Budget, BudgetItem, BudgetScenario, Forecast, BudgetVariance
 from .inventory import InventoryItem
 from .sale import Sale, SaleStatus, JournalEntry
 from .inventory_audit import InventoryAuditLog, InventoryChangeType
+from .department import Department
 
 __all__ = [
     "User", "UserRole", "Role",
@@ -26,5 +27,6 @@ __all__ = [
     "BudgetType", "BudgetPeriod", "BudgetStatus",
     "InventoryItem",
     "Sale", "SaleStatus", "JournalEntry",
-    "InventoryAuditLog", "InventoryChangeType"
+    "InventoryAuditLog", "InventoryChangeType",
+    "Department"
 ]

@@ -7,6 +7,7 @@ import logging
 
 from ...core.database import get_db
 from ...models.user import User, UserRole
+from ...models.department import Department
 from ...api.deps import get_current_active_user, require_min_role
 from ...core.security import verify_password
 
@@ -34,13 +35,18 @@ def get_departments(
             User.department == dept,
             User.is_active == True
         ).count()
+        
+        # Try to get department metadata (description) from Department table
+        dept_metadata = db.query(Department).filter(Department.name == dept).first()
+        description = dept_metadata.description if dept_metadata else f"{dept} department"
+        
         result.append({
             "id": dept.lower().replace(" ", "_"),
             "name": dept,
-            "description": f"{dept} department",
+            "description": description,
             "user_count": user_count,
-            "created_at": None,
-            "updated_at": None
+            "created_at": dept_metadata.created_at.isoformat() if dept_metadata and dept_metadata.created_at else None,
+            "updated_at": dept_metadata.updated_at.isoformat() if dept_metadata and dept_metadata.updated_at else None
         })
     
     return result
@@ -107,14 +113,18 @@ def get_department(
     # Generate the ID from the actual department name (consistent with list endpoint)
     dept_id = matching_dept_name.lower().replace(" ", "_")
     
+    # Try to get department metadata (description) from Department table
+    dept_metadata = db.query(Department).filter(Department.name == matching_dept_name).first()
+    description = dept_metadata.description if dept_metadata else f"{matching_dept_name} department"
+    
     return {
         "id": dept_id,
         "name": matching_dept_name,
-        "description": f"{matching_dept_name} department",
+        "description": description,
         "user_count": len(users),
         "users": [{"id": u.id, "name": u.full_name or u.username, "email": u.email} for u in users],
-        "created_at": None,
-        "updated_at": None
+        "created_at": dept_metadata.created_at.isoformat() if dept_metadata and dept_metadata.created_at else None,
+        "updated_at": dept_metadata.updated_at.isoformat() if dept_metadata and dept_metadata.updated_at else None
     }
 
 
@@ -229,11 +239,33 @@ def update_department(
         user.department = new_name
     db.commit()
     
+    # Update or create department metadata (description)
+    # First check if metadata exists for the old name
+    dept_metadata = db.query(Department).filter(Department.name == old_dept_name).first()
+    
+    if dept_metadata:
+        # Update existing metadata
+        if new_name != old_dept_name:
+            dept_metadata.name = new_name
+        # Update description if provided, otherwise keep existing
+        new_description = department_data.get("description")
+        if new_description is not None:
+            dept_metadata.description = new_description
+    else:
+        # Create new metadata
+        dept_metadata = Department(
+            name=new_name,
+            description=department_data.get("description", f"{new_name} department")
+        )
+        db.add(dept_metadata)
+    
+    db.commit()
+    
     new_dept_id = new_name.lower().replace(" ", "_")
     return {
         "id": new_dept_id,
         "name": new_name,
-        "description": department_data.get("description", f"{new_name} department"),
+        "description": dept_metadata.description or f"{new_name} department",
         "user_count": len(users),
         "message": f"Department updated from '{old_dept_name}' to '{new_name}'"
     }

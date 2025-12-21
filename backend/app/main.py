@@ -40,7 +40,8 @@ from .models import (  # noqa: F401
     BudgetType, BudgetPeriod, BudgetStatus,
     InventoryItem,
     Sale, SaleStatus, JournalEntry,
-    InventoryAuditLog, InventoryChangeType
+    InventoryAuditLog, InventoryChangeType,
+    Department
 )
 
 # Create log directory early if LOG_FILE is set (prevents FileNotFoundError during config)
