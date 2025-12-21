@@ -165,7 +165,39 @@ def update_department(
     db: Session = Depends(get_db)
 ):
     """Update department - updates department name for all users in that department"""
-    old_dept_name = department_id.replace("_", " ").title()
+    # Decode URL-encoded department ID
+    decoded_id = unquote(department_id)
+    
+    # Try multiple formats to match department name (same logic as get_department)
+    dept_name_v1 = decoded_id.replace("_", " ").title()
+    dept_name_v2 = decoded_id.replace("_", " ")
+    dept_name_v3 = decoded_id
+    
+    # Find matching department name (case-insensitive)
+    all_departments = db.query(User.department).filter(
+        User.department.isnot(None),
+        User.department != ""
+    ).distinct().all()
+    
+    matching_dept_name = None
+    for (dept,) in all_departments:
+        if dept and (
+            dept.lower() == dept_name_v1.lower() or
+            dept.lower() == dept_name_v2.lower() or
+            dept.lower() == dept_name_v3.lower() or
+            dept.lower().replace(" ", "_") == decoded_id.lower()
+        ):
+            matching_dept_name = dept
+            break
+    
+    if not matching_dept_name:
+        logger.warning(f"Department not found for update. ID: {department_id}, Decoded: {decoded_id}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Department not found. The department '{decoded_id}' does not exist or has no users."
+        )
+    
+    old_dept_name = matching_dept_name
     new_name = department_data.get("name", "").strip()
     
     if not new_name or len(new_name) < 2:
@@ -180,11 +212,11 @@ def update_department(
     if not users:
         raise HTTPException(
             status_code=404,
-            detail="Department not found or has no users"
+            detail=f"Department '{old_dept_name}' has no users"
         )
     
     # Check if new name already exists (and is different)
-    if new_name != old_dept_name:
+    if new_name.lower() != old_dept_name.lower():
         existing = db.query(User).filter(User.department == new_name).first()
         if existing:
             raise HTTPException(

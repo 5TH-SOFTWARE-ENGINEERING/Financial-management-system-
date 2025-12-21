@@ -332,22 +332,56 @@ export default function EditDepartmentPage() {
     setError(null);
 
     try {
+      // Decode the department ID if it's URL encoded
+      const decodedId = decodeURIComponent(departmentId);
+      
       const departmentData = {
         name: data.name.trim(),
         description: data.description?.trim() || null,
       };
 
-      await apiClient.updateDepartment(departmentId as string, departmentData);
+      // Log for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Updating department:', {
+          id: decodedId,
+          data: departmentData,
+        });
+      }
+
+      await apiClient.updateDepartment(decodedId, departmentData);
       toast.success('Department updated successfully!');
       router.push('/department/list');
     } catch (err: unknown) {
-      const errorMessage =
-        (typeof err === 'object' &&
-          err !== null &&
-          'response' in err &&
-          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail) ||
-        (err as { message?: string }).message ||
-        'Failed to update department';
+      console.error('Error updating department:', err);
+      
+      let errorMessage = 'Failed to update department';
+      
+      if (typeof err === 'object' && err !== null) {
+        // Handle Axios errors
+        if ('response' in err) {
+          const axiosError = err as { response?: { status?: number; data?: { detail?: string; message?: string } } };
+          const status = axiosError.response?.status;
+          const detail = axiosError.response?.data?.detail || axiosError.response?.data?.message;
+          
+          if (status === 404) {
+            errorMessage = `Department not found. The department with ID "${departmentId}" does not exist or has no users.`;
+          } else if (status === 403) {
+            errorMessage = 'You do not have permission to update departments.';
+          } else if (status === 401) {
+            errorMessage = 'Please log in to update departments.';
+          } else if (status === 400) {
+            errorMessage = detail || 'Invalid department data. Please check your input.';
+          } else if (detail) {
+            errorMessage = detail;
+          } else {
+            errorMessage = `Failed to update department (Status: ${status})`;
+          }
+        } else if ('message' in err) {
+          // Handle standard Error objects
+          errorMessage = (err as { message: string }).message;
+        }
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
