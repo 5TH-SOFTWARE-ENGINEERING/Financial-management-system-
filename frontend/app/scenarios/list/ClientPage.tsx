@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Target, Plus, ArrowLeft, Filter, Search, Building2, Trash2, Loader2, Eye, EyeOff, Lock, XCircle
 } from 'lucide-react';
@@ -535,9 +535,11 @@ interface Scenario {
 
 const ScenarioListPage: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const budgetIdFromUrl = searchParams?.get('budget_id');
   const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [selectedBudgetId, setSelectedBudgetId] = useState<string>('');
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string>(budgetIdFromUrl || '');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingScenarios, setLoadingScenarios] = useState(false);
@@ -554,6 +556,16 @@ const ScenarioListPage: React.FC = () => {
   useEffect(() => {
     loadBudgets();
   }, []);
+
+  // Auto-select budget from URL parameter after budgets are loaded
+  useEffect(() => {
+    if (budgetIdFromUrl && budgets.length > 0) {
+      const budgetExists = budgets.some(b => b.id?.toString() === budgetIdFromUrl);
+      if (budgetExists && selectedBudgetId !== budgetIdFromUrl) {
+        setSelectedBudgetId(budgetIdFromUrl);
+      }
+    }
+  }, [budgetIdFromUrl, budgets, selectedBudgetId]);
 
   const loadBudgets = async () => {
     try {

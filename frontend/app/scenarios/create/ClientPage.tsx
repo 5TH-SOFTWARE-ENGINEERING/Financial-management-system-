@@ -374,13 +374,18 @@ const ScenarioCreatePageInner: React.FC = () => {
   }, [budgetIdParam, router]);
 
   useEffect(() => {
+    // Wait for searchParams to be ready
+    if (!searchParams) {
+      return; // Still loading
+    }
+    
     if (budgetIdParam) {
       loadBudget();
     } else {
-      toast.error('Budget ID is required');
+      // No budget_id in URL, redirect to list page
       router.push('/scenarios/list');
     }
-  }, [budgetIdParam, loadBudget, router]);
+  }, [budgetIdParam, loadBudget, router, searchParams]);
 
   const handleAdjustmentChange = (itemId: number, field: 'amount_multiplier' | 'amount', value: number) => {
     setFormData(prev => ({

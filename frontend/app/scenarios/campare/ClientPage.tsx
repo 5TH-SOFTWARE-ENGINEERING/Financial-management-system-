@@ -246,27 +246,6 @@ const CompareScenariosPageInner: React.FC = () => {
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
   const [budgetName, setBudgetName] = useState<string>('');
 
-  useEffect(() => {
-    if (budgetIdParam) {
-      loadScenarios();
-      if (scenariosParam) {
-        const ids = scenariosParam.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
-        setSelectedScenarios(ids);
-      }
-    } else {
-      toast.error('Budget ID is required');
-      router.push('/scenarios/list');
-    }
-  }, [budgetIdParam, scenariosParam, loadScenarios, router]);
-
-  useEffect(() => {
-    if (selectedScenarios.length > 0 && budgetIdParam) {
-      compareScenarios();
-    } else {
-      setComparison(null);
-    }
-  }, [selectedScenarios, budgetIdParam, compareScenarios]);
-
   const loadScenarios = useCallback(async () => {
     if (!budgetIdParam) return;
     
@@ -302,6 +281,32 @@ const CompareScenariosPageInner: React.FC = () => {
       setLoadingComparison(false);
     }
   }, [budgetIdParam, selectedScenarios]);
+
+  useEffect(() => {
+    // Wait for searchParams to be ready
+    if (!searchParams) {
+      return; // Still loading
+    }
+    
+    if (budgetIdParam) {
+      loadScenarios();
+      if (scenariosParam) {
+        const ids = scenariosParam.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+        setSelectedScenarios(ids);
+      }
+    } else {
+      // No budget_id in URL, redirect to list page
+      router.push('/scenarios/list');
+    }
+  }, [budgetIdParam, scenariosParam, loadScenarios, router, searchParams]);
+
+  useEffect(() => {
+    if (selectedScenarios.length > 0 && budgetIdParam) {
+      compareScenarios();
+    } else {
+      setComparison(null);
+    }
+  }, [selectedScenarios, budgetIdParam, compareScenarios]);
 
   const handleScenarioToggle = (scenarioId: number) => {
     setSelectedScenarios(prev => {
