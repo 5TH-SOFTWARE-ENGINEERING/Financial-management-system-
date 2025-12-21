@@ -1,9 +1,10 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import {
   Brain, Play, CheckCircle, XCircle, AlertCircle, Loader2,
-  TrendingUp, TrendingDown, Package, Info
+  TrendingUp, TrendingDown, Package, Info, RefreshCw, Clock,
+  BarChart3, Zap, Settings, List
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -256,6 +257,86 @@ const SectionTitle = styled.h2`
   gap: ${theme.spacing.sm};
 `;
 
+const StatusCard = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+`;
+
+const StatusGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: ${theme.spacing.md};
+  margin-top: ${theme.spacing.md};
+`;
+
+const StatusItem = styled.div`
+  padding: ${theme.spacing.md};
+  background: #f9fafb;
+  border-radius: ${theme.borderRadius.sm};
+  border: 1px solid #e5e7eb;
+  
+  .label {
+    font-size: ${theme.typography.fontSizes.xs};
+    color: ${TEXT_COLOR_MUTED};
+    margin-bottom: ${theme.spacing.xs};
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .value {
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+  }
+  
+  .subvalue {
+    font-size: ${theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
+    margin-top: ${theme.spacing.xs};
+  }
+`;
+
+const TrainedModelCard = styled.div`
+  background: ${theme.colors.background};
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  box-shadow: ${CardShadow};
+  padding: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.md};
+  
+  .model-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: ${theme.spacing.sm};
+  }
+  
+  .model-name {
+    font-weight: ${theme.typography.fontWeights.bold};
+    color: ${TEXT_COLOR_DARK};
+  }
+  
+  .model-metrics {
+    display: flex;
+    gap: ${theme.spacing.md};
+    margin-top: ${theme.spacing.sm};
+    padding-top: ${theme.spacing.sm};
+    border-top: 1px solid ${theme.colors.border};
+    font-size: ${theme.typography.fontSizes.sm};
+  }
+`;
+
+const ActionButtonGroup = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  flex-wrap: wrap;
+  margin-top: ${theme.spacing.md};
+`;
+
 interface ModelInfo {
   id: string;
   name: string;
@@ -342,6 +423,11 @@ const MLTrainingPage: React.FC = () => {
     return new Date().toISOString().split('T')[0];
   });
   const [trainingAll, setTrainingAll] = useState(false);
+  const [autoLearnStatus, setAutoLearnStatus] = useState<any>(null);
+  const [trainedModels, setTrainedModels] = useState<any[]>([]);
+  const [schedulerStatus, setSchedulerStatus] = useState<any>(null);
+  const [loadingStatus, setLoadingStatus] = useState(false);
+  const [triggeringAutoLearn, setTriggeringAutoLearn] = useState<string | null>(null);
   const [models, setModels] = useState<ModelInfo[]>([
     {
       id: 'expenses-arima',
@@ -504,6 +590,66 @@ const MLTrainingPage: React.FC = () => {
       toast.error(`${model.name} training failed: ${errorMessage}`);
     }
   };
+
+  // Load auto-learn status, trained models, and scheduler status
+  const loadMLStatus = async () => {
+    setLoadingStatus(true);
+    try {
+      // Load auto-learn status
+      const statusResponse = await apiClient.getAutoLearnStatus();
+      const statusData = (statusResponse as any)?.data || statusResponse;
+      setAutoLearnStatus(statusData?.status || statusData);
+
+      // Load trained models
+      const modelsResponse = await apiClient.getTrainedModels();
+      const modelsData = (modelsResponse as any)?.data || modelsResponse;
+      setTrainedModels(modelsData?.models || []);
+
+      // Load scheduler status (may require admin permissions)
+      try {
+        const schedulerResponse = await apiClient.getSchedulerStatus();
+        const schedulerData = (schedulerResponse as any)?.data || schedulerResponse;
+        setSchedulerStatus(schedulerData);
+      } catch (e) {
+        // Scheduler status may require admin permissions, ignore error
+        setSchedulerStatus(null);
+      }
+    } catch (error) {
+      console.error('Failed to load ML status:', error);
+      toast.error('Failed to load ML status information');
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
+  // Trigger auto-learn for a metric
+  const handleTriggerAutoLearn = async (metric: 'expense' | 'revenue' | 'inventory') => {
+    setTriggeringAutoLearn(metric);
+    try {
+      const response = await apiClient.triggerAutoLearn(metric);
+      const responseData = (response as any)?.data || response;
+      
+      if (responseData?.status === 'success') {
+        toast.success(`${metric.charAt(0).toUpperCase() + metric.slice(1)} auto-learning completed successfully!`);
+        // Reload status
+        await loadMLStatus();
+      } else if (responseData?.status === 'skipped') {
+        toast.info(responseData?.message || 'Auto-learning skipped (conditions not met)');
+      } else {
+        toast.error('Auto-learning failed');
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to trigger auto-learning';
+      toast.error(errorMessage);
+    } finally {
+      setTriggeringAutoLearn(null);
+    }
+  };
+
+  // Load status on component mount
+  useEffect(() => {
+    loadMLStatus();
+  }, []);
 
   const trainAllModels = async () => {
     setTrainingAll(true);
@@ -715,6 +861,193 @@ const MLTrainingPage: React.FC = () => {
               )}
             </Button>
           </TrainingControls>
+
+          {/* Auto-Learn Status Section */}
+          <StatusCard>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+              <SectionTitle style={{ margin: 0 }}>
+                <Zap size={20} />
+                Auto-Learning Status
+              </SectionTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadMLStatus}
+                disabled={loadingStatus}
+              >
+                {loadingStatus ? (
+                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <RefreshCw size={14} />
+                )}
+              </Button>
+            </div>
+            
+            {autoLearnStatus && (
+              <>
+                <StatusGrid>
+                  <StatusItem>
+                    <div className="label">Status</div>
+                    <div className="value" style={{ color: autoLearnStatus.enabled ? PRIMARY_COLOR : '#ef4444' }}>
+                      {autoLearnStatus.enabled ? 'Enabled' : 'Disabled'}
+                    </div>
+                  </StatusItem>
+                  <StatusItem>
+                    <div className="label">Min Data Points</div>
+                    <div className="value">{autoLearnStatus.configuration?.min_new_data_points || 'N/A'}</div>
+                  </StatusItem>
+                  <StatusItem>
+                    <div className="label">Min Hours Between</div>
+                    <div className="value">{autoLearnStatus.configuration?.min_hours_between_training || 'N/A'}</div>
+                  </StatusItem>
+                  <StatusItem>
+                    <div className="label">Training History</div>
+                    <div className="value">
+                      {autoLearnStatus.training_history?.total_trainings || 0}
+                    </div>
+                    <div className="subvalue">Total sessions</div>
+                  </StatusItem>
+                </StatusGrid>
+
+                <div style={{ marginTop: theme.spacing.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.medium, marginBottom: theme.spacing.sm }}>
+                    Metric Status:
+                  </div>
+                  <StatusGrid>
+                    {['expense', 'revenue', 'inventory'].map((metric) => {
+                      const status = autoLearnStatus.should_retrain?.[metric];
+                      const dataCount = autoLearnStatus.new_data_counts?.[metric] || 0;
+                      const lastTraining = autoLearnStatus.last_training_times?.[metric];
+                      
+                      return (
+                        <StatusItem key={metric}>
+                          <div className="label">{metric.charAt(0).toUpperCase() + metric.slice(1)}</div>
+                          <div className="value" style={{ color: status ? PRIMARY_COLOR : TEXT_COLOR_MUTED }}>
+                            {status ? 'Ready' : 'Waiting'}
+                          </div>
+                          <div className="subvalue">
+                            Data: {dataCount} | Last: {lastTraining ? new Date(lastTraining).toLocaleDateString() : 'Never'}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleTriggerAutoLearn(metric as any)}
+                            disabled={triggeringAutoLearn === metric || !autoLearnStatus.enabled}
+                            style={{ marginTop: theme.spacing.sm, width: '100%' }}
+                          >
+                            {triggeringAutoLearn === metric ? (
+                              <>
+                                <Loader2 size={12} style={{ marginRight: theme.spacing.xs, animation: 'spin 1s linear infinite' }} />
+                                Training...
+                              </>
+                            ) : (
+                              <>
+                                <Play size={12} style={{ marginRight: theme.spacing.xs }} />
+                                Trigger Training
+                              </>
+                            )}
+                          </Button>
+                        </StatusItem>
+                      );
+                    })}
+                  </StatusGrid>
+                </div>
+              </>
+            )}
+          </StatusCard>
+
+          {/* Trained Models Section */}
+          <StatusCard>
+            <SectionTitle style={{ margin: 0, marginBottom: theme.spacing.md }}>
+              <List size={20} />
+              Trained Models ({trainedModels.length})
+            </SectionTitle>
+            
+            {trainedModels.length > 0 ? (
+              trainedModels.map((model: any, index: number) => (
+                <TrainedModelCard key={index}>
+                  <div className="model-header">
+                    <div className="model-name">
+                      {model.metric?.charAt(0).toUpperCase() + model.metric?.slice(1)} - {model.model_type?.toUpperCase()}
+                    </div>
+                    <StatusBadge $status={model.exists ? 'trained' : 'error'}>
+                      {model.exists ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                      {model.exists ? 'Available' : 'Missing'}
+                    </StatusBadge>
+                  </div>
+                  {model.metrics && (
+                    <div className="model-metrics">
+                      {model.metrics.mae !== undefined && (
+                        <span><strong>MAE:</strong> {model.metrics.mae.toFixed(2)}</span>
+                      )}
+                      {model.metrics.rmse !== undefined && (
+                        <span><strong>RMSE:</strong> {model.metrics.rmse.toFixed(2)}</span>
+                      )}
+                      {model.metrics.r2 !== undefined && (
+                        <span><strong>R²:</strong> {model.metrics.r2.toFixed(3)}</span>
+                      )}
+                    </div>
+                  )}
+                  {model.trained_at && (
+                    <div style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginTop: theme.spacing.xs }}>
+                      Trained: {new Date(model.trained_at).toLocaleString()}
+                    </div>
+                  )}
+                </TrainedModelCard>
+              ))
+            ) : (
+              <div style={{ padding: theme.spacing.md, textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+                No trained models found. Train models to see them here.
+              </div>
+            )}
+          </StatusCard>
+
+          {/* Scheduler Status Section */}
+          {schedulerStatus && (
+            <StatusCard>
+              <SectionTitle style={{ margin: 0, marginBottom: theme.spacing.md }}>
+                <Clock size={20} />
+                Training Scheduler
+              </SectionTitle>
+              
+              <StatusGrid>
+                <StatusItem>
+                  <div className="label">Scheduler</div>
+                  <div className="value" style={{ color: schedulerStatus.scheduler_running ? PRIMARY_COLOR : '#ef4444' }}>
+                    {schedulerStatus.scheduler_running ? 'Running' : 'Stopped'}
+                  </div>
+                </StatusItem>
+                <StatusItem>
+                  <div className="label">Scheduled Jobs</div>
+                  <div className="value">
+                    {Object.keys(schedulerStatus.scheduled_jobs || {}).length}
+                  </div>
+                </StatusItem>
+              </StatusGrid>
+
+              {Object.keys(schedulerStatus.scheduled_jobs || {}).length > 0 && (
+                <div style={{ marginTop: theme.spacing.md }}>
+                  <div style={{ fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.medium, marginBottom: theme.spacing.sm }}>
+                    Scheduled Jobs:
+                  </div>
+                  {Object.entries(schedulerStatus.scheduled_jobs || {}).map(([jobId, job]: [string, any]) => (
+                    <div key={jobId} style={{ 
+                      padding: theme.spacing.sm, 
+                      background: '#f9fafb', 
+                      borderRadius: theme.borderRadius.sm,
+                      marginBottom: theme.spacing.xs,
+                      fontSize: theme.typography.fontSizes.sm
+                    }}>
+                      <strong>{job.name}</strong>
+                      <div style={{ color: TEXT_COLOR_MUTED, marginTop: theme.spacing.xs }}>
+                        Next run: {job.next_run_time ? new Date(job.next_run_time).toLocaleString() : 'Not scheduled'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </StatusCard>
+          )}
 
           <SectionTitle>
             <Brain size={24} />

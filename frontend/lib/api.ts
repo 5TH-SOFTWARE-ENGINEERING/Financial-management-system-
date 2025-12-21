@@ -1457,6 +1457,69 @@ class ApiClient {
     });
   }
 
+  /**
+   * Get auto-learning status and statistics
+   */
+  async getAutoLearnStatus() {
+    return this.request({
+      method: 'GET',
+      url: '/budgeting/ml/auto-learn/status'
+    });
+  }
+
+  /**
+   * Manually trigger auto-learning for a metric
+   * @param metric - 'expense', 'revenue', or 'inventory'
+   */
+  async triggerAutoLearn(metric: 'expense' | 'revenue' | 'inventory') {
+    return this.request({
+      method: 'POST',
+      url: `/budgeting/ml/auto-learn/trigger/${metric}`,
+      timeout: 300000 // 5 minutes for training
+    });
+  }
+
+  /**
+   * Get list of all trained models
+   * @param metric - Optional filter by metric
+   */
+  async getTrainedModels(metric?: 'expense' | 'revenue' | 'inventory') {
+    return this.request({
+      method: 'GET',
+      url: '/budgeting/ml/models',
+      params: metric ? { metric } : {}
+    });
+  }
+
+  /**
+   * Get ML scheduler status and scheduled jobs
+   */
+  async getSchedulerStatus() {
+    return this.request({
+      method: 'GET',
+      url: '/budgeting/ml/scheduler/status'
+    });
+  }
+
+  /**
+   * Generate forecast with AI-powered advice and recommendations
+   * @param metric - 'expense', 'revenue', or 'inventory'
+   * @param modelType - 'arima', 'sarima', 'prophet', 'xgboost', 'lstm', 'linear_regression'
+   * @param periods - Number of periods to forecast
+   */
+  async generateForecastWithAdvice(
+    metric: 'expense' | 'revenue' | 'inventory',
+    modelType: 'arima' | 'sarima' | 'prophet' | 'xgboost' | 'lstm' | 'linear_regression',
+    periods: number = 12
+  ) {
+    return this.request({
+      method: 'POST',
+      url: '/budgeting/ml/forecast/with-advice',
+      params: { metric, model_type: modelType, periods },
+      timeout: 120000 // 2 minutes
+    });
+  }
+
   // Variance Analysis
   async calculateVariance(budgetId: number, periodStart: string, periodEnd: string) {
     return this.post(`/budgeting/budgets/${budgetId}/variance`, {}, {
