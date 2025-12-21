@@ -1679,10 +1679,10 @@ class ApiClient {
 
   /**
    * Submit a contact/support message
-   * You can override the endpoint path with NEXT_PUBLIC_CONTACT_ENDPOINT (e.g. "/support/contact")
+   * You can override the endpoint path with NEXT_PUBLIC_CONTACT_ENDPOINT (e.g. "/api/v1/contact")
    */
   async submitContact(payload: { name: string; email: string; message: string }) {
-    const contactPath = process.env.NEXT_PUBLIC_CONTACT_ENDPOINT || '/contact';
+    const contactPath = process.env.NEXT_PUBLIC_CONTACT_ENDPOINT || '/api/v1/contact';
     return this.post(contactPath, payload);
   }
 
