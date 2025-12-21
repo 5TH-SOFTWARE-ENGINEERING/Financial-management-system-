@@ -743,67 +743,37 @@ const AdminDashboard: React.FC = () => {
             accessibleUserIds = [userId];
           }
         } else if (isAccountantRole && user?.id) {
-          // Accountant: Get their Finance Admin's (manager's) subordinates
+          // Accountant: See ONLY their own data AND employees' data (for posting sales)
+          // Accountants do NOT see Finance Admin's data or other accountants' data
           const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-          let managerId: number | null = null;
-          
-          // Try to get managerId from storeUser first
-          const managerIdStr = storeUser?.managerId;
-          if (managerIdStr) {
-            managerId = typeof managerIdStr === 'string' ? parseInt(managerIdStr, 10) : Number(managerIdStr);
-          } else {
-            // If not in storeUser, try to fetch current user profile from API
-            try {
-              const currentUserRes = await apiClient.getCurrentUser();
-              const currentUserData = currentUserRes?.data;
-              if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
-                managerId = typeof currentUserData.manager_id === 'string' 
-                  ? parseInt(currentUserData.manager_id, 10) 
-                  : Number(currentUserData.manager_id);
-              }
-            } catch (err) {
-              console.warn('Failed to fetch current user profile for manager_id:', err);
-            }
-          }
-          
-          if (managerId) {
-            try {
-              const financeAdminId = managerId;
-              
-              // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
-              const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
-              const subordinates: Subordinate[] = subordinatesRes?.data || [];
-              
-              // Include the Finance Admin themselves and all their subordinates
-              accessibleUserIds = [financeAdminId, ...subordinates.map((sub) => {
+          try {
+            // Get all subordinates (this includes accountants and employees)
+            const subordinatesRes = await apiClient.getSubordinates(accountantId);
+            const subordinates: Subordinate[] = subordinatesRes?.data || [];
+            
+            // Filter to ONLY include employees (exclude accountants and Finance Admins)
+            // We need to fetch user details to check roles, but for now we'll get all subordinates
+            // and filter on the backend. For frontend, we'll include accountant + all subordinates
+            // The backend will filter correctly by role
+            const subordinateIds = subordinates
+              .map((sub) => {
                 const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
-                return subId;
-              })];
-              
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Accountant - Accessible User IDs (from Finance Admin):', {
-                  accountantId: accountantId,
-                  financeAdminId: financeAdminId,
-                  subordinatesCount: subordinates.length,
-                  accessibleUserIds: accessibleUserIds
-                });
-              }
-            } catch (err) {
-              console.error('Failed to fetch Finance Admin subordinates for accountant:', err);
-              // Fallback: if we can't get subordinates, at least try to show data from the Finance Admin
-              accessibleUserIds = [managerId];
-              
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Accountant - Using fallback (Finance Admin only):', {
-                  accountantId: accountantId,
-                  financeAdminId: managerId,
-                  accessibleUserIds: accessibleUserIds
-                });
-              }
+                return Number.isNaN(subId) ? undefined : subId;
+              })
+              .filter((id): id is number => id !== undefined);
+            
+            // Include: Accountant themselves + subordinates (backend will filter to employees only)
+            accessibleUserIds = [accountantId, ...subordinateIds];
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Accountant - Accessible User IDs (themselves + employees):', {
+                accountantId: accountantId,
+                subordinatesCount: subordinates.length,
+                accessibleUserIds: accessibleUserIds
+              });
             }
-          } else {
-            // Accountant has no manager assigned - fallback to just themselves
-            console.warn('Accountant has no manager (Finance Admin) assigned - using only accountant ID');
+          } catch (err) {
+            console.warn('Failed to fetch subordinates for accountant, using only accountant ID:', err);
             accessibleUserIds = [accountantId];
           }
         } else if (user?.id) {

@@ -1669,7 +1669,7 @@ export default function Navbar() {
 
   const handleNotificationsClick = () => {
     setIsNotificationPanelOpen(!isNotificationPanelOpen);
-    setIsDropdownOpen(false);
+    setIsDropdownOpen(false); 
     if (isNotificationPanelOpen) {
       setNotificationsExpanded(false);
     }
@@ -1715,7 +1715,7 @@ export default function Navbar() {
         : `/${notification.action_url}`;
       router.push(url);
     } else {
-      router.push('/notifications');
+    router.push('/notifications');
     }
   };
 
@@ -2011,9 +2011,9 @@ export default function Navbar() {
                         )
                         .map((notification) => (
                         <NotificationListItem
-                          key={notification.id}
-                          $isRead={notification.is_read}
-                          onClick={() => handleNotificationClick(notification)}
+                      key={notification.id}
+                      $isRead={notification.is_read}
+                      onClick={() => handleNotificationClick(notification)}
                           title={notification.action_url ? 'Click to view details' : 'Click to view all notifications'}
                         >
                           <NotificationListText $isRead={notification.is_read}>
@@ -2098,8 +2098,8 @@ export default function Navbar() {
                         maxWidth: notifications.length > 4 ? '200px' : 'none'
                       }}
                     >
-                      View All Notifications
-                    </ViewAllButton>
+                    View All Notifications
+                  </ViewAllButton>
                   </div>
                 </NotificationPanelFooter>
               )}

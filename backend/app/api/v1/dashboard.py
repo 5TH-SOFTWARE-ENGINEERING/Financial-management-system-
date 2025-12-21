@@ -211,11 +211,18 @@ def get_dashboard_overview(
             }
     
         elif current_user.role == UserRole.ACCOUNTANT:
-            # Accountant overview - includes their own data AND their subordinates' (employees) data
-            # Similar to Finance Admin but only sees employees (not other accountants)
+            # Accountant overview - includes ONLY their own data AND employees' data (for posting sales)
+            # Accountants do NOT see Finance Admin's data or other accountants' data
             try:
-                subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
-                subordinate_ids.append(current_user.id)  # Include themselves
+                # Get all subordinates (this includes accountants and employees)
+                all_subordinates = user_crud.get_hierarchy(db, current_user.id)
+                # Filter to ONLY include employees (exclude accountants and Finance Admins)
+                employee_ids = [
+                    sub.id for sub in all_subordinates 
+                    if sub.role == UserRole.EMPLOYEE
+                ]
+                # Include: Accountant themselves + employees only
+                subordinate_ids = [current_user.id] + employee_ids
             except Exception as e:
                 logger.error(f"Error fetching user hierarchy for Accountant {current_user.id}: {str(e)}")
                 subordinate_ids = [current_user.id]  # Fallback to just themselves
@@ -661,6 +668,114 @@ def get_recent_activity(
                         continue
             except Exception as e:
                 logger.error(f"Error adding team approval entries: {str(e)}")
+        
+        elif current_user.role == UserRole.ACCOUNTANT:
+            # Accountant: See ONLY their own activities AND employees' activities (for posting sales)
+            # Accountants do NOT see Finance Admin's activities or other accountants' activities
+            try:
+                # Get all subordinates (this includes accountants and employees)
+                all_subordinates = user_crud.get_hierarchy(db, current_user.id)
+                # Filter to ONLY include employees (exclude accountants and Finance Admins)
+                employee_ids = [
+                    sub.id for sub in all_subordinates 
+                    if sub.role == UserRole.EMPLOYEE
+                ]
+                # Include: Accountant themselves + employees only
+                accessible_user_ids = [current_user.id] + employee_ids
+            except Exception as e:
+                logger.error(f"Error fetching subordinates for accountant activities: {str(e)}")
+                accessible_user_ids = [current_user.id]  # Fallback to just themselves
+            
+            # Get all revenue and expenses for the period
+            try:
+                all_revenue = revenue_crud.get_multi(db, 0, limit * 2)
+            except Exception as e:
+                logger.error(f"Error fetching revenue entries for accountant: {str(e)}")
+                all_revenue = []
+            
+            try:
+                all_expenses = expense_crud.get_multi(db, 0, limit * 2)
+            except Exception as e:
+                logger.error(f"Error fetching expense entries for accountant: {str(e)}")
+                all_expenses = []
+            
+            try:
+                all_approvals = approval_crud.get_pending(db)
+            except Exception as e:
+                logger.error(f"Error fetching pending approvals for accountant: {str(e)}")
+                all_approvals = []
+            
+            # Filter for accessible users only (Accountant + employees)
+            try:
+                team_revenue = [r for r in all_revenue if hasattr(r, 'created_by_id') and r.created_by_id in accessible_user_ids]
+                team_expenses = [e for e in all_expenses if hasattr(e, 'created_by_id') and e.created_by_id in accessible_user_ids]
+                team_approvals = [a for a in all_approvals if hasattr(a, 'requester_id') and a.requester_id in accessible_user_ids]
+            except Exception as e:
+                logger.error(f"Error filtering accountant activities: {str(e)}")
+                team_revenue = []
+                team_expenses = []
+                team_approvals = []
+            
+            # Add team revenue entries
+            try:
+                for rev in team_revenue[:limit]:
+                    try:
+                        activities.append({
+                            "type": "revenue",
+                            "id": rev.id,
+                            "title": rev.title if hasattr(rev, 'title') and rev.title else f"Revenue #{rev.id}",
+                            "amount": float(rev.amount) if hasattr(rev, 'amount') and rev.amount else 0,
+                            "date": rev.created_at if hasattr(rev, 'created_at') else None,
+                            "status": "approved" if (hasattr(rev, 'is_approved') and rev.is_approved) else "pending"
+                        })
+                    except Exception as e:
+                        logger.warning(f"Error processing accountant revenue entry {rev.id if hasattr(rev, 'id') else 'unknown'}: {str(e)}")
+                        continue
+            except Exception as e:
+                logger.error(f"Error adding accountant revenue entries: {str(e)}")
+            
+            # Add team expense entries
+            try:
+                for exp in team_expenses[:limit]:
+                    try:
+                        activities.append({
+                            "type": "expense",
+                            "id": exp.id,
+                            "title": exp.title if hasattr(exp, 'title') and exp.title else f"Expense #{exp.id}",
+                            "amount": float(exp.amount) if hasattr(exp, 'amount') and exp.amount else 0,
+                            "date": exp.created_at if hasattr(exp, 'created_at') else None,
+                            "status": "approved" if (hasattr(exp, 'is_approved') and exp.is_approved) else "pending"
+                        })
+                    except Exception as e:
+                        logger.warning(f"Error processing accountant expense entry {exp.id if hasattr(exp, 'id') else 'unknown'}: {str(e)}")
+                        continue
+            except Exception as e:
+                logger.error(f"Error adding accountant expense entries: {str(e)}")
+            
+            # Add team approval requests
+            try:
+                for appr in team_approvals[:limit]:
+                    try:
+                        status_value = "pending"
+                        if hasattr(appr, 'status'):
+                            if hasattr(appr.status, 'value'):
+                                status_value = appr.status.value
+                            else:
+                                status_value = str(appr.status)
+                        
+                        activities.append({
+                            "type": "approval",
+                            "id": appr.id,
+                            "title": appr.title if hasattr(appr, 'title') and appr.title else f"Approval Request #{appr.id}",
+                            "amount": None,
+                            "date": appr.created_at if hasattr(appr, 'created_at') else None,
+                            "status": status_value
+                        })
+                    except Exception as e:
+                        logger.warning(f"Error processing accountant approval entry {appr.id if hasattr(appr, 'id') else 'unknown'}: {str(e)}")
+                        continue
+            except Exception as e:
+                logger.error(f"Error adding accountant approval entries: {str(e)}")
         
         else:
             # Regular users can only see their own activities

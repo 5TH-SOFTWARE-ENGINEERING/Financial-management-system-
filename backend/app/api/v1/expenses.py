@@ -87,6 +87,34 @@ def read_expense_entries(
         
         entries = [entry for entry in all_entries if entry.created_by_id in subordinate_ids]
         entries = entries[skip:skip + limit]
+    elif current_user.role == UserRole.ACCOUNTANT:
+        # Accountant: See ONLY their own entries AND employees' entries (for posting sales)
+        # Accountants do NOT see Finance Admin's entries or other accountants' entries
+        try:
+            # Get all subordinates (this includes accountants and employees)
+            all_subordinates = user_crud.get_hierarchy(db, current_user.id)
+            # Filter to ONLY include employees (exclude accountants and Finance Admins)
+            employee_ids = [
+                sub.id for sub in all_subordinates 
+                if sub.role == UserRole.EMPLOYEE
+            ]
+            # Include: Accountant themselves + employees only
+            subordinate_ids = [current_user.id] + employee_ids
+        except Exception as e:
+            logger.error(f"Error fetching subordinates for accountant: {str(e)}")
+            subordinate_ids = [current_user.id]  # Fallback to just themselves
+        
+        if start_date and end_date:
+            all_entries = expense_crud.get_by_date_range(db, start_date, end_date, 0, 1000)
+        elif category:
+            all_entries = expense_crud.get_by_category(db, category, 0, 1000)
+        elif vendor:
+            all_entries = expense_crud.get_by_vendor(db, vendor, 0, 1000)
+        else:
+            all_entries = expense_crud.get_multi(db, 0, 1000)
+        
+        entries = [entry for entry in all_entries if entry.created_by_id in subordinate_ids]
+        entries = entries[skip:skip + limit]
     else:
         # Regular users can only see their own entries
         if start_date and end_date:
@@ -128,13 +156,21 @@ def read_expense_entry(
                 if entry.created_by_id not in subordinate_ids + [current_user.id]:
                     raise HTTPException(status_code=403, detail="Not enough permissions")
             elif current_user.role == UserRole.ACCOUNTANT:
-                # Accountants can see their own entries and their subordinates' entries
+                # Accountants can see ONLY their own entries AND employees' entries (for posting sales)
+                # Accountants do NOT see Finance Admin's entries or other accountants' entries
                 try:
-                    subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, current_user.id)]
+                    all_subordinates = user_crud.get_hierarchy(db, current_user.id)
+                    # Filter to ONLY include employees (exclude accountants and Finance Admins)
+                    employee_ids = [
+                        sub.id for sub in all_subordinates 
+                        if sub.role == UserRole.EMPLOYEE
+                    ]
+                    # Include: Accountant themselves + employees only
+                    subordinate_ids = [current_user.id] + employee_ids
                 except Exception as e:
                     logger.error(f"Error fetching subordinates for accountant {current_user.id}: {str(e)}", exc_info=True)
-                    subordinate_ids = []
-                if entry.created_by_id not in subordinate_ids + [current_user.id]:
+                    subordinate_ids = [current_user.id]  # Fallback to just themselves
+                if entry.created_by_id not in subordinate_ids:
                     raise HTTPException(status_code=403, detail="Not enough permissions")
             else:
                 # Regular users can only see their own entries
