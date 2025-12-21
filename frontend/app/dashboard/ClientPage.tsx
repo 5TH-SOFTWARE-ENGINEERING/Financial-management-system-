@@ -536,7 +536,7 @@ type SalesSummary = {
   total_sales?: number;
 };
 
-type Subordinate = { id?: number | string };
+type Subordinate = { id?: number | string; role?: string };
 
 type Workflow = {
   status?: { value?: string } | string;
@@ -743,16 +743,51 @@ const AdminDashboard: React.FC = () => {
             accessibleUserIds = [userId];
           }
         } else if (isAccountantRole && user?.id) {
-          // Accountant: See ONLY their own data
-          // Accountants do NOT see Finance Admin's data, other accountants' data, or employees' data
+          // Accountant: See their own data + employees' sales (from their Finance Admin's team)
+          // This allows accountants to see and approve sales made by employees
           const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-          accessibleUserIds = [accountantId];  // Only themselves
+          const managerId = storeUser?.managerId 
+            ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
+            : null;
           
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Accountant - Accessible User IDs (themselves only):', {
-              accountantId: accountantId,
-              accessibleUserIds: accessibleUserIds
-            });
+          if (managerId) {
+            try {
+              // Get the Finance Admin's subordinates (employees)
+              const subordinatesRes = await apiClient.getSubordinates(managerId);
+              const subordinates: Subordinate[] = subordinatesRes?.data || [];
+              
+              // Filter to ONLY include employees (exclude accountants and Finance Admins)
+              // This ensures accountants can see sales made by employees for approval
+              const employeeIds = subordinates
+                .map((sub) => {
+                  const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+                  const subRole = (sub as { role?: string }).role?.toLowerCase() || '';
+                  // Only include employees
+                  if (!Number.isNaN(subId) && subRole === 'employee') {
+                    return subId;
+                  }
+                  return undefined;
+                })
+                .filter((id): id is number => id !== undefined);
+              
+              // Include: Accountant themselves + employees from Finance Admin's team
+              accessibleUserIds = [accountantId, ...employeeIds];
+              
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Accountant - Accessible User IDs (themselves + employees):', {
+                  accountantId: accountantId,
+                  managerId: managerId,
+                  employeeIds: employeeIds,
+                  accessibleUserIds: accessibleUserIds
+                });
+              }
+            } catch (err) {
+              console.warn('Failed to fetch Finance Admin subordinates for accountant, using only accountant ID:', err);
+              accessibleUserIds = [accountantId];
+            }
+          } else {
+            // No manager - only see own data
+            accessibleUserIds = [accountantId];
           }
         } else if (user?.id) {
           // For other roles, they can only see their own data
