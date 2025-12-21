@@ -198,11 +198,22 @@ def get_inventory_items(
                 user_ids = [manager_id] if manager_id else [current_user.id]
         else:
             user_ids = [current_user.id]
+    elif current_user.role == UserRole.EMPLOYEE:
+        # Employee: See items created by their Finance Admin (manager) AND their own items
+        # This allows employees to sell items that Finance Admin created
+        from ...crud.user import user as user_crud
+        manager_id = current_user.manager_id
+        if manager_id:
+            # Include: Finance Admin (manager) + employee themselves
+            user_ids = [manager_id, current_user.id]
+        else:
+            # Employee has no manager - only see their own items
+            user_ids = [current_user.id]
     elif current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         # Admin/Super Admin: See all items
         user_ids = None
     else:
-        # Employee and others: See only their own items
+        # Other roles: See only their own items
         user_ids = [current_user.id]
     
     # Get all items first (we'll filter by user_ids if needed)
