@@ -65,10 +65,16 @@ def read_notifications(
                     Notification.created_at.desc()
                 ).offset(skip).limit(limit).all()
         # Finance Admin/Manager can see their own and subordinates' notifications
+        # IMPORTANT: They should ONLY see accountants and employees, NOT other Finance Admins/Managers
         elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
             # Get all subordinates in the hierarchy
             subordinates = user_crud.get_hierarchy(db, current_user.id)
-            accessible_user_ids.extend([sub.id for sub in subordinates])
+            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+            valid_subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            accessible_user_ids.extend(valid_subordinate_ids)
             
             # Query notifications for accessible users
             if unread_only:
@@ -116,10 +122,16 @@ def get_unread_count(
                 Notification.is_read == False
             ).count()
         # Finance Admin/Manager can see their own and subordinates' notifications
+        # IMPORTANT: They should ONLY see accountants and employees, NOT other Finance Admins/Managers
         elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
             # Get all subordinates in the hierarchy
             subordinates = user_crud.get_hierarchy(db, current_user.id)
-            accessible_user_ids.extend([sub.id for sub in subordinates])
+            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+            valid_subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            accessible_user_ids.extend(valid_subordinate_ids)
             
             count = db.query(Notification).filter(
                 and_(
@@ -163,10 +175,15 @@ def read_notification(
             return notification
         
         # Finance Admin/Manager can access notifications for their subordinates
+        # IMPORTANT: They should ONLY see accountants and employees, NOT other Finance Admins/Managers
         if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
             subordinates = user_crud.get_hierarchy(db, current_user.id)
-            subordinate_ids = [sub.id for sub in subordinates]
-            if notification.user_id in subordinate_ids:
+            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+            valid_subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            if notification.user_id in valid_subordinate_ids:
                 return notification
         
         # If we reach here, user doesn't have permission
@@ -208,10 +225,15 @@ def update_notification(
             return notification_crud.update(db, db_obj=notification, obj_in=notification_update)
         
         # Finance Admin/Manager can update notifications for their subordinates
+        # IMPORTANT: They should ONLY see accountants and employees, NOT other Finance Admins/Managers
         if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
             subordinates = user_crud.get_hierarchy(db, current_user.id)
-            subordinate_ids = [sub.id for sub in subordinates]
-            if notification.user_id in subordinate_ids:
+            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+            valid_subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            if notification.user_id in valid_subordinate_ids:
                 return notification_crud.update(db, db_obj=notification, obj_in=notification_update)
         
         # If we reach here, user doesn't have permission
@@ -254,10 +276,15 @@ def mark_notification_as_read(
             return {"message": "Notification marked as read"}
         
         # Finance Admin/Manager can mark notifications for their subordinates as read
+        # IMPORTANT: They should ONLY see accountants and employees, NOT other Finance Admins/Managers
         if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
             subordinates = user_crud.get_hierarchy(db, current_user.id)
-            subordinate_ids = [sub.id for sub in subordinates]
-            if notification.user_id in subordinate_ids:
+            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+            valid_subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            if notification.user_id in valid_subordinate_ids:
                 notification_crud.mark_as_read(db, notification_id)
                 return {"message": "Notification marked as read"}
         

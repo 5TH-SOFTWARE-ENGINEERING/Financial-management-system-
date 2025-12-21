@@ -965,6 +965,7 @@ interface Notification {
   title?: string;
   action_url?: string;
   display_type?: 'success' | 'error' | 'warning' | 'info';
+  user_id?: number;
 }
 
 export default function Navbar() {
@@ -980,6 +981,7 @@ export default function Navbar() {
   const [isOnline, setIsOnline] = useState(true);
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const [notificationsExpanded, setNotificationsExpanded] = useState(false);
+  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationPanelRef = useRef<HTMLDivElement>(null);
   const notificationBadgeRef = useRef<HTMLDivElement>(null);
@@ -991,6 +993,65 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // Initialize accessible user IDs for Finance Admin/Manager
+  useEffect(() => {
+    const initializeAccessibleUsers = async () => {
+      if (!user) {
+        setAccessibleUserIds(null);
+        return;
+      }
+
+      const userRole = user?.role?.toLowerCase() || '';
+      const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager';
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
+      if (isAdmin) {
+        // Admin sees all - no filtering needed
+        setAccessibleUserIds(null);
+        return;
+      }
+
+      if (isFinanceAdmin && user?.id) {
+        // Finance Admin/Manager: Get their own subordinates ONLY (accountants and employees)
+        // Exclude other Finance Admins, Managers, and their subordinates
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        try {
+          const subordinatesRes = await apiClient.getSubordinates(userId);
+          const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
+          
+          // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
+          const validSubordinateIds = subordinates
+            .map((sub: { id?: number | string; role?: string }) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+              const subRole = (sub.role || '').toLowerCase();
+              
+              // Only include accountants and employees, exclude Finance Admins and Managers
+              if (typeof subId === 'number' && 
+                  (subRole === 'accountant' || subRole === 'employee')) {
+                return subId;
+              }
+              return null;
+            })
+            .filter((id): id is number => id !== null);
+          
+          // Create accessible user IDs: Finance Admin's own ID + their valid subordinates only
+          const userIds = [userId, ...validSubordinateIds];
+          setAccessibleUserIds(userIds);
+        } catch (err) {
+          console.error('Failed to fetch subordinates for Finance Admin:', err);
+          // Fallback: only see own notifications
+          setAccessibleUserIds([userId]);
+        }
+      } else {
+        // Other roles: only see own notifications
+        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        setAccessibleUserIds(userId ? [userId] : null);
+      }
+    };
+
+    initializeAccessibleUsers();
+  }, [user]);
 
   // Online/Offline detection
   useEffect(() => {
@@ -1121,6 +1182,11 @@ export default function Navbar() {
             // Use Map to deduplicate by ID
             const notifsMap = new Map<number, Notification>();
             
+            // Get current user ID for filtering
+            const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
+            const userRole = user?.role?.toLowerCase() || '';
+            const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+            
             (notificationsData || []).forEach((notif: unknown) => {
               const notification = notif as { 
                 id?: number; 
@@ -1131,9 +1197,37 @@ export default function Navbar() {
                 created_at?: string; 
                 title?: string; 
                 action_url?: string;
+                user_id?: number;
               };
               
               const notifId = notification.id || 0;
+              const notifUserId = notification.user_id;
+              
+              // Role-based filtering: Finance Admin/Manager should only see their own and subordinates' notifications
+              // Backend already filters, but we add frontend validation for extra security
+              // IMPORTANT: Finance Admins should NOT see notifications from other Finance Admins or their subordinates
+              if (!isAdmin && currentUserId && notifUserId !== undefined && notifUserId !== null) {
+                // For non-admin users, check if notification belongs to accessible users
+                if (accessibleUserIds === null) {
+                  // If accessibleUserIds is null, it means we're still loading or it's an admin
+                  // For safety, if we're not admin and accessibleUserIds is null, only show own notifications
+                  if (notifUserId !== currentUserId) {
+                    return;
+                  }
+                } else if (accessibleUserIds.length > 0) {
+                  // Strict check: notification user_id MUST be in the accessible user IDs list
+                  // This ensures Finance Admins only see notifications from themselves and their own subordinates
+                  if (!accessibleUserIds.includes(notifUserId)) {
+                    // Notification doesn't belong to current user or their subordinates - skip it
+                    return;
+                  }
+                } else {
+                  // No accessible users (empty array) - only show own notifications
+                  if (notifUserId !== currentUserId) {
+                    return;
+                  }
+                }
+              }
               
               // Only add if we haven't seen this ID yet (deduplicate)
               if (notifId > 0 && !notifsMap.has(notifId)) {
@@ -1146,6 +1240,7 @@ export default function Navbar() {
                   created_at: notification.created_at || new Date().toISOString(),
                   title: notification.title,
                   action_url: notification.action_url,
+                  user_id: notifUserId,
                 } as Notification);
               }
             });
@@ -1299,6 +1394,11 @@ export default function Navbar() {
           // Use Map to deduplicate by ID
           const initialNotifsMap = new Map<number, Notification>();
           
+          // Get current user ID for filtering
+          const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
+          const userRole = user?.role?.toLowerCase() || '';
+          const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+          
           (notificationsData || []).forEach((notif: unknown) => {
             const notification = notif as { 
               id?: number; 
@@ -1309,9 +1409,37 @@ export default function Navbar() {
               created_at?: string; 
               title?: string; 
               action_url?: string;
+              user_id?: number;
             };
             
             const notifId = notification.id || 0;
+            const notifUserId = notification.user_id;
+            
+            // Role-based filtering: Finance Admin/Manager should only see their own and subordinates' notifications
+            // Backend already filters, but we add frontend validation for extra security
+            // IMPORTANT: Finance Admins should NOT see notifications from other Finance Admins or their subordinates
+            if (!isAdmin && currentUserId && notifUserId !== undefined && notifUserId !== null) {
+              // For non-admin users, check if notification belongs to accessible users
+              if (accessibleUserIds === null) {
+                // If accessibleUserIds is null, it means we're still loading or it's an admin
+                // For safety, if we're not admin and accessibleUserIds is null, only show own notifications
+                if (notifUserId !== currentUserId) {
+                  return;
+                }
+              } else if (accessibleUserIds.length > 0) {
+                // Strict check: notification user_id MUST be in the accessible user IDs list
+                // This ensures Finance Admins only see notifications from themselves and their own subordinates
+                if (!accessibleUserIds.includes(notifUserId)) {
+                  // Notification doesn't belong to current user or their subordinates - skip it
+                  return;
+                }
+              } else {
+                // No accessible users (empty array) - only show own notifications
+                if (notifUserId !== currentUserId) {
+                  return;
+                }
+              }
+            }
             
             // Only add if we haven't seen this ID yet (deduplicate)
             if (notifId > 0 && !initialNotifsMap.has(notifId)) {
@@ -1324,6 +1452,7 @@ export default function Navbar() {
                 created_at: notification.created_at || new Date().toISOString(),
                 title: notification.title,
                 action_url: notification.action_url,
+                user_id: notifUserId,
               } as Notification);
             }
           });
@@ -1353,7 +1482,7 @@ export default function Navbar() {
         if (intervalId) clearInterval(intervalId);
       };
     }
-  }, [user, router, isOnline]);
+  }, [user, router, isOnline, accessibleUserIds]);
 
   useEffect(() => {
     const savedLanguage = localStorage.getItem('language') || 'EN';
@@ -1420,6 +1549,11 @@ export default function Navbar() {
           
           const notifsMap = new Map<number, Notification>();
           
+          // Get current user ID for filtering
+          const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
+          const userRole = user?.role?.toLowerCase() || '';
+          const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+          
           // Process and deduplicate notifications by ID
           (notificationsData || []).forEach((notif: unknown) => {
             const notification = notif as { 
@@ -1431,9 +1565,37 @@ export default function Navbar() {
               created_at?: string; 
               title?: string; 
               action_url?: string;
+              user_id?: number;
             };
             
             const notifId = notification.id || 0;
+            const notifUserId = notification.user_id;
+            
+            // Role-based filtering: Finance Admin/Manager should only see their own and subordinates' notifications
+            // Backend already filters, but we add frontend validation for extra security
+            // IMPORTANT: Finance Admins should NOT see notifications from other Finance Admins or their subordinates
+            if (!isAdmin && currentUserId && notifUserId !== undefined && notifUserId !== null) {
+              // For non-admin users, check if notification belongs to accessible users
+              if (accessibleUserIds === null) {
+                // If accessibleUserIds is null, it means we're still loading or it's an admin
+                // For safety, if we're not admin and accessibleUserIds is null, only show own notifications
+                if (notifUserId !== currentUserId) {
+                  return;
+                }
+              } else if (accessibleUserIds.length > 0) {
+                // Strict check: notification user_id MUST be in the accessible user IDs list
+                // This ensures Finance Admins only see notifications from themselves and their own subordinates
+                if (!accessibleUserIds.includes(notifUserId)) {
+                  // Notification doesn't belong to current user or their subordinates - skip it
+                  return;
+                }
+              } else {
+                // No accessible users (empty array) - only show own notifications
+                if (notifUserId !== currentUserId) {
+                  return;
+                }
+              }
+            }
             
             // Only add if we haven't seen this ID yet (deduplicate)
             if (notifId > 0 && !notifsMap.has(notifId)) {
@@ -1446,6 +1608,7 @@ export default function Navbar() {
                 created_at: notification.created_at || new Date().toISOString(),
                 title: notification.title,
                 action_url: notification.action_url,
+                user_id: notifUserId,
               } as Notification);
             }
           });
@@ -1478,7 +1641,7 @@ export default function Navbar() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isNotificationPanelOpen, user, isOnline]);
+  }, [isNotificationPanelOpen, user, isOnline, accessibleUserIds]);
 
   const handleAddClick = () => {
     if (pathname?.includes('/expenses')) {
