@@ -230,6 +230,17 @@ const CardValue = styled.div<{ $isNegative?: boolean; $isPositive?: boolean; $is
   gap: ${theme.spacing.sm};
 `;
 
+const CardSubtitle = styled.div`
+  font-size: ${theme.typography.fontSizes.xs};
+  color: ${TEXT_COLOR_MUTED};
+  margin-top: ${theme.spacing.xs};
+  font-weight: ${theme.typography.fontWeights.medium};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+  flex-wrap: wrap;
+`;
+
 const ClickableIndicator = styled(ArrowRight)`
   width: 18px;
   height: 18px;
@@ -505,8 +516,8 @@ type OverviewStats = {
 type OverviewData = {
   financials?: Financials;
   pending_approvals?: number;
-  team_stats?: Partial<OverviewStats> & { pending_approvals?: number };
-  personal_stats?: Partial<OverviewStats> & { pending_approvals?: number };
+  team_stats?: Partial<OverviewStats> & { pending_approvals?: number; revenue_entries?: number; expense_entries?: number };
+  personal_stats?: Partial<OverviewStats> & { pending_approvals?: number; revenue_entries?: number; expense_entries?: number };
   stats?: OverviewStats;
   sales?: { total_sales?: number };
 };
@@ -1166,6 +1177,17 @@ const AdminDashboard: React.FC = () => {
   
   // Use the pending approvals count from state (fetched from multiple sources)
   const pendingApprovals = pendingApprovalsCount;
+  
+  // Calculate revenue counts for display
+  const revenueEntriesCount = overview?.personal_stats?.revenue_entries ?? 
+                              overview?.team_stats?.revenue_entries ?? 
+                              0;
+  const salesCount = salesSummary?.total_sales ?? 0;
+  
+  // Create subtitle for Total Revenue card showing the breakdown
+  const revenueSubtitle = (revenueEntriesCount > 0 || salesCount > 0)
+    ? `${revenueEntriesCount > 0 ? `${revenueEntriesCount} revenue ${revenueEntriesCount === 1 ? 'entry' : 'entries'}` : ''}${revenueEntriesCount > 0 && salesCount > 0 ? ' + ' : ''}${salesCount > 0 ? `${salesCount} ${salesCount === 1 ? 'sale' : 'sales'}` : ''}`
+    : undefined;
 
   const renderWelcomeHeader = () => {
     if (!user) return <HeaderContent><h1>Dashboard</h1></HeaderContent>;
@@ -1200,7 +1222,8 @@ const AdminDashboard: React.FC = () => {
     growthLabel?: string,
     isNegative?: boolean,
     isPositive?: boolean,
-    isPending?: boolean
+    isPending?: boolean,
+    subtitle?: string
   ) => (
     <StatsCard 
       $IconComponent={Icon} 
@@ -1213,6 +1236,7 @@ const AdminDashboard: React.FC = () => {
         {value}
         {clickable && <ClickableIndicator />}
       </CardValue>
+      {subtitle && <CardSubtitle>{subtitle}</CardSubtitle>}
       {growth !== undefined && growth !== null && !isNaN(growth) && (
         <GrowthIndicator $positive={growth >= 0}>
           {growth >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
@@ -1263,7 +1287,9 @@ const AdminDashboard: React.FC = () => {
                   analyticsData?.growth?.revenue_growth_percent,
                   undefined,
                   false,
-                  true
+                  true,
+                  false,
+                  revenueSubtitle
                 )}
                 {createStatsCard(
                   CreditCard, 
