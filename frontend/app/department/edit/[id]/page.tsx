@@ -220,7 +220,7 @@ const LoadingContainer = styled.div`
 export default function EditDepartmentPage() {
   const router = useRouter();
   const params = useParams();
-  const departmentId = params?.id ? (params.id as string) : null;
+  const departmentId = params?.id ? (params.id as string) : undefined;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -235,30 +235,80 @@ export default function EditDepartmentPage() {
   });
 
   const loadDepartment = useCallback(async () => {
-    if (!departmentId) return;
+    if (!departmentId) {
+      setError('Department ID is missing');
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await apiClient.getDepartment(departmentId);
-      const department = response.data as {
+      // Decode the department ID if it's URL encoded
+      const decodedId = decodeURIComponent(departmentId);
+      
+      // Log for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Loading department with ID:', {
+          original: departmentId,
+          decoded: decodedId,
+        });
+      }
+      
+      const response = await apiClient.getDepartment(decodedId);
+      
+      // Handle both direct response and wrapped response
+      const department = (response?.data || response) as {
+        id?: string;
         name?: string;
         description?: string | null;
+        user_count?: number;
       };
+      
+      if (!department) {
+        throw new Error('Invalid response from server');
+      }
+      
+      // Check if department has required fields
+      if (!department.name) {
+        throw new Error('Department name is missing in response');
+      }
       
       reset({
         name: department.name || '',
-        description: department.description || '',
+        description: department.description || undefined,
         managerId: '', // Departments don't have managers in current implementation
       });
     } catch (err: unknown) {
-      const errorMessage =
-        (typeof err === 'object' &&
-          err !== null &&
-          'response' in err &&
-          (err as { response?: { data?: { detail?: string } } }).response?.data?.detail) ||
-        'Failed to load department';
+      console.error('Error loading department:', err);
+      
+      let errorMessage = 'Failed to load department';
+      
+      if (typeof err === 'object' && err !== null) {
+        // Handle Axios errors
+        if ('response' in err) {
+          const axiosError = err as { response?: { status?: number; data?: { detail?: string; message?: string } } };
+          const status = axiosError.response?.status;
+          const detail = axiosError.response?.data?.detail || axiosError.response?.data?.message;
+          
+          if (status === 404) {
+            errorMessage = `Department not found. The department with ID "${departmentId}" does not exist or has no active users.`;
+          } else if (status === 403) {
+            errorMessage = 'You do not have permission to view this department.';
+          } else if (status === 401) {
+            errorMessage = 'Please log in to view departments.';
+          } else if (detail) {
+            errorMessage = detail;
+          } else {
+            errorMessage = `Failed to load department (Status: ${status})`;
+          }
+        } else if ('message' in err) {
+          // Handle standard Error objects
+          errorMessage = (err as { message: string }).message;
+        }
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -273,7 +323,10 @@ export default function EditDepartmentPage() {
   }, [departmentId, loadDepartment]);
 
   const onSubmit = async (data: CreateDepartmentInput) => {
-    if (!departmentId) return;
+    if (!departmentId) {
+      setError('Department ID is missing');
+      return;
+    }
 
     setSubmitting(true);
     setError(null);

@@ -2,11 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, status # type: ignore[imp
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List
 from pydantic import BaseModel # type: ignore[import-untyped]
+from urllib.parse import unquote
+import logging
 
 from ...core.database import get_db
 from ...models.user import User, UserRole
 from ...api.deps import get_current_active_user, require_min_role
 from ...core.security import verify_password
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -49,21 +53,64 @@ def get_department(
     db: Session = Depends(get_db)
 ):
     """Get specific department"""
-    # Convert ID back to name
-    dept_name = department_id.replace("_", " ").title()
+    # Decode URL-encoded department ID
+    decoded_id = unquote(department_id)
     
+    # Try multiple formats to match department name
+    # Format 1: Replace underscores with spaces and title case
+    dept_name_v1 = decoded_id.replace("_", " ").title()
+    # Format 2: Replace underscores with spaces and keep original case
+    dept_name_v2 = decoded_id.replace("_", " ")
+    # Format 3: Try exact match with decoded ID
+    dept_name_v3 = decoded_id
+    
+    # First, try to find the department by checking all unique department names
+    all_departments = db.query(User.department).filter(
+        User.department.isnot(None),
+        User.department != ""
+    ).distinct().all()
+    
+    # Find matching department name (case-insensitive)
+    matching_dept_name = None
+    for (dept,) in all_departments:
+        if dept and (
+            dept.lower() == dept_name_v1.lower() or
+            dept.lower() == dept_name_v2.lower() or
+            dept.lower() == dept_name_v3.lower() or
+            dept.lower().replace(" ", "_") == decoded_id.lower()
+        ):
+            matching_dept_name = dept
+            break
+    
+    if not matching_dept_name:
+        # Log available departments for debugging
+        available_depts = [dept for (dept,) in all_departments if dept]
+        logger.warning(f"Department not found. ID: {department_id}, Decoded: {decoded_id}, Available: {available_depts}")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Department not found. The department '{decoded_id}' does not exist or has no users."
+        )
+    
+    # Get users with the matching department name
     users = db.query(User).filter(
-        User.department == dept_name,
+        User.department == matching_dept_name,
         User.is_active == True
     ).all()
     
     if not users:
-        raise HTTPException(status_code=404, detail="Department not found")
+        logger.warning(f"Department '{matching_dept_name}' exists but has no active users")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Department '{matching_dept_name}' has no active users."
+        )
+    
+    # Generate the ID from the actual department name (consistent with list endpoint)
+    dept_id = matching_dept_name.lower().replace(" ", "_")
     
     return {
-        "id": department_id,
-        "name": dept_name,
-        "description": f"{dept_name} department",
+        "id": dept_id,
+        "name": matching_dept_name,
+        "description": f"{matching_dept_name} department",
         "user_count": len(users),
         "users": [{"id": u.id, "name": u.full_name or u.username, "email": u.email} for u in users],
         "created_at": None,
