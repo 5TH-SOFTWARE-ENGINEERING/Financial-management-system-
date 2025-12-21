@@ -4,13 +4,8 @@ import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
-  AlertCircle,
-  ArrowUpRight,
-  ArrowDownRight,
-  Search,
-  TrendingUp,
-  ShoppingCart,
-  Package
+  AlertCircle, ArrowUpRight, ArrowDownRight,
+  Search, TrendingUp, ShoppingCart, Package
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -463,6 +458,15 @@ const toString = (value: unknown): string | undefined =>
 const toRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
+interface TransactionSummary {
+  totalRevenue: number;
+  totalSales: number;
+  totalExpenses: number;
+  totalInventory: number;
+  netAmount: number;
+  totalTransactions: number;
+}
+
 export default function TransactionListPage() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
@@ -471,6 +475,86 @@ export default function TransactionListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [summary, setSummary] = useState<TransactionSummary>({
+    totalRevenue: 0,
+    totalSales: 0,
+    totalExpenses: 0,
+    totalInventory: 0,
+    netAmount: 0,
+    totalTransactions: 0,
+  });
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  // Load summary data from backend
+  const loadSummary = useCallback(async () => {
+    if (!user) return;
+
+    setLoadingSummary(true);
+    try {
+      const userRole = user?.role?.toLowerCase();
+      const canViewFinancials = userRole === 'admin' || userRole === 'super_admin' || 
+                                 userRole === 'finance_admin' || userRole === 'finance_manager' ||
+                                 userRole === 'manager' || userRole === 'accountant';
+      
+      if (!canViewFinancials) {
+        setLoadingSummary(false);
+        return;
+      }
+
+      // Fetch all summary data from backend in parallel
+      const [financialSummaryResult, salesSummaryResult, inventorySummaryResult] = await Promise.allSettled([
+        apiClient.getFinancialSummary().catch(() => ({ data: null })),
+        apiClient.getSalesSummary().catch(() => ({ data: null })),
+        apiClient.getInventorySummary().catch(() => ({ data: null })),
+      ]);
+
+      // Extract financial summary
+      let totalRevenue = 0;
+      let totalExpenses = 0;
+      if (financialSummaryResult.status === 'fulfilled') {
+        const financialData = financialSummaryResult.value?.data;
+        if (financialData?.financials) {
+          totalRevenue = Number(financialData.financials.total_revenue || 0);
+          totalExpenses = Number(financialData.financials.total_expenses || 0);
+        }
+      }
+
+      // Extract sales summary
+      let totalSales = 0;
+      if (salesSummaryResult.status === 'fulfilled') {
+        const salesData = salesSummaryResult.value?.data;
+        if (salesData && typeof salesData === 'object' && 'total_revenue' in salesData) {
+          totalSales = Number((salesData as { total_revenue?: number }).total_revenue || 0);
+        }
+      }
+
+      // Extract inventory summary
+      let totalInventory = 0;
+      if (inventorySummaryResult.status === 'fulfilled') {
+        const inventoryData = inventorySummaryResult.value?.data;
+        if (inventoryData && typeof inventoryData === 'object' && 'total_cost_value' in inventoryData) {
+          totalInventory = Number((inventoryData as { total_cost_value?: number }).total_cost_value || 0);
+        }
+      }
+
+      const netAmount = totalRevenue + totalSales - totalExpenses - totalInventory;
+
+      // Update summary - transaction count will be updated separately
+      setSummary(prev => ({
+        ...prev,
+        totalRevenue,
+        totalSales,
+        totalExpenses,
+        totalInventory,
+        netAmount,
+      }));
+    } catch (err) {
+      console.warn('Failed to load summary from backend:', err);
+      // Don't show error, just use local calculations as fallback
+    } finally {
+      setLoadingSummary(false);
+    }
+  }, [user]);
+
   const loadTransactions = useCallback(async () => {
     if (!user) {
       setLoading(false);
@@ -660,6 +744,13 @@ export default function TransactionListPage() {
       });
 
       setTransactions(allTransactions);
+      
+      // Update summary with transaction count after loading
+      // Note: Financial totals (revenue, expenses, sales, inventory) are loaded separately via loadSummary()
+      setSummary(prev => ({
+        ...prev,
+        totalTransactions: allTransactions.length,
+      }));
     } catch (err: unknown) {
       let errorMessage = 'Failed to load transactions';
       
@@ -689,6 +780,12 @@ export default function TransactionListPage() {
       loadTransactions();
     }
   }, [user, loadTransactions]);
+
+  useEffect(() => {
+    if (user && !loading) {
+      loadSummary();
+    }
+  }, [user, loading, loadSummary]);
 
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = 
@@ -724,23 +821,35 @@ export default function TransactionListPage() {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const totalRevenue = filteredTransactions
+  // Use backend summary if available, otherwise fallback to local calculations
+  const localTotalRevenue = filteredTransactions
     .filter(t => t.transaction_type === 'revenue')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
-  const totalSales = filteredTransactions
+  const localTotalSales = filteredTransactions
     .filter(t => t.transaction_type === 'sale')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
-  const totalExpenses = filteredTransactions
+  const localTotalExpenses = filteredTransactions
     .filter(t => t.transaction_type === 'expense')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
-  const totalInventory = filteredTransactions
+  const localTotalInventory = filteredTransactions
     .filter(t => t.transaction_type === 'inventory')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
-  const netAmount = totalRevenue + totalSales - totalExpenses - totalInventory;
+  const localNetAmount = localTotalRevenue + localTotalSales - localTotalExpenses - localTotalInventory;
+  const localTotalTransactions = filteredTransactions.length;
+
+  // Use backend data if available and not loading, otherwise use local calculations
+  const totalRevenue = !loadingSummary && summary.totalRevenue > 0 ? summary.totalRevenue : localTotalRevenue;
+  const totalSales = !loadingSummary && summary.totalSales > 0 ? summary.totalSales : localTotalSales;
+  const totalExpenses = !loadingSummary && summary.totalExpenses > 0 ? summary.totalExpenses : localTotalExpenses;
+  const totalInventory = !loadingSummary && summary.totalInventory > 0 ? summary.totalInventory : localTotalInventory;
+  const netAmount = !loadingSummary && (summary.totalRevenue > 0 || summary.totalSales > 0 || summary.totalExpenses > 0) 
+    ? summary.netAmount 
+    : localNetAmount;
+  const totalTransactionsCount = localTotalTransactions;
 
   if (loading) {
     return (
@@ -775,33 +884,48 @@ export default function TransactionListPage() {
 
           <SummaryGrid>
             <SummaryCard $type="revenue">
-              <div className="label">Total Revenue</div>
+              <div className="label">
+                Total Revenue
+                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
+              </div>
               <div className="value">{formatCurrency(totalRevenue)}</div>
             </SummaryCard>
             <SummaryCard $type="revenue">
-              <div className="label">Total Sales</div>
+              <div className="label">
+                Total Sales
+                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
+              </div>
               <div className="value">{formatCurrency(totalSales)}</div>
             </SummaryCard>
             <SummaryCard $type="expense">
-              <div className="label">Total Expenses</div>
+              <div className="label">
+                Total Expenses
+                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
+              </div>
               <div className="value">{formatCurrency(totalExpenses)}</div>
             </SummaryCard>
           </SummaryGrid>
 
           <BottomSummaryGrid>
             <SummaryCard $type="expense">
-              <div className="label">Total Inventory Cost</div>
+              <div className="label">
+                Total Inventory Cost
+                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
+              </div>
               <div className="value">{formatCurrency(totalInventory)}</div>
             </SummaryCard>
             <SummaryCard $type="net">
-              <div className="label">Net Amount</div>
+              <div className="label">
+                Net Amount
+                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
+              </div>
               <div className="value" style={{ color: netAmount >= 0 ? '#16a34a' : '#dc2626' }}>
                 {formatCurrency(netAmount)}
               </div>
             </SummaryCard>
             <SummaryCard $type="total">
               <div className="label">Total Transactions</div>
-              <div className="value">{filteredTransactions.length}</div>
+              <div className="value">{totalTransactionsCount}</div>
             </SummaryCard>
           </BottomSummaryGrid>
 

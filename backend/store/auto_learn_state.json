@@ -1,9 +1,9 @@
 {
   "last_training_times": {},
   "new_data_counts": {
-    "expense": 1,
-    "revenue": 1
+    "expense": 3,
+    "revenue": 2
   },
   "training_history": [],
-  "last_updated": "2025-12-21T06:03:08.864730+00:00"
+  "last_updated": "2025-12-21T06:45:55.116259+00:00"
 }
