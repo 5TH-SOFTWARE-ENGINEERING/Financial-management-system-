@@ -202,7 +202,7 @@ def migrate():
                 return True
         
         except Exception as e:
-            trans.rollback()
+            trans.rollback() #type: ignore
             print(f"\n[ERROR] Error during migration: {e}")
             import traceback
             traceback.print_exc()

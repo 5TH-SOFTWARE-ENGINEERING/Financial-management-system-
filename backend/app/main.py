@@ -96,9 +96,7 @@ logger = logging.getLogger(__name__)
 # Security
 security = HTTPBearer()
 
-
 # Helper: create default admin (now runs inside lifespan)
-# ------------------------------------------------------------------
 def create_default_admin():
     """Create a default admin user if none exists."""
     db = SessionLocal()
@@ -143,10 +141,7 @@ def create_default_admin():
     finally:
         db.close()
 
-
-# ------------------------------------------------------------------
 # Lifespan (startup + shutdown)
-# ------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # -------------------- STARTUP --------------------
@@ -206,9 +201,7 @@ app = FastAPI(
     lifespan=lifespan,                     # <-- new way
 )
 
-# ------------------------------------------------------------------
 # CORS configuration
-# ------------------------------------------------------------------
 allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -225,10 +218,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# ------------------------------------------------------------------
 # Custom OpenAPI Schema with Bearer Token Authorization
-# ------------------------------------------------------------------
 def custom_openapi():
     """
     Custom OpenAPI schema generator that adds Bearer token authentication
@@ -362,7 +352,6 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
-
 # Override default OpenAPI schema with custom one
 app.openapi = custom_openapi
 
@@ -437,7 +426,6 @@ if not settings.DEBUG:
         allowed_hosts=allowed_hosts
     )
 
-
 # CORS headers middleware (backup - ensures CORS headers are always present)
 @app.middleware("http")
 async def add_cors_headers(request: Request, call_next):
@@ -485,7 +473,6 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     return response
 
-
 # Request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -503,7 +490,6 @@ async def log_requests(request: Request, call_next):
     
     return response
 
-
 # Exception handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -519,7 +505,6 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         }
     )
 
-
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle general exceptions"""
@@ -533,7 +518,6 @@ async def general_exception_handler(request: Request, exc: Exception):
             "timestamp": datetime.utcnow().isoformat()
         }
     )
-
 
 # Include API routers
 api_v1_prefix = "/api/v1"
@@ -603,7 +587,6 @@ async def health_check():
         "environment": "development" if settings.DEBUG else "production"
     }
 
-
 # Root endpoint
 @app.get("/")
 async def root():
@@ -614,7 +597,6 @@ async def root():
         "docs": "/docs" if settings.DEBUG else "Documentation not available in production",
         "health": "/health"
     }
-
 
 # API info endpoint
 @app.get("/api/info")
@@ -674,7 +656,6 @@ try:
 except ImportError:
     logger.warning("Celery not available - background tasks disabled")
     celery_app = None
-
 
 # Background tasks
 if celery_app:
@@ -768,7 +749,6 @@ if celery_app:
         except Exception as e:
             logger.error(f"Error in cleanup_notifications_task: {str(e)}")
 
-
 # Scheduled tasks (Celery Beat)
 if celery_app:
     from celery.schedules import crontab  # type: ignore
@@ -789,7 +769,6 @@ if celery_app:
         }
     }
 
-
 if __name__ == "__main__":
     import uvicorn  # type: ignore
     uvicorn.run(
@@ -799,6 +778,3 @@ if __name__ == "__main__":
         reload=settings.DEBUG,
         log_level=settings.LOG_LEVEL.lower()
     )
-
-    # source venv/Scripts/activate
-    # uvicorn app.main:app --reload
