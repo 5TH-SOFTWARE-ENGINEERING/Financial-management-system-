@@ -102,6 +102,36 @@ def read_notifications(
         return []
 
 
+@router.post("/check-pending-approvals")
+def check_pending_approvals(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Trigger a check for pending approvals and generate notifications"""
+    try:
+        from ...services.notification_service import NotificationService
+        from ...crud.approval import approval as approval_crud
+        from ...models.user import UserRole
+        
+        # Only check for managers, finance admins, and admins
+        if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+            # Use query to get pending count efficiently
+            pending_approvals = approval_crud.get_pending(db, current_user.id, 0, 100)
+            
+            if pending_approvals:
+                NotificationService.notify_pending_approvals(
+                    db=db,
+                    approver_id=current_user.id,
+                    pending_count=len(pending_approvals)
+                )
+        
+        return {"message": "Pending approvals check completed"}
+    except Exception as e:
+        logger.error(f"Error checking pending approvals for user {current_user.id}: {str(e)}", exc_info=True)
+        # Return success to avoid frontend errors for background tasks
+        return {"message": "Check completed with errors"}
+
+
 @router.get("/unread/count")
 def get_unread_count(
     current_user: User = Depends(get_current_active_user),
