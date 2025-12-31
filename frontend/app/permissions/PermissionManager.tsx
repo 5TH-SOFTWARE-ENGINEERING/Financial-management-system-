@@ -3,17 +3,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { theme } from '@/components/common/theme';
-import {Button} from '@/components/ui/button';
-import {Checkbox} from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Save, Filter, Copy, Check, Loader2 } from 'lucide-react';
 import { Resource, Action, UserType } from '@/lib/rbac/models';
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell
 } from '@/components/ui/table';
 import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -431,7 +431,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmUser, setConfirmUser] = useState<UserPermissions | null>(null);
-  
+
   // Map backend role to frontend UserType
   const mapRoleToUserType = (role?: string): UserType => {
     const normalized = role?.toLowerCase() ?? '';
@@ -444,7 +444,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   // Get default permissions based on user type
   const getDefaultPermissions = (userType: UserType): PermissionItem[] => {
     const defaultPerms: PermissionItem[] = [];
-    
+
     // All users can view their profile
     defaultPerms.push({
       resource: Resource.PROFILE,
@@ -515,7 +515,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
         });
         break;
     }
-    
+
     return defaultPerms;
   };
 
@@ -540,19 +540,19 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
 
   const loadUsers = useCallback(async () => {
     if (!currentUser) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiClient.getUsers();
       const apiUsers = (response.data || []) as ApiUserLite[];
-      
+
       // Load permissions from backend for each user
       const usersWithPermissions = await Promise.allSettled(
         apiUsers.map(async (apiUser) => {
           const userType = mapRoleToUserType(apiUser.role);
-          
+
           // Try to load permissions from backend
           let permissions = getDefaultPermissions(userType);
           try {
@@ -581,7 +581,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
               console.warn(`Failed to load permissions for user ${apiUser.id}:`, permErr);
             }
           }
-          
+
           return {
             userId: apiUser.id.toString(),
             userName: apiUser.full_name || apiUser.username || apiUser.email,
@@ -592,17 +592,17 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
           };
         })
       );
-      
+
       // Convert Promise.allSettled results to UserPermissions array
       const users: UserPermissions[] = usersWithPermissions
         .filter((result): result is PromiseFulfilledResult<UserPermissions> => result.status === 'fulfilled')
         .map(result => result.value);
-      
+
       // Filter users based on managedUserTypes
-      const filteredUsers = users.filter(user => 
+      const filteredUsers = users.filter(user =>
         managedUserTypes.includes(user.userType)
       );
-      
+
       setUserPermissions(filteredUsers);
       if (filteredUsers.length > 0 && !selectedUser) {
         setSelectedUser(filteredUsers[0].userId);
@@ -625,17 +625,17 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
 
   // Handlers
   const handlePermissionChange = (
-    userId: string, 
-    resource: Resource, 
-    action: Action, 
+    userId: string,
+    resource: Resource,
+    action: Action,
     value: boolean
   ) => {
-    setUserPermissions(prev => 
+    setUserPermissions(prev =>
       prev.map(user => {
         if (user.userId === userId) {
           // Find the resource in the user's permissions
           const resourceIndex = user.permissions.findIndex(p => p.resource === resource);
-          
+
           // If resource exists, update the action; otherwise add a new resource
           if (resourceIndex !== -1) {
             const updatedPermissions = [...user.permissions];
@@ -667,12 +667,12 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   };
 
   const handleToggleAllForResource = (userId: string, resource: Resource, value: boolean) => {
-    setUserPermissions(prev => 
+    setUserPermissions(prev =>
       prev.map(user => {
         if (user.userId === userId) {
           // Find the resource in the user's permissions
           const resourceIndex = user.permissions.findIndex(p => p.resource === resource);
-          
+
           // Create an object with all actions set to the specified value
           const allActions = {
             [Action.READ]: value,
@@ -681,7 +681,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             [Action.DELETE]: value,
             [Action.MANAGE]: value
           };
-          
+
           // If resource exists, update all actions; otherwise add a new resource
           if (resourceIndex !== -1) {
             const updatedPermissions = [...user.permissions];
@@ -712,9 +712,9 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   const areAllActionsSelected = (permissions: PermissionItem[], resource: Resource): boolean => {
     const resourcePermission = permissions.find(p => p.resource === resource);
     if (!resourcePermission) return false;
-    
+
     // Check if all actions are true
-    return Object.values(Action).every(action => 
+    return Object.values(Action).every(action =>
       resourcePermission.actions[action] === true
     );
   };
@@ -731,30 +731,33 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
 
   const executeSavePermissions = async () => {
     if (!selectedUser) return;
-    
+
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       const selectedUserData = userPermissions.find(u => u.userId === selectedUser);
       if (!selectedUserData) {
         throw new Error('Selected user not found');
       }
-      
+
       const userId = parseInt(selectedUser, 10);
       if (isNaN(userId)) {
         throw new Error('Invalid user ID');
       }
-      
-      const serializedPermissions = selectedUserData.permissions.flatMap((perm) =>
-        Object.entries(perm.actions)
-          .filter(([, allowed]) => allowed === true)
-          .map(([action]) => `${perm.resource}:${action}`)
-      );
 
-      await apiClient.updateUserPermissions(userId, serializedPermissions);
-      
+      // Serialize permissions locally to JSON format required by backend
+      const serializedPermissions = selectedUserData.permissions
+        .filter(perm => Object.values(perm.actions).some(enabled => enabled))
+        .map(perm => ({
+          resource: perm.resource,
+          actions: perm.actions
+        }));
+
+      // Type assertion needed because apiClient expects Record<string, unknown>[]
+      await apiClient.updateUserPermissions(userId, serializedPermissions as unknown as Record<string, unknown>[]);
+
       setSuccess('Permissions saved successfully!');
       setTimeout(() => setSuccess(null), 3000);
       setShowConfirm(false);
@@ -765,7 +768,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
       const errorMessage =
         typeof err === 'object' && err !== null && 'response' in err
           ? (err as { response?: { data?: { detail?: string } }; message?: string }).response?.data?.detail ||
-            (err as { message?: string }).message
+          (err as { message?: string }).message
           : err instanceof Error
             ? err.message
             : 'Failed to save permissions';
@@ -793,63 +796,63 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
   // Template handlers
   const handleSaveTemplate = () => {
     if (!selectedUser || !newTemplateName.trim()) return;
-    
+
     const userToTemplate = userPermissions.find(u => u.userId === selectedUser);
     if (!userToTemplate) return;
-    
+
     // Check if template name already exists
-    const templateExists = templates.some(t => 
-      t.name.toLowerCase() === newTemplateName.trim().toLowerCase() && 
+    const templateExists = templates.some(t =>
+      t.name.toLowerCase() === newTemplateName.trim().toLowerCase() &&
       t.userType === userToTemplate.userType
     );
-    
+
     if (templateExists) {
       setError('Template with this name already exists for this user type');
       return;
     }
-    
+
     const newTemplate: RoleTemplate = {
       id: `template-${Date.now()}`,
       name: newTemplateName.trim(),
       userType: userToTemplate.userType,
       permissions: JSON.parse(JSON.stringify(userToTemplate.permissions))
     };
-    
+
     const updatedTemplates = [...templates, newTemplate];
     setTemplates(updatedTemplates);
-    
+
     // Save to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('permission_templates', JSON.stringify(updatedTemplates));
     }
-    
+
     setNewTemplateName('');
     setError(null);
-    
+
     // Show saved message
     setShowSavedMessage(true);
-    
+
     // Clear previous timeout if it exists
     if (messageTimeoutRef.current) {
       clearTimeout(messageTimeoutRef.current);
     }
-    
+
     // Hide message after 3 seconds
     messageTimeoutRef.current = setTimeout(() => {
       setShowSavedMessage(false);
     }, 3000);
   };
-  
+
   const handleApplyTemplate = () => {
     if (!selectedUser || !selectedTemplate) return;
-    
+
     const template = templates.find(t => t.id === selectedTemplate);
     if (!template) {
       setError('Template not found');
       return;
     }
-    
-    setUserPermissions(prev => 
+
+    setUserPermissions(prev =>
       prev.map(user => {
         if (user.userId === selectedUser) {
           return {
@@ -860,12 +863,12 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
         return user;
       })
     );
-    
+
     setError(null);
     setSuccess('Template applied successfully!');
     setTimeout(() => setSuccess(null), 3000);
   };
-  
+
   // Clean up timeout on unmount
   useEffect(() => {
     return () => {
@@ -880,15 +883,15 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
 
   // Get all available resources for checkboxes
   const allResources = Object.values(Resource);
-  
+
   // Filter users by search term and user type
   const filteredUsers = userPermissions.filter(user => {
-    const matchesSearch = 
+    const matchesSearch =
       user.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesType = userTypeFilter === 'all' || user.userType === userTypeFilter;
-    
+
     return matchesSearch && matchesType;
   });
 
@@ -914,30 +917,30 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
           Manage user permissions and access controls
         </p>
       </HeaderContainer>
-      
+
       {error && (
         <ErrorMessage>
           {error}
         </ErrorMessage>
       )}
-      
+
       {success && (
         <SuccessMessage>
           <Check size={16} />
           {success}
         </SuccessMessage>
       )}
-      
+
       <FilterContainer>
-        <SearchInput 
-          placeholder="Search users..." 
+        <SearchInput
+          placeholder="Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        
+
         <FilterLabel>
           <Filter size={16} />
-          <Select 
+          <Select
             value={userTypeFilter}
             onChange={(e) => setUserTypeFilter(e.target.value)}
           >
@@ -950,7 +953,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
           </Select>
         </FilterLabel>
       </FilterContainer>
-      
+
       <Card>
         {filteredUsers.length === 0 ? (
           <EmptyState>
@@ -986,8 +989,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                       </StatusBadge>
                     </TableCell>
                     <TableCell>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant={selectedUser === user.userId ? "default" : "secondary"}
                         onClick={() => setSelectedUser(user.userId)}
                       >
@@ -1001,7 +1004,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
           </TableWrapper>
         )}
       </Card>
-      
+
       {selectedUserData && (
         <Card>
           <SelectionHeader>
@@ -1009,24 +1012,24 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
               Managing Permissions for {selectedUserData.userName} ({selectedUserData.userType})
             </Subtitle>
           </SelectionHeader>
-          
+
           <TemplateContainer>
             <Subtitle>Permission Templates</Subtitle>
             <TemplateControls>
-              <TemplateName 
+              <TemplateName
                 placeholder="New template name..."
                 value={newTemplateName}
                 onChange={(e) => setNewTemplateName(e.target.value)}
               />
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={handleSaveTemplate}
                 disabled={!newTemplateName.trim()}
               >
                 <Copy size={16} />
                 Save as Template
               </Button>
-              
+
               <TemplateSelect
                 value={selectedTemplate}
                 onChange={(e) => setSelectedTemplate(e.target.value)}
@@ -1041,8 +1044,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                   ))
                 }
               </TemplateSelect>
-              
-              <Button 
+
+              <Button
                 variant="secondary"
                 onClick={handleApplyTemplate}
                 disabled={!selectedTemplate}
@@ -1050,7 +1053,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                 Apply Template
               </Button>
             </TemplateControls>
-            
+
             {showSavedMessage && (
               <SuccessMessage>
                 <Check size={16} />
@@ -1077,74 +1080,74 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                   const resourcePermission = selectedUserData.permissions.find(
                     p => p.resource === resource
                   );
-                  
+
                   // Check if all permissions are selected
                   const allSelected = areAllActionsSelected(selectedUserData.permissions, resource);
-                  
+
                   return (
-                    <TableRow key={resource} style={{ 
-                      backgroundColor: allSelected ? `${PRIMARY_COLOR}08` : 'transparent' 
+                    <TableRow key={resource} style={{
+                      backgroundColor: allSelected ? `${PRIMARY_COLOR}08` : 'transparent'
                     }}>
                       <TableCell style={{ fontWeight: theme.typography.fontWeights.medium }}>
                         {resource.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
                       </TableCell>
                       <TableCell style={{ textAlign: 'center' }}>
-                        <Checkbox 
+                        <Checkbox
                           checked={resourcePermission?.actions[Action.READ] || false}
                           onCheckedChange={(checked) => handlePermissionChange(
-                            selectedUserData.userId, 
-                            resource, 
-                            Action.READ, 
+                            selectedUserData.userId,
+                            resource,
+                            Action.READ,
                             checked === true
                           )}
                         />
                       </TableCell>
                       <TableCell style={{ textAlign: 'center' }}>
-                        <Checkbox 
+                        <Checkbox
                           checked={resourcePermission?.actions[Action.CREATE] || false}
                           onCheckedChange={(checked) => handlePermissionChange(
-                            selectedUserData.userId, 
-                            resource, 
-                            Action.CREATE, 
+                            selectedUserData.userId,
+                            resource,
+                            Action.CREATE,
                             checked === true
                           )}
                         />
                       </TableCell>
                       <TableCell style={{ textAlign: 'center' }}>
-                        <Checkbox 
+                        <Checkbox
                           checked={resourcePermission?.actions[Action.UPDATE] || false}
                           onCheckedChange={(checked) => handlePermissionChange(
-                            selectedUserData.userId, 
-                            resource, 
-                            Action.UPDATE, 
+                            selectedUserData.userId,
+                            resource,
+                            Action.UPDATE,
                             checked === true
                           )}
                         />
                       </TableCell>
                       <TableCell style={{ textAlign: 'center' }}>
-                        <Checkbox 
+                        <Checkbox
                           checked={resourcePermission?.actions[Action.DELETE] || false}
                           onCheckedChange={(checked) => handlePermissionChange(
-                            selectedUserData.userId, 
-                            resource, 
-                            Action.DELETE, 
+                            selectedUserData.userId,
+                            resource,
+                            Action.DELETE,
                             checked === true
                           )}
                         />
                       </TableCell>
                       <TableCell style={{ textAlign: 'center' }}>
-                        <Checkbox 
+                        <Checkbox
                           checked={resourcePermission?.actions[Action.MANAGE] || false}
                           onCheckedChange={(checked) => handlePermissionChange(
-                            selectedUserData.userId, 
-                            resource, 
-                            Action.MANAGE, 
+                            selectedUserData.userId,
+                            resource,
+                            Action.MANAGE,
                             checked === true
                           )}
                         />
                       </TableCell>
                       <TableCell style={{ textAlign: 'center' }}>
-                        <Checkbox 
+                        <Checkbox
                           checked={allSelected}
                           onCheckedChange={(checked) => handleToggleAllForResource(
                             selectedUserData.userId,
@@ -1159,10 +1162,10 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
               </TableBody>
             </Table>
           </TableWrapper>
-          
+
           <ButtonGroup>
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               onClick={() => {
                 setSelectedUser(null);
                 setError(null);
@@ -1171,8 +1174,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             >
               Cancel
             </Button>
-            <Button 
-              onClick={handleSaveClick} 
+            <Button
+              onClick={handleSaveClick}
               disabled={loading || !selectedUser}
             >
               {loading ? (
@@ -1190,7 +1193,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
           </ButtonGroup>
         </Card>
       )}
-      
+
       {showConfirm && confirmUser && (
         <ConfirmOverlay>
           <ConfirmDialog>
@@ -1222,7 +1225,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
               </div>
             </ConfirmBody>
             <ConfirmFooter>
-              <Button 
+              <Button
                 variant="secondary"
                 onClick={() => {
                   setShowConfirm(false);

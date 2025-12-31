@@ -90,7 +90,7 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config;
         const requestUrl = originalRequest?.url || '';
-        
+
         // Handle 401 Unauthorized - but DON'T redirect on login endpoint
         // The login page handles its own error states and redirects
         if (error.response?.status === 401 && !originalRequest?._retry) {
@@ -98,12 +98,12 @@ class ApiClient {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
-            
+
             // Only redirect if NOT on the login endpoint
             // Login endpoint errors should be handled by the login page component
-            const isLoginEndpoint = requestUrl.includes('/auth/login-json') || 
-                                   requestUrl.includes('/auth/login');
-            
+            const isLoginEndpoint = requestUrl.includes('/auth/login-json') ||
+              requestUrl.includes('/auth/login');
+
             if (!isLoginEndpoint && !window.location.pathname.includes('/auth/login')) {
               // Redirect to home page for other 401 errors (not login-related)
               window.location.href = '/';
@@ -111,20 +111,20 @@ class ApiClient {
             // For login endpoint 401s, let the error propagate to the component
           }
         }
-        
+
         // Handle 403 Forbidden - user doesn't have permission
         if (error.response?.status === 403) {
           const url = error.config?.url || '';
           const errorDetail = error.response?.data?.detail || 'Insufficient permissions';
-          
+
           // Suppress warnings for expected 403s on role-restricted endpoints
           // These are handled gracefully by the calling code
-          const suppressWarnings = url.includes('/inventory/summary') || 
-                                   url.includes('/sales/summary') || 
-                                   url.includes('/sales/summary/overview') ||
-                                   url.includes('/sales/journal-entries') ||
-                                   url.includes('/backup');
-          
+          const suppressWarnings = url.includes('/inventory/summary') ||
+            url.includes('/sales/summary') ||
+            url.includes('/sales/summary/overview') ||
+            url.includes('/sales/journal-entries') ||
+            url.includes('/backup');
+
           // For user endpoints, provide more helpful error messages
           if (url.includes('/users/') && !url.includes('/users/me')) {
             // Don't suppress warnings for user endpoints - these are important
@@ -141,7 +141,7 @@ class ApiClient {
             console.warn('Access forbidden:', errorDetail);
           }
         }
-        
+
         // Handle 404 Not Found - suppress console warnings for non-critical endpoints
         if (error.response?.status === 404) {
           const url = error.config?.url || '';
@@ -150,23 +150,23 @@ class ApiClient {
             console.warn('Resource not found:', url);
           }
         }
-        
+
         // Handle network errors - suppress repetitive errors for polling endpoints
         if (!error.response) {
           const url = error.config?.url || '';
           // Suppress errors for polling endpoints to reduce console noise
           // These are expected when backend is down
-          const isPollingEndpoint = url.includes('/notifications/unread/count') || 
-                                   url.includes('/dashboard/recent-activity') ||
-                                   url.includes('/health');
-          
+          const isPollingEndpoint = url.includes('/notifications/unread/count') ||
+            url.includes('/dashboard/recent-activity') ||
+            url.includes('/health');
+
           if (!isPollingEndpoint) {
             // Only log non-polling endpoint errors
             const errorMessage = error.message || 'Network error: Unable to connect to server';
-            
+
             if (process.env.NODE_ENV === 'development') {
               console.error('Network error:', errorMessage);
-              
+
               if (error.code === 'ECONNREFUSED' || error.message?.includes('Network Error')) {
                 console.error('Backend server may not be running. Please ensure the backend is running on http://localhost:8000');
               } else if (error.code === 'ERR_NETWORK') {
@@ -176,7 +176,7 @@ class ApiClient {
           }
           // Polling endpoint errors are silently handled - they're expected when backend is down
         }
-        
+
         return Promise.reject(error);
       },
     );
@@ -187,7 +187,7 @@ class ApiClient {
     if (!payload) {
       return { data: null as unknown as T };
     }
-    
+
     // If payload is already in ApiResponse format
     if (typeof payload === 'object' && payload !== null) {
       if ('data' in payload) {
@@ -196,7 +196,7 @@ class ApiClient {
       // If payload is the data itself (direct response)
       return { data: payload as T };
     }
-    
+
     // Fallback: wrap primitive values
     return { data: payload as T };
   }
@@ -209,10 +209,10 @@ class ApiClient {
       // Axios error format
       if ('response' in error) {
         const axiosError = error as { response?: { data?: { detail?: string; message?: string; error?: string } } };
-        return axiosError.response?.data?.detail || 
-               axiosError.response?.data?.message || 
-               axiosError.response?.data?.error || 
-               'An error occurred';
+        return axiosError.response?.data?.detail ||
+          axiosError.response?.data?.message ||
+          axiosError.response?.data?.error ||
+          'An error occurred';
       }
       // Standard Error object
       if ('message' in error) {
@@ -250,7 +250,7 @@ class ApiClient {
       password,
     });
     const normalized = this.normalizeResponse<LoginResponse>(response.data);
-    
+
     // Only set token if we have a valid access token and user data
     if (normalized.data?.access_token && normalized.data?.user) {
       if (typeof window !== 'undefined') {
@@ -264,7 +264,7 @@ class ApiClient {
       }
       throw new Error('Invalid login response: missing access token or user data');
     }
-    
+
     return normalized;
   }
 
@@ -412,11 +412,11 @@ class ApiClient {
   }
 
   // Permission endpoints
-  async getUserPermissions(userId: number): Promise<ApiResponse<{ permissions: string[] }>> {
+  async getUserPermissions(userId: number): Promise<ApiResponse<{ permissions: Record<string, unknown>[] }>> {
     return this.get(`/users/${userId}/permissions`);
   }
 
-  async updateUserPermissions(userId: number, permissions: string[]): Promise<ApiResponse<{ message: string; permissions: string[] }>> {
+  async updateUserPermissions(userId: number, permissions: Record<string, unknown>[]): Promise<ApiResponse<{ message: string; permissions: Record<string, unknown>[] }>> {
     return this.put(`/users/${userId}/permissions`, { permissions });
   }
 
@@ -605,7 +605,7 @@ class ApiClient {
       const end = new Date(endDate + 'T23:59:59');
       params.end_date = end.toISOString();
     }
-    
+
     // Fetch revenue and expense data to calculate income statement
     // Always fetch all data first, then filter client-side if needed
     const [revenuesRes, expensesRes] = await Promise.all([
@@ -615,12 +615,12 @@ class ApiClient {
 
     let revenues = revenuesRes.data || [];
     let expenses = expensesRes.data || [];
-    
+
     // Filter by date range if provided (client-side filtering)
     if (startDate && endDate) {
       const start = new Date(startDate + 'T00:00:00').getTime();
       const end = new Date(endDate + 'T23:59:59').getTime();
-      
+
       revenues = revenues.filter((r: RevenueRecord) => {
         const dateStr = r.date || r.created_at;
         if (!dateStr) return true; // Include entries without dates
@@ -631,7 +631,7 @@ class ApiClient {
           return true; // Include if date parsing fails
         }
       });
-      
+
       expenses = expenses.filter((e: ExpenseRecord) => {
         const dateStr = e.date || e.created_at;
         if (!dateStr) return true; // Include entries without dates
@@ -646,13 +646,13 @@ class ApiClient {
 
     // Filter to only include APPROVED revenue and expense entries
     // This ensures revenue and net profit are only calculated from approved entries
-    const approvedRevenues = revenues.filter((r: RevenueRecord) => 
+    const approvedRevenues = revenues.filter((r: RevenueRecord) =>
       r.is_approved === true || r.is_approved === 'true' || r.approved === true
     );
-    const approvedExpenses = expenses.filter((e: ExpenseRecord) => 
+    const approvedExpenses = expenses.filter((e: ExpenseRecord) =>
       e.is_approved === true || e.is_approved === 'true' || e.approved === true
     );
-    
+
     // Calculate totals - ONLY from approved entries
     const totalRevenue = approvedRevenues.reduce((sum: number, r: RevenueRecord) => sum + Number(r.amount || 0), 0);
     const totalExpenses = approvedExpenses.reduce((sum: number, e: ExpenseRecord) => sum + Number(e.amount || 0), 0);
@@ -715,19 +715,19 @@ class ApiClient {
       const end = new Date(endDate + 'T23:59:59');
       params.end_date = end.toISOString();
     }
-    
+
     // Fetch revenue and expense data to calculate cash flow
     // Always fetch all data first, then filter client-side if needed
     const [revenuesRes, expensesRes] = await Promise.all([this.getRevenues(), this.getExpenses()]);
 
     let revenues = revenuesRes.data || [];
     let expenses = expensesRes.data || [];
-    
+
     // Filter by date range if provided (client-side filtering)
     if (startDate && endDate) {
       const start = new Date(startDate + 'T00:00:00').getTime();
       const end = new Date(endDate + 'T23:59:59').getTime();
-      
+
       revenues = revenues.filter((r: RevenueRecord) => {
         const dateStr = r.date || r.created_at;
         if (!dateStr) return true; // Include entries without dates
@@ -753,16 +753,16 @@ class ApiClient {
 
     // Filter to only include APPROVED revenue and expense entries
     // This ensures cash flow is only calculated from approved entries
-    const approvedRevenues = revenues.filter((r: RevenueRecord) => 
+    const approvedRevenues = revenues.filter((r: RevenueRecord) =>
       r.is_approved === true || r.is_approved === 'true' || r.approved === true
     );
-    const approvedExpenses = expenses.filter((e: ExpenseRecord) => 
+    const approvedExpenses = expenses.filter((e: ExpenseRecord) =>
       e.is_approved === true || e.is_approved === 'true' || e.approved === true
     );
-    
+
     // Calculate daily cash flow - ONLY from approved entries
     const cashFlowByDay: Record<string, { inflow: number; outflow: number; net: number }> = {};
-    
+
     approvedRevenues.forEach((r: RevenueRecord) => {
       // Handle different date formats - try date, created_at, or use current date
       const dateStr = r.date || r.created_at;
@@ -829,12 +829,12 @@ class ApiClient {
 
     let revenues = allRevenuesRes.data || [];
     let expenses = allExpensesRes.data || [];
-    
+
     // Filter by date range if provided (client-side filtering)
     if (startDate && endDate) {
       const start = new Date(startDate + 'T00:00:00').getTime();
       const end = new Date(endDate + 'T23:59:59').getTime();
-      
+
       revenues = revenues.filter((r: RevenueRecord) => {
         const dateStr = r.date || r.created_at;
         if (!dateStr) return true; // Include entries without dates
@@ -857,18 +857,18 @@ class ApiClient {
         }
       });
     }
-    
+
     // Filter to only include APPROVED revenue entries for calculations
     // This ensures revenue and net profit are only calculated from approved entries
-    const approvedRevenues = revenues.filter((r: RevenueRecord) => 
+    const approvedRevenues = revenues.filter((r: RevenueRecord) =>
       r.is_approved === true || r.is_approved === 'true' || r.approved === true
     );
-    
+
     // Filter to only include APPROVED expense entries for calculations
-    const approvedExpenses = expenses.filter((e: ExpenseRecord) => 
+    const approvedExpenses = expenses.filter((e: ExpenseRecord) =>
       e.is_approved === true || e.is_approved === 'true' || e.approved === true
     );
-    
+
     // Calculate totals from filtered data - ONLY approved revenue and expenses
     const totalRevenue = approvedRevenues.reduce((sum: number, r: RevenueRecord) => sum + Number(r.amount || 0), 0);
     const totalExpenses = approvedExpenses.reduce((sum: number, e: ExpenseRecord) => sum + Number(e.amount || 0), 0);
@@ -1235,7 +1235,7 @@ class ApiClient {
     if (data.end_date) params.end_date = data.end_date;
     if (data.department) params.department = data.department;
     if (data.project) params.project = data.project;
-    
+
     return this.post(`/budgeting/budgets/from-template`, {}, { params });
   }
 
@@ -1292,7 +1292,7 @@ class ApiClient {
       skip: params?.skip !== undefined && params.skip >= 0 ? params.skip : 0,
       limit: params?.limit !== undefined && params.limit >= 1 && params.limit <= 1000 ? params.limit : 100
     };
-    
+
     return this.get('/budgeting/forecasts', { params: queryParams });
   }
 
@@ -1538,7 +1538,7 @@ class ApiClient {
   // ============================================================================
   // INVENTORY MANAGEMENT API
   // ============================================================================
-  
+
   async createInventoryItem(itemData: {
     item_name: string;
     buying_price: number;
@@ -1634,12 +1634,12 @@ class ApiClient {
       console.warn(`getSales: Limit ${safeLimit} exceeds backend maximum of 1000. Capping to 1000.`);
       safeLimit = 1000;
     }
-    
+
     const safeParams = params ? {
       ...params,
       limit: safeLimit
     } : undefined;
-    
+
     return this.get('/sales', { params: safeParams });
   }
 
