@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Layout from '@/components/layout';
@@ -53,43 +53,43 @@ interface SystemHealth {
 
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
-    if (active) {
-        // Active state colors (brighter)
-        const activeColors: Record<string, string> = {
-            'settings': '#3b82f6',           // Blue
-            'users': '#8b5cf6',             // Purple
-            'globe': '#06b6d4',             // Cyan
-            'lock': '#3b82f6',              // Blue
-            'bell': '#f59e0b',              // Amber
-            'database': '#3b82f6',           // Blue
-            'list': '#6366f1',              // Indigo
-            'history': '#8b5cf6',           // Purple
-            'refresh-cw': '#06b6d4',        // Cyan
-            'loader2': '#3b82f6',           // Blue
-            'activity': '#22c55e',          // Green
-            'shield-check': '#22c55e',      // Green
-            'alert-triangle': '#f59e0b',     // Amber
-        };
-        return activeColors[iconType] || '#6b7280';
-    } else {
-        // Inactive state colors (muted but colorful)
-        const inactiveColors: Record<string, string> = {
-            'settings': '#60a5fa',           // Light Blue
-            'users': '#a78bfa',             // Light Purple
-            'globe': '#22d3ee',             // Light Cyan
-            'lock': '#60a5fa',              // Light Blue
-            'bell': '#fbbf24',              // Light Amber
-            'database': '#60a5fa',           // Light Blue
-            'list': '#818cf8',              // Light Indigo
-            'history': '#a78bfa',           // Light Purple
-            'refresh-cw': '#22d3ee',         // Light Cyan
-            'loader2': '#60a5fa',           // Light Blue
-            'activity': '#4ade80',          // Light Green
-            'shield-check': '#4ade80',       // Light Green
-            'alert-triangle': '#fbbf24',     // Light Amber
-        };
-        return inactiveColors[iconType] || '#9ca3af';
-    }
+  if (active) {
+    // Active state colors (brighter)
+    const activeColors: Record<string, string> = {
+      'settings': '#3b82f6',           // Blue
+      'users': '#8b5cf6',             // Purple
+      'globe': '#06b6d4',             // Cyan
+      'lock': '#3b82f6',              // Blue
+      'bell': '#f59e0b',              // Amber
+      'database': '#3b82f6',           // Blue
+      'list': '#6366f1',              // Indigo
+      'history': '#8b5cf6',           // Purple
+      'refresh-cw': '#06b6d4',        // Cyan
+      'loader2': '#3b82f6',           // Blue
+      'activity': '#22c55e',          // Green
+      'shield-check': '#22c55e',      // Green
+      'alert-triangle': '#f59e0b',     // Amber
+    };
+    return activeColors[iconType] || '#6b7280';
+  } else {
+    // Inactive state colors (muted but colorful)
+    const inactiveColors: Record<string, string> = {
+      'settings': '#60a5fa',           // Light Blue
+      'users': '#a78bfa',             // Light Purple
+      'globe': '#22d3ee',             // Light Cyan
+      'lock': '#60a5fa',              // Light Blue
+      'bell': '#fbbf24',              // Light Amber
+      'database': '#60a5fa',           // Light Blue
+      'list': '#818cf8',              // Light Indigo
+      'history': '#a78bfa',           // Light Purple
+      'refresh-cw': '#22d3ee',         // Light Cyan
+      'loader2': '#60a5fa',           // Light Blue
+      'activity': '#4ade80',          // Light Green
+      'shield-check': '#4ade80',       // Light Green
+      'alert-triangle': '#fbbf24',     // Light Amber
+    };
+    return inactiveColors[iconType] || '#9ca3af';
+  }
 };
 
 // Icon styled components
@@ -141,142 +141,151 @@ const MessageIcon = styled(IconWrapper)`
     margin-right: ${theme.spacing.sm};
 `;
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = '#111827';
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const PRIMARY_COLOR = '#10b981'; // Modern emerald green
+const PRIMARY_HOVER = '#059669';
+const ACCENT_BLUE = '#3b82f6';
+const ACCENT_PURPLE = '#8b5cf6';
+const TEXT_COLOR_DARK = '#0f172a';
+const TEXT_COLOR_MUTED = '#64748b';
+
+const glassBackground = css`
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+`;
 
 const CardShadow = `
-  0 2px 4px -1px rgba(0, 0, 0, 0.06),
-  0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+  0 4px 6px -1px rgba(0, 0, 0, 0.05),
+  0 2px 4px -1px rgba(0, 0, 0, 0.03),
+  inset 0 0 0 1px rgba(255, 255, 255, 0.1)
 `;
 const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
+  0 20px 25px -5px rgba(0, 0, 0, 0.1),
+  0 10px 10px -5px rgba(0, 0, 0, 0.04),
+  inset 0 0 0 1px rgba(255, 255, 255, 0.2)
 `;
 
 const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-height: 100vh;
+  background: #f8fafc;
 `;
 
 const ContentContainer = styled.div`
   flex: 1;
   width: 100%;
-  max-width: 980px;
-  margin-left: auto;
-  margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: ${theme.spacing.lg};
 `;
 
 const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, ${PRIMARY_HOVER} 100%);
   color: #ffffff;
-  padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: ${theme.borderRadius.md};
-  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+  padding: 40px;
+  margin-bottom: ${theme.spacing.xl};
+  border-radius: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.3);
   
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
   h1 {
-    font-size: clamp(24px, 3vw, 36px);
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 800;
     margin: 0;
     color: #ffffff;
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.md};
-  }
-
-  svg {
-    width: 32px;
-    height: 32px;
+    gap: ${theme.spacing.lg};
+    letter-spacing: -0.02em;
   }
 `;
 
 const SettingsGrid = styled.div`
   display: grid;
-  grid-template-columns: 250px 1fr;
+  grid-template-columns: 280px 1fr;
   gap: ${theme.spacing.xl};
-  max-width: 1200px;
   
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     grid-template-columns: 1fr;
     gap: ${theme.spacing.lg};
   }
 `;
 
 const Nav = styled.nav`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  ${glassBackground};
+  border-radius: 20px;
   box-shadow: ${CardShadow};
   padding: ${theme.spacing.md};
   height: fit-content;
-  transition: box-shadow ${theme.transitions.default};
-
-  &:hover {
-    box-shadow: ${CardShadowHover};
-  }
+  position: sticky;
+  top: 100px;
 `;
 
-const NavItem = styled(Link)<{ $active: boolean }>`
+const NavItem = styled(Link) <{ $active: boolean }>`
   display: flex;
   align-items: center;
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.xs};
-  border-radius: ${theme.borderRadius.md};
-  font-weight: ${props => props.$active ? theme.typography.fontWeights.bold : theme.typography.fontWeights.medium};
+  padding: 14px 18px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  font-weight: ${props => props.$active ? '700' : '500'};
   color: ${props => props.$active ? PRIMARY_COLOR : TEXT_COLOR_MUTED};
-  background: ${props => props.$active ? 'rgba(0, 170, 0, 0.1)' : 'transparent'};
-  cursor: pointer;
-  text-decoration: none;
-  transition: all ${theme.transitions.default};
-  border-left: 3px solid ${props => props.$active ? PRIMARY_COLOR : 'transparent'};
+  background: ${props => props.$active ? `${PRIMARY_COLOR}10` : 'transparent'};
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid ${props => props.$active ? `${PRIMARY_COLOR}20` : 'transparent'};
 
   &:hover {
-    background: rgba(0, 170, 0, 0.05);
+    background: ${props => props.$active ? `${PRIMARY_COLOR}15` : '#f1f5f9'};
     color: ${PRIMARY_COLOR};
-    transform: translateX(3px);
+    transform: translateX(4px);
   }
 
   svg {
-    margin-right: ${theme.spacing.sm};
+    margin-right: 12px;
     width: 20px;
     height: 20px;
-    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover svg {
+    transform: scale(1.1);
   }
 `;
 
 const SettingContent = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  ${glassBackground};
+  border-radius: 24px;
   box-shadow: ${CardShadow};
-  padding: ${theme.spacing.xl};
-  transition: box-shadow ${theme.transitions.default};
-
-  &:hover {
-    box-shadow: ${CardShadowHover};
-  }
+  padding: 40px;
+  min-height: 600px;
 `;
 
 const ContentHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: ${theme.spacing.md};
-  border-bottom: 2px solid ${theme.colors.border};
-  padding-bottom: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  margin-bottom: 40px;
 
   h2 {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-size: 24px;
+    font-weight: 800;
     color: ${TEXT_COLOR_DARK};
     margin: 0;
+    letter-spacing: -0.01em;
   }
 `;
 
@@ -311,39 +320,60 @@ const StatGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.lg};
-  box-shadow: ${CardShadow};
-  background: ${theme.colors.background};
+  border-radius: 20px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+    border-color: ${PRIMARY_COLOR}30;
+  }
 `;
 
 const StatLabel = styled.p`
   margin: 0;
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: 13px;
+  font-weight: 700;
   color: ${TEXT_COLOR_MUTED};
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 `;
 
 const StatValue = styled.p`
-  margin: ${theme.spacing.xs} 0 0 0;
-  font-size: clamp(1.8rem, 2.5vw, 2.4rem);
-  font-weight: ${theme.typography.fontWeights.bold};
+  margin: 8px 0 4px 0;
+  font-size: 32px;
+  font-weight: 800;
   color: ${TEXT_COLOR_DARK};
+  letter-spacing: -0.02em;
 `;
 
 const StatSubtext = styled.p`
-  margin: ${theme.spacing.xs} 0 0 0;
-  font-size: ${theme.typography.fontSizes.sm};
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
   color: ${TEXT_COLOR_MUTED};
 `;
 
 const SectionHeader = styled.h3`
-  font-size: ${theme.typography.fontSizes.md};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: 18px;
+  font-weight: 800;
   color: ${TEXT_COLOR_DARK};
-  margin: ${theme.spacing.xl} 0 ${theme.spacing.md};
+  margin: 48px 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  letter-spacing: -0.01em;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, #e2e8f0, transparent);
+  }
 `;
 
 const ServiceList = styled.div`
@@ -356,21 +386,36 @@ const ServiceRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: ${PRIMARY_COLOR}20;
+    background: ${PRIMARY_COLOR}05;
+  }
+
+  span {
+    font-weight: 600;
+    color: ${TEXT_COLOR_DARK};
+  }
 `;
 
 const StatusPill = styled.span<{ $healthy: boolean }>`
   display: inline-flex;
   align-items: center;
-  gap: ${theme.spacing.xs};
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: 999px;
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
-  background: ${props => props.$healthy ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'};
-  color: ${props => props.$healthy ? '#065f46' : '#991b1b'};
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: ${props => props.$healthy ? '#ecfdf5' : '#fef2f2'};
+  color: ${props => props.$healthy ? '#059669' : '#dc2626'};
+  border: 1px solid ${props => props.$healthy ? '#10b98130' : '#ef444430'};
 `;
 
 const QuickActionsGrid = styled.div`
@@ -381,20 +426,20 @@ const QuickActionsGrid = styled.div`
 `;
 
 const QuickActionCard = styled(Link)`
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.lg};
+  ${glassBackground};
+  border-radius: 18px;
+  padding: 24px;
   display: flex;
-  gap: ${theme.spacing.md};
-  align-items: flex-start;
-  text-decoration: none;
-  color: ${TEXT_COLOR_DARK};
-  background: ${theme.colors.background};
-  transition: transform ${theme.transitions.default}, box-shadow ${theme.transitions.default};
+  gap: 20px;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: ${CardShadowHover};
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.1);
+    background: #ffffff;
+    border-color: ${PRIMARY_COLOR}40;
   }
 `;
 
@@ -424,22 +469,34 @@ const RoleList = styled.div`
 `;
 
 const RoleCard = styled.div`
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  background: ${theme.colors.background};
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: ${ACCENT_BLUE}30;
+    transform: translateY(-2px);
+  }
+
+  strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: ${TEXT_COLOR_DARK};
+  }
 `;
 
 const SettingsPage: React.FC = () => {
   const pathname = usePathname();
   const { user } = useAuth();
   // Allow access for both admin and super_admin roles
-  const isAdmin = user?.role?.toLowerCase() === 'admin' || 
-                  user?.role?.toLowerCase() === 'super_admin' ||
-                  user?.userType === UserType.ADMIN;
+  const isAdmin = user?.role?.toLowerCase() === 'admin' ||
+    user?.role?.toLowerCase() === 'super_admin' ||
+    user?.userType === UserType.ADMIN;
 
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
@@ -447,7 +504,7 @@ const SettingsPage: React.FC = () => {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Determine active tab based on pathname
   const getActiveTab = () => {
     if (!pathname) return 'general';
@@ -460,7 +517,7 @@ const SettingsPage: React.FC = () => {
     if (pathname.includes('/general')) return 'general';
     return 'general';
   };
-  
+
   const activeTab = getActiveTab();
 
   const fetchSystemData = async () => {
@@ -549,7 +606,7 @@ const SettingsPage: React.FC = () => {
       } else if (error?.message) {
         message = error.message;
       }
-      
+
       setError(message);
       toast.error(message);
       console.error('Error loading system data:', err);
@@ -564,7 +621,7 @@ const SettingsPage: React.FC = () => {
     } else {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   const formatNumber = (value?: number) => {
@@ -715,54 +772,49 @@ const SettingsPage: React.FC = () => {
 
               <SettingContent>
                 <ContentHeader>
-                  <h2>System Overview</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <IconWrapper $iconType="activity" $size={24} $active={true}>
+                      <Settings size={24} />
+                    </IconWrapper>
+                    <h2>System Overview</h2>
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={fetchSystemData}
                     disabled={loading}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.8rem',
+                      borderRadius: '12px',
+                      padding: '8px 16px',
+                      fontWeight: '600'
+                    }}
                   >
-                    <ButtonIcon $iconType="refresh-cw" $size={16} $active={!loading}>
-                      <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                    </ButtonIcon>
-                    {loading ? 'Refreshing' : 'Refresh'}
+                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                    {loading ? 'Updating...' : 'Refresh Data'}
                   </Button>
                 </ContentHeader>
 
                 {error && (
                   <ErrorBanner>
-                    <MessageIcon $iconType="alert-triangle" $size={18} $active={true}>
-                      <AlertTriangle size={18} />
+                    <MessageIcon $iconType="alert-triangle" $size={20} $active={true}>
+                      <AlertTriangle size={20} />
                     </MessageIcon>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>{error}</div>
-                      {error.includes('Unable to connect to backend server') && (
-                        <div style={{ fontSize: theme.typography.fontSizes.sm, marginTop: theme.spacing.xs, opacity: 0.9 }}>
-                          To start the backend server, navigate to the backend directory and run:
-                          <code style={{ 
-                            display: 'block', 
-                            marginTop: theme.spacing.xs, 
-                            padding: theme.spacing.sm, 
-                            background: 'rgba(0, 0, 0, 0.1)', 
-                            borderRadius: theme.borderRadius.sm,
-                            fontFamily: 'monospace',
-                            fontSize: theme.typography.fontSizes.xs
-                          }}>
-                            uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-                          </code>
-                        </div>
-                      )}
+                      <div style={{ fontWeight: '700', marginBottom: '4px' }}>Connection Error</div>
+                      <div style={{ opacity: 0.9 }}>{error}</div>
                     </div>
                   </ErrorBanner>
                 )}
 
                 {loading && isAdmin && !systemStats ? (
                   <LoadingState>
-                    <IconWrapper $iconType="loader2" $size={28} $active={true}>
-                      <Loader2 size={28} className="animate-spin" />
+                    <IconWrapper $iconType="loader2" $size={40} $active={true}>
+                      <Loader2 size={40} className="animate-spin" />
                     </IconWrapper>
-                    <p>Loading settings data...</p>
+                    <p style={{ fontWeight: '600', fontSize: '16px' }}>Synchronizing system metrics...</p>
                   </LoadingState>
                 ) : (
                   <>
@@ -770,85 +822,128 @@ const SettingsPage: React.FC = () => {
                       <>
                         <StatGrid>
                           <StatCard>
-                            <StatLabel>Total Users</StatLabel>
-                            <StatValue>{formatNumber(systemStats?.users?.total)}</StatValue>
-                            <StatSubtext>{formatNumber(systemStats?.users?.active)} active users</StatSubtext>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <StatLabel>Total Users</StatLabel>
+                                <StatValue>{formatNumber(systemStats?.users?.total)}</StatValue>
+                              </div>
+                              <IconWrapper $iconType="users" $size={24} $active={true}>
+                                <Users size={24} />
+                              </IconWrapper>
+                            </div>
+                            <StatSubtext>{formatNumber(systemStats?.users?.active)} active members</StatSubtext>
                           </StatCard>
+
                           <StatCard>
-                            <StatLabel>Pending Approvals</StatLabel>
-                            <StatValue>{formatNumber(systemStats?.pending_approvals)}</StatValue>
-                            <StatSubtext>Awaiting review</StatSubtext>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <StatLabel>Pending Actions</StatLabel>
+                                <StatValue>{formatNumber(systemStats?.pending_approvals)}</StatValue>
+                              </div>
+                              <IconWrapper $iconType="history" $size={24} $active={true}>
+                                <History size={24} />
+                              </IconWrapper>
+                            </div>
+                            <StatSubtext>Awaiting administrative review</StatSubtext>
                           </StatCard>
+
                           <StatCard>
-                            <StatLabel>Revenue (30d)</StatLabel>
-                            <StatValue>{formatCurrency(systemStats?.financials?.total_revenue)}</StatValue>
-                            <StatSubtext>Net {formatCurrency(systemStats?.financials?.net_profit)}</StatSubtext>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <StatLabel>Monthly Revenue</StatLabel>
+                                <StatValue style={{ color: PRIMARY_COLOR }}>{formatCurrency(systemStats?.financials?.total_revenue)}</StatValue>
+                              </div>
+                              <IconWrapper $iconType="globe" $size={24} $active={true}>
+                                <Globe size={24} />
+                              </IconWrapper>
+                            </div>
+                            <StatSubtext>Net profit: {formatCurrency(systemStats?.financials?.net_profit)}</StatSubtext>
                           </StatCard>
+
                           <StatCard>
-                            <StatLabel>Expenses (30d)</StatLabel>
-                            <StatValue style={{ color: '#dc2626' }}>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
-                            <StatSubtext>Updated daily</StatSubtext>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <StatLabel>Operational Costs</StatLabel>
+                                <StatValue style={{ color: '#ef4444' }}>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
+                              </div>
+                              <IconWrapper $iconType="alert-triangle" $size={24} $active={true}>
+                                <AlertTriangle size={24} />
+                              </IconWrapper>
+                            </div>
+                            <StatSubtext>Expenditure tracking active</StatSubtext>
                           </StatCard>
                         </StatGrid>
 
-                        <SectionHeader>Service Status</SectionHeader>
+                        <SectionHeader>Service Infrastructure</SectionHeader>
                         <ServiceList>
                           {serviceStatuses.map((service) => (
                             <ServiceRow key={service.label}>
-                              <span>{service.label}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <IconWrapper
+                                  $iconType={service.label.toLowerCase().includes('database') ? 'database' :
+                                    service.label.toLowerCase().includes('email') ? 'bell' :
+                                      service.label.toLowerCase().includes('redis') ? 'refresh-cw' : 'globe'}
+                                  $size={18}
+                                  $active={true}
+                                >
+                                  {service.label.toLowerCase().includes('database') && <Database size={18} />}
+                                  {service.label.toLowerCase().includes('email') && <Bell size={18} />}
+                                  {service.label.toLowerCase().includes('redis') && <RefreshCw size={18} />}
+                                  {service.label.toLowerCase().includes('s3') && <Globe size={18} />}
+                                </IconWrapper>
+                                <span>{service.label}</span>
+                              </div>
                               <StatusPill $healthy={service.healthy}>
-                                {service.healthy ? (
-                                  <StatusIcon $iconType="shield-check" $size={14} $active={true}>
-                                    <ShieldCheck size={14} />
-                                  </StatusIcon>
-                                ) : (
-                                  <StatusIcon $iconType="alert-triangle" $size={14} $active={true}>
-                                    <AlertTriangle size={14} />
-                                  </StatusIcon>
-                                )}
+                                {service.healthy ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />}
                                 {service.status}
                               </StatusPill>
                             </ServiceRow>
                           ))}
                         </ServiceList>
-                        {settingsError && (
-                          <StatSubtext style={{ marginTop: theme.spacing.sm }}>
-                            {settingsError}
-                          </StatSubtext>
-                        )}
 
-                        <SectionHeader>Role Distribution</SectionHeader>
+                        <SectionHeader>Global Accessibility</SectionHeader>
                         <RoleList>
                           {roleDistribution.map(([role, count]) => (
                             <RoleCard key={role}>
                               <div>
                                 <strong style={{ textTransform: 'capitalize' }}>{role.replace('_', ' ')}</strong>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: TEXT_COLOR_MUTED }}>System Role</p>
                               </div>
-                              <StatValue style={{ fontSize: '1.5rem', margin: 0 }}>{formatNumber(count as number)}</StatValue>
+                              <StatValue style={{ fontSize: '24px', margin: 0 }}>{formatNumber(count as number)}</StatValue>
                             </RoleCard>
                           ))}
                         </RoleList>
                       </>
                     ) : (
-                      <ErrorBanner>
-                        <MessageIcon $iconType="alert-triangle" $size={18} $active={true}>
-                          <AlertTriangle size={18} />
-                        </MessageIcon>
-                        System-level metrics are visible only to administrators. Use the quick links below to manage your settings directly.
-                      </ErrorBanner>
+                      <div style={{
+                        padding: '40px',
+                        textAlign: 'center',
+                        background: '#f8fafc',
+                        borderRadius: '20px',
+                        border: '1px dashed #e2e8f0'
+                      }}>
+                        <IconWrapper $iconType="lock" $size={48} $active={true} style={{ margin: '0 auto 20px' }}>
+                          <Lock size={48} />
+                        </IconWrapper>
+                        <h3 style={{ fontWeight: '800', marginBottom: '12px' }}>Administrator Access Only</h3>
+                        <p style={{ color: TEXT_COLOR_MUTED, maxWidth: '400px', margin: '0 auto' }}>
+                          Detailed system metrics and infrastructure controls are reserved for administrators.
+                          Please use the shortcuts below for your personal settings.
+                        </p>
+                      </div>
                     )}
 
-                    <SectionHeader>Quick Actions</SectionHeader>
+                    <SectionHeader>Control Center Shortcuts</SectionHeader>
                     <QuickActionsGrid>
                       {quickLinks.map((link) => (
                         <QuickActionCard key={link.href} href={link.href}>
-                          <QuickActionIconWrapper $iconType={link.iconType} $size={16} $active={true}>
-                            {link.iconType === 'globe' && <Globe size={16} />}
-                            {link.iconType === 'bell' && <Bell size={16} />}
-                            {link.iconType === 'lock' && <Lock size={16} />}
-                            {link.iconType === 'database' && <Database size={16} />}
-                            {link.iconType === 'list' && <List size={16} />}
-                            {link.iconType === 'users' && <Users size={16} />}
+                          <QuickActionIconWrapper $iconType={link.iconType} $size={20} $active={true}>
+                            {link.iconType === 'globe' && <Globe size={20} />}
+                            {link.iconType === 'bell' && <Bell size={20} />}
+                            {link.iconType === 'lock' && <Lock size={20} />}
+                            {link.iconType === 'database' && <Database size={20} />}
+                            {link.iconType === 'list' && <List size={20} />}
+                            {link.iconType === 'users' && <Users size={20} />}
                           </QuickActionIconWrapper>
                           <QuickActionContent>
                             <h4>{link.title}</h4>
