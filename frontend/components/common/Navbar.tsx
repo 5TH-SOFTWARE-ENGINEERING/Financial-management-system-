@@ -18,7 +18,7 @@ import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { debounce } from '@/lib/utils';
 
-const PRIMARY_ACCENT = '#06b6d4'; 
+const PRIMARY_ACCENT = '#06b6d4';
 const PRIMARY_HOVER = '#0891b2';
 const DANGER_COLOR = '#ef4444';
 
@@ -40,36 +40,36 @@ const slideDown = keyframes`
 `;
 
 const getIconColor = (iconType: string, active: boolean = false): string => {
-    if (active) {
-        const activeColors: Record<string, string> = {
-            'search': '#3b82f6',
-            'plus': '#22c55e',
-            'bell': '#f59e0b',
-            'file-spreadsheet': '#8b5cf6',
-            'globe': '#06b6d4',
-            'user': '#6366f1',
-            'users': '#ec4899',
-            'settings': '#64748b',
-            'help-circle': '#14b8a6',
-            'log-out': '#ef4444',
-        };
-        return activeColors[iconType] || PRIMARY_ACCENT;
-    } else {
-        const inactiveColors: Record<string, string> = {
-            'search': '#60a5fa',
-            'plus': '#4ade80',
-            'bell': '#fbbf24',
-            'file-spreadsheet': '#a78bfa',
-            'globe': '#22d3ee',
-            'user': '#818cf8',
-            'users': '#f472b6',
-            'settings': '#94a3b8',
-            'help-circle': '#2dd4bf',
-            'log-out': '#f87171',
-        };
-        return inactiveColors[iconType] || theme.colors.textSecondary;
-    }
-}; 
+  if (active) {
+    const activeColors: Record<string, string> = {
+      'search': '#3b82f6',
+      'plus': '#22c55e',
+      'bell': '#f59e0b',
+      'file-spreadsheet': '#8b5cf6',
+      'globe': '#06b6d4',
+      'user': '#6366f1',
+      'users': '#ec4899',
+      'settings': '#64748b',
+      'help-circle': '#14b8a6',
+      'log-out': '#ef4444',
+    };
+    return activeColors[iconType] || PRIMARY_ACCENT;
+  } else {
+    const inactiveColors: Record<string, string> = {
+      'search': '#60a5fa',
+      'plus': '#4ade80',
+      'bell': '#fbbf24',
+      'file-spreadsheet': '#a78bfa',
+      'globe': '#22d3ee',
+      'user': '#818cf8',
+      'users': '#f472b6',
+      'settings': '#94a3b8',
+      'help-circle': '#2dd4bf',
+      'log-out': '#f87171',
+    };
+    return inactiveColors[iconType] || theme.colors.textSecondary;
+  }
+};
 
 const HeaderContainer = styled.header`
   position: fixed;
@@ -731,14 +731,14 @@ const NotificationListItem = styled.div<{ $isRead: boolean }>`
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: ${props => props.$isRead 
-    ? '#ffffff' 
+  background: ${props => props.$isRead
+    ? '#ffffff'
     : `linear-gradient(135deg, rgba(6, 182, 212, 0.06) 0%, rgba(6, 182, 212, 0.02) 100%)`};
   position: relative;
   display: flex;
   flex-direction: column;
-  box-shadow: ${props => props.$isRead 
-    ? '0 1px 3px rgba(0, 0, 0, 0.06)' 
+  box-shadow: ${props => props.$isRead
+    ? '0 1px 3px rgba(0, 0, 0, 0.06)'
     : '0 2px 6px rgba(6, 182, 212, 0.12)'};
   
   &:hover {
@@ -1019,22 +1019,22 @@ export default function Navbar() {
         try {
           const subordinatesRes = await apiClient.getSubordinates(userId);
           const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
-          
+
           // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
           const validSubordinateIds = subordinates
             .map((sub: { id?: number | string; role?: string }) => {
               const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
               const subRole = (sub.role || '').toLowerCase();
-              
+
               // Only include accountants and employees, exclude Finance Admins and Managers
-              if (typeof subId === 'number' && 
-                  (subRole === 'accountant' || subRole === 'employee')) {
+              if (typeof subId === 'number' &&
+                (subRole === 'accountant' || subRole === 'employee')) {
                 return subId;
               }
               return null;
             })
             .filter((id): id is number => id !== null);
-          
+
           // Create accessible user IDs: Finance Admin's own ID + their valid subordinates only
           const userIds = [userId, ...validSubordinateIds];
           setAccessibleUserIds(userIds);
@@ -1057,11 +1057,11 @@ export default function Navbar() {
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     setIsOnline(navigator.onLine);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -1123,15 +1123,15 @@ export default function Navbar() {
       const isNotificationClick = target?.closest('[data-notification-panel]');
       const isNotificationBadgeClick = target?.closest('[data-notification-badge]');
       const isSearchClick = target?.closest('[data-search-container]');
-      
+
       if (dropdownRef.current && !dropdownRef.current.contains(target as Node) && !isSignOutClick && !isDropdownClick) {
         setIsDropdownOpen(false);
       }
-      
-      const isNotificationArea = isNotificationClick || isNotificationBadgeClick || 
+
+      const isNotificationArea = isNotificationClick || isNotificationBadgeClick ||
         (notificationPanelRef.current && notificationPanelRef.current.contains(target as Node)) ||
         (notificationBadgeRef.current && notificationBadgeRef.current.contains(target as Node));
-      
+
       if (!isNotificationArea && isNotificationPanelOpen) {
         setIsNotificationPanelOpen(false);
       }
@@ -1148,15 +1148,15 @@ export default function Navbar() {
     let retryCount = 0;
     const MAX_RETRIES = 3;
     let intervalId: NodeJS.Timeout | null = null;
-    
+
     const loadUnreadCount = async () => {
       if (!isOnline) return;
-      
+
       try {
         const response = await apiClient.getUnreadCount();
         const newCount = response.data?.unread_count || 0;
         const oldCount = previousUnreadCountRef.current;
-        
+
         // Also trigger a check for pending approvals on the backend
         // This will create notifications for users with pending approvals
         try {
@@ -1168,41 +1168,41 @@ export default function Navbar() {
         } catch (e) {
           // Silently fail - this is just a trigger, not critical
         }
-        
+
         if (newCount > oldCount) {
           try {
             const notifResponse = await apiClient.getNotifications(true);
             // Handle both direct array response and wrapped response
             const notificationsData = Array.isArray(notifResponse?.data)
               ? notifResponse.data
-              : (notifResponse?.data && typeof notifResponse.data === 'object' && notifResponse.data !== null && 'data' in notifResponse.data 
-                  ? (notifResponse.data as { data: unknown[] }).data 
-                  : []);
-            
+              : (notifResponse?.data && typeof notifResponse.data === 'object' && notifResponse.data !== null && 'data' in notifResponse.data
+                ? (notifResponse.data as { data: unknown[] }).data
+                : []);
+
             // Use Map to deduplicate by ID
             const notifsMap = new Map<number, Notification>();
-            
+
             // Get current user ID for filtering
             const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
             const userRole = user?.role?.toLowerCase() || '';
             const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-            
+
             (notificationsData || []).forEach((notif: unknown) => {
-              const notification = notif as { 
-                id?: number; 
-                message?: string; 
-                type?: string; 
+              const notification = notif as {
+                id?: number;
+                message?: string;
+                type?: string;
                 priority?: string;
-                is_read?: boolean; 
-                created_at?: string; 
-                title?: string; 
+                is_read?: boolean;
+                created_at?: string;
+                title?: string;
                 action_url?: string;
                 user_id?: number;
               };
-              
+
               const notifId = notification.id || 0;
               const notifUserId = notification.user_id;
-              
+
               // Role-based filtering: Finance Admin/Manager should only see their own and subordinates' notifications
               // Backend already filters, but we add frontend validation for extra security
               // IMPORTANT: Finance Admins should NOT see notifications from other Finance Admins or their subordinates
@@ -1228,7 +1228,7 @@ export default function Navbar() {
                   }
                 }
               }
-              
+
               // Only add if we haven't seen this ID yet (deduplicate)
               if (notifId > 0 && !notifsMap.has(notifId)) {
                 notifsMap.set(notifId, {
@@ -1244,19 +1244,19 @@ export default function Navbar() {
                 } as Notification);
               }
             });
-            
+
             const latestNotifs = Array.from(notifsMap.values());
             const newNotifs = latestNotifs.filter((n) => !lastNotificationIdsRef.current.has(n.id));
-            
+
             newNotifs.forEach((notification: Notification) => {
               lastNotificationIdsRef.current.add(notification.id);
-              
+
               // Determine toast type based on notification type, title, and message (context-aware)
               const notifType = notification.type?.toLowerCase() || '';
               const titleLower = (notification.title || '').toLowerCase();
               const messageLower = (notification.message || '').toLowerCase();
               let toastType: 'success' | 'error' | 'warning' | 'info' = 'info';
-              
+
               // Success types - positive outcomes
               if (
                 notifType === 'approval_decision' ||
@@ -1276,7 +1276,7 @@ export default function Navbar() {
                 (notifType === 'approval_decision' && (titleLower.includes('approved') || messageLower.includes('approved')))
               ) {
                 toastType = 'success';
-              } 
+              }
               // Error types - negative outcomes
               else if (
                 notifType === 'budget_exceeded' ||
@@ -1291,7 +1291,7 @@ export default function Navbar() {
                 (notifType === 'approval_decision' && (titleLower.includes('rejected') || messageLower.includes('rejected')))
               ) {
                 toastType = 'error';
-              } 
+              }
               // Warning types - need attention
               else if (
                 notifType === 'approval_request' ||
@@ -1310,7 +1310,7 @@ export default function Navbar() {
               ) {
                 toastType = 'warning';
               }
-              
+
               const toastOptions = {
                 description: notification.message,
                 duration: 5000,
@@ -1319,8 +1319,8 @@ export default function Navbar() {
                   onClick: () => {
                     setIsNotificationPanelOpen(true);
                     if (notification.action_url) {
-                      const url = notification.action_url.startsWith('/') 
-                        ? notification.action_url 
+                      const url = notification.action_url.startsWith('/')
+                        ? notification.action_url
                         : `/${notification.action_url}`;
                       router.push(url);
                     }
@@ -1328,14 +1328,14 @@ export default function Navbar() {
                   }
                 }
               };
-              
-              const toastId = toastType === 'success' 
+
+              const toastId = toastType === 'success'
                 ? toast.success(notification.title || notification.message, toastOptions)
                 : toastType === 'error'
-                ? toast.error(notification.title || notification.message, toastOptions)
-                : toastType === 'warning'
-                ? toast.warning(notification.title || notification.message, toastOptions)
-                : toast.info(notification.title || notification.message, toastOptions);
+                  ? toast.error(notification.title || notification.message, toastOptions)
+                  : toastType === 'warning'
+                    ? toast.warning(notification.title || notification.message, toastOptions)
+                    : toast.info(notification.title || notification.message, toastOptions);
             });
             if (latestNotifs.length > 0) {
               lastNotificationIdsRef.current = new Set(latestNotifs.map((n) => n.id));
@@ -1358,14 +1358,14 @@ export default function Navbar() {
         }
         previousUnreadCountRef.current = newCount;
         setUnreadCount(newCount);
-        retryCount = 0; 
+        retryCount = 0;
       } catch (err: unknown) {
         const errorDetails = err as { code?: string; message?: string; response?: unknown };
-        const isNetworkError = errorDetails.code === 'ERR_NETWORK' || 
-                               errorDetails.message === 'Network Error' ||
-                               errorDetails.message?.includes('ERR_CONNECTION_REFUSED') ||
-                               !errorDetails.response;
-        
+        const isNetworkError = errorDetails.code === 'ERR_NETWORK' ||
+          errorDetails.message === 'Network Error' ||
+          errorDetails.message?.includes('ERR_CONNECTION_REFUSED') ||
+          !errorDetails.response;
+
         if (!isNetworkError) {
           console.error('Failed to load unread count:', err);
         }
@@ -1387,34 +1387,34 @@ export default function Navbar() {
           // Handle both direct array response and wrapped response
           const notificationsData = Array.isArray(notifResponse?.data)
             ? notifResponse.data
-            : (notifResponse?.data && typeof notifResponse.data === 'object' && notifResponse.data !== null && 'data' in notifResponse.data 
-                ? (notifResponse.data as { data: unknown[] }).data 
-                : []);
-          
+            : (notifResponse?.data && typeof notifResponse.data === 'object' && notifResponse.data !== null && 'data' in notifResponse.data
+              ? (notifResponse.data as { data: unknown[] }).data
+              : []);
+
           // Use Map to deduplicate by ID
           const initialNotifsMap = new Map<number, Notification>();
-          
+
           // Get current user ID for filtering
           const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
           const userRole = user?.role?.toLowerCase() || '';
           const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-          
+
           (notificationsData || []).forEach((notif: unknown) => {
-            const notification = notif as { 
-              id?: number; 
-              message?: string; 
-              type?: string; 
+            const notification = notif as {
+              id?: number;
+              message?: string;
+              type?: string;
               priority?: string;
-              is_read?: boolean; 
-              created_at?: string; 
-              title?: string; 
+              is_read?: boolean;
+              created_at?: string;
+              title?: string;
               action_url?: string;
               user_id?: number;
             };
-            
+
             const notifId = notification.id || 0;
             const notifUserId = notification.user_id;
-            
+
             // Role-based filtering: Finance Admin/Manager should only see their own and subordinates' notifications
             // Backend already filters, but we add frontend validation for extra security
             // IMPORTANT: Finance Admins should NOT see notifications from other Finance Admins or their subordinates
@@ -1440,7 +1440,7 @@ export default function Navbar() {
                 }
               }
             }
-            
+
             // Only add if we haven't seen this ID yet (deduplicate)
             if (notifId > 0 && !initialNotifsMap.has(notifId)) {
               initialNotifsMap.set(notifId, {
@@ -1456,9 +1456,9 @@ export default function Navbar() {
               } as Notification);
             }
           });
-          
+
           const initialNotifs = Array.from(initialNotifsMap.values());
-          
+
           if (initialNotifs.length > 0) {
             lastNotificationIdsRef.current = new Set(initialNotifs.map((n) => n.id));
             previousUnreadCountRef.current = initialNotifs.filter(n => !n.is_read).length;
@@ -1475,9 +1475,9 @@ export default function Navbar() {
         loadUnreadCount();
         intervalId = setInterval(loadUnreadCount, 20000); // Poll every 20 seconds
       };
-      
+
       initAndStart();
-      
+
       return () => {
         if (intervalId) clearInterval(intervalId);
       };
@@ -1517,7 +1517,7 @@ export default function Navbar() {
   }, [router, pathname]);
 
   const debouncedSearchRef = useRef<((value: unknown) => void) | null>(null);
-  
+
   useEffect(() => {
     debouncedSearchRef.current = debounce((value: unknown) => {
       if (typeof value === 'string') {
@@ -1526,7 +1526,7 @@ export default function Navbar() {
         navigateToSearch(String(value));
       }
     }, 500);
-    
+
     return () => {
       if (debouncedSearchRef.current) {
         debouncedSearchRef.current = null;
@@ -1539,38 +1539,38 @@ export default function Navbar() {
       if (isNotificationPanelOpen && user && isOnline) {
         setLoadingNotifications(true);
         try {
-          const response = await apiClient.getNotifications(false); 
+          const response = await apiClient.getNotifications(false);
           // Handle both direct array response and wrapped response
           const notificationsData = Array.isArray(response?.data)
             ? response.data
-            : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data 
-                ? (response.data as { data: unknown[] }).data 
-                : []);
-          
+            : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data
+              ? (response.data as { data: unknown[] }).data
+              : []);
+
           const notifsMap = new Map<number, Notification>();
-          
+
           // Get current user ID for filtering
           const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
           const userRole = user?.role?.toLowerCase() || '';
           const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-          
+
           // Process and deduplicate notifications by ID
           (notificationsData || []).forEach((notif: unknown) => {
-            const notification = notif as { 
-              id?: number; 
-              message?: string; 
-              type?: string; 
+            const notification = notif as {
+              id?: number;
+              message?: string;
+              type?: string;
               priority?: string;
-              is_read?: boolean; 
-              created_at?: string; 
-              title?: string; 
+              is_read?: boolean;
+              created_at?: string;
+              title?: string;
               action_url?: string;
               user_id?: number;
             };
-            
+
             const notifId = notification.id || 0;
             const notifUserId = notification.user_id;
-            
+
             // Role-based filtering: Finance Admin/Manager should only see their own and subordinates' notifications
             // Backend already filters, but we add frontend validation for extra security
             // IMPORTANT: Finance Admins should NOT see notifications from other Finance Admins or their subordinates
@@ -1596,7 +1596,7 @@ export default function Navbar() {
                 }
               }
             }
-            
+
             // Only add if we haven't seen this ID yet (deduplicate)
             if (notifId > 0 && !notifsMap.has(notifId)) {
               notifsMap.set(notifId, {
@@ -1612,15 +1612,15 @@ export default function Navbar() {
               } as Notification);
             }
           });
-          
+
           // Convert map values to array and sort by created_at (newest first)
-          const uniqueNotifs = Array.from(notifsMap.values()).sort((a, b) => 
+          const uniqueNotifs = Array.from(notifsMap.values()).sort((a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           );
-          
+
           // Update last seen notification IDs
           lastNotificationIdsRef.current = new Set(uniqueNotifs.map(n => n.id));
-          
+
           setNotifications(uniqueNotifs);
           const unreadCountFromList = uniqueNotifs.filter((n) => !n.is_read).length;
           setUnreadCount(unreadCountFromList);
@@ -1669,7 +1669,7 @@ export default function Navbar() {
 
   const handleNotificationsClick = () => {
     setIsNotificationPanelOpen(!isNotificationPanelOpen);
-    setIsDropdownOpen(false); 
+    setIsDropdownOpen(false);
     if (isNotificationPanelOpen) {
       setNotificationsExpanded(false);
     }
@@ -1698,7 +1698,7 @@ export default function Navbar() {
     if (!notification.is_read) {
       try {
         await apiClient.markNotificationAsRead(notification.id);
-        setNotifications(prev => prev.map(n => 
+        setNotifications(prev => prev.map(n =>
           n.id === notification.id ? { ...n, is_read: true } : n
         ));
         setUnreadCount(prev => Math.max(0, prev - 1));
@@ -1707,15 +1707,15 @@ export default function Navbar() {
       }
     }
     setIsNotificationPanelOpen(false);
-    
+
     // Navigate to action URL if available, otherwise to notifications page
     if (notification.action_url) {
-      const url = notification.action_url.startsWith('/') 
-        ? notification.action_url 
+      const url = notification.action_url.startsWith('/')
+        ? notification.action_url
         : `/${notification.action_url}`;
       router.push(url);
     } else {
-    router.push('/notifications');
+      router.push('/notifications');
     }
   };
 
@@ -1759,13 +1759,13 @@ export default function Navbar() {
     router.push('/permissions');
     setIsDropdownOpen(false);
   };
-  
+
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDropdownOpen(false);
     toast.loading('Signing out...', { id: 'signout' });
-    
+
     try {
       try {
         await apiClient.logout();
@@ -1804,7 +1804,7 @@ export default function Navbar() {
       setTimeout(() => {
         window.location.href = '/';
       }, 500);
-      
+
     } catch (error) {
       console.error('Sign out error:', error);
       if (typeof window !== 'undefined') {
@@ -1825,14 +1825,14 @@ export default function Navbar() {
       } catch (err) {
         console.error('Error clearing store:', err);
       }
-      
+
       toast.success('Signed out', { id: 'signout' });
       setTimeout(() => {
         window.location.href = '/';
       }, 500);
     }
   };
-  
+
   const handleSignOutMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1892,7 +1892,7 @@ export default function Navbar() {
     const normalizedRole = (role || '').toLowerCase();
     return roleMap[normalizedRole] || role || 'User';
   };
-  
+
   const displayRole = getRoleDisplayName(currentUser?.role);
 
   return (
@@ -1967,7 +1967,7 @@ export default function Navbar() {
         </ComponentGate>
         {user && (
           <div ref={notificationBadgeRef} style={{ position: 'relative' }}>
-            <NotificationBadge 
+            <NotificationBadge
               data-notification-badge="true"
               onClick={handleNotificationsClick}
             >
@@ -1986,123 +1986,123 @@ export default function Navbar() {
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
               >
-              <NotificationPanelHeader>
-                <h3>Notifications</h3>
-                {unreadCount > 0 && (
-                  <span>{unreadCount} unread</span>
-                )}
-              </NotificationPanelHeader>
-              <NotificationPanelBody data-notification-body>
-                {loadingNotifications ? (
-                  <LoadingNotifications>
-                    <p>Loading notifications...</p>
-                  </LoadingNotifications>
-                ) : notifications.length === 0 ? (
-                  <EmptyNotifications>
-                    <p>No notifications</p>
-                  </EmptyNotifications>
-                ) : (
-                  <>
-                    <NotificationList>
-                      {(notificationsExpanded ? notifications : notifications.slice(0, 4))
-                        .filter((notification, index, self) => 
-                          // Additional deduplication check - keep only first occurrence of each ID
-                          index === self.findIndex(n => n.id === notification.id)
-                        )
-                        .map((notification) => (
-                        <NotificationListItem
-                      key={notification.id}
-                      $isRead={notification.is_read}
-                      onClick={() => handleNotificationClick(notification)}
-                          title={notification.action_url ? 'Click to view details' : 'Click to view all notifications'}
+                <NotificationPanelHeader>
+                  <h3>Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span>{unreadCount} unread</span>
+                  )}
+                </NotificationPanelHeader>
+                <NotificationPanelBody data-notification-body>
+                  {loadingNotifications ? (
+                    <LoadingNotifications>
+                      <p>Loading notifications...</p>
+                    </LoadingNotifications>
+                  ) : notifications.length === 0 ? (
+                    <EmptyNotifications>
+                      <p>No notifications</p>
+                    </EmptyNotifications>
+                  ) : (
+                    <>
+                      <NotificationList>
+                        {(notificationsExpanded ? notifications : notifications.slice(0, 4))
+                          .filter((notification, index, self) =>
+                            // Additional deduplication check - keep only first occurrence of each ID
+                            index === self.findIndex(n => n.id === notification.id)
+                          )
+                          .map((notification) => (
+                            <NotificationListItem
+                              key={notification.id}
+                              $isRead={notification.is_read}
+                              onClick={() => handleNotificationClick(notification)}
+                              title={notification.action_url ? 'Click to view details' : 'Click to view all notifications'}
+                            >
+                              <NotificationListText $isRead={notification.is_read}>
+                                <div className="notification-meta">
+                                  <p style={{ flex: 1, margin: 0 }}>{notification.title || notification.message}</p>
+                                  <span className="notification-time">{formatNotificationDate(notification.created_at)}</span>
+                                </div>
+                                {notification.priority && notification.priority !== 'medium' && (
+                                  <div style={{ marginTop: '4px' }}>
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      padding: '3px 7px',
+                                      fontSize: '10px',
+                                      fontWeight: '600',
+                                      textTransform: 'uppercase',
+                                      borderRadius: '4px',
+                                      backgroundColor: notification.priority === 'urgent' ? '#fee2e2' :
+                                        notification.priority === 'high' ? '#fef3c7' : '#dbeafe',
+                                      color: notification.priority === 'urgent' ? '#dc2626' :
+                                        notification.priority === 'high' ? '#d97706' : '#2563eb',
+                                      border: `1px solid ${notification.priority === 'urgent' ? '#fecaca' :
+                                        notification.priority === 'high' ? '#fde68a' : '#bfdbfe'}`,
+                                      letterSpacing: '0.025em',
+                                    }}>
+                                      {notification.priority}
+                                    </span>
+                                  </div>
+                                )}
+                              </NotificationListText>
+                            </NotificationListItem>
+                          ))}
+                      </NotificationList>
+                    </>
+                  )}
+                </NotificationPanelBody>
+                {notifications.length > 0 && (
+                  <NotificationPanelFooter>
+                    <div style={{
+                      display: 'flex',
+                      gap: '10px',
+                      width: '100%',
+                      alignItems: 'stretch',
+                      justifyContent: 'center'
+                    }}>
+                      {notifications.length > 4 && (
+                        <CollapseButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleExpandNotifications();
+                          }}
+                          style={{
+                            flex: '0 1 auto',
+                            margin: 0,
+                            minWidth: '140px',
+                            maxWidth: '200px'
+                          }}
                         >
-                          <NotificationListText $isRead={notification.is_read}>
-                            <div className="notification-meta">
-                              <p style={{ flex: 1, margin: 0 }}>{notification.title || notification.message}</p>
-                              <span className="notification-time">{formatNotificationDate(notification.created_at)}</span>
-                            </div>
-                            {notification.priority && notification.priority !== 'medium' && (
-                              <div style={{ marginTop: '4px' }}>
-                                <span style={{ 
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  padding: '3px 7px',
-                                  fontSize: '10px',
-                                  fontWeight: '600',
-                                  textTransform: 'uppercase',
-                                  borderRadius: '4px',
-                                  backgroundColor: notification.priority === 'urgent' ? '#fee2e2' : 
-                                                 notification.priority === 'high' ? '#fef3c7' : '#dbeafe',
-                                  color: notification.priority === 'urgent' ? '#dc2626' : 
-                                         notification.priority === 'high' ? '#d97706' : '#2563eb',
-                                  border: `1px solid ${notification.priority === 'urgent' ? '#fecaca' : 
-                                                    notification.priority === 'high' ? '#fde68a' : '#bfdbfe'}`,
-                                  letterSpacing: '0.025em',
-                                }}>
-                                  {notification.priority}
-                                </span>
-                              </div>
-                            )}
-                          </NotificationListText>
-                        </NotificationListItem>
-                      ))}
-                    </NotificationList>
-                  </>
-                )}
-              </NotificationPanelBody>
-              {notifications.length > 0 && (
-                <NotificationPanelFooter>
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '10px', 
-                    width: '100%', 
-                    alignItems: 'stretch',
-                    justifyContent: 'center'
-                  }}>
-                    {notifications.length > 4 && (
-                      <CollapseButton
+                          {notificationsExpanded ? (
+                            <>
+                              <ChevronUp size={14} />
+                              <span>Show Less</span>
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown size={14} />
+                              <span>Show {notifications.length - 4} More</span>
+                            </>
+                          )}
+                        </CollapseButton>
+                      )}
+                      <ViewAllButton
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
-                          handleExpandNotifications();
+                          handleViewAllNotifications();
                         }}
-                        style={{ 
-                          flex: '0 1 auto',
-                          margin: 0,
-                          minWidth: '140px',
-                          maxWidth: '200px'
+                        style={{
+                          flex: notifications.length > 4 ? '0 1 auto' : 'none',
+                          minWidth: '160px',
+                          maxWidth: notifications.length > 4 ? '200px' : 'none'
                         }}
                       >
-                        {notificationsExpanded ? (
-                          <>
-                            <ChevronUp size={14} />
-                            <span>Show Less</span>
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown size={14} />
-                            <span>Show {notifications.length - 4} More</span>
-                          </>
-                        )}
-                      </CollapseButton>
-                    )}
-                    <ViewAllButton 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleViewAllNotifications();
-                      }}
-                      style={{ 
-                        flex: notifications.length > 4 ? '0 1 auto' : 'none',
-                        minWidth: '160px',
-                        maxWidth: notifications.length > 4 ? '200px' : 'none'
-                      }}
-                    >
-                    View All Notifications
-                  </ViewAllButton>
-                  </div>
-                </NotificationPanelFooter>
-              )}
+                        View All Notifications
+                      </ViewAllButton>
+                    </div>
+                  </NotificationPanelFooter>
+                )}
               </NotificationPanel>
             </div>
           </div>
@@ -2130,7 +2130,7 @@ export default function Navbar() {
             <UserRole>{displayRole}</UserRole>
           </UserInfo>
         </UserProfileContainer>
-        <DropdownMenu 
+        <DropdownMenu
           data-dropdown-menu="true"
           $isOpen={isDropdownOpen}
           onClick={(e) => {
@@ -2147,10 +2147,10 @@ export default function Navbar() {
             <span>Profile</span>
           </DropdownItem>
           {currentUser && (
-            (currentUser.role?.toLowerCase() === 'admin' || 
-             currentUser.role?.toLowerCase() === 'super_admin' || 
-             currentUser.role?.toLowerCase() === 'finance_admin' ||
-             currentUser.role?.toLowerCase() === 'finance_manager'
+            (currentUser.role?.toLowerCase() === 'admin' ||
+              currentUser.role?.toLowerCase() === 'super_admin' ||
+              currentUser.role?.toLowerCase() === 'finance_admin' ||
+              currentUser.role?.toLowerCase() === 'finance_manager'
             ) && (
               <DropdownItem onClick={handleUsersClick}>
                 <DropdownIcon $iconType="users">
@@ -2161,8 +2161,8 @@ export default function Navbar() {
             )
           )}
           {currentUser && (
-            (currentUser.role?.toLowerCase() !== 'accountant' && 
-             currentUser.role?.toLowerCase() !== 'employee'
+            (currentUser.role?.toLowerCase() !== 'accountant' &&
+              currentUser.role?.toLowerCase() !== 'employee'
             ) && (
               <DropdownItem onClick={handleSettingsClick}>
                 <DropdownIcon $iconType="settings">
@@ -2180,7 +2180,7 @@ export default function Navbar() {
               <span>Role & Permission Management</span>
             </DropdownItem>
           </ComponentGate>
-          <SignOutItem 
+          <SignOutItem
             data-signout="true"
             onMouseDown={handleSignOutMouseDown}
             onClick={(e) => {
