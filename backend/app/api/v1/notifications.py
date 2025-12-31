@@ -180,6 +180,118 @@ def get_unread_count(
         return {"unread_count": 0}
 
 
+@router.get("/preferences", response_model=dict)
+def get_notification_preferences(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get current user's notification preferences"""
+    try:
+        from ...schemas.notification import NotificationPreferencesOut, QuietHours
+        from datetime import datetime
+        
+        # Default preferences structure matching frontend
+        default_preferences = {
+            "notificationPreferences": {
+                "claims": {"email": True, "sms": False, "app": True, "push": True},
+                "appointments": {"email": True, "sms": True, "app": True, "push": True},
+                "messages": {"email": True, "sms": False, "app": True, "push": True},
+                "billing": {"email": True, "sms": False, "app": True, "push": False},
+                "policy": {"email": True, "sms": False, "app": True, "push": False},
+                "marketing": {"email": False, "sms": False, "app": False, "push": False},
+                "system": {"email": True, "sms": False, "app": True, "push": False}
+            },
+            "doNotDisturb": False,
+            "quietHours": {"enabled": False, "startTime": "22:00", "endTime": "08:00"}
+        }
+        
+        # Get user's preferences from database
+        if current_user.notification_preferences:
+            user_prefs = current_user.notification_preferences
+            # Merge with defaults to ensure all fields are present
+            result = {
+                "notificationPreferences": {
+                    **default_preferences["notificationPreferences"],
+                    **(user_prefs.get("notificationPreferences", {}) or {})
+                },
+                "doNotDisturb": user_prefs.get("doNotDisturb", False),
+                "quietHours": {
+                    **default_preferences["quietHours"],
+                    **(user_prefs.get("quietHours", {}) or {})
+                },
+                "lastUpdated": user_prefs.get("lastUpdated")
+            }
+            return result
+        
+        return {
+            **default_preferences,
+            "lastUpdated": None
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error in get_notification_preferences: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve notification preferences: {str(e)}"
+        )
+
+
+@router.put("/preferences", response_model=dict)
+def update_notification_preferences(
+    preferences: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user's notification preferences"""
+    try:
+        from datetime import datetime
+        
+        # Validate and structure the preferences
+        notification_prefs = {
+            "notificationPreferences": preferences.get("notificationPreferences", {}),
+            "doNotDisturb": preferences.get("doNotDisturb", False),
+            "quietHours": preferences.get("quietHours", {
+                "enabled": False,
+                "startTime": "22:00",
+                "endTime": "08:00"
+            }),
+            "lastUpdated": datetime.utcnow().isoformat()
+        }
+        
+        # Update user's notification preferences
+        current_user.notification_preferences = notification_prefs
+        db.commit()
+        db.refresh(current_user)
+        
+        return {
+            "message": "Notification preferences updated successfully",
+            "preferences": notification_prefs
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Unexpected error in update_notification_preferences: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update notification preferences: {str(e)}"
+        )
+
+
+@router.delete("/cleanup")
+def cleanup_notifications(
+    current_user: User = Depends(require_min_role(UserRole.SUPER_ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """Clean up expired notifications (super admin only)"""
+    try:
+        count = notification_crud.cleanup_expired(db)
+        return {"message": f"Cleaned up {count} expired notifications"}
+    except Exception as e:
+        logger.error(f"Unexpected error in cleanup_notifications: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to cleanup notifications: {str(e)}"
+        )
+
+
 @router.get("/{notification_id}", response_model=NotificationOut)
 def read_notification(
     notification_id: int,
@@ -447,118 +559,6 @@ def create_broadcast_notification(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create broadcast notification: {str(e)}"
-        )
-
-
-@router.delete("/cleanup")
-def cleanup_notifications(
-    current_user: User = Depends(require_min_role(UserRole.SUPER_ADMIN)),
-    db: Session = Depends(get_db)
-):
-    """Clean up expired notifications (super admin only)"""
-    try:
-        count = notification_crud.cleanup_expired(db)
-        return {"message": f"Cleaned up {count} expired notifications"}
-    except Exception as e:
-        logger.error(f"Unexpected error in cleanup_notifications: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to cleanup notifications: {str(e)}"
-        )
-
-
-@router.get("/preferences", response_model=dict)
-def get_notification_preferences(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Get current user's notification preferences"""
-    try:
-        from ...schemas.notification import NotificationPreferencesOut, QuietHours
-        from datetime import datetime
-        
-        # Default preferences structure matching frontend
-        default_preferences = {
-            "notificationPreferences": {
-                "claims": {"email": True, "sms": False, "app": True, "push": True},
-                "appointments": {"email": True, "sms": True, "app": True, "push": True},
-                "messages": {"email": True, "sms": False, "app": True, "push": True},
-                "billing": {"email": True, "sms": False, "app": True, "push": False},
-                "policy": {"email": True, "sms": False, "app": True, "push": False},
-                "marketing": {"email": False, "sms": False, "app": False, "push": False},
-                "system": {"email": True, "sms": False, "app": True, "push": False}
-            },
-            "doNotDisturb": False,
-            "quietHours": {"enabled": False, "startTime": "22:00", "endTime": "08:00"}
-        }
-        
-        # Get user's preferences from database
-        if current_user.notification_preferences:
-            user_prefs = current_user.notification_preferences
-            # Merge with defaults to ensure all fields are present
-            result = {
-                "notificationPreferences": {
-                    **default_preferences["notificationPreferences"],
-                    **(user_prefs.get("notificationPreferences", {}) or {})
-                },
-                "doNotDisturb": user_prefs.get("doNotDisturb", False),
-                "quietHours": {
-                    **default_preferences["quietHours"],
-                    **(user_prefs.get("quietHours", {}) or {})
-                },
-                "lastUpdated": user_prefs.get("lastUpdated")
-            }
-            return result
-        
-        return {
-            **default_preferences,
-            "lastUpdated": None
-        }
-    except Exception as e:
-        logger.error(f"Unexpected error in get_notification_preferences: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve notification preferences: {str(e)}"
-        )
-
-
-@router.put("/preferences", response_model=dict)
-def update_notification_preferences(
-    preferences: dict,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Update current user's notification preferences"""
-    try:
-        from datetime import datetime
-        
-        # Validate and structure the preferences
-        notification_prefs = {
-            "notificationPreferences": preferences.get("notificationPreferences", {}),
-            "doNotDisturb": preferences.get("doNotDisturb", False),
-            "quietHours": preferences.get("quietHours", {
-                "enabled": False,
-                "startTime": "22:00",
-                "endTime": "08:00"
-            }),
-            "lastUpdated": datetime.utcnow().isoformat()
-        }
-        
-        # Update user's notification preferences
-        current_user.notification_preferences = notification_prefs
-        db.commit()
-        db.refresh(current_user)
-        
-        return {
-            "message": "Notification preferences updated successfully",
-            "preferences": notification_prefs
-        }
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Unexpected error in update_notification_preferences: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update notification preferences: {str(e)}"
         )
 
 
