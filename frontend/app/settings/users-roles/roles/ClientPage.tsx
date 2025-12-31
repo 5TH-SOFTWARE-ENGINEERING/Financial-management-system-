@@ -16,14 +16,7 @@ import {
   TableHead,
   TableCell
 } from '@/components/common/Table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { RoleDeleteModal } from './RoleDeleteModal';
 import { useRouter } from 'next/navigation';
 import apiClient, { type ApiRole } from '@/lib/api';
 import {
@@ -176,7 +169,7 @@ const Message = styled.div`
 // --- Interface ---
 
 interface Role {
-  id: number;
+  id: string | number;
   name: string;
   description: string;
   permissions: string[];
@@ -192,7 +185,7 @@ const RolesPage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | number | null>(null);
 
   // Deletion Modal State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -213,7 +206,7 @@ const RolesPage: React.FC = () => {
       const transformedRoles: Role[] = (response.data || []).map((role: ApiRole) => {
         const permissions = role.permissions || [];
         return {
-          id: Number(role.id ?? Date.now()),
+          id: role.id ?? String(Date.now()),
           name: role.name,
           description: role.description || `Users with ${role.name} role`,
           permissions,
@@ -248,13 +241,13 @@ const RolesPage: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!roleToDelete || !confirmPassword) return;
+  const handleConfirmDelete = async (password: string) => {
+    if (!roleToDelete) return;
 
     setIsVerifying(true);
     setDeleteLoadingId(roleToDelete.id);
     try {
-      await apiClient.deleteRole(roleToDelete.id, confirmPassword);
+      await apiClient.deleteRole(roleToDelete.id, password);
       setRoles((prev) => prev.filter((item) => item.id !== roleToDelete.id));
       toast.success(`Role "${formatRoleName(roleToDelete.name)}" deleted successfully`);
       setIsDeleteDialogOpen(false);
@@ -266,6 +259,7 @@ const RolesPage: React.FC = () => {
             ? err.message
             : 'Failed to delete role';
       toast.error(detail);
+      throw err; // Re-throw to let the modal handle the error display
     } finally {
       setIsVerifying(false);
       setDeleteLoadingId(null);
@@ -412,55 +406,13 @@ const RolesPage: React.FC = () => {
         </StyledCard>
       </PermissionGate>
 
-      {/* --- Password Verification Modal --- */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Shield className="h-5 w-5" />
-              Secure Deletion Required
-            </DialogTitle>
-            <DialogDescription>
-              You are about to delete the role <strong>"{roleToDelete ? formatRoleName(roleToDelete.name) : ''}"</strong>.
-              This action is permanent and cannot be reversed.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="password">Administrator Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  autoFocus
-                  className="pl-9"
-                  placeholder="Enter your password to confirm"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleConfirmDelete()}
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)} disabled={isVerifying}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              className="gap-2"
-              disabled={!confirmPassword || isVerifying}
-            >
-              {isVerifying && <Loader2 className="animate-spin" size={16} />}
-              Permanently Delete Role
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RoleDeleteModal
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        role={roleToDelete}
+        isDeleting={isVerifying}
+      />
     </Container>
   );
 };

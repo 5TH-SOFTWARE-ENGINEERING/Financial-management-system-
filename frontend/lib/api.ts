@@ -1052,7 +1052,7 @@ class ApiClient {
     return this.put(`/admin/roles/${roleId}`, payload);
   }
 
-  async deleteRole(roleId: number, password: string): Promise<ApiResponse<null>> {
+  async deleteRole(roleId: number | string, password: string): Promise<ApiResponse<null>> {
     return this.post(`/admin/roles/${roleId}/delete`, { password });
   }
 
