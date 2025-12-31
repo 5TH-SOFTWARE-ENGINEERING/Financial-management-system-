@@ -211,6 +211,53 @@ def update_role(
     return updated_role
 
 
+class DeleteRoleRequest(BaseModel):
+    password: str
+
+
+@router.post("/roles/{role_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
+def delete_role_verified(
+    role_id: int,
+    delete_request: DeleteRoleRequest,
+    current_user: User = Depends(require_min_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """Delete a role definition with password verification"""
+    # Verify password
+    if not verify_password(delete_request.password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid password. Verification failed."
+        )
+
+    db_role = role_crud.get(db, role_id)
+    if not db_role:
+        raise HTTPException(status_code=404, detail="Role not found")
+
+    # Check if role is in use
+    try:
+        enum_role = UserRole(db_role.name)
+        assigned_count = db.query(User).filter(User.role == enum_role).count()
+    except ValueError:
+        assigned_count = 0
+
+    if assigned_count:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete role '{db_role.name}' because it is assigned to {assigned_count} user(s)."
+        )
+
+    # Protect default roles from deletion
+    if db_role.name in [r.value for r in UserRole]:
+        raise HTTPException(
+            status_code=400,
+            detail="System default roles cannot be deleted."
+        )
+
+    role_crud.delete(db, role_id)
+    return None
+
+
 @router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_role(
     role_id: int,

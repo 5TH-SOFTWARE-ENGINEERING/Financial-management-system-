@@ -1052,8 +1052,8 @@ class ApiClient {
     return this.put(`/admin/roles/${roleId}`, payload);
   }
 
-  async deleteRole(roleId: number): Promise<ApiResponse<null>> {
-    return this.delete(`/admin/roles/${roleId}`);
+  async deleteRole(roleId: number, password: string): Promise<ApiResponse<null>> {
+    return this.post(`/admin/roles/${roleId}/delete`, { password });
   }
 
   // Backup endpoints

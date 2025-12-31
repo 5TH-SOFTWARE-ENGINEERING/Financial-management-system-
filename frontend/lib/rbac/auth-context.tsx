@@ -103,26 +103,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Call store logout which handles API call and state clearing
       await storeLogout();
-      
+
       // Clear any additional localStorage items
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('language');
       }
-      
+
       // Redirect to home page after logout
       redirectToHome();
     } catch (error) {
       console.error('Logout error:', error);
-      
+
       // Even if logout fails, clear local storage and redirect
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('language');
       }
-      
+
       // Still redirect to home page
       redirectToHome();
     }
@@ -156,6 +156,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         Resource.DEPARTMENTS,
         Resource.PROJECTS,
         Resource.PROFILE,
+        Resource.ROLES,
+        Resource.SETTINGS,
       ],
       [UserType.ACCOUNTANT]: [
         Resource.DASHBOARD,
