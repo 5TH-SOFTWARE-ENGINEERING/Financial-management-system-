@@ -3,8 +3,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import apiClient, { type ApiUser } from '@/lib/api';
-
-// Define store user type (frontend-optimized, string IDs)
 export interface StoreUser {
   id: string;
   name: string;

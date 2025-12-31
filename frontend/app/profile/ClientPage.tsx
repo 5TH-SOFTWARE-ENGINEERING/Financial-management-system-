@@ -44,7 +44,7 @@ const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
 // Styled components
 const Container = styled.div`
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 20px auto;
   padding: ${theme.spacing.md};
 `;
 
