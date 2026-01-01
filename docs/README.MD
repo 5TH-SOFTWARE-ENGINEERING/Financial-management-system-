@@ -55,7 +55,11 @@ Key features:
 - **Search**: Global search across users, revenue, expenses, projects, and departments with RBAC filtering
 - **Notifications**: Real-time notifications with role-based filtering
 - **Dashboard**: Comprehensive dashboard with role-specific data views
-- **Scenarios & Budgeting**: Budget scenario planning and comparison tools
+- **Scenarios & Budgeting**: Advanced FP&A tools for financial planning and forecasting
+  - **Budget Dashboard**: Centralized view of all budgets with status tracking (Draft, Approved, Active, Archived) and real-time financial health summaries (Revenue vs. Expenses vs. Profit).
+  - **Budget Creation**: Comprehensive wizard for metadata capture (name, period, department, project) and itemized planning.
+  - **Granular Planning**: Dynamic itemized budgeting system allowing per-item revenue and expense tracking with categorical breakdowns.
+  - **Scenario Analysis**: Comparison tools and detailed item management (add/edit/list) within specific budget scenarios.
 
 Common commands:
 - Dev: `npm run dev`
@@ -113,3 +117,5 @@ All endpoints enforce role-based access control. See `backend/app/api/v1/` for d
 - Backend guide: `backend/README.md`
 - FastAPI docs: https://fastapi.tiangolo.com/
 - Next.js docs: https://nextjs.org/docs
+
+
