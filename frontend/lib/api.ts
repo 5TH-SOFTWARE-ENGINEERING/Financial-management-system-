@@ -57,6 +57,27 @@ export interface ApiRole {
   updated_at?: string;
 }
 
+export interface AuditLog {
+  id: number;
+  user_id: number;
+  user_full_name?: string;
+  user_email?: string;
+  user?: { // Backend returns nested user object based on pre-fetched data
+    id: number;
+    username?: string;
+    full_name?: string;
+    email?: string;
+  };
+  action: string;
+  resource_type: string;
+  resource_id?: number;
+  old_values?: string;
+  new_values?: string;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+}
+
 class ApiClient {
   private client: AxiosInstance;
 
@@ -1187,7 +1208,8 @@ class ApiClient {
     resource_type?: string;
     start_date?: string;
     end_date?: string;
-  }): Promise<ApiResponse<Record<string, unknown>[]>> {
+    search?: string; // Search by username/email/full_name
+  }): Promise<ApiResponse<AuditLog[]>> {
     const params: Record<string, unknown> = {};
     if (filters) {
       if (filters.skip !== undefined) params.skip = filters.skip;
@@ -1195,6 +1217,7 @@ class ApiClient {
       if (filters.user_id !== undefined) params.user_id = filters.user_id;
       if (filters.action) params.action = filters.action;
       if (filters.resource_type) params.resource_type = filters.resource_type;
+      if (filters.search) params.search = filters.search;
       if (filters.start_date) {
         // Convert to ISO format for backend
         const start = new Date(filters.start_date + 'T00:00:00');

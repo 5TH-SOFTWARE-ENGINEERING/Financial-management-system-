@@ -24,6 +24,8 @@ from ...schemas.sale import (
     SaleCreate, SaleOut, SalePostRequest, JournalEntryOut, 
     SalesSummaryOut, ReceiptOut
 )
+from ...utils.audit import AuditLogger, AuditAction
+from ...api.v1.auth import get_client_info
 
 router = APIRouter()
 
@@ -126,6 +128,24 @@ def create_sale(
         except Exception as e:
             logger.warning(f"Notification failed for sale creation: {str(e)}")
         
+        # Log sale creation
+        try:
+            ip_address, user_agent = get_client_info(request=None) # We don't have request in this dependency yet, but we can pass None or try to get it
+            AuditLogger.log_create(
+                db=db,
+                user_id=current_user.id,
+                resource_type="sale",
+                resource_id=sale.id,
+                new_values={
+                    "item_id": sale.item_id,
+                    "quantity": sale.quantity_sold,
+                    "total_amount": float(sale.total_sale),
+                    "receipt_number": sale.receipt_number
+                }
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for sale creation: {str(audit_err)}")
+
         return _format_sale_output(sale, current_user)
     except HTTPException:
         raise
@@ -397,6 +417,17 @@ def post_sale(
         except Exception as e:
             logger.warning(f"Notification failed for sale posting: {str(e)}")
         
+        # Log sale posting
+        try:
+            AuditLogger.log_approve(
+                db=db,
+                user_id=current_user.id,
+                resource_type="sale",
+                resource_id=sale.id
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for sale posting: {str(audit_err)}")
+
         return _format_sale_output(sale, current_user)
     except HTTPException:
         raise
@@ -425,6 +456,19 @@ def cancel_sale(
             )
         
         sale = sale_crud.cancel_sale(db, sale_id, current_user.id)
+        # Log sale cancellation
+        try:
+            AuditLogger.log_action(
+                db=db,
+                user_id=current_user.id,
+                action=AuditAction.REJECT,
+                resource_type="sale",
+                resource_id=sale.id,
+                new_values={"status": SaleStatus.CANCELLED}
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for sale cancellation: {str(audit_err)}")
+
         return _format_sale_output(sale, current_user)
     except HTTPException:
         raise

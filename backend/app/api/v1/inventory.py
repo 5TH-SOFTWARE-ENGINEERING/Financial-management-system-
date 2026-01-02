@@ -22,6 +22,8 @@ from ...schemas.inventory import (
     InventoryItemCreate, InventoryItemUpdate, InventoryItemOut, 
     InventoryItemPublicOut, InventoryAuditLogOut
 )
+from ...utils.audit import AuditLogger, AuditAction
+from ...api.v1.auth import get_client_info
 from ...utils.encryption import encrypt_value, decrypt_value
 from ...core.security import verify_password
 from pydantic import BaseModel # type: ignore[import-untyped]
@@ -149,6 +151,26 @@ def create_inventory_item(
         'profit_margin': item.calculate_profit_margin(),
     }
     
+    # Log inventory item creation
+    try:
+        ip_address, user_agent = get_client_info(request)
+        AuditLogger.log_create(
+            db=db,
+            user_id=current_user.id,
+            resource_type="inventory",
+            resource_id=item.id,
+            new_values={
+                "item_name": item.item_name,
+                "selling_price": item.selling_price,
+                "quantity": item.quantity,
+                "sku": item.sku
+            },
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+    except Exception as audit_err:
+        logger.warning(f"Audit logging failed for inventory creation: {str(audit_err)}")
+
     return _filter_item_by_role(item_dict, current_user.role)
 
 
@@ -407,6 +429,23 @@ def update_inventory_item(
         item_dict['profit_per_unit'] = updated_item.calculate_profit_per_unit()
         item_dict['profit_margin'] = updated_item.calculate_profit_margin()
     
+    # Log inventory item update
+    try:
+        ip_address, user_agent = get_client_info(request)
+        # We can extract old values from 'item' and new values from 'updated_item' if we want more detail
+        AuditLogger.log_update(
+            db=db,
+            user_id=current_user.id,
+            resource_type="inventory",
+            resource_id=updated_item.id,
+            old_values={"item_name": item.item_name, "quantity": item.quantity, "selling_price": item.selling_price},
+            new_values={"item_name": updated_item.item_name, "quantity": updated_item.quantity, "selling_price": updated_item.selling_price},
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+    except Exception as audit_err:
+        logger.warning(f"Audit logging failed for inventory update: {str(audit_err)}")
+
     return _filter_item_by_role(item_dict, current_user.role)
 
 
@@ -690,5 +729,18 @@ def delete_inventory_item(
     if not deleted:
         raise HTTPException(status_code=500, detail="Failed to delete inventory item")
     
+    # Log inventory item deletion
+    try:
+        # We don't have request easily available here, but we can try to get it if we add it to params
+        AuditLogger.log_delete(
+            db=db,
+            user_id=current_user.id,
+            resource_type="inventory",
+            resource_id=item_id,
+            old_values={"item_name": item.item_name}
+        )
+    except Exception as audit_err:
+        logger.warning(f"Audit logging failed for inventory deletion: {str(audit_err)}")
+
     return {"message": "Inventory item deleted successfully"}
 

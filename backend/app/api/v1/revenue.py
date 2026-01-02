@@ -16,6 +16,8 @@ from ...models.approval import ApprovalStatus
 from ...api.deps import get_current_active_user, require_min_role
 from ...core.security import verify_password
 from pydantic import BaseModel # type: ignore[import-untyped]
+from ...utils.audit import AuditLogger, AuditAction
+from ...api.v1.auth import get_client_info
 
 router = APIRouter()
 
@@ -238,6 +240,20 @@ def create_revenue_entry(
             # Don't fail the request if auto-learning fails
             logger.warning(f"Auto-learning trigger failed for revenue: {str(e)}")
         
+        # Log revenue entry creation
+        try:
+            # We don't have request easily available here, but we can try to get it if we add it to params
+            # For now passing None or getting it from a dependency if we add it
+            AuditLogger.log_create(
+                db=db,
+                user_id=current_user.id,
+                resource_type="revenue",
+                resource_id=revenue.id,
+                new_values={"amount": float(revenue.amount), "description": revenue.description}
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for revenue creation: {str(audit_err)}")
+
         return revenue
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -302,6 +318,19 @@ def update_revenue_entry(
     if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
         raise HTTPException(status_code=400, detail="Cannot update approved entry")
     
+    # Log revenue entry update
+    try:
+        AuditLogger.log_update(
+            db=db,
+            user_id=current_user.id,
+            resource_type="revenue",
+            resource_id=entry.id,
+            old_values={"amount": float(entry.amount), "description": entry.description},
+            new_values=revenue_update.dict(exclude_unset=True)
+        )
+    except Exception as audit_err:
+        logger.warning(f"Audit logging failed for revenue update: {str(audit_err)}")
+
     return revenue_crud.update(db, db_obj=entry, obj_in=revenue_update)
 
 
@@ -368,6 +397,18 @@ def delete_revenue_entry(
         if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
             raise HTTPException(status_code=400, detail="Cannot delete approved entry")
         
+        # Log revenue entry deletion
+        try:
+            AuditLogger.log_delete(
+                db=db,
+                user_id=current_user.id,
+                resource_type="revenue",
+                resource_id=revenue_id,
+                old_values={"amount": float(entry.amount), "description": entry.description}
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for revenue deletion: {str(audit_err)}")
+
         revenue_crud.delete(db, id=revenue_id)
         return {"message": "Revenue entry deleted successfully"}
     except HTTPException:
@@ -471,6 +512,17 @@ def approve_revenue_entry(
         except Exception as e:
             logger.warning(f"Notification failed for revenue approval: {str(e)}")
         
+        # Log revenue entry approval
+        try:
+            AuditLogger.log_approve(
+                db=db,
+                user_id=current_user.id,
+                resource_type="revenue",
+                resource_id=revenue_id
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for revenue approval: {str(audit_err)}")
+
         return {"message": "Revenue entry approved successfully"}
     except HTTPException:
         raise
@@ -559,6 +611,20 @@ def reject_revenue_entry(
     
     # Reject the approval workflow
     approval_crud.reject(db, approval_workflow.id, current_user.id, reject_request.reason)
+    
+    # Log revenue entry rejection
+    try:
+        AuditLogger.log_action(
+            db=db,
+            user_id=current_user.id,
+            action=AuditAction.REJECT,
+            resource_type="revenue",
+            resource_id=revenue_id,
+            new_values={"reason": reject_request.reason}
+        )
+    except Exception as audit_err:
+        logger.warning(f"Audit logging failed for revenue rejection: {str(audit_err)}")
+
     return {"message": "Revenue entry rejected successfully"}
 
 

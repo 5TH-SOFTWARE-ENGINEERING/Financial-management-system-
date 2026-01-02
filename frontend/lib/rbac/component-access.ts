@@ -1,8 +1,8 @@
 // lib/rbac/component-access.ts
 import { UserType } from './models';
- 
+
 // Common components
-export enum ComponentId {    
+export enum ComponentId {
     LOGIN = 'com.login',
     HEADER = 'com.header',
     DASHBOARD = 'com.dashboard',
@@ -88,13 +88,13 @@ export enum ComponentId {    
     FINANCE_MANAGER_CREATE = 'finance_manager.create',
     FINANCE_MANAGER_EDIT = 'finance_manager.edit',
     FINANCE_MANAGER_DELETE = 'finance_manager.delete',
-    
+
     // Accountant management components
     ACCOUNTANT_LIST = 'accountant.list',
     ACCOUNTANT_CREATE = 'accountant.create',
     ACCOUNTANT_EDIT = 'accountant.edit',
     ACCOUNTANT_DELETE = 'accountant.delete',
-    
+
     // Employee management components
     EMPLOYEE_LIST = 'employee.list',
     EMPLOYEE_CREATE = 'employee.create',
@@ -125,11 +125,12 @@ export enum ComponentId {    
     SIDEBAR_PROJECT = 'sidebar.project',
     SIDEBAR_INVENTORY = 'sidebar.inventory',
     SIDEBAR_SALES = 'sidebar.sales',
-    
+
     // NEW ADMINISTRATION SECTION SIDEBAR IDs
-    SIDEBAR_FINANCE_ADMINS = 'sidebar.finance_admins', 
-    SIDEBAR_ACCOUNTANTS = 'sidebar.accountants',       
-    SIDEBAR_EMPLOYEES = 'sidebar.employees',           
+    SIDEBAR_FINANCE_ADMINS = 'sidebar.finance_admins',
+    SIDEBAR_ACCOUNTANTS = 'sidebar.accountants',
+    SIDEBAR_EMPLOYEES = 'sidebar.employees',
+    SIDEBAR_AUDIT_LOGS = 'sidebar.audit_logs',
 }
 
 /**
@@ -144,7 +145,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_DASHBOARD,
         ComponentId.SIDEBAR_PROFILE,
         ComponentId.SIDEBAR_SETTINGS,
-        
+
         // All Management & CRUD
         ComponentId.USER_LIST,
         ComponentId.USER_CREATE,
@@ -194,7 +195,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.ADMIN_DELETE,
         ComponentId.PERMISSION_VIEW,
         ComponentId.PERMISSION_EDIT,
-        
+
         // **NEW/UPDATED ADMIN USER MANAGEMENT COMPONENTS**
         ComponentId.FINANCE_MANAGER_LIST,
         ComponentId.FINANCE_MANAGER_CREATE,
@@ -224,6 +225,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_FINANCE_ADMINS,
         ComponentId.SIDEBAR_ACCOUNTANTS,
         ComponentId.SIDEBAR_EMPLOYEES,
+        ComponentId.SIDEBAR_AUDIT_LOGS,
     ],
 
     [UserType.FINANCE_ADMIN]: [
@@ -233,7 +235,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_DASHBOARD,
         ComponentId.SIDEBAR_PROFILE,
         ComponentId.SIDEBAR_SETTINGS,
-    
+
         ComponentId.USER_LIST,
         ComponentId.USER_CREATE,
         ComponentId.USER_EDIT,
@@ -276,7 +278,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.PROFILE_EDIT,
         ComponentId.SETTINGS_VIEW,
         ComponentId.SETTINGS_EDIT,
-    
+
         // **NEW/UPDATED FINANCE ADMIN USER MANAGEMENT COMPONENTS**
         ComponentId.ACCOUNTANT_LIST,
         ComponentId.ACCOUNTANT_CREATE,
@@ -300,12 +302,12 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_SCENARIO,
         ComponentId.SIDEBAR_VARIANCE,
         ComponentId.SIDEBAR_BUDGETS,
-        ComponentId.SIDEBAR_DEPARTMENT,
         ComponentId.SIDEBAR_PROJECT,
         ComponentId.SIDEBAR_ACCOUNTANTS,
         ComponentId.SIDEBAR_EMPLOYEES,
-    ],  
-    
+        ComponentId.SIDEBAR_AUDIT_LOGS,
+    ],
+
     [UserType.ACCOUNTANT]: [
         ComponentId.LOGIN,
         ComponentId.HEADER,
@@ -336,7 +338,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_INVENTORY,
         ComponentId.SIDEBAR_SALES,
     ],
-    
+
     [UserType.EMPLOYEE]: [
         ComponentId.LOGIN,
         ComponentId.HEADER,
@@ -366,7 +368,7 @@ export const canAccessComponent = (
 ): boolean => {
     // Normalize userType to UserType enum
     let normalizedUserType: UserType;
-    
+
     if (typeof userType === 'string') {
         // Map string to UserType enum
         const typeMap: Record<string, UserType> = {
@@ -382,18 +384,18 @@ export const canAccessComponent = (
     } else {
         normalizedUserType = userType;
     }
-    
+
     const cacheKey = `${normalizedUserType}:${componentId}`;
     if (accessCache.has(cacheKey)) {
         return accessCache.get(cacheKey)!;
     }
-    
+
     // Admin always gets access
     if (normalizedUserType === UserType.ADMIN) {
         accessCache.set(cacheKey, true);
         return true;
     }
-    
+
     // Check mapping
     const allowedComponents = USER_TYPE_COMPONENT_MAP[normalizedUserType] ?? [];
     const result = allowedComponents.includes(componentId);

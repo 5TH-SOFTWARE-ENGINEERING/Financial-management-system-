@@ -443,6 +443,7 @@ def get_audit_logs(
     user_id: int = Query(None),
     action: str = Query(None),
     resource_type: str = Query(None),
+    search: str = Query(None),
     start_date: datetime = Query(None),
     end_date: datetime = Query(None),
     current_user: User = Depends(require_min_role(UserRole.ADMIN)),
@@ -467,6 +468,14 @@ def get_audit_logs(
     
     if resource_type:
         filters.append(AuditLog.resource_type == resource_type)
+    
+    if search:
+        search_term = f"%{search}%"
+        query = query.join(User).filter(
+            (User.full_name.ilike(search_term)) | 
+            (User.email.ilike(search_term)) |
+            (User.username.ilike(search_term))
+        )
     
     if start_date:
         filters.append(AuditLog.created_at >= start_date)

@@ -16,6 +16,8 @@ from ...models.approval import ApprovalStatus
 from ...api.deps import get_current_active_user, require_min_role
 from ...core.security import verify_password
 from pydantic import BaseModel # type: ignore[import-untyped]
+from ...utils.audit import AuditLogger, AuditAction
+from ...api.v1.auth import get_client_info
 
 router = APIRouter()
 
@@ -200,6 +202,18 @@ def create_expense_entry(
             # Don't fail the request if auto-learning fails
             logger.warning(f"Auto-learning trigger failed for expense: {str(e)}")
         
+        # Log expense entry creation
+        try:
+            AuditLogger.log_create(
+                db=db,
+                user_id=current_user.id,
+                resource_type="expense",
+                resource_id=expense.id,
+                new_values={"amount": float(expense.amount), "description": expense.description}
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for expense creation: {str(audit_err)}")
+
         return expense
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -278,6 +292,19 @@ def update_expense_entry(
         if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
             raise HTTPException(status_code=400, detail="Cannot update approved entry")
         
+        # Log expense entry update
+        try:
+            AuditLogger.log_update(
+                db=db,
+                user_id=current_user.id,
+                resource_type="expense",
+                resource_id=entry.id,
+                old_values={"amount": float(entry.amount), "description": entry.description},
+                new_values=expense_update.dict(exclude_unset=True)
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for expense update: {str(audit_err)}")
+
         return expense_crud.update(db, db_obj=entry, obj_in=expense_update)
     except HTTPException:
         raise
@@ -352,6 +379,18 @@ def delete_expense_entry(
         if entry.is_approved and current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
             raise HTTPException(status_code=400, detail="Cannot delete approved entry")
         
+        # Log expense entry deletion
+        try:
+            AuditLogger.log_delete(
+                db=db,
+                user_id=current_user.id,
+                resource_type="expense",
+                resource_id=expense_id,
+                old_values={"amount": float(entry.amount), "description": entry.description}
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for expense deletion: {str(audit_err)}")
+
         expense_crud.delete(db, id=expense_id)
         return {"message": "Expense entry deleted successfully"}
     except HTTPException:
@@ -455,6 +494,17 @@ def approve_expense_entry(
         except Exception as e:
             logger.warning(f"Notification failed for expense approval: {str(e)}")
         
+        # Log expense entry approval
+        try:
+            AuditLogger.log_approve(
+                db=db,
+                user_id=current_user.id,
+                resource_type="expense",
+                resource_id=expense_id
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit logging failed for expense approval: {str(audit_err)}")
+
         return {"message": "Expense entry approved successfully"}
     except HTTPException:
         raise
@@ -543,6 +593,20 @@ def reject_expense_entry(
     
     # Reject the approval workflow
     approval_crud.reject(db, approval_workflow.id, current_user.id, reject_request.reason)
+    
+    # Log expense entry rejection
+    try:
+        AuditLogger.log_action(
+            db=db,
+            user_id=current_user.id,
+            action=AuditAction.REJECT,
+            resource_type="expense",
+            resource_id=expense_id,
+            new_values={"reason": reject_request.reason}
+        )
+    except Exception as audit_err:
+        logger.warning(f"Audit logging failed for expense rejection: {str(audit_err)}")
+
     return {"message": "Expense entry rejected successfully"}
 
 

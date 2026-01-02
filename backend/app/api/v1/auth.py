@@ -14,6 +14,7 @@ from ...core.security import verify_password, create_access_token, get_password_
 from ...models.user import User, UserRole
 from ...crud import login_history as login_history_crud
 from ...utils.user_agent import get_device_info, get_location_from_ip
+from ...utils.audit import AuditLogger, AuditAction
 
 import pyotp # type: ignore[import-untyped]
 
@@ -239,7 +240,6 @@ def login(
     
     if not user:
         # Log failed login attempt (without user_id, we can't identify the user)
-        # We could create a separate table for failed attempts without user_id
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     
     # Check if user is active before logging
@@ -282,23 +282,22 @@ def login(
                 detail=f"Access denied. Your IP address ({ip_address}) is not in the allowed list."
             )
     
-    # Log successful login
+    # Log successful login (Audit Log)
     try:
-        login_history_crud.create(
+        AuditLogger.log_login(
             db=db,
             user_id=user.id,
             ip_address=ip_address,
-            user_agent=user_agent,
-            device=device,
-            location=location,
-            success=True
+            user_agent=user_agent
         )
+        
         # Update last_login
         from datetime import datetime
         user.last_login = datetime.utcnow()
         db.commit()
-    except Exception:
-        pass  # Don't fail login if history logging fails
+    except Exception as e:
+        logger.error(f"Failed to log audit/history: {str(e)}")
+        pass  # Don't fail login if logging fails
 
     access_token = create_access_token(
         data={"sub": str(user.id)},
@@ -311,8 +310,21 @@ def login(
 # REGISTER
 # ------------------------------------------------------------------
 @router.post("/register", response_model=UserOut, status_code=201)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
+def register(user_data: UserCreate, request: Request, db: Session = Depends(get_db)):
     user = user_crud.create(db, user_data)
+    
+    # Log registration
+    ip_address, user_agent = get_client_info(request)
+    AuditLogger.log_create(
+        db=db,
+        user_id=user.id,
+        resource_type="user",
+        resource_id=user.id,
+        new_values={"username": user.username, "email": user.email, "role": user.role.value},
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+    
     return UserOut.from_orm(user)
 
 
@@ -391,10 +403,20 @@ def login_json(
             location=location,
             success=True
         )
+        
+        # Log to Audit Log
+        AuditLogger.log_login(
+            db=db,
+            user_id=user.id,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
         # Update last_login
         user.last_login = datetime.utcnow()
         db.commit()
-    except Exception:
+    except Exception as e:
+        logger.error(f"Failed to log audit/history: {str(e)}")
         pass
 
     access_token = create_access_token(
@@ -668,5 +690,13 @@ def refresh_token(
 # LOGOUT (client-side)
 # ------------------------------------------------------------------
 @router.post("/logout")
-def logout():
+def logout(request: Request, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    # Log logout
+    ip_address, user_agent = get_client_info(request)
+    AuditLogger.log_logout(
+        db=db,
+        user_id=current_user.id,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
     return {"message": "Logged out successfully"}
