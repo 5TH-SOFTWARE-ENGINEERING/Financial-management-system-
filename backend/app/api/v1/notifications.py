@@ -24,24 +24,25 @@ def read_notifications(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get notifications with role-based access:
+    """Get notifications with advanced role-based access:
     - Admin/Super Admin: See all notifications
     - Finance Admin/Manager: See their own and subordinates' notifications
-    - Others: See only their own notifications
+    - Accountant: Own notifications + sales made by employees (subordinates of manager)
+    - Employee: Own notifications + internal items created by their Finance Admin (manager)
     """
     try:
+        from ...models.notification import NotificationType
+        from sqlalchemy import or_
+        
         # Check for pending approvals and notify approvers periodically
         try:
             from ...services.notification_service import NotificationService
             from ...crud.approval import approval as approval_crud
-            from ...models.approval import ApprovalStatus
             
             # Only check for managers, finance admins, and admins
             if current_user.role in [UserRole.MANAGER, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
                 pending_approvals = approval_crud.get_pending(db, current_user.id, 0, 100)
                 if pending_approvals:
-                    # Check if we've already notified about these approvals recently
-                    # (This is a simple check - in production, you might want to track last notification time)
                     NotificationService.notify_pending_approvals(
                         db=db,
                         approver_id=current_user.id,
@@ -50,55 +51,77 @@ def read_notifications(
         except Exception as e:
             logger.warning(f"Failed to check pending approvals: {str(e)}")
         
-        # Determine which user IDs the current user can access
-        accessible_user_ids = [current_user.id]  # Always include self
+        query = db.query(Notification)
         
         # Admin/Super Admin can see all notifications
         if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-            # Get all notifications (no user_id filter)
-            if unread_only:
-                notifications = db.query(Notification).filter(
-                    Notification.is_read == False
-                ).order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
-            else:
-                notifications = db.query(Notification).order_by(
-                    Notification.created_at.desc()
-                ).offset(skip).limit(limit).all()
-        # Finance Admin/Manager can see their own and subordinates' notifications
-        # IMPORTANT: They should ONLY see accountants and employees, NOT other Finance Admins/Managers
+            pass # No base filter needed
+            
+        # Finance Admin/Manager: Own + Subordinates (Accountants/Employees only)
         elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
-            # Get all subordinates in the hierarchy
             subordinates = user_crud.get_hierarchy(db, current_user.id)
-            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
-            valid_subordinate_ids = [
+            accessible_user_ids = [current_user.id] + [
                 sub.id for sub in subordinates 
                 if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
             ]
-            accessible_user_ids.extend(valid_subordinate_ids)
+            query = query.filter(Notification.user_id.in_(accessible_user_ids))
             
-            # Query notifications for accessible users
-            if unread_only:
-                notifications = db.query(Notification).filter(
+        # Accountant: Own + Sales made by Employees of their manager
+        elif current_user.role == UserRole.ACCOUNTANT:
+            # Find manager and their other subordinates
+            manager_id = current_user.manager_id
+            sales_user_ids = []
+            if manager_id:
+                subordinates = user_crud.get_hierarchy(db, manager_id)
+                # Only include employees (potential sales staff)
+                sales_user_ids = [sub.id for sub in subordinates if sub.role == UserRole.EMPLOYEE]
+            
+            # Filter: Own OR (Other's sales)
+            query = query.filter(
+                or_(
+                    Notification.user_id == current_user.id,
                     and_(
-                        Notification.user_id.in_(accessible_user_ids),
-                        Notification.is_read == False
+                        Notification.user_id.in_(sales_user_ids),
+                        Notification.type.in_([NotificationType.SALE_CREATED, NotificationType.SALE_POSTED])
                     )
-                ).order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
-            else:
-                notifications = db.query(Notification).filter(
-                    Notification.user_id.in_(accessible_user_ids)
-                ).order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
-        # Others can only see their own notifications
-        else:
-            if unread_only:
-                notifications = notification_crud.get_unread(db, current_user.id, skip, limit)
-            else:
-                notifications = notification_crud.get_by_user(db, current_user.id, skip, limit)
+                )
+            )
+            
+        # Employee: Own + Items created by Finance Admin (manager)
+        elif current_user.role == UserRole.EMPLOYEE:
+            manager_id = current_user.manager_id
+            # Item creation types they should see from manager
+            manager_item_types = [
+                NotificationType.EXPENSE_CREATED,
+                NotificationType.REVENUE_CREATED,
+                NotificationType.INVENTORY_UPDATED,
+                NotificationType.SALE_CREATED,
+                NotificationType.FORECAST_CREATED
+            ]
+            
+            query = query.filter(
+                or_(
+                    Notification.user_id == current_user.id,
+                    and_(
+                        Notification.user_id == manager_id,
+                        Notification.type.in_(manager_item_types)
+                    )
+                )
+            )
         
+        # Others: Only see their own
+        else:
+            query = query.filter(Notification.user_id == current_user.id)
+            
+        # Apply shared filters
+        if unread_only:
+            query = query.filter(Notification.is_read == False)
+            
+        notifications = query.order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
         return notifications
+        
     except Exception as e:
         logger.error(f"Error fetching notifications for user {current_user.id}: {str(e)}", exc_info=True)
-        # Return empty list as a safe default
         return []
 
 
@@ -137,46 +160,78 @@ def get_unread_count(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get count of unread notifications with role-based access:
-    - Admin/Super Admin: Count all unread notifications
-    - Finance Admin/Manager: Count unread notifications for themselves and subordinates
-    - Others: Count only their own unread notifications
+    """Get count of unread notifications with advanced role-based access:
+    - Admin/Super Admin: Count all unread
+    - Finance Admin/Manager: Count for self and subordinates
+    - Accountant: Own + sales by employees
+    - Employee: Own + items by manager
     """
     try:
-        # Determine which user IDs the current user can access
-        accessible_user_ids = [current_user.id]  # Always include self
+        from ...models.notification import NotificationType
+        from sqlalchemy import or_
         
-        # Admin/Super Admin can see all notifications
+        query = db.query(Notification).filter(Notification.is_read == False)
+        
+        # Admin/Super Admin
         if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-            count = db.query(Notification).filter(
-                Notification.is_read == False
-            ).count()
-        # Finance Admin/Manager can see their own and subordinates' notifications
-        # IMPORTANT: They should ONLY see accountants and employees, NOT other Finance Admins/Managers
+            pass
+            
+        # Finance Admin/Manager
         elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
-            # Get all subordinates in the hierarchy
             subordinates = user_crud.get_hierarchy(db, current_user.id)
-            # Filter to ONLY include accountants and employees (exclude other Finance Admins/Managers)
-            valid_subordinate_ids = [
+            accessible_user_ids = [current_user.id] + [
                 sub.id for sub in subordinates 
                 if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
             ]
-            accessible_user_ids.extend(valid_subordinate_ids)
+            query = query.filter(Notification.user_id.in_(accessible_user_ids))
             
-            count = db.query(Notification).filter(
-                and_(
-                    Notification.user_id.in_(accessible_user_ids),
-                    Notification.is_read == False
+        # Accountant
+        elif current_user.role == UserRole.ACCOUNTANT:
+            manager_id = current_user.manager_id
+            sales_user_ids = []
+            if manager_id:
+                subordinates = user_crud.get_hierarchy(db, manager_id)
+                sales_user_ids = [sub.id for sub in subordinates if sub.role == UserRole.EMPLOYEE]
+            
+            query = query.filter(
+                or_(
+                    Notification.user_id == current_user.id,
+                    and_(
+                        Notification.user_id.in_(sales_user_ids),
+                        Notification.type.in_([NotificationType.SALE_CREATED, NotificationType.SALE_POSTED])
+                    )
                 )
-            ).count()
-        # Others can only see their own notifications
+            )
+            
+        # Employee
+        elif current_user.role == UserRole.EMPLOYEE:
+            manager_id = current_user.manager_id
+            manager_item_types = [
+                NotificationType.EXPENSE_CREATED,
+                NotificationType.REVENUE_CREATED,
+                NotificationType.INVENTORY_UPDATED,
+                NotificationType.SALE_CREATED,
+                NotificationType.FORECAST_CREATED
+            ]
+            
+            query = query.filter(
+                or_(
+                    Notification.user_id == current_user.id,
+                    and_(
+                        Notification.user_id == manager_id,
+                        Notification.type.in_(manager_item_types)
+                    )
+                )
+            )
+            
+        # Others
         else:
-            count = notification_crud.get_unread_count(db, current_user.id)
-        
+            query = query.filter(Notification.user_id == current_user.id)
+            
+        count = query.count()
         return {"unread_count": count}
     except Exception as e:
         logger.error(f"Error fetching unread notification count for user {current_user.id}: {str(e)}", exc_info=True)
-        # Return 0 as a safe default instead of crashing
         return {"unread_count": 0}
 
 

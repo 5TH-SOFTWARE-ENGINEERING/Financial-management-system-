@@ -392,20 +392,20 @@ const Badge = styled.span<{ $type: 'success' | 'warning' | 'danger' | 'info' }>`
   font-size: 12px;
   font-weight: 700;
   background-color: ${props => {
-    switch(props.$type) {
-      case 'success': return 'rgba(16, 185, 129, 0.12)'; 
-      case 'warning': return 'rgba(251, 191, 36, 0.16)'; 
-      case 'danger': return 'rgba(239, 68, 68, 0.18)'; 
-      case 'info': return 'rgba(99, 102, 241, 0.15)'; 
+    switch (props.$type) {
+      case 'success': return 'rgba(16, 185, 129, 0.12)';
+      case 'warning': return 'rgba(251, 191, 36, 0.16)';
+      case 'danger': return 'rgba(239, 68, 68, 0.18)';
+      case 'info': return 'rgba(99, 102, 241, 0.15)';
       default: return 'rgba(16, 185, 129, 0.12)';
     }
   }};
   color: ${props => {
-    switch(props.$type) {
+    switch (props.$type) {
       case 'success': return '#065f46'; // Emerald-800
       case 'warning': return '#b45309'; // Amber-800
       case 'danger': return '#991b1b'; // Red-800
-      case 'info': return '#3730a3'; 
+      case 'info': return '#3730a3';
       default: return '#065f46';
     }
   }};
@@ -645,7 +645,7 @@ const AdminDashboard: React.FC = () => {
         const isAccountant = userRole === 'accountant';
         const isManager = userRole === 'manager';
         const isEmployee = userRole === 'employee';
-        
+
         let overviewRes;
         try {
           overviewRes = await apiClient.getDashboardOverview();
@@ -672,56 +672,56 @@ const AdminDashboard: React.FC = () => {
             throw err; // Re-throw for other roles to be caught by outer catch
           }
         }
-        
+
         const activityRes = await apiClient.getDashboardRecentActivity(8).catch((err: unknown) => {
           console.warn('Failed to fetch recent activity:', err);
           // Return empty array for activity if it fails
           return { data: [] };
         });
-        
+
         const analyticsRes = await apiClient.getAdvancedKPIs({ period: 'month' }).catch(() => null); // Optional analytics
-        
+
         // Load inventory summary for Finance Admin, Admin, Super Admin, and Managers
         // Backend restricts access to these roles only
         const inventoryRes = (isFinanceAdmin || isManager)
           ? await apiClient.getInventorySummary().catch((err: unknown) => {
-              const status = typeof err === 'object' && err !== null && 'response' in err
-                ? (err as { response?: { status?: number } }).response?.status
-                : undefined;
-              if (status === 403) {
-                console.warn('Access denied to inventory summary for role:', userRole);
-                return null;
-              }
-              console.warn('Failed to load inventory summary:', err);
+            const status = typeof err === 'object' && err !== null && 'response' in err
+              ? (err as { response?: { status?: number } }).response?.status
+              : undefined;
+            if (status === 403) {
+              console.warn('Access denied to inventory summary for role:', userRole);
               return null;
-            })
+            }
+            console.warn('Failed to load inventory summary:', err);
+            return null;
+          })
           : null;
-        
+
         // Load sales summary ONLY for Accountants and Finance Admins (NOT managers)
         // Managers do not have access to sales summary
         const salesRes = ((isAccountant || isFinanceAdmin) && !isManager)
           ? await apiClient.getSalesSummary().catch((err: unknown) => {
-              const status = typeof err === 'object' && err !== null && 'response' in err
-                ? (err as { response?: { status?: number } }).response?.status
-                : undefined;
-              if (status === 403) {
-                return null;
-              }
-              console.warn('Failed to load sales summary:', err);
+            const status = typeof err === 'object' && err !== null && 'response' in err
+              ? (err as { response?: { status?: number } }).response?.status
+              : undefined;
+            if (status === 403) {
               return null;
-            })
+            }
+            console.warn('Failed to load sales summary:', err);
+            return null;
+          })
           : null;
         // Ensure overview data is properly set
         const overviewData: OverviewData = (overviewRes as { data?: OverviewData })?.data || {};
         setOverview(overviewData);
-        
+
         // Get accessible user IDs for finance admins and accountants (themselves + subordinates)
         // Finance admins see their own subordinates
         // Accountants see their Finance Admin (manager) and their Finance Admin's team
         let accessibleUserIds: number[] = [];
         const isFinanceAdminRole = userRole === 'finance_admin' || userRole === 'finance_manager';
         const isAccountantRole = userRole === 'accountant';
-        
+
         if (isFinanceAdminRole && user?.id) {
           try {
             // Finance Admin: Get their own subordinates
@@ -740,7 +740,7 @@ const AdminDashboard: React.FC = () => {
                 })
                 .filter((id): id is number => id !== undefined),
             ];
-            
+
             if (process.env.NODE_ENV === 'development') {
               console.log('Finance Admin - Accessible User IDs:', {
                 userId: userId,
@@ -757,16 +757,16 @@ const AdminDashboard: React.FC = () => {
           // Accountant: See their own data + employees' sales (from their Finance Admin's team)
           // This allows accountants to see and approve sales made by employees
           const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-          const managerId = storeUser?.managerId 
+          const managerId = storeUser?.managerId
             ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
             : null;
-          
+
           if (managerId) {
             try {
               // Get the Finance Admin's subordinates (employees)
               const subordinatesRes = await apiClient.getSubordinates(managerId);
               const subordinates: Subordinate[] = subordinatesRes?.data || [];
-              
+
               // Filter to ONLY include employees (exclude accountants and Finance Admins)
               // This ensures accountants can see sales made by employees for approval
               const employeeIds = subordinates
@@ -780,10 +780,10 @@ const AdminDashboard: React.FC = () => {
                   return undefined;
                 })
                 .filter((id): id is number => id !== undefined);
-              
+
               // Include: Accountant themselves + employees from Finance Admin's team
               accessibleUserIds = [accountantId, ...employeeIds];
-              
+
               if (process.env.NODE_ENV === 'development') {
                 console.log('Accountant - Accessible User IDs (themselves + employees):', {
                   accountantId: accountantId,
@@ -805,24 +805,24 @@ const AdminDashboard: React.FC = () => {
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
           accessibleUserIds = [userId];
         }
-        
+
         // Fetch all pending approvals in real-time (workflows, revenue, expenses, sales)
         // Use deduplication logic to avoid counting items with workflows twice
         // IMPORTANT: For finance admins, only count approvals from themselves and their subordinates
         // NOTE: Employees typically don't have approval permissions, so we skip this section for them
-        const hasApprovalPermissions = user?.role === 'admin' || 
-                                       user?.role === 'super_admin' || 
-                                       user?.role === 'manager' || 
-                                       user?.role === 'finance_manager' || 
-                                       user?.role === 'finance_admin' || 
-                                       user?.role === 'accountant';
-        
+        const hasApprovalPermissions = user?.role === 'admin' ||
+          user?.role === 'super_admin' ||
+          user?.role === 'manager' ||
+          user?.role === 'finance_manager' ||
+          user?.role === 'finance_admin' ||
+          user?.role === 'accountant';
+
         let totalPendingCount = 0;
         const debugInfo: Record<string, unknown> = {};
-        
+
         // Store pending sales count for later use
         let pendingSalesForActivity: Sale[] = [];
-        
+
         // Only fetch pending approvals if user has approval permissions
         if (hasApprovalPermissions && !isEmployee) {
           try {
@@ -841,13 +841,13 @@ const AdminDashboard: React.FC = () => {
               }
               debugInfo.workflowsError = workflowsStatus || 'Unknown error';
             }
-            
+
             // Count pending workflows - filter by requester_id for finance admins and accountants
             const pendingWorkflows = workflows.filter((w) => {
               const statusRaw = typeof w.status === 'string' ? w.status : w.status?.value;
               const status = (statusRaw ?? 'pending').toString().toLowerCase();
               const isPending = status === 'pending';
-              
+
               // For finance admins and accountants, only count workflows they requested or from their subordinates
               if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
                 const requesterRaw = w.requester_id ?? w.requesterId;
@@ -858,7 +858,7 @@ const AdminDashboard: React.FC = () => {
                     : undefined;
                 return requesterId !== undefined && accessibleUserIds.includes(requesterId);
               }
-              
+
               return isPending;
             });
             totalPendingCount += pendingWorkflows.length;
@@ -887,7 +887,7 @@ const AdminDashboard: React.FC = () => {
                 const pendingRevenues = revenuesRes.data.filter((r: Revenue) => {
                   // Only count if not approved AND doesn't have an existing workflow
                   const isPending = !r.is_approved && !revenueIdsWithWorkflow.has(r.id);
-                  
+
                   // For finance admins and accountants, also check if created by them or their subordinates
                   if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
                     const createdByIdRaw = r.created_by_id || r.createdBy || r.created_by;
@@ -897,7 +897,7 @@ const AdminDashboard: React.FC = () => {
                       : Number(createdByIdRaw);
                     return !isNaN(createdById) && accessibleUserIds.includes(createdById);
                   }
-                  
+
                   return isPending;
                 });
                 totalPendingCount += pendingRevenues.length;
@@ -922,7 +922,7 @@ const AdminDashboard: React.FC = () => {
                 const pendingExpenses = expensesRes.data.filter((e: Expense) => {
                   // Only count if not approved AND doesn't have an existing workflow
                   const isPending = !e.is_approved && !expenseIdsWithWorkflow.has(e.id);
-                  
+
                   // For finance admins and accountants, also check if created by them or their subordinates
                   if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
                     const createdByIdRaw = e.created_by_id || e.createdBy || e.created_by;
@@ -932,7 +932,7 @@ const AdminDashboard: React.FC = () => {
                       : Number(createdByIdRaw);
                     return !isNaN(createdById) && accessibleUserIds.includes(createdById);
                   }
-                  
+
                   return isPending;
                 });
                 totalPendingCount += pendingExpenses.length;
@@ -952,47 +952,47 @@ const AdminDashboard: React.FC = () => {
             // Fetch pending sales - for accountants, finance admins, managers, and admins
             // Sales need to be approved/posted by accountants or finance admins
             const userRoleLower = user?.role?.toLowerCase();
-            const canViewSales = userRoleLower === 'accountant' || 
-                                userRoleLower === 'finance_manager' || 
-                                userRoleLower === 'finance_admin' || 
-                                userRoleLower === 'admin' || 
-                                userRoleLower === 'super_admin' ||
-                                userRoleLower === 'manager';
-            
+            const canViewSales = userRoleLower === 'accountant' ||
+              userRoleLower === 'finance_manager' ||
+              userRoleLower === 'finance_admin' ||
+              userRoleLower === 'admin' ||
+              userRoleLower === 'super_admin' ||
+              userRoleLower === 'manager';
+
             if (canViewSales) {
               try {
                 const salesResponse = await apiClient.getSales({ status: 'pending', limit: 1000 });
-                const salesData: Sale[] = Array.isArray(salesResponse?.data) 
-                  ? salesResponse.data 
-                  : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
-                    ? ((salesResponse.data as { data?: Sale[] }).data || []) 
+                const salesData: Sale[] = Array.isArray(salesResponse?.data)
+                  ? salesResponse.data
+                  : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data
+                    ? ((salesResponse.data as { data?: Sale[] }).data || [])
                     : []);
-                
+
                 // Filter for pending sales (status is 'pending' or 'PENDING')
                 // For finance admins and accountants, only count sales created by themselves or their subordinates
                 const pendingSales = (salesData || []).filter((s) => {
                   const saleStatusRaw = typeof s.status === 'string' ? s.status : s.status?.value;
                   const saleStatus = (saleStatusRaw ?? 'pending').toString().toLowerCase();
                   const isPending = saleStatus === 'pending';
-                  
+
                   // For finance admins and accountants, also check if sold by them or their subordinates
                   if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
                     const soldByIdRaw = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
-                    const soldById = typeof soldByIdRaw === 'string' 
-                      ? parseInt(soldByIdRaw, 10) 
+                    const soldById = typeof soldByIdRaw === 'string'
+                      ? parseInt(soldByIdRaw, 10)
                       : typeof soldByIdRaw === 'number'
                         ? soldByIdRaw
                         : undefined;
                     return soldById !== undefined && accessibleUserIds.includes(soldById);
                   }
-                  
+
                   return isPending;
                 });
-                
+
                 totalPendingCount += pendingSales.length;
                 debugInfo.pendingSalesCount = pendingSales.length;
                 setPendingSalesCount(pendingSales.length);
-                
+
                 // Store for adding to recent activity
                 pendingSalesForActivity = pendingSales;
               } catch (salesErr: unknown) {
@@ -1010,9 +1010,9 @@ const AdminDashboard: React.FC = () => {
             console.error('Error fetching pending approvals:', err);
             // Fallback to overview count if direct fetching fails
             // Check both team_stats (for accountants, finance admins, managers) and personal_stats (for employees)
-            const overviewCount = overviewData.pending_approvals ?? 
-                                 overviewData.team_stats?.pending_approvals ?? 
-                                 overviewData.personal_stats?.pending_approvals;
+            const overviewCount = overviewData.pending_approvals ??
+              overviewData.team_stats?.pending_approvals ??
+              overviewData.personal_stats?.pending_approvals;
             if (overviewCount !== undefined && overviewCount !== null) {
               totalPendingCount = Number(overviewCount) || 0;
             }
@@ -1020,20 +1020,20 @@ const AdminDashboard: React.FC = () => {
           }
         } else {
           // For employees and users without approval permissions, use overview count
-          const overviewCount = overviewData.pending_approvals ?? 
-                               overviewData.team_stats?.pending_approvals ?? 
-                               overviewData.personal_stats?.pending_approvals;
+          const overviewCount = overviewData.pending_approvals ??
+            overviewData.team_stats?.pending_approvals ??
+            overviewData.personal_stats?.pending_approvals;
           if (overviewCount !== undefined && overviewCount !== null) {
             totalPendingCount = Number(overviewCount) || 0;
           }
         }
-        
+
         setPendingApprovalsCount(Math.max(0, totalPendingCount));
-        
+
         const analyticsDataPayload = (analyticsRes as { data?: AnalyticsData })?.data;
         const inventorySummaryPayload = (inventoryRes as { data?: InventorySummary | null })?.data;
         const salesSummaryPayload = (salesRes as { data?: SalesSummary | null })?.data;
-        
+
         // Log for debugging (only in development)
         if (process.env.NODE_ENV === 'development') {
           console.log('Dashboard Overview Data:', {
@@ -1061,11 +1061,11 @@ const AdminDashboard: React.FC = () => {
             ...debugInfo,
           });
         }
-        
+
         const activityData = Array.isArray((activityRes as { data?: ActivityApiEntry[] })?.data)
           ? ((activityRes as { data?: ActivityApiEntry[] }).data || [])
           : [];
-        
+
         // Map regular activity
         const activity = activityData.map((entry: ActivityApiEntry, index: number): ActivityItem => ({
           id: entry.id?.toString() ?? `activity-${index}`,
@@ -1075,16 +1075,16 @@ const AdminDashboard: React.FC = () => {
           date: entry.date ?? entry.created_at,
           status: entry.status ?? (entry.is_approved ? 'approved' : 'pending'),
         }));
-        
+
         // Add pending sales to recent activity for accountants and finance admins
         const userRoleLower = user?.role?.toLowerCase();
-        const canViewSales = userRoleLower === 'accountant' || 
-                            userRoleLower === 'finance_manager' || 
-                            userRoleLower === 'finance_admin' || 
-                            userRoleLower === 'admin' || 
-                            userRoleLower === 'super_admin' ||
-                            userRoleLower === 'manager';
-        
+        const canViewSales = userRoleLower === 'accountant' ||
+          userRoleLower === 'finance_manager' ||
+          userRoleLower === 'finance_admin' ||
+          userRoleLower === 'admin' ||
+          userRoleLower === 'super_admin' ||
+          userRoleLower === 'manager';
+
         // Add pending sales to recent activity if available
         if (canViewSales && pendingSalesForActivity.length > 0) {
           const salesActivity = pendingSalesForActivity.map((s): ActivityItem => ({
@@ -1095,7 +1095,7 @@ const AdminDashboard: React.FC = () => {
             date: s.created_at,
             status: 'pending',
           }));
-          
+
           // Combine and sort by date
           const allActivity = [...activity, ...salesActivity];
           allActivity.sort((a, b) => {
@@ -1103,23 +1103,23 @@ const AdminDashboard: React.FC = () => {
             const dateB = b.date ? new Date(b.date).getTime() : 0;
             return dateB - dateA;
           });
-          
+
           // Take the most recent items (up to the limit)
           setRecentActivity(allActivity.slice(0, 8));
         } else {
           setRecentActivity(activity);
         }
-        
+
         // Set analytics data if available
         if (analyticsDataPayload) {
           setAnalyticsData(analyticsDataPayload);
         }
-        
+
         // Set inventory summary if available
         if (inventorySummaryPayload) {
           setInventorySummary(inventorySummaryPayload ?? null);
         }
-        
+
         // Set sales summary if available
         if (salesSummaryPayload) {
           setSalesSummary(salesSummaryPayload ?? null);
@@ -1156,17 +1156,17 @@ const AdminDashboard: React.FC = () => {
   // Always ensure we have valid numbers, defaulting to 0 if data is missing
   // Base revenue from overview (includes revenue entries)
   const baseRevenue = safeNumber(overview?.financials?.total_revenue);
-  
+
   // Sales revenue from sales summary (if available for accountants and finance admins)
   // Only include sales revenue if salesSummary exists (meaning user has access to sales data)
   const salesRevenue = salesSummary ? safeNumber(salesSummary?.total_revenue) : 0;
-  
+
   // Total revenue = base revenue + sales revenue
   // This ensures total revenue includes both revenue entries and posted sales
   const totalRevenue = baseRevenue + salesRevenue;
-  
+
   const totalExpenses = safeNumber(overview?.financials?.total_expenses);
-  
+
   // Net profit calculation - use backend profit if available, otherwise calculate
   const backendProfit = safeNumber(overview?.financials?.profit);
   const calculatedProfit = totalRevenue - totalExpenses;
@@ -1174,24 +1174,29 @@ const AdminDashboard: React.FC = () => {
   const netProfit = (overview?.financials?.profit !== undefined && overview?.financials?.profit !== null && backendProfit !== 0)
     ? backendProfit
     : calculatedProfit;
-  
+
   // Use the pending approvals count from state (fetched from multiple sources)
   const pendingApprovals = pendingApprovalsCount;
-  
+
   // Calculate revenue counts for display
-  const revenueEntriesCount = overview?.personal_stats?.revenue_entries ?? 
-                              overview?.team_stats?.revenue_entries ?? 
-                              0;
+  const revenueEntriesCount = overview?.personal_stats?.revenue_entries ??
+    overview?.team_stats?.revenue_entries ??
+    0;
   const salesCount = salesSummary?.total_sales ?? 0;
-  
+
   // Create subtitle for Total Revenue card showing the breakdown
   const revenueSubtitle = (revenueEntriesCount > 0 || salesCount > 0)
     ? `${revenueEntriesCount > 0 ? `${revenueEntriesCount} revenue ${revenueEntriesCount === 1 ? 'entry' : 'entries'}` : ''}${revenueEntriesCount > 0 && salesCount > 0 ? ' + ' : ''}${salesCount > 0 ? `${salesCount} ${salesCount === 1 ? 'sale' : 'sales'}` : ''}`
     : undefined;
 
+  // Create subtitle for Pending Approvals card showing the breakdown (including sales)
+  const pendingApprovalsSubtitle = pendingSalesCount > 0
+    ? `${pendingSalesCount} pending ${pendingSalesCount === 1 ? 'sale' : 'sales'}${pendingApprovals > pendingSalesCount ? ` + others` : ''}`
+    : undefined;
+
   const renderWelcomeHeader = () => {
     if (!user) return <HeaderContent><h1>Dashboard</h1></HeaderContent>;
-    
+
     return (
       <HeaderContent>
         <h1>Welcome, {user.username || 'Admin'} </h1>
@@ -1213,9 +1218,9 @@ const AdminDashboard: React.FC = () => {
   };
 
   const createStatsCard = (
-    Icon: IconComponent, 
-    title: string, 
-    value: string, 
+    Icon: IconComponent,
+    title: string,
+    value: string,
     clickable: boolean = false,
     onClick?: () => void,
     growth?: number,
@@ -1225,12 +1230,12 @@ const AdminDashboard: React.FC = () => {
     isPending?: boolean,
     subtitle?: string
   ) => (
-    <StatsCard 
-      $IconComponent={Icon} 
+    <StatsCard
+      $IconComponent={Icon}
       $clickable={clickable}
       onClick={onClick}
     >
-      <CardIcon $IconComponent={Icon}><Icon /></CardIcon> 
+      <CardIcon $IconComponent={Icon}><Icon /></CardIcon>
       <CardTitle>{title}</CardTitle>
       <CardValue $isNegative={isNegative} $isPositive={isPositive} $isPending={isPending}>
         {value}
@@ -1274,179 +1279,183 @@ const AdminDashboard: React.FC = () => {
               <span>{error}</span>
             </ErrorBanner>
           )}
-          <SectionTitle>System Overview</SectionTitle>
-          {overview ? (
+          {user?.role !== 'employee' && (
             <>
-              <DashboardGrid>
-                {createStatsCard(
-                  DollarSign, 
-                  'Total Revenue', 
-                  `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                  false,
-                  undefined,
-                  analyticsData?.growth?.revenue_growth_percent,
-                  undefined,
-                  false,
-                  true,
-                  false,
-                  revenueSubtitle
-                )}
-                {createStatsCard(
-                  CreditCard, 
-                  'Total Expenses', 
-                  `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                  false,
-                  undefined,
-                  analyticsData?.growth?.expense_growth_percent,
-                  undefined,
-                  true
-                )}
-              </DashboardGrid>
-              <DashboardGrid style={{ marginTop: theme.spacing.lg }}>
-                {createStatsCard(
-                  TrendingUp, 
-                  'Net Profit', 
-                  `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                  false,
-                  undefined,
-                  analyticsData?.growth?.profit_growth_percent,
-                  undefined,
-                  netProfit < 0,
-                  netProfit >= 0
-                )}
-                {/* Only show Pending Approvals card if user has approval permissions */}
-                {(user?.role === 'admin' || 
-                  user?.role === 'super_admin' || 
-                  user?.role === 'manager' || 
-                  user?.role === 'finance_manager' || 
-                  user?.role === 'finance_admin' || 
-                  user?.role === 'accountant') && 
-                  createStatsCard(
-                    ClipboardList, 
-                    'Pending Approvals', 
-                    pendingApprovals.toString(),
-                    true,
-                    handlePendingApprovalsClick,
-                    undefined,
-                    undefined,
-                    false,
-                    false,
-                    true
-                  )}
-              </DashboardGrid>
-              
-              {/* Inventory & Sales Section - Role-based */}
-              {/* Only show inventory summary if user has access and data is available */}
-              {(user?.role === 'finance_manager' || 
-                user?.role === 'finance_admin' || 
-                user?.role === 'admin' || 
-                user?.role === 'super_admin' || 
-                user?.role === 'manager') && inventorySummary && (
+              <SectionTitle>System Overview</SectionTitle>
+              {overview ? (
                 <>
-                  <SectionTitle>Inventory Overview</SectionTitle>
                   <DashboardGrid>
                     {createStatsCard(
-                      Package,
-                      'Total Items',
-                      (inventorySummary.total_items || 0).toString(),
+                      DollarSign,
+                      'Total Revenue',
+                      `$${Number(totalRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      false,
+                      undefined,
+                      analyticsData?.growth?.revenue_growth_percent,
+                      undefined,
+                      false,
                       true,
-                      () => router.push('/inventory/manage')
+                      false,
+                      revenueSubtitle
                     )}
                     {createStatsCard(
-                      DollarSign,
-                      'Inventory Value',
-                      `$${Number(inventorySummary.total_selling_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                      false
+                      CreditCard,
+                      'Total Expenses',
+                      `$${Number(totalExpenses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      false,
+                      undefined,
+                      analyticsData?.growth?.expense_growth_percent,
+                      undefined,
+                      true
                     )}
+                  </DashboardGrid>
+                  <DashboardGrid style={{ marginTop: theme.spacing.lg }}>
                     {createStatsCard(
                       TrendingUp,
-                      'Potential Profit',
-                      `$${Number(inventorySummary.potential_profit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                      false
+                      'Net Profit',
+                      `$${Number(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      false,
+                      undefined,
+                      analyticsData?.growth?.profit_growth_percent,
+                      undefined,
+                      netProfit < 0,
+                      netProfit >= 0
                     )}
-                    {createStatsCard(
-                      DollarSign,
-                      'Total Cost',
-                      `$${Number(inventorySummary.total_cost_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                      false
-                    )}
+                    {/* Only show Pending Approvals card if user has approval permissions */}
+                    {(user?.role === 'admin' ||
+                      user?.role === 'super_admin' ||
+                      user?.role === 'manager' ||
+                      user?.role === 'finance_manager' ||
+                      user?.role === 'finance_admin' ||
+                      user?.role === 'accountant') &&
+                      createStatsCard(
+                        ClipboardList,
+                        'Pending Approvals',
+                        pendingApprovals.toString(),
+                        true,
+                        handlePendingApprovalsClick,
+                        undefined,
+                        undefined,
+                        false,
+                        false,
+                        true,
+                        pendingApprovalsSubtitle
+                      )}
                   </DashboardGrid>
                 </>
-              )}
-              
-              {/* Sales Summary - For Accountants, Finance Admins, and Admins */}
-              {(user?.role === 'accountant' || user?.role === 'finance_manager' || user?.role === 'finance_admin' || user?.role === 'admin' || user?.role === 'super_admin') && salesSummary && (
-                <>
-                  <SectionTitle>Sales Overview</SectionTitle>
-                  <DashboardGrid>
-                    {createStatsCard(
-                      ShoppingCart,
-                      'Total Sales',
-                      (salesSummary?.total_sales || 0).toString(),
-                      true,
-                      () => router.push('/sales/accounting')
-                    )}
-                    {createStatsCard(
-                      DollarSign,
-                      'Sales Revenue',
-                      `$${Number(salesSummary?.total_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                      false
-                    )}
-                    {createStatsCard(
-                      Activity,
-                      'Pending Sales',
-                      (salesSummary?.pending_sales || pendingSalesCount || 0).toString(),
-                      true,
-                      () => router.push('/sales/accounting?tab=sales&status=pending')
-                    )}
-                    {createStatsCard(
-                      FileText,
-                      'Posted Sales',
-                      (salesSummary?.posted_sales || 0).toString(),
-                      false
-                    )}
-                  </DashboardGrid>
-                </>
-              )}
-              
-              {/* Quick Actions for Employees */}
-              {user?.role === 'employee' && (
-                <>
-                  <SectionTitle>Quick Actions</SectionTitle>
-                  <DashboardGrid>
-                    {createStatsCard(
-                      ShoppingCart,
-                      'Make a Sale',
-                      'Start Selling',
-                      true,
-                      () => router.push('/inventory/sales')
-                    )}
-                    {createStatsCard(
-                      Package,
-                      'View Items',
-                      'Browse',
-                      true,
-                      () => router.push('/inventory/sales')
-                    )}
-                  </DashboardGrid>
-                </>
+              ) : (
+                <EmptyState>
+                  <p>
+                    No overview data available. Please ensure you have revenue and expense entries.
+                  </p>
+                </EmptyState>
               )}
             </>
-          ) : (
-            <EmptyState>
-              <p>
-                {user?.role === 'employee' 
-                  ? 'No overview data available. Your dashboard will show your own revenue and expense entries once you create them.'
-                  : 'No overview data available. Please ensure you have revenue and expense entries.'}
-              </p>
-            </EmptyState>
           )}
+
+          {/* Inventory & Sales Section - Role-based */}
+          {/* Only show inventory summary if user has access and data is available */}
+          {(user?.role === 'finance_manager' ||
+            user?.role === 'finance_admin' ||
+            user?.role === 'admin' ||
+            user?.role === 'super_admin' ||
+            user?.role === 'manager') && inventorySummary && (
+              <>
+                <SectionTitle>Inventory Overview</SectionTitle>
+                <DashboardGrid>
+                  {createStatsCard(
+                    Package,
+                    'Total Items',
+                    (inventorySummary.total_items || 0).toString(),
+                    true,
+                    () => router.push('/inventory/manage')
+                  )}
+                  {createStatsCard(
+                    DollarSign,
+                    'Inventory Value',
+                    `$${Number(inventorySummary.total_selling_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    false
+                  )}
+                  {createStatsCard(
+                    TrendingUp,
+                    'Potential Profit',
+                    `$${Number(inventorySummary.potential_profit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    false
+                  )}
+                  {createStatsCard(
+                    DollarSign,
+                    'Total Cost',
+                    `$${Number(inventorySummary.total_cost_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    false
+                  )}
+                </DashboardGrid>
+              </>
+            )}
+
+          {/* Sales Summary - For Accountants, Finance Admins, and Admins */}
+          {(user?.role === 'accountant' || user?.role === 'finance_manager' || user?.role === 'finance_admin' || user?.role === 'admin' || user?.role === 'super_admin') && salesSummary && (
+            <>
+              <SectionTitle>Sales Overview</SectionTitle>
+              <DashboardGrid>
+                {createStatsCard(
+                  ShoppingCart,
+                  'Total Sales',
+                  (salesSummary?.total_sales || 0).toString(),
+                  true,
+                  () => router.push('/sales/accounting')
+                )}
+                {createStatsCard(
+                  DollarSign,
+                  'Sales Revenue',
+                  `$${Number(salesSummary?.total_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  false
+                )}
+                {createStatsCard(
+                  Activity,
+                  'Pending Sales',
+                  (salesSummary?.pending_sales || pendingSalesCount || 0).toString(),
+                  true,
+                  () => router.push('/sales/accounting?tab=sales&status=pending')
+                )}
+                {createStatsCard(
+                  FileText,
+                  'Posted Sales',
+                  (salesSummary?.posted_sales || 0).toString(),
+                  false
+                )}
+              </DashboardGrid>
+            </>
+          )}
+
+          {/* Quick Actions for Employees */}
+          {user?.role === 'employee' && (
+            <>
+              <SectionTitle>Quick Actions</SectionTitle>
+              <DashboardGrid>
+                {createStatsCard(
+                  ShoppingCart,
+                  'Make a Sale',
+                  'Start Selling',
+                  true,
+                  () => router.push('/inventory/sales')
+                )}
+                {createStatsCard(
+                  Package,
+                  'View Items',
+                  'Browse',
+                  true,
+                  () => router.push('/inventory/sales')
+                )}
+              </DashboardGrid>
+            </>
+          )}
+
           <SectionTitle>
             Recent Transactions
             {user?.role === 'employee' && (
-              <span style={{ 
-                fontSize: theme.typography.fontSizes.sm, 
-                fontWeight: 'normal', 
+              <span style={{
+                fontSize: theme.typography.fontSizes.sm,
+                fontWeight: 'normal',
                 color: TEXT_COLOR_MUTED,
                 marginLeft: theme.spacing.sm
               }}>
@@ -1454,9 +1463,9 @@ const AdminDashboard: React.FC = () => {
               </span>
             )}
             {(user?.role === 'manager') && (
-              <span style={{ 
-                fontSize: theme.typography.fontSizes.sm, 
-                fontWeight: 'normal', 
+              <span style={{
+                fontSize: theme.typography.fontSizes.sm,
+                fontWeight: 'normal',
                 color: TEXT_COLOR_MUTED,
                 marginLeft: theme.spacing.sm
               }}>
@@ -1491,13 +1500,13 @@ const AdminDashboard: React.FC = () => {
                     item.status === 'approved' || item.status === 'posted'
                       ? 'success'
                       : item.status === 'pending'
-                      ? 'warning'
-                      : item.status === 'rejected' || item.status === 'cancelled'
-                      ? 'danger'
-                      : 'info';
-                  
+                        ? 'warning'
+                        : item.status === 'rejected' || item.status === 'cancelled'
+                          ? 'danger'
+                          : 'info';
+
                   // Format title for sales to make them more visible
-                  const displayTitle = item.type === 'sale' 
+                  const displayTitle = item.type === 'sale'
                     ? `Sale: ${item.title?.replace('Sale: ', '') || 'Unknown Item'}`
                     : item.title || item.type;
 
@@ -1505,14 +1514,14 @@ const AdminDashboard: React.FC = () => {
                     <tr key={`${item.type}-${item.id}-${item.date}`}>
                       <td>{item.date ? new Date(item.date).toLocaleDateString() : '—'}</td>
                       <td>
-                        <span style={{ 
+                        <span style={{
                           textTransform: 'capitalize',
                           fontWeight: item.type === 'sale' ? theme.typography.fontWeights.medium : 'normal'
                         }}>
                           {displayTitle}
                         </span>
                         {item.type === 'sale' && item.status === 'pending' && (
-                          <span style={{ 
+                          <span style={{
                             marginLeft: theme.spacing.xs,
                             fontSize: theme.typography.fontSizes.xs,
                             color: TEXT_COLOR_MUTED
@@ -1526,8 +1535,8 @@ const AdminDashboard: React.FC = () => {
                       </AmountCell>
                       <td>
                         <Badge $type={statusType as 'success' | 'warning' | 'danger' | 'info'}>
-                          {item.type === 'sale' && item.status === 'pending' 
-                            ? 'PENDING SALE' 
+                          {item.type === 'sale' && item.status === 'pending'
+                            ? 'PENDING SALE'
                             : (item.status || 'pending').toString().toUpperCase()}
                         </Badge>
                       </td>
@@ -1560,7 +1569,7 @@ const AdminDashboard: React.FC = () => {
 
         </ContentContainer>
       </PageContainer>
-    </Layout>
+    </Layout >
   );
 };
 

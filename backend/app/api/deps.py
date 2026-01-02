@@ -77,8 +77,8 @@ def require_role(required_role: UserRole):
             UserRole.ACCOUNTANT: 1,
             UserRole.MANAGER: 2,
             UserRole.FINANCE_ADMIN: 3,
-            UserRole.ADMIN: 3,
-            UserRole.SUPER_ADMIN: 4,
+            UserRole.ADMIN: 4,
+            UserRole.SUPER_ADMIN: 5,
         }
         if hierarchy.get(current_user.role, -1) < hierarchy.get(required_role, -1):
             raise HTTPException(
@@ -96,8 +96,8 @@ def require_min_role(min_role: UserRole):
             UserRole.ACCOUNTANT: 1,
             UserRole.MANAGER: 2,
             UserRole.FINANCE_ADMIN: 3,
-            UserRole.ADMIN: 3,
-            UserRole.SUPER_ADMIN: 4,
+            UserRole.ADMIN: 4,
+            UserRole.SUPER_ADMIN: 5,
         }
         if hierarchy.get(current_user.role, -1) < hierarchy.get(min_role, -1):
             raise HTTPException(

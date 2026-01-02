@@ -343,19 +343,28 @@ class NotificationService:
                 action_url=f"/inventory/manage?item_id={item_id}"
             )
             
-            # Notify finance admins about new inventory
-            finance_admins = db.query(User).filter(
-                User.role.in_([UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-                User.is_active == True,
-                User.id != created_by_id
-            ).all()
+            # Notify the creator's manager and relevant admins only
+            creator = user_crud.get(db, id=created_by_id)
+            notify_ids = []
+            if creator and creator.manager_id:
+                notify_ids.append(creator.manager_id)
             
-            for admin in finance_admins:
+            # Plus any global admins (limited to avoid spam)
+            admins = db.query(User).filter(
+                User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                User.is_active == True,
+                User.id != created_by_id,
+                User.id.notin_(notify_ids)
+            ).limit(5).all()
+            
+            notify_ids.extend([admin.id for admin in admins])
+            
+            for target_id in list(set(notify_ids)):
                 NotificationService.create_notification(
                     db=db,
-                    user_id=admin.id,
+                    user_id=target_id,
                     title="New Inventory Item",
-                    message=f"A new inventory item '{item_name}' has been added to the system.",
+                    message=f"A new inventory item '{item_name}' has been added by {creator.full_name or creator.username}.",
                     notification_type=NotificationType.INVENTORY_UPDATED,
                     priority=NotificationPriority.LOW,
                     action_url=f"/inventory/manage?item_id={item_id}"
@@ -408,16 +417,25 @@ class NotificationService:
                 action_url=f"/sales/accounting?sale_id={sale_id}"
             )
             
-            # Notify accountants about pending sale
-            accountants = db.query(User).filter(
-                User.role.in_([UserRole.ACCOUNTANT, UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-                User.is_active == True
-            ).all()
+            # Notify the manager (the Finance Admin) and global admins if necessary
+            creator = user_crud.get(db, id=created_by_id)
+            notify_ids = []
+            if creator and creator.manager_id:
+                notify_ids.append(creator.manager_id)
             
-            for accountant in accountants:
+            # If no direct manager, notify global admins
+            if not notify_ids:
+                admins = db.query(User).filter(
+                    User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                    User.is_active == True,
+                    User.id != created_by_id
+                ).limit(5).all()
+                notify_ids.extend([admin.id for admin in admins])
+            
+            for target_id in list(set(notify_ids)):
                 NotificationService.create_notification(
                     db=db,
-                    user_id=accountant.id,
+                    user_id=target_id,
                     title="New Sale Pending",
                     message=f"New sale for {quantity}x {item_name} (${total_amount:,.2f}) is pending posting to ledger.",
                     notification_type=NotificationType.SALE_CREATED,
@@ -722,7 +740,7 @@ class NotificationService:
     
     @staticmethod
     def _get_approvers(db: Session, requester_id: int) -> List[User]:
-        """Get list of approvers for a requester"""
+        """Get list of approvers for a requester - prioritized by hierarchy"""
         try:
             requester = user_crud.get(db, id=requester_id)
             if not requester:
@@ -730,36 +748,33 @@ class NotificationService:
             
             approvers = []
             
-            # Get manager if exists
+            # 1. Primary Approver: The direct manager
             if requester.manager_id:
                 manager = user_crud.get(db, id=requester.manager_id)
                 if manager and manager.is_active:
                     approvers.append(manager)
             
-            # Get finance managers/admins
-            finance_admins = db.query(User).filter(
-                User.role.in_([UserRole.FINANCE_ADMIN, UserRole.FINANCE_MANAGER]),
-                User.is_active == True
-            ).all()
-            approvers.extend(finance_admins)
+            # 2. Secondary Approvers: Global Admins (limited)
+            # Only include global admins if they are not the manager
+            admins = db.query(User).filter(
+                User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                User.is_active == True,
+                User.id != requester_id
+            ).limit(3).all()
+            approvers.extend(admins)
             
-            # Get general admins if no other approvers
+            # 3. Fallback: If no manager and no admins, include a few Finance Admins
             if not approvers:
-                admins = db.query(User).filter(
-                    User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-                    User.is_active == True
-                ).limit(5).all()
-                approvers.extend(admins)
+                finance_admins = db.query(User).filter(
+                    User.role == UserRole.FINANCE_ADMIN,
+                    User.is_active == True,
+                    User.id != requester_id
+                ).limit(3).all()
+                approvers.extend(finance_admins)
             
-            # Remove duplicates
-            seen = set()
-            unique_approvers = []
-            for approver in approvers:
-                if approver.id not in seen:
-                    seen.add(approver.id)
-                    unique_approvers.append(approver)
-            
-            return unique_approvers
+            # Remove duplicates and ensure uniqueness
+            id_to_user = {u.id: u for u in approvers}
+            return list(id_to_user.values())
         except Exception as e:
             logger.error(f"Failed to get approvers: {str(e)}", exc_info=True)
             return []

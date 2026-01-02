@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import styled, { keyframes, css } from 'styled-components';
 import {
   Search, Plus, Bell, FileSpreadsheet, Globe, User, Users, LogOut, Settings, HelpCircle,
-  Clock, ChevronDown, ChevronUp
+  Clock, ChevronDown, ChevronUp, AlertCircle, XCircle, CheckCircle, Info
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -444,7 +444,7 @@ const NotificationBadge = styled.div`
     font-weight: ${theme.typography.fontWeights.bold};
     min-width: 20px;
     height: 20px;
-    padding: 0 6px;
+    padding: 0 0px;
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -641,67 +641,76 @@ const SignOutItem = styled(DropdownItem)`
 
 const NotificationPanel = styled.div<{ $isOpen: boolean }>`
   position: absolute;
-  top: calc(100% + ${theme.spacing.sm});
+  top: calc(100% + 12px);
   right: 0;
-  width: 480px;
-  max-height: 640px;
-  background: ${theme.colors.background};
-  border: 1px solid ${theme.colors.border};
-  border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
+  width: 750px;
+  max-height: 800px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   z-index: 1000;
   opacity: ${props => (props.$isOpen ? 1 : 0)};
   visibility: ${props => (props.$isOpen ? 'visible' : 'hidden')};
-  transform: ${props => (props.$isOpen ? 'translateY(0)' : 'translateY(-8px)')};
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: ${props => (props.$isOpen ? 'translateY(0)' : 'translateY(-12px)')};
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(20px);
   
   ${props => props.$isOpen && css`
-    animation: ${slideDown} 0.25s ease-out;
+    animation: ${slideDown} 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   `}
+
+  @media (max-width: 480px) {
+    width: calc(100vw - 32px);
+    right: -16px;
+  }
 `;
 
 const NotificationPanelHeader = styled.div`
-  padding: 16px 20px;
-  border-bottom: 1px solid ${theme.colors.border};
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background: rgba(255, 255, 255, 0.4);
   
   h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1e293b;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
     margin: 0;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
   
-  span {
-    font-size: 12px;
-    color: ${PRIMARY_ACCENT};
-    font-weight: 600;
-    padding: 5px 12px;
-    background: ${PRIMARY_ACCENT}12;
-    border-radius: 12px;
-    border: 1px solid ${PRIMARY_ACCENT}25;
+  .unread-badge {
+    font-size: 11px;
+    color: white;
+    font-weight: 700;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, ${PRIMARY_ACCENT} 0%, ${PRIMARY_HOVER} 100%);
+    border-radius: 20px;
+    box-shadow: 0 4px 8px ${PRIMARY_ACCENT}30;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 `;
 
 const NotificationPanelBody = styled.div`
   flex: 1;
   overflow-y: auto;
-  max-height: 480px;
-  padding: 12px;
-  background: #ffffff;
+  padding: 0px;
+  background: transparent;
   scroll-behavior: smooth;
   
-  /* Custom scrollbar */
   &::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
   }
   
   &::-webkit-scrollbar-track {
@@ -709,11 +718,11 @@ const NotificationPanelBody = styled.div`
   }
   
   &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
     
     &:hover {
-      background: #94a3b8;
+      background: rgba(0, 0, 0, 0.2);
     }
   }
 `;
@@ -721,82 +730,129 @@ const NotificationPanelBody = styled.div`
 const NotificationList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 2px;
 `;
 
-const NotificationListItem = styled.div<{ $isRead: boolean }>`
-  padding: 14px 16px;
-  border: 1.5px solid ${props => props.$isRead ? '#e2e8f0' : `${PRIMARY_ACCENT}30`};
-  border-radius: 10px;
+const NotificationListItem = styled.div<{ $isRead: boolean; $type?: string }>`
+  padding: 8px;
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: ${props => props.$isRead
-    ? '#ffffff'
-    : `linear-gradient(135deg, rgba(6, 182, 212, 0.06) 0%, rgba(6, 182, 212, 0.02) 100%)`};
-  position: relative;
+  background: ${props => props.$isRead ? 'rgba(255, 255, 255, 0.5)' : '#ffffff'};
+  border: 1px solid ${props => props.$isRead ? 'rgba(0, 0, 0, 0.03)' : 'rgba(0, 0, 0, 0.06)'};
   display: flex;
-  flex-direction: column;
-  box-shadow: ${props => props.$isRead
-    ? '0 1px 3px rgba(0, 0, 0, 0.06)'
-    : '0 2px 6px rgba(6, 182, 212, 0.12)'};
+  gap: 16px;
+  position: relative;
+  box-shadow: ${props => props.$isRead ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.04)'};
   
   &:hover {
-    background: ${props => props.$isRead ? '#f8fafc' : 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.04) 100%)'};
-    transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-color: ${PRIMARY_ACCENT};
+    background: #ffffff;
+    transform: scale(1.01);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    border-color: ${PRIMARY_ACCENT}40;
   }
-  
-  ${props => !props.$isRead && `
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      background: linear-gradient(180deg, ${PRIMARY_ACCENT} 0%, ${PRIMARY_HOVER} 100%);
-      border-radius: 10px 0 0 10px;
-    }
-  `}
+
+  &::after {
+    display: none; /* Hide the default left-side dot if using the right-side one */
+  }
+
+  .unread-dot {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background: #0084ff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px #fff;
+  }
 `;
 
-const CollapseButton = styled.button`
+const NotificationIconBox = styled.div<{ $type?: string }>`
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 16px;
-  margin: 0;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
-  color: ${PRIMARY_ACCENT};
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-  
-  &:hover {
-    background: ${PRIMARY_ACCENT}10;
-    border-color: ${PRIMARY_ACCENT};
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px ${PRIMARY_ACCENT}20;
-    color: ${PRIMARY_HOVER};
-  }
-  
-  &:active {
-    transform: translateY(0);
-  }
-  
+  flex-shrink: 0;
+  background: ${props => {
+    switch (props.$type) {
+      case 'success': return '#dcfce7';
+      case 'error': return '#fee2e2';
+      case 'warning': return '#fef3c7';
+      default: return '#e0f2fe';
+    }
+  }};
+  color: ${props => {
+    switch (props.$type) {
+      case 'success': return '#16a34a';
+      case 'error': return '#dc2626';
+      case 'warning': return '#d97706';
+      default: return PRIMARY_ACCENT;
+    }
+  }};
+
   svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const NotificationContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const NotificationTitle = styled.h4<{ $isRead: boolean }>`
+  font-size: 14px;
+  font-weight: ${props => props.$isRead ? 500 : 700};
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.4;
+`;
+
+const NotificationMessage = styled.p`
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+`;
+
+const NotificationMeta = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  
+  .time {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .priority {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+`;
+
+const CollapseButton = styled.button`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
     width: 14px;
     height: 14px;
-    transition: transform 0.2s;
-    stroke-width: 2.5;
-    flex-shrink: 0;
   }
 `;
 
@@ -893,64 +949,90 @@ const NotificationListText = styled.div<{ $isRead?: boolean }>`
 `;
 
 const NotificationPanelFooter = styled.div`
-  padding: 14px 20px;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.4);
   display: flex;
-  justify-content: center;
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  gap: 12px;
 `;
 
 const ViewAllButton = styled.button`
-  padding: 10px 24px;
+  flex: 1;
+  padding: 10px;
   font-size: 13px;
-  font-weight: 600;
-  color: ${PRIMARY_ACCENT};
-  background: transparent;
-  border: 1.5px solid ${PRIMARY_ACCENT};
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, ${PRIMARY_ACCENT} 0%, ${PRIMARY_HOVER} 100%);
+  border: none;
   cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: -0.01em;
-  white-space: nowrap;
+  border-radius: 12px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px ${PRIMARY_ACCENT}30;
   
   &:hover {
-    background: ${PRIMARY_ACCENT};
-    color: white;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px ${PRIMARY_ACCENT}35;
-  }
-  
-  &:active {
-    transform: translateY(0);
+    box-shadow: 0 6px 16px ${PRIMARY_ACCENT}40;
+    filter: brightness(1.05);
   }
 `;
 
 const EmptyNotifications = styled.div`
-  padding: 48px 24px;
+  padding: 60px 24px;
   text-align: center;
-  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   
+  .icon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    margin-bottom: 8px;
+  }
+
   p {
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #475569;
     margin: 0;
-    font-weight: 500;
-    color: #64748b;
+  }
+
+  span {
+    font-size: 13px;
+    color: #94a3b8;
   }
 `;
 
 const LoadingNotifications = styled.div`
-  padding: 48px 24px;
+  padding: 60px 24px;
   text-align: center;
-  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(6, 182, 212, 0.1);
+    border-top-color: ${PRIMARY_ACCENT};
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
   p {
     font-size: 14px;
-    margin: 0;
-    font-weight: 500;
+    font-weight: 600;
     color: #64748b;
   }
 `;
@@ -1012,40 +1094,55 @@ export default function Navbar() {
         return;
       }
 
-      if (isFinanceAdmin && user?.id) {
-        // Finance Admin/Manager: Get their own subordinates ONLY (accountants and employees)
-        // Exclude other Finance Admins, Managers, and their subordinates
-        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+      const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+      const managerId = user.manager_id ? (typeof user.manager_id === 'string' ? parseInt(user.manager_id, 10) : user.manager_id) : null;
+
+      if (isFinanceAdmin && userId) {
+        // Finance Admin/Manager: Get their own valid subordinates (accountants and employees)
         try {
           const subordinatesRes = await apiClient.getSubordinates(userId);
           const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
 
-          // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
           const validSubordinateIds = subordinates
             .map((sub: { id?: number | string; role?: string }) => {
               const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
               const subRole = (sub.role || '').toLowerCase();
-
-              // Only include accountants and employees, exclude Finance Admins and Managers
-              if (typeof subId === 'number' &&
-                (subRole === 'accountant' || subRole === 'employee')) {
+              if (typeof subId === 'number' && (subRole === 'accountant' || subRole === 'employee')) {
                 return subId;
               }
               return null;
             })
             .filter((id): id is number => id !== null);
 
-          // Create accessible user IDs: Finance Admin's own ID + their valid subordinates only
-          const userIds = [userId, ...validSubordinateIds];
-          setAccessibleUserIds(userIds);
+          setAccessibleUserIds([userId, ...validSubordinateIds]);
         } catch (err) {
           console.error('Failed to fetch subordinates for Finance Admin:', err);
-          // Fallback: only see own notifications
           setAccessibleUserIds([userId]);
         }
+      } else if (userRole === 'accountant' && userId && managerId) {
+        // Accountant: Own + other subordinates of their manager who are Employees (for sales)
+        try {
+          const subordinatesRes = await apiClient.getSubordinates(managerId);
+          const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
+
+          const employeeIds = subordinates
+            .map((sub: { id?: number | string; role?: string }) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+              const subRole = (sub.role || '').toLowerCase();
+              if (typeof subId === 'number' && subRole === 'employee') return subId;
+              return null;
+            })
+            .filter((id): id is number => id !== null);
+
+          setAccessibleUserIds([userId, ...employeeIds]);
+        } catch (err) {
+          setAccessibleUserIds([userId]);
+        }
+      } else if (userRole === 'employee' && userId && managerId) {
+        // Employee: Own + manager (for items created by finance admin)
+        setAccessibleUserIds([userId, managerId]);
       } else {
         // Other roles: only see own notifications
-        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
         setAccessibleUserIds(userId ? [userId] : null);
       }
     };
@@ -1989,118 +2086,100 @@ export default function Navbar() {
                 <NotificationPanelHeader>
                   <h3>Notifications</h3>
                   {unreadCount > 0 && (
-                    <span>{unreadCount} unread</span>
+                    <div className="unread-badge">{unreadCount} New</div>
                   )}
                 </NotificationPanelHeader>
                 <NotificationPanelBody data-notification-body>
                   {loadingNotifications ? (
                     <LoadingNotifications>
-                      <p>Loading notifications...</p>
+                      <div className="spinner" />
+                      <p>Fetching notifications...</p>
                     </LoadingNotifications>
                   ) : notifications.length === 0 ? (
                     <EmptyNotifications>
-                      <p>No notifications</p>
+                      <div className="icon-box">
+                        <Bell size={28} />
+                      </div>
+                      <p>All caught up!</p>
+                      <span>No new notifications at the moment.</span>
                     </EmptyNotifications>
                   ) : (
-                    <>
-                      <NotificationList>
-                        {(notificationsExpanded ? notifications : notifications.slice(0, 4))
-                          .filter((notification, index, self) =>
-                            // Additional deduplication check - keep only first occurrence of each ID
-                            index === self.findIndex(n => n.id === notification.id)
-                          )
-                          .map((notification) => (
+                    <NotificationList>
+                      {(notificationsExpanded ? notifications : notifications.slice(0, 3))
+                        .filter((notification, index, self) =>
+                          index === self.findIndex(n => n.id === notification.id)
+                        )
+                        .map((notification) => {
+                          // Determine type for styling
+                          const notifType = notification.display_type ||
+                            (notification.type?.includes('error') ? 'error' :
+                              notification.type?.includes('warning') ? 'warning' :
+                                notification.type?.includes('success') ? 'success' : 'info');
+
+                          return (
                             <NotificationListItem
                               key={notification.id}
                               $isRead={notification.is_read}
+                              $type={notifType}
                               onClick={() => handleNotificationClick(notification)}
-                              title={notification.action_url ? 'Click to view details' : 'Click to view all notifications'}
                             >
-                              <NotificationListText $isRead={notification.is_read}>
-                                <div className="notification-meta">
-                                  <p style={{ flex: 1, margin: 0 }}>{notification.title || notification.message}</p>
-                                  <span className="notification-time">{formatNotificationDate(notification.created_at)}</span>
-                                </div>
-                                {notification.priority && notification.priority !== 'medium' && (
-                                  <div style={{ marginTop: '4px' }}>
-                                    <span style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      padding: '3px 7px',
-                                      fontSize: '10px',
-                                      fontWeight: '600',
-                                      textTransform: 'uppercase',
-                                      borderRadius: '4px',
-                                      backgroundColor: notification.priority === 'urgent' ? '#fee2e2' :
-                                        notification.priority === 'high' ? '#fef3c7' : '#dbeafe',
-                                      color: notification.priority === 'urgent' ? '#dc2626' :
-                                        notification.priority === 'high' ? '#d97706' : '#2563eb',
-                                      border: `1px solid ${notification.priority === 'urgent' ? '#fecaca' :
-                                        notification.priority === 'high' ? '#fde68a' : '#bfdbfe'}`,
-                                      letterSpacing: '0.025em',
-                                    }}>
-                                      {notification.priority}
-                                    </span>
+                              <NotificationIconBox $type={notifType}>
+                                {notifType === 'success' ? <CheckCircle size={18} /> :
+                                  notifType === 'error' ? <XCircle size={18} /> :
+                                    notifType === 'warning' ? <AlertCircle size={18} /> :
+                                      <Info size={18} />}
+                              </NotificationIconBox>
+
+                              <NotificationContent>
+                                <NotificationTitle $isRead={notification.is_read}>
+                                  {notification.title || 'Notification'}
+                                </NotificationTitle>
+                                <NotificationMessage>
+                                  {notification.message}
+                                </NotificationMessage>
+                                <NotificationMeta>
+                                  <div className="time">
+                                    {formatNotificationDate(notification.created_at)}
                                   </div>
-                                )}
-                              </NotificationListText>
+                                </NotificationMeta>
+                              </NotificationContent>
+                              {!notification.is_read && <div className="unread-dot" />}
                             </NotificationListItem>
-                          ))}
-                      </NotificationList>
-                    </>
+                          );
+                        })}
+                    </NotificationList>
                   )}
                 </NotificationPanelBody>
                 {notifications.length > 0 && (
                   <NotificationPanelFooter>
-                    <div style={{
-                      display: 'flex',
-                      gap: '10px',
-                      width: '100%',
-                      alignItems: 'stretch',
-                      justifyContent: 'center'
-                    }}>
-                      {notifications.length > 4 && (
-                        <CollapseButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            handleExpandNotifications();
-                          }}
-                          style={{
-                            flex: '0 1 auto',
-                            margin: 0,
-                            minWidth: '140px',
-                            maxWidth: '200px'
-                          }}
-                        >
-                          {notificationsExpanded ? (
-                            <>
-                              <ChevronUp size={14} />
-                              <span>Show Less</span>
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown size={14} />
-                              <span>Show {notifications.length - 4} More</span>
-                            </>
-                          )}
-                        </CollapseButton>
-                      )}
-                      <ViewAllButton
+                    {notifications.length > 3 && (
+                      <CollapseButton
                         onClick={(e) => {
                           e.stopPropagation();
-                          e.preventDefault();
-                          handleViewAllNotifications();
-                        }}
-                        style={{
-                          flex: notifications.length > 4 ? '0 1 auto' : 'none',
-                          minWidth: '160px',
-                          maxWidth: notifications.length > 4 ? '200px' : 'none'
+                          handleExpandNotifications();
                         }}
                       >
-                        View All Notifications
-                      </ViewAllButton>
-                    </div>
+                        {notificationsExpanded ? (
+                          <>
+                            <ChevronUp size={14} />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown size={14} />
+                            Show More ({notifications.length - 3})
+                          </>
+                        )}
+                      </CollapseButton>
+                    )}
+                    <ViewAllButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewAllNotifications();
+                      }}
+                    >
+                      All Notifications
+                    </ViewAllButton>
                   </NotificationPanelFooter>
                 )}
               </NotificationPanel>

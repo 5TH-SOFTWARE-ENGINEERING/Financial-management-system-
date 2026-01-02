@@ -349,21 +349,36 @@ def update_inventory_item(
         
         # Check for low stock after update
         if updated_item.quantity is not None and updated_item.quantity <= 10:  # Threshold for low stock
-            # Notify finance admins about low stock
-            finance_admins = db.query(User).filter(
-                User.role.in_([UserRole.FINANCE_ADMIN, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]),
-                User.is_active == True
-            ).all()
+            # Target identifying relevant recipients hierarchically
+            recipient_ids = []
             
-            admin_ids = [admin.id for admin in finance_admins]
-            if admin_ids:
+            # 1. The manager of the current user (if they are Finance Admin/Manager)
+            if current_user.manager_id:
+                manager = db.query(User).filter(User.id == current_user.manager_id).first()
+                if manager and manager.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER] and manager.is_active:
+                    recipient_ids.append(manager.id)
+            
+            # 2. The current user themselves if they are Finance Admin/Manager
+            if current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+                recipient_ids.append(current_user.id)
+            
+            # 3. Limited set of global Admins (max 3)
+            global_admins = db.query(User).filter(
+                User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                User.is_active == True
+            ).limit(3).all()
+            for admin in global_admins:
+                if admin.id not in recipient_ids:
+                    recipient_ids.append(admin.id)
+            
+            if recipient_ids:
                 NotificationService.notify_inventory_low(
                     db=db,
                     item_id=updated_item.id,
                     item_name=updated_item.item_name,
                     current_quantity=updated_item.quantity,
                     min_quantity=10,
-                    user_ids=admin_ids
+                    user_ids=recipient_ids
                 )
     except Exception as e:
         logger.warning(f"Notification failed for inventory update: {str(e)}")

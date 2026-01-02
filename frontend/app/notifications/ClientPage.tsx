@@ -292,39 +292,56 @@ const NotificationsList = styled.div`
 `;
 
 const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string }>`
-  background: ${props => props.$isRead 
-    ? theme.colors.background 
-    : 'linear-gradient(135deg, ' + theme.colors.backgroundSecondary + ' 0%, ' + theme.colors.background + ' 100%)'};
-  border: 1px solid ${theme.colors.border};
-  border-left: 5px solid ${props => {
-    if (!props.$isRead) return PRIMARY_COLOR;
+  background: ${props => props.$isRead
+    ? 'rgba(255, 255, 255, 0.7)'
+    : 'rgba(255, 255, 255, 0.95)'};
+  backdrop-filter: blur(10px);
+  border: 1px solid ${props => props.$isRead ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.1)'};
+  border-left: 4px solid ${props => {
     const colors: Record<string, string> = {
       success: '#10b981',
       error: '#ef4444',
       warning: '#f59e0b',
       info: '#3b82f6'
     };
-    return colors[props.$displayType] || theme.colors.border;
+    return props.$isRead ? colors[props.$displayType] + '40' : colors[props.$displayType];
   }};
-  border-radius: ${theme.borderRadius.lg || '12px'};
-  padding: ${theme.spacing.xl};
-  box-shadow: ${CardShadow};
-  transition: all ${theme.transitions.default};
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: ${props => props.$isRead ? '0 2px 8px rgba(0,0,0,0.02)' : '0 4px 12px rgba(0,0,0,0.05)'};
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
   
   &:hover {
-    transform: translateX(6px);
-    box-shadow: ${CardShadowHover};
-    border-left-width: 6px;
+    transform: translateY(-2px) translateX(4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
     border-color: ${props => {
-      const colors: Record<string, string> = {
-        success: '#10b981',
-        error: '#ef4444',
-        warning: '#f59e0b',
-        info: '#3b82f6'
-      };
-      return colors[props.$displayType] || PRIMARY_COLOR;
-    }};
+    const colors: Record<string, string> = {
+      success: '#10b981',
+      error: '#ef4444',
+      warning: '#f59e0b',
+      info: '#3b82f6'
+    };
+    return colors[props.$displayType] + '80';
+  }};
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+  }
+
+  &:hover::before {
+    transform: translateX(100%);
   }
 `;
 
@@ -385,8 +402,8 @@ const NotificationHeader = styled.div`
 
 const NotificationTitle = styled.h3<{ $isRead: boolean }>`
   font-size: ${theme.typography.fontSizes.lg || '18px'};
-  font-weight: ${props => props.$isRead 
-    ? theme.typography.fontWeights.medium 
+  font-weight: ${props => props.$isRead
+    ? theme.typography.fontWeights.medium
     : theme.typography.fontWeights.bold || '700'};
   color: ${TEXT_COLOR_DARK};
   margin: 0;
@@ -820,107 +837,70 @@ export default function NotificationsPage() {
       const isEmployee = userRole === 'employee';
 
       if (isAdmin) {
-        // Admin sees all - no filtering needed
+        // Admin sees all
         setAccessibleUserIds(null);
         setIsAccessibleUserIdsReady(true);
         return;
       }
 
-      if (isFinanceAdmin && user?.id) {
-        // Finance Admin/Manager: Get their own subordinates ONLY (accountants and employees)
-        // Exclude other Finance Admins, Managers, and their subordinates
-        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+      const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+      const managerId = (user as any).managerId || (user as any).manager_id;
+      const normalizedManagerId = managerId ? (typeof managerId === 'string' ? parseInt(managerId, 10) : Number(managerId)) : null;
+
+      if (isFinanceAdmin && userId) {
+        // Finance Admin/Manager: Own + Subordinates (Accountants/Employees only)
         try {
           const subordinatesRes = await apiClient.getSubordinates(userId);
           const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
-          
-          // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
           const validSubordinateIds = subordinates
             .map((sub: { id?: number | string; role?: string }) => {
-              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
               const subRole = (sub.role || '').toLowerCase();
-              
-              // Only include accountants and employees, exclude Finance Admins and Managers
-              if (typeof subId === 'number' && 
-                  (subRole === 'accountant' || subRole === 'employee')) {
-                return subId;
-              }
+              if (!Number.isNaN(subId) && (subRole === 'accountant' || subRole === 'employee')) return subId;
               return null;
             })
             .filter((id): id is number => id !== null);
-          
-          // Create accessible user IDs: Finance Admin's own ID + their valid subordinates only
-          const userIds = [userId, ...validSubordinateIds];
-          setAccessibleUserIds(userIds);
+
+          setAccessibleUserIds([userId, ...validSubordinateIds]);
           setIsAccessibleUserIdsReady(true);
         } catch (err) {
           console.error('Failed to fetch subordinates for Finance Admin:', err);
-          // Fallback: only see own notifications
           setAccessibleUserIds([userId]);
           setIsAccessibleUserIdsReady(true);
         }
-      } else if (isAccountant && user?.id) {
-        // Accountant: See their own notifications + employees' notifications (from their Finance Admin's team)
-        const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-        const managerId = storeUser?.managerId 
-          ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
-          : null;
-        
-        if (managerId) {
-          try {
-            // Get the Finance Admin's subordinates (employees)
-            const subordinatesRes = await apiClient.getSubordinates(managerId);
-            const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
-            
-            // Filter to ONLY include employees (exclude accountants and Finance Admins)
-            const employeeIds = subordinates
-              .map((sub: { id?: number | string; role?: string }) => {
-                const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
-                const subRole = (sub.role || '').toLowerCase() || '';
-                // Only include employees
-                if (!Number.isNaN(subId) && subRole === 'employee') {
-                  return subId;
-                }
-                return undefined;
-              })
-              .filter((id): id is number => id !== undefined);
-            
-            // Include: Accountant themselves + employees from Finance Admin's team
-            setAccessibleUserIds([accountantId, ...employeeIds]);
-            setIsAccessibleUserIdsReady(true);
-          } catch (err) {
-            console.warn('Failed to fetch Finance Admin subordinates for accountant, using only accountant ID:', err);
-            setAccessibleUserIds([accountantId]);
-            setIsAccessibleUserIdsReady(true);
-          }
-        } else {
-          // No manager - only see own notifications
-          setAccessibleUserIds([accountantId]);
+      } else if (isAccountant && userId && normalizedManagerId) {
+        // Accountant: Own + Employees of their Finance Admin manager (for sales)
+        try {
+          const subordinatesRes = await apiClient.getSubordinates(normalizedManagerId);
+          const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
+          const employeeIds = subordinates
+            .map((sub: { id?: number | string; role?: string }) => {
+              const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
+              const subRole = (sub.role || '').toLowerCase();
+              if (!Number.isNaN(subId) && subRole === 'employee') return subId;
+              return null;
+            })
+            .filter((id): id is number => id !== null);
+
+          setAccessibleUserIds([userId, ...employeeIds]);
+          setIsAccessibleUserIdsReady(true);
+        } catch (err) {
+          setAccessibleUserIds([userId]);
           setIsAccessibleUserIdsReady(true);
         }
-      } else if (isEmployee && user?.id) {
-        // Employee: See their own notifications + Finance Admin's notifications (their manager)
-        const employeeId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-        const managerId = storeUser?.managerId 
-          ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
-          : null;
-        
-        if (managerId) {
-          setAccessibleUserIds([employeeId, managerId]);
-        } else {
-          setAccessibleUserIds([employeeId]);
-        }
+      } else if (isEmployee && userId && normalizedManagerId) {
+        // Employee: Own + manager (for items created by finance admin)
+        setAccessibleUserIds([userId, normalizedManagerId]);
         setIsAccessibleUserIdsReady(true);
       } else {
-        // Other roles: only see own notifications
-        const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        // Others: only see own
         setAccessibleUserIds(userId ? [userId] : null);
         setIsAccessibleUserIdsReady(true);
       }
     };
 
     initializeAccessibleUsers();
-  }, [user, storeUser]);
+  }, [user]);
 
   // Role-based access control - all authenticated users can access notifications
   useEffect(() => {
@@ -929,7 +909,7 @@ export default function NotificationsPage() {
         router.push('/auth/login');
         return;
       }
-      
+
       // Check if user has a valid role
       const userRole = user.role?.toLowerCase();
       const allowedRoles = [
@@ -941,7 +921,7 @@ export default function NotificationsPage() {
         'accountant',
         'employee'
       ];
-      
+
       if (!userRole || !allowedRoles.includes(userRole)) {
         toast.error('Access denied: Insufficient permissions');
         router.push('/dashboard');
@@ -953,13 +933,13 @@ export default function NotificationsPage() {
   // Helper to fetch user information for notifications
   const fetchUserInfoForNotifications = useCallback(async (notifications: Notification[]) => {
     if (!user) return;
-    
+
     const userRole = user.role?.toLowerCase() || '';
     const isAdminOrFinanceAdmin = ['admin', 'super_admin', 'finance_admin', 'manager'].includes(userRole);
-    
+
     // Only fetch user info if admin/finance admin and viewing notifications from other users
     if (!isAdminOrFinanceAdmin) return;
-    
+
     try {
       // Get unique user IDs from notifications that are not the current user
       const currentUserId = Number(user.id);
@@ -967,9 +947,9 @@ export default function NotificationsPage() {
         .map(n => n.user_id)
         .filter(id => id && id !== currentUserId && !userCache.has(id))
       )];
-      
+
       if (uniqueUserIds.length === 0) return;
-      
+
       // Fetch user information for unique user IDs
       const userPromises = uniqueUserIds.map(async (userId) => {
         try {
@@ -989,16 +969,16 @@ export default function NotificationsPage() {
           };
         }
       });
-      
+
       const userInfos = await Promise.all(userPromises);
       const newCache = new Map(userCache);
       userInfos.forEach(userInfo => {
         newCache.set(userInfo.id, { name: userInfo.name, email: userInfo.email });
       });
       setUserCache(newCache);
-      
+
       // Update notifications with user info
-      setNotifications(prevNotifications => 
+      setNotifications(prevNotifications =>
         prevNotifications.map(notif => {
           const userInfo = newCache.get(notif.user_id);
           return userInfo ? {
@@ -1023,70 +1003,70 @@ export default function NotificationsPage() {
       setLoading(true);
     }
     setError(null);
-    
+
     try {
       const response = await apiClient.getNotifications();
       // Handle both direct array response and wrapped response
       const notificationsData = Array.isArray(response?.data)
         ? response.data
         : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data ? (response.data as { data: unknown[] }).data : []);
-      
+
       // Get current user info for filtering
       const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
       const userRole = user?.role?.toLowerCase() || '';
       const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-      
+
       // Filter notifications based on accessibleUserIds
       const filteredNotificationsData = (notificationsData || []).filter((notif: unknown) => {
         const notification = notif as { user_id?: number };
         const notifUserId = notification.user_id;
-        
+
         // Admin sees all
         if (isAdmin) {
           return true;
         }
-        
+
         // If accessibleUserIds is null, it means we're still loading or it's an admin
         // For safety, if we're not admin and accessibleUserIds is null, only show own notifications
         if (accessibleUserIds === null) {
           return notifUserId === currentUserId;
         }
-        
+
         // If notification has no user_id, skip it for non-admin roles
         if (notifUserId === undefined || notifUserId === null) {
           return false;
         }
-        
+
         // Check if notification's user_id is in accessibleUserIds
         if (accessibleUserIds.length > 0) {
           return accessibleUserIds.includes(notifUserId);
         }
-        
+
         // Fallback: only show own notifications
         return notifUserId === currentUserId;
       });
-      
+
       const apiNotifications = (filteredNotificationsData || []).map((notif: unknown) => {
-        const notification = notif as { 
-          id?: number; 
+        const notification = notif as {
+          id?: number;
           user_id?: number;
-          message?: string; 
-          type?: string; 
+          message?: string;
+          type?: string;
           priority?: string;
-          created_at?: string; 
+          created_at?: string;
           read_at?: string | null;
           expires_at?: string | null;
-          is_read?: boolean; 
+          is_read?: boolean;
           is_email_sent?: boolean;
-          title?: string; 
+          title?: string;
           action_url?: string | null;
         };
         const notificationType = notification.type || 'system_alert';
         const notificationUserId = notification.user_id || 0;
-        
+
         // Check cache for user info
         const cachedUserInfo = userCache.get(notificationUserId);
-        
+
         return {
           id: notification.id || 0,
           user_id: notificationUserId,
@@ -1105,20 +1085,20 @@ export default function NotificationsPage() {
           user_email: cachedUserInfo?.email,
         };
       });
-      
+
       // Sort by created_at (newest first)
-      apiNotifications.sort((a: Notification, b: Notification) => 
+      apiNotifications.sort((a: Notification, b: Notification) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
-      
+
       setNotifications(apiNotifications);
-      
+
       // Fetch user info for notifications from other users (async, doesn't block UI)
       // Call this after setting notifications, but don't wait for it
       if (user) {
         const userRole = user.role?.toLowerCase() || '';
         const isAdminOrFinanceAdmin = ['admin', 'super_admin', 'finance_admin', 'manager'].includes(userRole);
-        
+
         if (isAdminOrFinanceAdmin) {
           // Get unique user IDs from notifications that are not the current user
           const currentUserId = Number(user.id);
@@ -1126,7 +1106,7 @@ export default function NotificationsPage() {
             .map(n => n.user_id)
             .filter(id => id && id !== currentUserId && !userCache.has(id))
           )];
-          
+
           if (uniqueUserIds.length > 0) {
             // Fetch user information asynchronously (fire and forget)
             Promise.all(uniqueUserIds.map(async (userId) => {
@@ -1151,9 +1131,9 @@ export default function NotificationsPage() {
                 userInfos.forEach(userInfo => {
                   newCache.set(userInfo.id, { name: userInfo.name, email: userInfo.email });
                 });
-                
+
                 // Update notifications with user info after cache is updated
-                setNotifications(prevNotifications => 
+                setNotifications(prevNotifications =>
                   prevNotifications.map(notif => {
                     const userInfo = newCache.get(notif.user_id);
                     return userInfo ? {
@@ -1163,7 +1143,7 @@ export default function NotificationsPage() {
                     } : notif;
                   })
                 );
-                
+
                 return newCache;
               });
             }).catch(err => {
@@ -1177,7 +1157,7 @@ export default function NotificationsPage() {
       const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to load notifications';
       setError(errorMessage);
       console.error('Failed to fetch notifications:', err);
-      
+
       // Only show toast on initial load or manual refresh, not on background updates
       if (showLoading) {
         toast.error(errorMessage);
@@ -1193,7 +1173,7 @@ export default function NotificationsPage() {
     const normalized = type?.toLowerCase() || 'system_alert';
     const titleLower = (title || '').toLowerCase();
     const messageLower = (message || '').toLowerCase();
-    
+
     // Success types - positive outcomes
     if (
       normalized === 'approval_decision' ||
@@ -1207,15 +1187,14 @@ export default function NotificationsPage() {
       normalized.includes('completed') ||
       normalized.includes('confirmed') ||
       normalized.includes('posted') ||
-      // Check title/message for user creation (uses SYSTEM_ALERT but indicates success)
+      normalized.includes('success') ||
       (normalized === 'system_alert' && (titleLower.includes('welcome') || titleLower.includes('user created') || messageLower.includes('welcome'))) ||
-      // Check for approved in approval_decision
       (normalized === 'approval_decision' && (titleLower.includes('approved') || messageLower.includes('approved')))
     ) {
       return 'success';
     }
-    
-    // Error types - negative outcomes that need attention
+
+    // Error types - negative outcomes
     if (
       normalized === 'budget_exceeded' ||
       normalized === 'expense_rejected' ||
@@ -1225,13 +1204,13 @@ export default function NotificationsPage() {
       normalized.includes('failed') ||
       normalized.includes('cancelled') ||
       normalized.includes('denied') ||
-      // Check for rejection in approval_decision type
+      normalized.includes('alert') ||
       (normalized === 'approval_decision' && (titleLower.includes('rejected') || messageLower.includes('rejected')))
     ) {
       return 'error';
     }
-    
-    // Warning types - high priority items that need attention
+
+    // Warning types - pending or high attention items
     if (
       normalized === 'approval_request' ||
       normalized === 'deadline_reminder' ||
@@ -1242,33 +1221,14 @@ export default function NotificationsPage() {
       normalized.includes('pending') ||
       normalized.includes('reminder') ||
       normalized.includes('required') ||
-      // Check for approval requests in title/message
+      normalized.includes('warning') ||
       (normalized === 'system_alert' && (titleLower.includes('approval required') || messageLower.includes('approval required'))) ||
-      // Pending approvals notification
       (normalized === 'system_alert' && (titleLower.includes('pending approval') || messageLower.includes('pending approval')))
     ) {
       return 'warning';
     }
-    
-    // Info types - general system updates and informational messages
-    if (
-      normalized === 'system_alert' ||
-      normalized === 'expense_updated' ||
-      normalized === 'revenue_updated' ||
-      normalized === 'inventory_updated' ||
-      normalized === 'inventory_created' ||
-      normalized === 'report_ready' ||
-      normalized.includes('updated') ||
-      normalized.includes('profile') ||
-      // User updates are info
-      (normalized === 'system_alert' && (titleLower.includes('profile updated') || titleLower.includes('user updated') || messageLower.includes('updated'))) ||
-      // New user created notification for admins (info, not success)
-      (normalized === 'system_alert' && titleLower.includes('new user created') && !titleLower.includes('welcome'))
-    ) {
-      return 'info';
-    }
-    
-    // Default to info for unknown types
+
+    // Info types - general updates
     return 'info';
   };
 
@@ -1282,7 +1242,7 @@ export default function NotificationsPage() {
       return () => clearInterval(interval);
     }
   }, [isAuthenticated, user, fetchNotifications, isAccessibleUserIdsReady]);
-  
+
   // Update user cache when user changes
   useEffect(() => {
     if (user) {
@@ -1291,10 +1251,10 @@ export default function NotificationsPage() {
         const newCache = new Map(prev);
         const userId = Number(user.id);
         // Handle both StoreUser (has 'name') and User (has 'full_name')
-        const userName = ('name' in user ? user.name : undefined) || 
-                         (('full_name' in user) ? (user as { full_name?: string }).full_name : undefined) || 
-                         ('email' in user ? user.email : '') || 
-                         'You';
+        const userName = ('name' in user ? user.name : undefined) ||
+          (('full_name' in user) ? (user as { full_name?: string }).full_name : undefined) ||
+          ('email' in user ? user.email : '') ||
+          'You';
         const userEmail = ('email' in user ? user.email : '') || '';
         newCache.set(userId, {
           name: userName,
@@ -1312,27 +1272,27 @@ export default function NotificationsPage() {
         fetchNotifications(false);
       }
     };
-    
+
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [isAuthenticated, user, fetchNotifications]);
 
   const markAsRead = async (notificationId: number) => {
     if (processingIds.has(notificationId)) return;
-    
+
     setProcessingIds(prev => new Set(prev).add(notificationId));
-    
+
     try {
       await apiClient.markNotificationAsRead(notificationId);
-      
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === notificationId 
+
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === notificationId
             ? { ...notification, is_read: true }
             : notification
         )
       );
-      
+
       // Don't show toast for individual mark as read to avoid spam
       // toast.success('Notification marked as read');
     } catch (err: unknown) {
@@ -1352,16 +1312,16 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     if (processingIds.has(-1)) return;
-    
+
     setProcessingIds(prev => new Set(prev).add(-1));
-    
+
     try {
       await apiClient.markAllNotificationsAsRead();
-      
-      setNotifications(prev => 
+
+      setNotifications(prev =>
         prev.map(notification => ({ ...notification, is_read: true }))
       );
-      
+
       toast.success('All notifications marked as read');
     } catch (err: unknown) {
       const error = err as ErrorWithDetails;
@@ -1395,7 +1355,7 @@ export default function NotificationsPage() {
 
   const verifyPassword = async (password: string): Promise<boolean> => {
     if (!user) return false;
-    
+
     try {
       // Use login endpoint to verify password
       // We'll catch the error if password is wrong, but won't actually log in
@@ -1428,7 +1388,7 @@ export default function NotificationsPage() {
     try {
       // Verify password
       const isValid = await verifyPassword(deletePassword);
-      
+
       if (!isValid) {
         setDeletePasswordError('Incorrect password. Please try again.');
         setVerifyingPassword(false);
@@ -1438,14 +1398,14 @@ export default function NotificationsPage() {
       // Password is correct, proceed with deletion
       const notificationId = notificationToDelete.id;
       setProcessingIds(prev => new Set(prev).add(notificationId));
-      
+
       try {
         await apiClient.deleteNotification(notificationId);
-        
-        setNotifications(prev => 
+
+        setNotifications(prev =>
           prev.filter(notification => notification.id !== notificationId)
         );
-        
+
         toast.success('Notification deleted successfully');
         closeDeleteModal();
       } catch (err: unknown) {
@@ -1470,7 +1430,7 @@ export default function NotificationsPage() {
 
   const deleteNotification = async (notificationId: number) => {
     if (processingIds.has(notificationId)) return;
-    
+
     const notification = notifications.find(n => n.id === notificationId);
     if (notification) {
       openDeleteModal(notification);
@@ -1484,7 +1444,7 @@ export default function NotificationsPage() {
   });
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
-  
+
   // Calculate stats
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -1493,7 +1453,7 @@ export default function NotificationsPage() {
     notifDate.setHours(0, 0, 0, 0);
     return notifDate.getTime() === today.getTime();
   }).length;
-  
+
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
   const weekCount = notifications.filter(n => {
@@ -1515,7 +1475,7 @@ export default function NotificationsPage() {
     const type = notificationType?.toLowerCase() || '';
     const titleLower = (title || '').toLowerCase();
     const messageLower = (message || '').toLowerCase();
-    
+
     // Specific icons for certain notification types
     if (type.includes('user') || type.includes('welcome') || titleLower.includes('welcome') || messageLower.includes('welcome')) {
       return <CheckCircle />;
@@ -1554,7 +1514,7 @@ export default function NotificationsPage() {
     if (type === 'report_ready' || type === 'forecast_created' || type === 'ml_training_complete') {
       return <CheckCircle />;
     }
-    
+
     // Fallback to display type
     switch (displayType) {
       case 'success':
@@ -1569,7 +1529,7 @@ export default function NotificationsPage() {
         return <Bell />;
     }
   };
-  
+
   const getPriorityBadge = (priority: string) => {
     const normalized = priority?.toLowerCase() || 'medium';
     switch (normalized) {
@@ -1590,11 +1550,11 @@ export default function NotificationsPage() {
   const userRole = user?.role?.toLowerCase() || '';
   const isAdmin = ['admin', 'super_admin'].includes(userRole);
   const isFinanceAdminOrManager = ['finance_admin', 'manager'].includes(userRole);
-  const notificationScope = isAdmin 
-    ? 'all users' 
-    : isFinanceAdminOrManager 
-    ? 'your team' 
-    : 'your own';
+  const notificationScope = isAdmin
+    ? 'all users'
+    : isFinanceAdminOrManager
+      ? 'your team'
+      : 'your own';
 
   return (
     <Layout>
@@ -1605,11 +1565,11 @@ export default function NotificationsPage() {
               <div>
                 <h1>Notifications</h1>
                 <p>
-                  {isAdmin 
+                  {isAdmin
                     ? 'Viewing all notifications across the system'
                     : isFinanceAdminOrManager
-                    ? 'Viewing your notifications and your team\'s notifications'
-                    : 'Stay updated with your important alerts and updates'
+                      ? 'Viewing your notifications and your team\'s notifications'
+                      : 'Stay updated with your important alerts and updates'
                   }
                 </p>
               </div>
@@ -1636,17 +1596,17 @@ export default function NotificationsPage() {
                   </ActionButton>
                 )}
                 {user && (
-                  user.role?.toLowerCase() !== 'accountant' && 
+                  user.role?.toLowerCase() !== 'accountant' &&
                   user.role?.toLowerCase() !== 'employee'
                 ) && (
-                  <ActionButton
-                    $variant="secondary"
-                    onClick={() => router.push('/settings/notifications')}
-                  >
-                    <Settings />
-                    Settings
-                  </ActionButton>
-                )}
+                    <ActionButton
+                      $variant="secondary"
+                      onClick={() => router.push('/settings/notifications')}
+                    >
+                      <Settings />
+                      Settings
+                    </ActionButton>
+                  )}
               </HeaderActions>
             </HeaderContent>
           </HeaderContainer>
@@ -1727,7 +1687,7 @@ export default function NotificationsPage() {
                   <option value="warning">Warnings</option>
                   <option value="info">Info</option>
                 </FilterSelect>
-                
+
                 <FilterCount>
                   {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? 's' : ''}
                 </FilterCount>
@@ -1745,12 +1705,12 @@ export default function NotificationsPage() {
                         if (!notification.is_read) {
                           markAsRead(notification.id);
                         }
-                        
+
                         // Navigate to action URL if available
                         if (notification.action_url) {
                           // Handle both relative and absolute URLs
-                          const url = notification.action_url.startsWith('/') 
-                            ? notification.action_url 
+                          const url = notification.action_url.startsWith('/')
+                            ? notification.action_url
                             : `/${notification.action_url}`;
                           router.push(url);
                         }
@@ -1777,8 +1737,8 @@ export default function NotificationsPage() {
                             <NotificationTime>{formatDate(notification.created_at)}</NotificationTime>
                             {/* Show user info for admins/finance admins viewing other users' notifications */}
                             {user && notification.user_id !== Number(user.id) && (notification.user_name || notification.user_id) && (
-                              <span style={{ 
-                                fontSize: theme.typography.fontSizes.sm, 
+                              <span style={{
+                                fontSize: theme.typography.fontSizes.sm,
                                 color: TEXT_COLOR_MUTED,
                                 fontStyle: 'italic'
                               }}>
@@ -1794,8 +1754,8 @@ export default function NotificationsPage() {
                                     markAsRead(notification.id);
                                   }
                                   // Handle both relative and absolute URLs
-                                  const url = notification.action_url!.startsWith('/') 
-                                    ? notification.action_url! 
+                                  const url = notification.action_url!.startsWith('/')
+                                    ? notification.action_url!
                                     : `/${notification.action_url!}`;
                                   router.push(url);
                                 }}
@@ -1837,7 +1797,7 @@ export default function NotificationsPage() {
                     <Bell />
                     <h3>No notifications</h3>
                     <p>
-                      {filterType === 'unread' 
+                      {filterType === 'unread'
                         ? 'No unread notifications'
                         : 'No notifications match your filter'
                       }
@@ -1907,12 +1867,12 @@ export default function NotificationsPage() {
                         setDeletePassword(e.target.value);
                         setDeletePasswordError(null);
                       }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword) {
-                            handleDeleteWithPassword();
-                          }
-                        }}
-                      />
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword) {
+                          handleDeleteWithPassword();
+                        }
+                      }}
+                    />
                     <button
                       type="button"
                       onClick={() => setShowDeletePassword(!showDeletePassword)}

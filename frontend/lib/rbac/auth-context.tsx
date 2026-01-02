@@ -61,6 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       userType: userType,
       role: storeUser.role,
       is_active: storeUser.isActive,
+      manager_id: storeUser.managerId ?? null,
       created_at: storeUser.createdAt ? new Date(storeUser.createdAt) : new Date(),
       updated_at: new Date(),
       last_login: null,
