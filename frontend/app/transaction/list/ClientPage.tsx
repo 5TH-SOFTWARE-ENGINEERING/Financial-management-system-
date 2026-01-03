@@ -133,6 +133,7 @@ const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'net' | 'total'
     color: ${props => {
     if (props.$type === 'revenue') return '#16a34a';
     if (props.$type === 'expense') return '#dc2626';
+    if (props.$type === 'inventory') return '#1118d3ff';
     if (props.$type === 'net') return TEXT_COLOR_DARK;
     return TEXT_COLOR_DARK;
   }};
@@ -994,14 +995,12 @@ export default function TransactionListPage() {
   const localNetAmount = localTotalRevenue + localTotalSales - localTotalExpenses - localTotalInventory;
   const localTotalTransactions = filteredTransactions.length;
 
-  // Use backend data if available and not loading, otherwise use local calculations
-  const totalRevenue = !loadingSummary && summary.totalRevenue > 0 ? summary.totalRevenue : localTotalRevenue;
-  const totalSales = !loadingSummary && summary.totalSales > 0 ? summary.totalSales : localTotalSales;
-  const totalExpenses = !loadingSummary && summary.totalExpenses > 0 ? summary.totalExpenses : localTotalExpenses;
-  const totalInventory = !loadingSummary && summary.totalInventory > 0 ? summary.totalInventory : localTotalInventory;
-  const netAmount = !loadingSummary && (summary.totalRevenue > 0 || summary.totalSales > 0 || summary.totalExpenses > 0)
-    ? summary.netAmount
-    : localNetAmount;
+  // Summary indicators strictly follow the filtered transactions in the table
+  const totalRevenue = localTotalRevenue;
+  const totalSales = localTotalSales;
+  const totalExpenses = localTotalExpenses;
+  const totalInventory = localTotalInventory;
+  const netAmount = localNetAmount;
   const totalTransactionsCount = localTotalTransactions;
 
   if (loading) {
@@ -1039,21 +1038,18 @@ export default function TransactionListPage() {
             <SummaryCard $type="revenue">
               <div className="label">
                 Total Revenue
-                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
               </div>
               <div className="value">{formatCurrency(totalRevenue)}</div>
             </SummaryCard>
             <SummaryCard $type="revenue">
               <div className="label">
                 Total Sales
-                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
               </div>
               <div className="value">{formatCurrency(totalSales)}</div>
             </SummaryCard>
             <SummaryCard $type="expense">
               <div className="label">
                 Total Expenses
-                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
               </div>
               <div className="value">{formatCurrency(totalExpenses)}</div>
             </SummaryCard>
@@ -1063,14 +1059,12 @@ export default function TransactionListPage() {
             <SummaryCard $type="expense">
               <div className="label">
                 Total Inventory Cost
-                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
               </div>
               <div className="value">{formatCurrency(totalInventory)}</div>
             </SummaryCard>
             <SummaryCard $type="net">
               <div className="label">
                 Net Amount
-                {loadingSummary && <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>(Loading...)</span>}
               </div>
               <div className="value" style={{ color: netAmount >= 0 ? '#16a34a' : '#dc2626' }}>
                 {formatCurrency(netAmount)}
