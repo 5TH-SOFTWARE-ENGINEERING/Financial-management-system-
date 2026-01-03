@@ -1848,7 +1848,12 @@ export default function Navbar() {
   };
 
   const handleSettingsClick = () => {
-    router.push('/settings');
+    const role = currentUser?.role?.toLowerCase();
+    if (role === 'finance_admin' || role === 'finance_manager') {
+      router.push('/settings/history');
+    } else {
+      router.push('/settings');
+    }
     setIsDropdownOpen(false);
   };
 
@@ -2244,10 +2249,10 @@ export default function Navbar() {
               currentUser.role?.toLowerCase() !== 'employee'
             ) && (
               <DropdownItem onClick={handleSettingsClick}>
-                <DropdownIcon $iconType="settings">
-                  <Settings size={16} />
+                <DropdownIcon $iconType={(currentUser?.role?.toLowerCase() === 'finance_admin' || currentUser?.role?.toLowerCase() === 'finance_manager') ? "history" : "settings"}>
+                  {(currentUser?.role?.toLowerCase() === 'finance_admin' || currentUser?.role?.toLowerCase() === 'finance_manager') ? <Clock size={16} /> : <Settings size={16} />}
                 </DropdownIcon>
-                <span>Settings</span>
+                <span>{(currentUser?.role?.toLowerCase() === 'finance_admin' || currentUser?.role?.toLowerCase() === 'finance_manager') ? "History" : "Settings"}</span>
               </DropdownItem>
             )
           )}

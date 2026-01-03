@@ -71,14 +71,14 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
-# ------------------------------------------------------------------
 # OAuth2 Scheme
 # ------------------------------------------------------------------
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 # ------------------------------------------------------------------
-# Dependency: Get current active user
+# Dependencies: Get current active user
 # ------------------------------------------------------------------
 async def get_current_active_user(
     token: str = Depends(oauth2_scheme),
@@ -103,6 +103,25 @@ async def get_current_active_user(
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return user
+
+
+async def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if not user_id:
+            return None
+        user = db.query(User).filter(User.id == int(user_id)).first()
+        if not user or not user.is_active:
+            return None
+        return user
+    except JWTError:
+        return None
 
 
 # ------------------------------------------------------------------
@@ -690,13 +709,22 @@ def refresh_token(
 # LOGOUT (client-side)
 # ------------------------------------------------------------------
 @router.post("/logout")
-def logout(request: Request, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
-    # Log logout
-    ip_address, user_agent = get_client_info(request)
-    AuditLogger.log_logout(
-        db=db,
-        user_id=current_user.id,
-        ip_address=ip_address,
-        user_agent=user_agent
-    )
+def logout(
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    # Log logout only if we have a valid user
+    if current_user:
+        ip_address, user_agent = get_client_info(request)
+        try:
+            AuditLogger.log_logout(
+                db=db,
+                user_id=current_user.id,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+        except Exception as e:
+            logger.error(f"Failed to log logout audit: {str(e)}")
+            
     return {"message": "Logged out successfully"}
