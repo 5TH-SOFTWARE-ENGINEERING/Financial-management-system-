@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import {
   DollarSign, CheckCircle, Clock,
-  Loader2, BookOpen, Receipt
+  Loader2, BookOpen, Receipt, Download
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -456,7 +456,7 @@ export default function AccountingDashboard() {
       router.push('/dashboard');
       return;
     }
-    
+
     // Initialize accessible user IDs based on role (for journal entries filtering)
     const initializeAccess = async () => {
       if (process.env.NODE_ENV === 'development') {
@@ -518,18 +518,18 @@ export default function AccountingDashboard() {
         setAccessibleUserIds(null);
       }
     };
-    
+
     initializeAccess();
   }, [user, router]);
 
   const loadData = useCallback(async () => {
     // Double-check permissions before making API calls
     if (!user) return;
-    
+
     const userRole = user?.role?.toLowerCase() || '';
     const hasAccess = userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'employee';
     if (!hasAccess) return;
-    
+
     setLoading(true);
     try {
       const [salesRes, summaryRes, journalRes] = await Promise.all([
@@ -558,7 +558,7 @@ export default function AccountingDashboard() {
           throw err;
         }),
       ]);
-      
+
       // Handle API response structure - ApiResponse wraps data in .data property
       // Backend now handles role-based filtering for sales, so we just use the response
       const salesData = Array.isArray(salesRes.data)
@@ -566,7 +566,7 @@ export default function AccountingDashboard() {
         : (Array.isArray((salesRes.data as { data?: unknown })?.data) ? (salesRes.data as { data: unknown[] }).data : []);
 
       const summaryData = summaryRes.data || (summaryRes.data as { data?: SalesSummary })?.data || null;
-      
+
       // Handle journal entries - backend returns array directly or wrapped
       let journalData: JournalEntry[] = [];
       if (Array.isArray(journalRes.data)) {
@@ -583,7 +583,7 @@ export default function AccountingDashboard() {
           journalData = nested;
         }
       }
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.log('Raw journal entries from API:', journalData.length);
         if (journalData.length > 0) {
@@ -595,13 +595,13 @@ export default function AccountingDashboard() {
         }
         console.log('Accessible User IDs for filtering:', accessibleUserIds);
       }
-      
+
       // Apply role-based filtering for journal entries (backend doesn't filter journal entries)
       const userRole = user?.role?.toLowerCase() || '';
       const isFinanceManager = userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager';
       const isAccountant = userRole === 'accountant';
       const isEmployee = userRole === 'employee';
-      
+
       if (isFinanceManager) {
         if (accessibleUserIds && accessibleUserIds.length > 0) {
           // Finance Manager/Admin: Filter to only journal entries posted by themselves and their subordinates
@@ -643,18 +643,18 @@ export default function AccountingDashboard() {
         }
       }
       // Admin sees all journal entries - no filtering needed
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.log('Final journal entries count:', journalData.length);
       }
-      
+
       // Sort by entry date (newest first) to show most recent entries at the top
       journalData.sort((a, b) => {
         const dateA = new Date(a.entry_date).getTime();
         const dateB = new Date(b.entry_date).getTime();
         return dateB - dateA;
       });
-      
+
       setSales(salesData as Sale[]);
       setSummary(summaryData);
       setJournalEntries(journalData);
@@ -717,9 +717,107 @@ export default function AccountingDashboard() {
     }
   };
 
+  const handleExportSales = () => {
+    try {
+      if (sales.length === 0) {
+        toast.error('No sales data to export');
+        return;
+      }
+
+      const headers = [
+        'Receipt #',
+        'Item Name',
+        'Quantity Sold',
+        'Selling Price',
+        'Revenue',
+        'Customer',
+        'Status',
+        'Date'
+      ];
+
+      const csvRows = sales.map(sale => [
+        `"${(sale.receipt_number || `#${sale.id}`)}"`,
+        `"${(sale.item_name || '').replace(/"/g, '""')}"`,
+        sale.quantity_sold,
+        sale.selling_price,
+        sale.total_sale,
+        `"${(sale.customer_name || '-').replace(/"/g, '""')}"`,
+        sale.status,
+        new Date(sale.created_at).toLocaleDateString()
+      ].join(','));
+
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `sales_export_${date}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Sales data exported successfully');
+    } catch (err) {
+      console.error('Sales export failed:', err);
+      toast.error('Failed to export sales data');
+    }
+  };
+
+  const handleExportJournal = () => {
+    try {
+      if (journalEntries.length === 0) {
+        toast.error('No journal entries to export');
+        return;
+      }
+
+      const headers = [
+        'Date',
+        'Description',
+        'Debit Account',
+        'Debit Amount',
+        'Credit Account',
+        'Credit Amount',
+        'Reference',
+        'Posted By'
+      ];
+
+      const csvRows = journalEntries.map(entry => [
+        new Date(entry.entry_date).toLocaleDateString(),
+        `"${(entry.description || '').replace(/"/g, '""')}"`,
+        `"${(entry.debit_account || '').replace(/"/g, '""')}"`,
+        entry.debit_amount,
+        `"${(entry.credit_account || '').replace(/"/g, '""')}"`,
+        entry.credit_amount,
+        `"${(entry.reference_number || '-').replace(/"/g, '""')}"`,
+        `"${(entry.posted_by_name || '-').replace(/"/g, '""')}"`
+      ].join(','));
+
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `journal_export_${date}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Journal entries exported successfully');
+    } catch (err) {
+      console.error('Journal export failed:', err);
+      toast.error('Failed to export journal entries');
+    }
+  };
+
   const userRole = user?.role?.toLowerCase() || '';
   const hasAccess = userRole === 'accountant' || userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'employee';
-  
+
   if (!user || !hasAccess) {
     return null;
   }
@@ -793,17 +891,28 @@ export default function AccountingDashboard() {
 
         {activeTab === 'sales' && (
           <Card>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg, gap: theme.spacing.md }}>
               <h2 style={{ margin: 0 }}>Sales Transactions</h2>
-              <StyledSelect
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'posted')}
-                style={{ width: 'auto', minWidth: '150px' }}
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="posted">Posted</option>
-              </StyledSelect>
+              <div style={{ display: 'flex', gap: theme.spacing.md, alignItems: 'center' }}>
+                <StyledSelect
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'posted')}
+                  style={{ width: 'auto', minWidth: '150px' }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="posted">Posted</option>
+                </StyledSelect>
+                <Button
+                  variant="outline"
+                  onClick={handleExportSales}
+                  disabled={loading || sales.length === 0}
+                  style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}
+                >
+                  <Download size={16} />
+                  Export
+                </Button>
+              </div>
             </div>
 
             {loading ? (
@@ -868,18 +977,29 @@ export default function AccountingDashboard() {
 
         {activeTab === 'journal' && (
           <Card>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg, gap: theme.spacing.md }}>
               <h2 style={{ margin: 0 }}>Journal Entries</h2>
-              {(userRole === 'admin' || userRole === 'super_admin') && (
-                <Badge $variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
-                  Viewing all entries
-                </Badge>
-              )}
-              {(userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager') && (
-                <Badge $variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
-                  Viewing team entries
-                </Badge>
-              )}
+              <div style={{ display: 'flex', gap: theme.spacing.md, alignItems: 'center' }}>
+                {(userRole === 'admin' || userRole === 'super_admin') && (
+                  <Badge $variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
+                    Viewing all entries
+                  </Badge>
+                )}
+                {(userRole === 'finance_manager' || userRole === 'finance_admin' || userRole === 'manager') && (
+                  <Badge $variant="info" style={{ fontSize: theme.typography.fontSizes.xs }}>
+                    Viewing team entries
+                  </Badge>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={handleExportJournal}
+                  disabled={loading || journalEntries.length === 0}
+                  style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}
+                >
+                  <Download size={16} />
+                  Export
+                </Button>
+              </div>
             </div>
             {loading ? (
               <div style={{ textAlign: 'center', padding: theme.spacing.xxl }}>

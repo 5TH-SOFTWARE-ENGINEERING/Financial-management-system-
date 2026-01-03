@@ -415,7 +415,7 @@ export default function SalesPage() {
 
   const loadItems = useCallback(async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       // Use backend search parameter if searchTerm exists, otherwise fetch all active items
@@ -428,27 +428,27 @@ export default function SalesPage() {
         limit: 1000,
         is_active: true,
       };
-      
+
       // Add search parameter if user has entered a search term
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
       }
-      
+
       const response = await apiClient.getInventoryItems(params);
-      
+
       // Backend returns List[InventoryItemOut] directly (array), not wrapped
       let itemsData: InventoryItem[] = [];
-      
+
       if (Array.isArray(response?.data)) {
         itemsData = response.data as InventoryItem[];
       } else if (response?.data && typeof response.data === 'object' && 'data' in response.data && Array.isArray((response.data as { data?: unknown }).data)) {
         // Fallback: handle wrapped response if backend changes
         itemsData = (response.data as { data: InventoryItem[] }).data;
       }
-      
+
       // Filter out inactive items (backend should already filter, but add safety check)
       itemsData = itemsData.filter(item => item.quantity !== undefined && item.quantity !== null);
-      
+
       // Normalize item data structure
       itemsData = itemsData.map((item: InventoryItem) => ({
         id: item.id,
@@ -461,7 +461,7 @@ export default function SalesPage() {
         createdBy: item.createdBy,
         created_by: item.created_by,
       }));
-      
+
       setItems(itemsData);
     } catch (err: unknown) {
       const errorMessage =
@@ -482,44 +482,44 @@ export default function SalesPage() {
       router.push('/dashboard');
       return;
     }
-    
+
     // Allow Admin, Finance Admin, Accountant, and Employee to access sales page
     const userRole = user?.role?.toLowerCase() || '';
     const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'accountant', 'employee'];
-    
+
     if (!allowedRoles.includes(userRole)) {
       router.push('/dashboard');
       return;
     }
-    
+
     // Backend handles role-based filtering, so we just need to load items
     // Items will be filtered by backend based on user's role
   }, [user, router]);
 
   // Debounce search to avoid too many API calls
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Load items when user or search term changes
   useEffect(() => {
     if (!user) return;
-    
+
     // Clear existing timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-    
+
     // Debounce search - wait 300ms after user stops typing
     searchTimeoutRef.current = setTimeout(() => {
       loadItems();
     }, 300);
-    
+
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
     };
   }, [user, searchTerm, loadItems]);
-  
+
 
   const handleAddToSale = () => {
     if (!selectedItem) {
@@ -573,7 +573,7 @@ export default function SalesPage() {
       toast.error('Quantity must be greater than 0');
       return;
     }
-    
+
     const item = items.find(i => i.id === itemId);
     const itemQty = Number(item?.quantity || 0);
     if (item && newQuantity > itemQty) {
@@ -581,8 +581,8 @@ export default function SalesPage() {
       return;
     }
 
-    setSaleItems(saleItems.map(item => 
-      item.item_id === itemId 
+    setSaleItems(saleItems.map(item =>
+      item.item_id === itemId
         ? { ...item, quantity: newQuantity, total: Number(item.selling_price) * newQuantity }
         : item
     ));
@@ -670,13 +670,13 @@ export default function SalesPage() {
     if (!searchTerm.trim()) return true;
     const searchLower = searchTerm.toLowerCase();
     return item.item_name.toLowerCase().includes(searchLower) ||
-           (item.sku || '').toLowerCase().includes(searchLower);
+      (item.sku || '').toLowerCase().includes(searchLower);
   });
 
   // Allow Admin, Finance Admin, Accountant, and Employee to access sales page
   const userRole = user?.role?.toLowerCase() || '';
   const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'accountant', 'employee'];
-  
+
   if (!user || !userRole || !allowedRoles.includes(userRole)) {
     return null;
   }
@@ -750,39 +750,39 @@ export default function SalesPage() {
                           toast.error('This item is out of stock');
                         }
                       }}
-                      style={{ 
+                      style={{
                         opacity: Number(item.quantity || 0) === 0 ? 0.6 : 1,
                         cursor: Number(item.quantity || 0) === 0 ? 'not-allowed' : 'pointer'
                       }}
                     >
-                    <ItemInfoRow>
-                      <ItemName>{item.item_name}</ItemName>
-                      <ItemPrice>
-                        <span style={{ color: '#dc2626' }}>selling price:</span> ${Number(item.selling_price).toFixed(2)}
-                      </ItemPrice>
-                      <ItemStock>
-                        <span>Stock:</span>
-                        <Badge $variant={Number(item.quantity || 0) < 10 ? 'danger' : Number(item.quantity || 0) < 50 ? 'warning' : 'success'}>
-                          {Number(item.quantity || 0)}
-                        </Badge>
-                      </ItemStock>
-                    </ItemInfoRow>
-                    {Number(item.quantity || 0) === 0 && (
-                      <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: '#dc2626' }}>
-                        Out of Stock
-                      </div>
-                    )}
-                    {item.category && (
-                      <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
-                        {item.category}
-                      </div>
-                    )}
-                    {item.sku && (
-                      <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
-                        SKU: {item.sku}
-                      </div>
-                    )}
-                  </ItemCard>
+                      <ItemInfoRow>
+                        <ItemName>{item.item_name}</ItemName>
+                        <ItemPrice>
+                          <span style={{ color: '#dc2626' }}>selling price:</span> ${Number(item.selling_price).toFixed(2)}
+                        </ItemPrice>
+                        <ItemStock>
+                          <span>Stock:</span>
+                          <Badge $variant={Number(item.quantity || 0) < 10 ? 'danger' : Number(item.quantity || 0) < 50 ? 'warning' : 'success'}>
+                            {Number(item.quantity || 0)}
+                          </Badge>
+                        </ItemStock>
+                      </ItemInfoRow>
+                      {Number(item.quantity || 0) === 0 && (
+                        <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: '#dc2626' }}>
+                          Out of Stock
+                        </div>
+                      )}
+                      {item.category && (
+                        <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                          {item.category}
+                        </div>
+                      )}
+                      {item.sku && (
+                        <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                          SKU: {item.sku}
+                        </div>
+                      )}
+                    </ItemCard>
                   ))
                 )}
               </ItemsGrid>
