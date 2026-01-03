@@ -1047,37 +1047,67 @@ export default function InventoryManagePage() {
         return;
       }
 
-      // Define columns to export
+      // Check role for export permission
+      // Accountants should not see financial details (buying price, expense, cost, profit)
+      const isAccountantRole = user?.role?.toLowerCase() === 'accountant';
+
+      // Define columns to export based on role
       const headers = [
         'Item Name',
         'SKU',
         'Category',
-        'Buying Price',
-        'Expense Amount',
-        'Total Cost',
+        // Financials only for non-accountants
+        ...(!isAccountantRole ? [
+          'Buying Price',
+          'Expense Amount',
+          'Total Cost'
+        ] : []),
         'Selling Price',
         'Quantity',
-        'Profit Per Unit',
-        'Profit Margin %',
+        // Profit metrics only for non-accountants
+        ...(!isAccountantRole ? [
+          'Profit Per Unit',
+          'Profit Margin %'
+        ] : []),
         'Status',
         'Description'
       ];
 
       // Format data as CSV
-      const csvRows = filteredItems.map(item => [
-        `"${(item.item_name || '').replace(/"/g, '""')}"`,
-        `"${(item.sku || '').replace(/"/g, '""')}"`,
-        `"${(item.category || '').replace(/"/g, '""')}"`,
-        item.buying_price || 0,
-        item.expense_amount || 0,
-        item.total_cost || 0,
-        item.selling_price || 0,
-        item.quantity || 0,
-        item.profit_per_unit || 0,
-        item.profit_margin || 0,
-        item.is_active ? 'Active' : 'Inactive',
-        `"${(item.description || '').replace(/"/g, '""')}"`
-      ].join(','));
+      const csvRows = filteredItems.map(item => {
+        const row = [
+          `"${(item.item_name || '').replace(/"/g, '""')}"`,
+          `"${(item.sku || '').replace(/"/g, '""')}"`,
+          `"${(item.category || '').replace(/"/g, '""')}"`
+        ];
+
+        if (!isAccountantRole) {
+          row.push(
+            (item.buying_price || 0).toString(),
+            (item.expense_amount || 0).toString(),
+            (item.total_cost || 0).toString()
+          );
+        }
+
+        row.push(
+          (item.selling_price || 0).toString(),
+          (item.quantity || 0).toString()
+        );
+
+        if (!isAccountantRole) {
+          row.push(
+            (item.profit_per_unit || 0).toString(),
+            (item.profit_margin || 0).toString()
+          );
+        }
+
+        row.push(
+          item.is_active ? 'Active' : 'Inactive',
+          `"${(item.description || '').replace(/"/g, '""')}"`
+        );
+
+        return row.join(',');
+      });
 
       const csvContent = [headers.join(','), ...csvRows].join('\n');
 
