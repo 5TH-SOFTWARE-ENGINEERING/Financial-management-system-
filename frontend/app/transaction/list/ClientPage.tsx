@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
   AlertCircle, ArrowUpRight, ArrowDownRight,
-  Search, TrendingUp, ShoppingCart, Package
+  Search, TrendingUp, ShoppingCart, Package, Download
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -131,11 +131,11 @@ const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'net' | 'total'
     font-size: clamp(20px, 3vw, 24px);
     font-weight: ${theme.typography.fontWeights.bold};
     color: ${props => {
-      if (props.$type === 'revenue') return '#16a34a';
-      if (props.$type === 'expense') return '#dc2626';
-      if (props.$type === 'net') return TEXT_COLOR_DARK;
-      return TEXT_COLOR_DARK;
-    }};
+    if (props.$type === 'revenue') return '#16a34a';
+    if (props.$type === 'expense') return '#dc2626';
+    if (props.$type === 'net') return TEXT_COLOR_DARK;
+    return TEXT_COLOR_DARK;
+  }};
   }
 `;
 
@@ -155,8 +155,9 @@ const FiltersContainer = styled.div`
 
 const FiltersGrid = styled.div`
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr auto;
   gap: ${theme.spacing.sm};
+  align-items: center;
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -493,10 +494,10 @@ export default function TransactionListPage() {
     setLoadingSummary(true);
     try {
       const userRole = user?.role?.toLowerCase();
-      const canViewFinancials = userRole === 'admin' || userRole === 'super_admin' || 
-                                 userRole === 'finance_admin' || userRole === 'finance_manager' ||
-                                 userRole === 'manager' || userRole === 'accountant';
-      
+      const canViewFinancials = userRole === 'admin' || userRole === 'super_admin' ||
+        userRole === 'finance_admin' || userRole === 'finance_manager' ||
+        userRole === 'manager' || userRole === 'accountant';
+
       if (!canViewFinancials) {
         setLoadingSummary(false);
         return;
@@ -565,7 +566,7 @@ export default function TransactionListPage() {
 
     setLoading(true);
     setError(null);
-    
+
     try {
       const userRole = user?.role?.toLowerCase();
       const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
@@ -579,7 +580,7 @@ export default function TransactionListPage() {
       // Accountant: See their own + their Finance Admin's team (ONLY accountants and employees, NOT other Finance Admins)
       // Employee: See only their own
       let userIds: number[] | null = null;
-      
+
       if (isAdmin) {
         // Admin can see all - no filtering needed
         userIds = null;
@@ -590,13 +591,13 @@ export default function TransactionListPage() {
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
           const subordinatesRes = await apiClient.getSubordinates(userId);
           const subordinates = subordinatesRes?.data || [];
-          
+
           // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
           const validSubordinateIds = subordinates
             .map((sub: { id?: number | string; role?: string }) => {
               const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
               const subRole = (sub.role || '').toLowerCase();
-              
+
               // Only include accountants and employees, exclude Finance Admins and Managers
               if (!Number.isNaN(subId) && (subRole === 'accountant' || subRole === 'employee')) {
                 return subId;
@@ -604,10 +605,10 @@ export default function TransactionListPage() {
               return undefined;
             })
             .filter((id): id is number => id !== undefined);
-          
+
           // Include the finance admin themselves + their valid subordinates only
           userIds = [userId, ...validSubordinateIds];
-          
+
           if (process.env.NODE_ENV === 'development') {
             console.log('Finance Admin - Accessible User IDs for Transactions:', {
               userId: userId,
@@ -625,7 +626,7 @@ export default function TransactionListPage() {
         // Accountant: Get their Finance Admin's (manager's) subordinates
         const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
         let managerId: number | null = null;
-        
+
         // Try to get managerId from storeUser first
         const managerIdStr = storeUser?.managerId;
         if (managerIdStr) {
@@ -636,29 +637,29 @@ export default function TransactionListPage() {
             const currentUserRes = await apiClient.getCurrentUser();
             const currentUserData = currentUserRes?.data;
             if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
-              managerId = typeof currentUserData.manager_id === 'string' 
-                ? parseInt(currentUserData.manager_id, 10) 
+              managerId = typeof currentUserData.manager_id === 'string'
+                ? parseInt(currentUserData.manager_id, 10)
                 : Number(currentUserData.manager_id);
             }
           } catch (err) {
             console.warn('Failed to fetch current user profile for manager_id:', err);
           }
         }
-        
+
         if (managerId) {
           try {
             const financeAdminId = managerId;
-            
+
             // Get all subordinates of the Finance Admin
             const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
             const subordinates = subordinatesRes?.data || [];
-            
+
             // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
             const validSubordinateIds = subordinates
               .map((sub: { id?: number | string; role?: string }) => {
                 const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
                 const subRole = (sub.role || '').toLowerCase();
-                
+
                 // Only include accountants and employees, exclude Finance Admins and Managers
                 if (!Number.isNaN(subId) && (subRole === 'accountant' || subRole === 'employee')) {
                   return subId;
@@ -666,10 +667,10 @@ export default function TransactionListPage() {
                 return undefined;
               })
               .filter((id): id is number => id !== undefined);
-            
+
             // Include the Finance Admin themselves and their valid subordinates only
             userIds = [financeAdminId, ...validSubordinateIds];
-            
+
             if (process.env.NODE_ENV === 'development') {
               console.log('Accountant - Accessible User IDs for Transactions (from Finance Admin):', {
                 accountantId: accountantId,
@@ -704,7 +705,7 @@ export default function TransactionListPage() {
       ]);
 
       let transactions = transactionsResponse.data || [];
-      
+
       // Transform sales to transaction format
       const salesDataRaw = salesResponse?.data || [];
       const salesArray = Array.isArray(salesDataRaw) ? salesDataRaw : (toRecord(salesDataRaw).data as unknown[]) || [];
@@ -828,7 +829,7 @@ export default function TransactionListPage() {
       });
 
       setTransactions(allTransactions);
-      
+
       // Update summary with transaction count after loading
       // Note: Financial totals (revenue, expenses, sales, inventory) are loaded separately via loadSummary()
       setSummary(prev => ({
@@ -837,7 +838,7 @@ export default function TransactionListPage() {
       }));
     } catch (err: unknown) {
       let errorMessage = 'Failed to load transactions';
-      
+
       if (typeof err === 'object' && err !== null && 'response' in err) {
         const response = (err as { response?: { data?: { detail?: unknown } } }).response;
         const detail = response?.data?.detail;
@@ -851,7 +852,7 @@ export default function TransactionListPage() {
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -872,7 +873,7 @@ export default function TransactionListPage() {
   }, [user, loading, loadSummary]);
 
   const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = 
+    const matchesSearch =
       transaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.source?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -881,9 +882,9 @@ export default function TransactionListPage() {
       transaction.receipt_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.sku?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesType = typeFilter === 'all' || transaction.transaction_type === typeFilter;
-    
+
     // Handle status filter - include sales and inventory status
     let matchesStatus = false;
     if (statusFilter === 'all') {
@@ -901,27 +902,94 @@ export default function TransactionListPage() {
     } else {
       matchesStatus = transaction.status === statusFilter;
     }
-    
+
     return matchesSearch && matchesType && matchesStatus;
   });
+
+  const handleExport = () => {
+    try {
+      if (filteredTransactions.length === 0) {
+        toast.error('No transactions to export');
+        return;
+      }
+
+      // Define columns to export
+      const headers = [
+        'Type',
+        'Title',
+        'Category',
+        'Amount',
+        'Date',
+        'Status',
+        'Description'
+      ];
+
+      // Format data as CSV
+      const csvRows = filteredTransactions.map(transaction => {
+        const isExpense = transaction.transaction_type === 'expense' || transaction.transaction_type === 'inventory';
+        const typeLabel = transaction.transaction_type.charAt(0).toUpperCase() + transaction.transaction_type.slice(1);
+        const statusLabel = transaction.status === 'posted'
+          ? 'Posted'
+          : transaction.status === 'cancelled'
+            ? 'Cancelled'
+            : transaction.status === 'active'
+              ? 'Active'
+              : transaction.status === 'inactive'
+                ? 'Inactive'
+                : transaction.is_approved
+                  ? 'Approved'
+                  : 'Pending';
+
+        return [
+          typeLabel,
+          `"${(transaction.title || '').replace(/"/g, '""')}"`,
+          `"${(transaction.category || 'N/A').replace(/"/g, '""')}"`,
+          `${isExpense ? '-' : '+'}${transaction.amount.toFixed(2)}`,
+          formatDate(transaction.date || transaction.created_at || ''),
+          statusLabel,
+          `"${(transaction.description || '').replace(/"/g, '""')}"`
+        ].join(',');
+      });
+
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `transactions_export_${date}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Transactions exported successfully');
+    } catch (err) {
+      console.error('Export failed:', err);
+      toast.error('Failed to export transactions');
+    }
+  };
 
   // Use backend summary if available, otherwise fallback to local calculations
   const localTotalRevenue = filteredTransactions
     .filter(t => t.transaction_type === 'revenue')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  
+
   const localTotalSales = filteredTransactions
     .filter(t => t.transaction_type === 'sale')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  
+
   const localTotalExpenses = filteredTransactions
     .filter(t => t.transaction_type === 'expense')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  
+
   const localTotalInventory = filteredTransactions
     .filter(t => t.transaction_type === 'inventory')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  
+
   const localNetAmount = localTotalRevenue + localTotalSales - localTotalExpenses - localTotalInventory;
   const localTotalTransactions = filteredTransactions.length;
 
@@ -930,8 +998,8 @@ export default function TransactionListPage() {
   const totalSales = !loadingSummary && summary.totalSales > 0 ? summary.totalSales : localTotalSales;
   const totalExpenses = !loadingSummary && summary.totalExpenses > 0 ? summary.totalExpenses : localTotalExpenses;
   const totalInventory = !loadingSummary && summary.totalInventory > 0 ? summary.totalInventory : localTotalInventory;
-  const netAmount = !loadingSummary && (summary.totalRevenue > 0 || summary.totalSales > 0 || summary.totalExpenses > 0) 
-    ? summary.netAmount 
+  const netAmount = !loadingSummary && (summary.totalRevenue > 0 || summary.totalSales > 0 || summary.totalExpenses > 0)
+    ? summary.netAmount
     : localNetAmount;
   const totalTransactionsCount = localTotalTransactions;
 
@@ -1024,7 +1092,7 @@ export default function TransactionListPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </SearchContainer>
-              
+
               <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                 <option value="all">All Types</option>
                 <option value="revenue">Revenue</option>
@@ -1032,7 +1100,7 @@ export default function TransactionListPage() {
                 <option value="sale">Sales</option>
                 <option value="inventory">Inventory</option>
               </Select>
-              
+
               <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="all">All Status</option>
                 <option value="approved">Approved</option>
@@ -1042,6 +1110,16 @@ export default function TransactionListPage() {
                 <option value="inactive">Inactive</option>
                 <option value="cancelled">Cancelled</option>
               </Select>
+
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                disabled={filteredTransactions.length === 0}
+                style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, height: '38px' }}
+              >
+                <Download size={16} />
+                Export
+              </Button>
             </FiltersGrid>
           </FiltersContainer>
 
@@ -1070,8 +1148,8 @@ export default function TransactionListPage() {
                     {filteredTransactions.map((transaction) => {
                       const originalId = transaction.id.split('-')[1];
                       const isExpense = transaction.transaction_type === 'expense';
-                        const isSale = transaction.transaction_type === 'sale';
-                      
+                      const isSale = transaction.transaction_type === 'sale';
+
                       return (
                         <tr key={transaction.id}>
                           <td style={{ whiteSpace: 'nowrap' }}>
@@ -1085,13 +1163,13 @@ export default function TransactionListPage() {
                               ) : (
                                 <ArrowUpRight size={12} />
                               )}
-                              {transaction.transaction_type === 'revenue' 
-                                ? 'Revenue' 
-                                : transaction.transaction_type === 'expense' 
-                                ? 'Expense' 
-                                : transaction.transaction_type === 'sale'
-                                ? 'Sale'
-                                : 'Inventory'}
+                              {transaction.transaction_type === 'revenue'
+                                ? 'Revenue'
+                                : transaction.transaction_type === 'expense'
+                                  ? 'Expense'
+                                  : transaction.transaction_type === 'sale'
+                                    ? 'Sale'
+                                    : 'Inventory'}
                             </TypeBadge>
                           </td>
                           <td>
@@ -1105,21 +1183,21 @@ export default function TransactionListPage() {
                           </AmountCell>
                           <td style={{ whiteSpace: 'nowrap' }}>{formatDate(transaction.date || transaction.created_at || '')}</td>
                           <td style={{ whiteSpace: 'nowrap' }}>
-                            <StatusBadge 
-                              $approved={Boolean(transaction.is_approved)} 
+                            <StatusBadge
+                              $approved={Boolean(transaction.is_approved)}
                               $status={transaction.status}
                             >
-                              {transaction.status === 'posted' 
-                                ? 'Posted' 
+                              {transaction.status === 'posted'
+                                ? 'Posted'
                                 : transaction.status === 'cancelled'
-                                ? 'Cancelled'
-                                : transaction.status === 'active'
-                                ? 'Active'
-                                : transaction.status === 'inactive'
-                                ? 'Inactive'
-                                : transaction.is_approved 
-                                ? 'Approved' 
-                                : 'Pending'}
+                                  ? 'Cancelled'
+                                  : transaction.status === 'active'
+                                    ? 'Active'
+                                    : transaction.status === 'inactive'
+                                      ? 'Inactive'
+                                      : transaction.is_approved
+                                        ? 'Approved'
+                                        : 'Pending'}
                             </StatusBadge>
                             {transaction.is_recurring && (
                               <RecurringBadge>Recurring</RecurringBadge>
