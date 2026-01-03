@@ -1,58 +1,16 @@
-# Scenarios
+The frontend/app/scenarios directory is a powerful Financial Simulation and "What-If" Analysis module. It allows users to create and compare different financial outcomes based on a base budget, modeling how changes in revenue or expenses might impact the organization's bottom line.
 
-Scenarios are a powerful tool for simulating various application states, API responses, and edge cases during development and testing. They allow developers to switch between different data sets and network behaviors dynamically without modifying the core application logic.
-
-## How It Works
-
-The scenario system operates by intercepting network requests (typically using a library like MSW - Mock Service Worker) and providing a management layer to toggle between different sets of mock handlers.
-
-1.  **Registration**: Scenarios are defined with a unique ID and a set of request handlers.
-2.  **Selection**: The user selects a scenario via a developer dashboard or a query parameter.
-3.  **Interception**: When the application makes a network request, the scenario manager checks if the active scenario has a matching handler.
-4.  **Response**: If a match is found, the mock response is returned; otherwise, it falls back to default mocks or the actual network.
-
-## Core Functions
-
-### `defineScenario(config)`
-This function is used to register a new scenario. It encapsulates the metadata and the specific network behavior for a use case.
-- **Arguments**:
-    - `id`: A unique string identifier.
-    - `name`: A display name for the UI.
-    - `description`: A brief explanation of what the scenario simulates.
-    - `handlers`: An array of MSW handlers (e.g., `http.get`, `http.post`).
-- **Returns**: A scenario object ready for registration.
-
-### `activateScenario(id)`
-Programmatically switches the application's current state to the specified scenario.
-- **Arguments**: `id` (string) - The ID of the scenario to enable.
-- **Effect**: Updates the global state and refreshes the mock service worker to apply the new handlers.
-
-### `getAvailableScenarios()`
-Retrieves a list of all registered scenarios.
-- **Returns**: `Array<Scenario>` - Useful for populating developer toolbars or selection menus.
-
-### `useScenarioState()`
-A React hook that provides the current status of the scenario system.
-- **Returns**:
-    - `currentScenario`: The currently active scenario object.
-    - `isActive`: A boolean indicating if any scenario is currently overriding defaults.
-    - `reset()`: A function to clear the active scenario and return to default behavior.
-
-### `setupWorker(scenarios)`
-Initializes the underlying mock service worker with the provided scenarios.
-- **Arguments**: `scenarios` - An array of all defined scenarios.
-- **Usage**: Typically called in the application's entry point (e.g., `main.tsx` or `index.tsx`) during development.
-
-## Example Usage
-
-```typescript
-const successScenario = defineScenario({
-  id: 'user-success',
-  name: 'Successful User Load',
-  handlers: [
-    http.get('/api/user', () => {
-      return HttpResponse.json({ id: '1', name: 'John Doe' });
-    }),
-  ],
-});
-```
+Key Functions and Features:
+"What-If" Simulation (/create):
+Baseline Modeling: Select an existing budget and apply percentage-based adjustments (e.g., "What if revenue increases by 10%?" or "What if marketing expenses double?").
+Categorized Adjustments: Apply specific multipliers or flat-amount changes to individual revenue and expense categories.
+Outcome Comparison (/compare):
+Visual Side-by-Side: Compare multiple scenarios (e.g., Best Case vs. Worst Case) against the actual baseline budget.
+Delta Analysis: Instantly see the difference in Total Revenue, Total Expenses, and Net Profit across different modeled futures.
+Scenario Management (/list):
+Lifecycle Tracking: Scenarios are categorized by type (Best Case, Worst Case, Most Likely, Custom) for easy identification.
+Search & Filter: Quickly find simulations linked to specific budgets or departments.
+Secure Administration: Just like budgets, deleting a simulation scenario requires administrator password verification to prevent accidental data loss.
+Strategic Decision Support:
+Profitability Modeling: Helps leadership determine the viability of new projects or departmental expansions before committing real funds.
+Risk Assessment: Models "Worst Case" scenarios to ensure the company has enough runway during downturns.

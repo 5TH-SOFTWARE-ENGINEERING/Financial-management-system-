@@ -626,6 +626,26 @@ export default function AccountingDashboard() {
           console.warn('Finance Manager: accessibleUserIds is not set yet, showing no entries');
           journalData = []; // Don't show entries until accessibleUserIds is set
         }
+        // ============================================================================
+        // 1. FILTER SALES DATA
+        // ============================================================================
+        let filteredSales = salesData as Sale[];
+        // Accountants need to see ALL sales to post them to the ledger.
+        // Only Filter for:
+        // - Employees (Salespeople): Can only see their own sales
+        // - Finance Managers: Can only see their team's sales (if restrictive hierarchy is desired)
+        if ((isFinanceManager || isEmployee) && !isAccountant && accessibleUserIds && accessibleUserIds.length > 0) {
+          filteredSales = filteredSales.filter((sale) => {
+            const soldById = sale.sold_by_id;
+            // If sold_by_id is missing, we might want to be conservative and hide it, 
+            // or show it if it's unassigned. For now, we'll only show if ID matches or if we're Admin.
+            if (!soldById) return false;
+
+            const soldByIdNum = typeof soldById === 'string' ? parseInt(soldById, 10) : soldById;
+            return accessibleUserIds.includes(soldByIdNum);
+          });
+        }
+        // Accountant & Admin see all sales (no filtering here)
       } else if ((isAccountant || isEmployee) && accessibleUserIds && accessibleUserIds.length > 0) {
         // Accountant and Employee: Filter to only their own journal entries
         const beforeCount = journalData.length;
