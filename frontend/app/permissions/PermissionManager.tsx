@@ -18,7 +18,8 @@ import {
   ShieldAlert,
   Users,
   Search,
-  RotateCcw
+  RotateCcw,
+  Download
 } from 'lucide-react';
 import { Resource, Action, UserType } from '@/lib/rbac/models';
 import {
@@ -869,6 +870,74 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     setSuccess(null);
   };
 
+  const handleExport = () => {
+    try {
+      if (filteredUsers.length === 0) {
+        setError('No users to export');
+        return;
+      }
+
+      // Define columns to export
+      const headers = [
+        'Name',
+        'Email',
+        'User Type',
+        'Status',
+        'Permissions Summary'
+      ];
+
+      // Format data as CSV
+      const csvRows = filteredUsers.map(user => {
+        const userTypeLabel = user.userType.replace(/_/g, ' ');
+        const statusLabel = user.isActive ? 'Active' : 'Inactive';
+
+        // Summarize permissions
+        const permissionSummary = user.permissions
+          .map(perm => {
+            const enabledActions = Object.entries(perm.actions || {})
+              .filter(([, value]) => value === true)
+              .map(([action]) => action.toLowerCase());
+
+            if (enabledActions.length === 0) return null;
+
+            const resourceLabel = perm.resource.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+            return `${resourceLabel}: ${enabledActions.join(', ')}`;
+          })
+          .filter(Boolean)
+          .join('; ');
+
+        return [
+          `"${(user.userName || '').replace(/"/g, '""')}"`,
+          `"${(user.email || '').replace(/"/g, '""')}"`,
+          `"${userTypeLabel}"`,
+          `"${statusLabel}"`,
+          `"${permissionSummary.replace(/"/g, '""')}"`
+        ].join(',');
+      });
+
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `permissions_export_${date}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setSuccess('Permissions exported successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Export failed:', err);
+      setError('Failed to export permissions');
+    }
+  };
+
   const executeSavePermissions = async () => {
     if (!selectedUser) return;
 
@@ -1096,6 +1165,25 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             ))}
           </Select>
         </FilterLabel>
+
+        <Button
+          variant="outline"
+          onClick={handleExport}
+          disabled={loading || filteredUsers.length === 0}
+          style={{
+            borderRadius: '999px',
+            fontWeight: 600,
+            borderColor: '#dddfe2',
+            color: TEXT_COLOR_DARK,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#ffffff'
+          }}
+        >
+          <Download size={16} />
+          Export
+        </Button>
       </FilterContainer>
 
       <Card>
