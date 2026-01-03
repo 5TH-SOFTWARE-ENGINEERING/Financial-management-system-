@@ -8,7 +8,7 @@ import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Wallet, Shield, UserPlus, List, Calculator,
     DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3, Package, ShoppingCart, BookOpen,
-    Key, ChevronLeft, ChevronRight, Brain, Activity
+    Key, ChevronLeft, ChevronRight, Brain, Activity, Bell, Database
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -189,6 +189,8 @@ const getIconColor = (iconType: string, active: boolean): string => {
             'file-text': '#3b82f6',       // Blue
             'key': '#8b5cf6',             // Purple
             'activity': '#f43f5e',        // Rose
+            'bell': '#f59e0b',            // Amber
+            'database': '#3b82f6',        // Blue
         };
         return activeColors[iconType] || theme.colors.primary;
     } else {
@@ -219,6 +221,8 @@ const getIconColor = (iconType: string, active: boolean): string => {
             'file-text': '#60a5fa',       // Light Blue
             'key': '#a78bfa',             // Light Purple
             'activity': '#fb7185',        // Light Rose
+            'bell': '#fbbf24',            // Light Amber
+            'database': '#60a5fa',        // Light Blue
         };
         return inactiveColors[iconType] || theme.colors.textSecondary;
     }
@@ -1065,12 +1069,71 @@ const Sidebar: React.FC = () => {
                     </ComponentGate>
 
                     <ComponentGate componentId={ComponentId.SIDEBAR_SETTINGS}>
-                        <NavItem href="/settings" $active={pathname.startsWith('/settings')} $collapsed={collapsed}>
-                            <NavIcon $active={pathname.startsWith('/settings')} $collapsed={collapsed} $iconType="settings">
-                                <Settings />
-                            </NavIcon>
-                            {!collapsed && 'Settings'}
-                        </NavItem>
+                        {isAdmin ? (
+                            <>
+                                <DropdownHeader
+                                    onClick={() => toggleSection('settings')}
+                                    $open={isOpen('settings')}
+                                    $active={pathname.startsWith('/settings')}
+                                    $collapsed={collapsed}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <DropdownIcon $active={pathname.startsWith('/settings')} $collapsed={collapsed} $iconType="settings">
+                                            <Settings />
+                                        </DropdownIcon>
+                                        {!collapsed && <span style={{ marginLeft: '12px' }}>Settings</span>}
+                                    </div>
+                                    <ChevronIcon $open={isOpen('settings')}>
+                                        <ChevronDown />
+                                    </ChevronIcon>
+                                </DropdownHeader>
+                                {isOpen('settings') && (
+                                    <SubMenu $collapsed={collapsed}>
+                                        <NavItem href="/settings/general" $active={pathname === '/settings' || pathname === '/settings/general'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/settings' || pathname === '/settings/general'} $collapsed={collapsed} $size={16} $iconType="settings">
+                                                <Settings />
+                                            </NavIcon>
+                                            {!collapsed && 'General'}
+                                        </NavItem>
+
+                                        <NavItem href="/settings/notifications" $active={pathname === '/settings/notifications'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/settings/notifications'} $collapsed={collapsed} $size={16} $iconType="bell">
+                                                <Bell />
+                                            </NavIcon>
+                                            {!collapsed && 'Notifications'}
+                                        </NavItem>
+
+                                        <NavItem href="/settings/logs" $active={pathname === '/settings/logs'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/settings/logs'} $collapsed={collapsed} $size={16} $iconType="list">
+                                                <List />
+                                            </NavIcon>
+                                            {!collapsed && 'Audit Logs'}
+                                        </NavItem>
+
+                                        <NavItem href="/settings/backup" $active={pathname === '/settings/backup'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/settings/backup'} $collapsed={collapsed} $size={16} $iconType="database">
+                                                <Database />
+                                            </NavIcon>
+                                            {!collapsed && 'Backup Center'}
+                                        </NavItem>
+
+                                        <NavItem href="/settings/security" $active={pathname === '/settings/security'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/settings/security'} $collapsed={collapsed} $size={16} $iconType="shield">
+                                                <Shield />
+                                            </NavIcon>
+                                            {!collapsed && 'Security Control'}
+                                        </NavItem>
+                                    </SubMenu>
+                                )}
+                            </>
+                        ) : (
+                            <NavItem href="/settings" $active={pathname.startsWith('/settings')} $collapsed={collapsed}>
+                                <NavIcon $active={pathname.startsWith('/settings')} $collapsed={collapsed} $iconType="settings">
+                                    <Settings />
+                                </NavIcon>
+                                {!collapsed && 'Settings'}
+                            </NavItem>
+                        )}
                     </ComponentGate>
                 </AccountSectionContent>
             </AccountSection>
