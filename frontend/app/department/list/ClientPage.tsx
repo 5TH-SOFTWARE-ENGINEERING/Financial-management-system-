@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import apiClient from '@/lib/api';
-import { AlertCircle, Building2, Plus, Edit, Trash2, Loader2, Eye, EyeOff, Lock, XCircle } from 'lucide-react';
+import { AlertCircle, Building2, Plus, Edit, Trash2, Loader2, Eye, EyeOff, Lock, XCircle, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
@@ -437,7 +437,7 @@ export default function DepartmentListPage() {
   const loadDepartments = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiClient.getDepartments();
       const departmentsData = Array.isArray(response.data) ? response.data as Department[] : [];
@@ -467,7 +467,7 @@ export default function DepartmentListPage() {
 
   const verifyPassword = async (password: string): Promise<boolean> => {
     if (!user) return false;
-    
+
     try {
       // Use login endpoint to verify password
       const identifier = user.email || '';
@@ -516,7 +516,7 @@ export default function DepartmentListPage() {
     try {
       // First verify password
       const isValid = await verifyPassword(deletePassword.trim());
-      
+
       if (!isValid) {
         setDeletePasswordError('Incorrect password. Please try again.');
         setVerifyingPassword(false);
@@ -547,6 +547,59 @@ export default function DepartmentListPage() {
     }
   };
 
+  const handleExport = () => {
+    try {
+      if (departments.length === 0) {
+        toast.error('No departments to export');
+        return;
+      }
+
+      // Define columns to export
+      const headers = [
+        'Name',
+        'Description',
+        'Employees',
+        'Manager',
+        'Created At'
+      ];
+
+      // Format data as CSV
+      const csvRows = departments.map(dept => {
+        const employeeCount = dept.user_count ?? dept.employee_count ?? 0;
+        const managerName = dept.manager_name || 'N/A';
+        const createdAt = dept.created_at ? new Date(dept.created_at).toLocaleDateString() : 'N/A';
+
+        return [
+          `"${(dept.name || '').replace(/"/g, '""')}"`,
+          `"${(dept.description || 'N/A').replace(/"/g, '""')}"`,
+          `"${employeeCount}"`,
+          `"${managerName.replace(/"/g, '""')}"`,
+          `"${createdAt}"`
+        ].join(',');
+      });
+
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `departments_export_${date}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Departments exported successfully');
+    } catch (err) {
+      console.error('Export failed:', err);
+      toast.error('Failed to export departments');
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -572,12 +625,32 @@ export default function DepartmentListPage() {
                 <h1>Departments</h1>
                 <p>Manage organizational departments</p>
               </div>
-              <Link href="/department/create">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Department
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <Button
+                  variant="outline"
+                  onClick={handleExport}
+                  disabled={departments.length === 0}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    color: '#ffffff',
+                    backdropFilter: 'blur(8px)'
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
                 </Button>
-              </Link>
+                <Link href="/department/create">
+                  <Button style={{
+                    background: '#ffffff',
+                    color: PRIMARY_COLOR,
+                    fontWeight: 600
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Department
+                  </Button>
+                </Link>
+              </div>
             </HeaderContent>
           </HeaderContainer>
 
@@ -624,7 +697,7 @@ export default function DepartmentListPage() {
                         <td>{dept.description || 'N/A'}</td>
                         <td>{dept.user_count ?? dept.employee_count ?? 0}</td>
                         <td>
-                          {dept.created_at 
+                          {dept.created_at
                             ? new Date(dept.created_at).toLocaleDateString()
                             : 'N/A'}
                         </td>
@@ -635,15 +708,15 @@ export default function DepartmentListPage() {
                                 <Edit size={14} className="h-4 w-4 mr-1" />
                               </Button>
                             </Link>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               variant="destructive"
                               onClick={() => handleDeleteClick(dept)}
                               disabled={deleting}
                             >
                               {deleting && departmentToDelete?.id === dept.id ? (
                                 <>
-                                  <Loader2  className="h-4 w-4 mr-1 animate-spin" />
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                                 </>
                               ) : (
                                 <Trash2 size={14} className="h-4 w-4 mr-1" />
@@ -674,11 +747,11 @@ export default function DepartmentListPage() {
                 <XCircle />
               </button>
             </ModalHeader>
-            
+
             <WarningBox>
               <p>
-                <strong>Warning:</strong> You are about to permanently delete this department. 
-                This action cannot be undone and will remove all users from this department. 
+                <strong>Warning:</strong> You are about to permanently delete this department.
+                This action cannot be undone and will remove all users from this department.
                 Please enter <strong>your own password</strong> to verify this action.
               </p>
             </WarningBox>
