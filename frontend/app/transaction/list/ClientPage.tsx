@@ -445,13 +445,13 @@ type TransactionItem = Partial<Transaction> & {
   item_name?: string;
 };
 
-const toNumber = (value: unknown): number | undefined => {
+const toNumber = (value: unknown): number => {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
-    const parsed = parseInt(value, 10);
-    return Number.isNaN(parsed) ? undefined : parsed;
+    const parsed = parseFloat(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
   }
-  return undefined;
+  return 0;
 };
 
 const toString = (value: unknown): string | undefined =>
@@ -722,7 +722,7 @@ export default function TransactionListPage() {
             ? `Customer: ${sale.customer_name as string}`
             : toString(sale.notes) || `Receipt: ${toString(sale.receipt_number) || `#${saleId}`}`,
           category: toRecord(sale.item).category as string || 'Sales',
-          amount: typeof sale.total_sale === 'number' ? sale.total_sale : 0,
+          amount: toNumber(sale.total_sale),
           date: toString(sale.created_at) || toString(sale.date),
           is_approved: sale.status === 'posted',
           created_at: toString(sale.created_at),
@@ -741,11 +741,11 @@ export default function TransactionListPage() {
       const inventoryArray = Array.isArray(inventoryRaw) ? inventoryRaw : (toRecord(inventoryRaw).data as unknown[]) || [];
       let inventoryTransactions = inventoryArray.map((itemRaw): TransactionItem => {
         const item = toRecord(itemRaw);
-        const itemId = toNumber(item.id) ?? 0;
-        const quantity = toNumber(item.quantity) ?? 0;
-        const totalCost =
-          (typeof item.total_cost === 'number' ? item.total_cost : typeof item.buying_price === 'number' ? item.buying_price : 0) *
-          quantity;
+        const itemId = toNumber(item.id);
+        const quantity = toNumber(item.quantity);
+        const buyingPrice = toNumber(item.buying_price);
+        const totalCostAttr = toNumber(item.total_cost);
+        const totalCost = totalCostAttr > 0 ? totalCostAttr : (buyingPrice * quantity);
         const createdById = toNumber(item.created_by_id ?? item.createdBy ?? item.created_by);
         return {
           id: `inventory-${itemId}`,
@@ -761,8 +761,8 @@ export default function TransactionListPage() {
           item_name: toString(item.item_name),
           quantity,
           sku: toString(item.sku),
-          buying_price: typeof item.buying_price === 'number' ? item.buying_price : undefined,
-          total_cost: typeof item.total_cost === 'number' ? item.total_cost : undefined,
+          buying_price: buyingPrice,
+          total_cost: totalCost,
           createdById,
         };
       });
@@ -805,7 +805,7 @@ export default function TransactionListPage() {
         title: typeof t.title === 'string' ? t.title : 'Transaction',
         description: typeof t.description === 'string' ? t.description : undefined,
         category: typeof t.category === 'string' ? t.category : 'N/A',
-        amount: typeof t.amount === 'number' ? t.amount : 0,
+        amount: toNumber(t.amount),
         date: toString(t.date) || toString(t.created_at),
         is_approved: Boolean(t.is_approved),
         created_at: toString(t.created_at),
@@ -873,15 +873,16 @@ export default function TransactionListPage() {
   }, [user, loading, loadSummary]);
 
   const filteredTransactions = transactions.filter(transaction => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
-      transaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.source?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.receipt_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.sku?.toLowerCase().includes(searchTerm.toLowerCase());
+      (transaction.title?.toLowerCase() || '').includes(searchLower) ||
+      (transaction.description?.toLowerCase() || '').includes(searchLower) ||
+      (transaction.source?.toLowerCase() || '').includes(searchLower) ||
+      (transaction.vendor?.toLowerCase() || '').includes(searchLower) ||
+      (transaction.item_name?.toLowerCase() || '').includes(searchLower) ||
+      (transaction.receipt_number?.toLowerCase() || '').includes(searchLower) ||
+      (transaction.customer_name?.toLowerCase() || '').includes(searchLower) ||
+      (transaction.sku?.toLowerCase() || '').includes(searchLower);
 
     const matchesType = typeFilter === 'all' || transaction.transaction_type === typeFilter;
 
