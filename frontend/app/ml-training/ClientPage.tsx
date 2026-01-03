@@ -507,13 +507,13 @@ const MLTrainingPage: React.FC = () => {
     const model = models.find(m => m.id === modelId);
     if (!model) return;
 
-    setModels(prev => prev.map(m => 
+    setModels(prev => prev.map(m =>
       m.id === modelId ? { ...m, status: 'training', error: undefined } : m
     ));
 
     try {
       let result: TrainingResponse;
-      
+
       if (modelId === 'expenses-arima') {
         result = await apiClient.trainExpensesArima(startDate, endDate) as TrainingResponse;
       } else if (modelId === 'expenses-prophet') {
@@ -539,9 +539,9 @@ const MLTrainingPage: React.FC = () => {
       // Handle both axios response format and direct response
       const responseData = (result?.data || result) as TrainingResult;
       // Check for successful training status
-      if (responseData?.status === 'trained' || responseData?.status === 'success' || 
-          (responseData?.model_type && responseData?.status !== 'error')) {
-        setModels(prev => prev.map(m => 
+      if (responseData?.status === 'trained' || responseData?.status === 'success' ||
+        (responseData?.model_type && responseData?.status !== 'error')) {
+        setModels(prev => prev.map(m =>
           m.id === modelId ? {
             ...m,
             status: 'trained',
@@ -560,7 +560,7 @@ const MLTrainingPage: React.FC = () => {
     } catch (error: unknown) {
       // Extract error message from various response formats
       let errorMessage = 'Training failed';
-      
+
       const apiError = error as ApiError;
       if (apiError?.response?.data?.detail) {
         errorMessage = apiError.response.data.detail;
@@ -584,7 +584,7 @@ const MLTrainingPage: React.FC = () => {
         errorMessage = 'Insufficient historical data for training. Please import more data or select a different date range.';
       }
 
-      setModels(prev => prev.map(m => 
+      setModels(prev => prev.map(m =>
         m.id === modelId ? { ...m, status: 'error', error: errorMessage } : m
       ));
       toast.error(`${model.name} training failed: ${errorMessage}`);
@@ -628,7 +628,7 @@ const MLTrainingPage: React.FC = () => {
     try {
       const response = await apiClient.triggerAutoLearn(metric);
       const responseData = (response as any)?.data || response;
-      
+
       if (responseData?.status === 'success') {
         toast.success(`${metric.charAt(0).toUpperCase() + metric.slice(1)} auto-learning completed successfully!`);
         // Reload status
@@ -660,31 +660,29 @@ const MLTrainingPage: React.FC = () => {
       // Handle both axios response format and direct response
       const responseData = response?.data || response;
       const resultsData = (responseData as TrainingAllResponse)?.results || responseData;
-      const results: TrainingResults = (typeof resultsData === 'object' && resultsData !== null && 'results' in resultsData) 
+      const results: TrainingResults = (typeof resultsData === 'object' && resultsData !== null && 'results' in resultsData)
         ? (resultsData as { results?: TrainingResults }).results || {} as TrainingResults
         : (resultsData as TrainingResults) || {} as TrainingResults;
-      
+
       // Update model statuses based on results
       setModels(prev => prev.map(model => {
-        const metricKey = model.metric === 'expense' ? 'expenses' : 
-                         model.metric === 'revenue' ? 'revenue' : 'inventory';
+        // Find result for this model
+        const metricKey = model.metric === 'expense' ? 'expenses' :
+          model.metric === 'revenue' ? 'revenue' : 'inventory';
+
         const methodKey = model.id.includes('arima') ? 'arima' :
-                         model.id.includes('prophet') ? 'prophet' :
-                         model.id.includes('linear-regression') ? 'linear_regression' :
-                         model.id.includes('xgboost') ? 'xgboost' :
-                         model.id.includes('lstm') ? 'lstm' :
-                         model.id.includes('sarima') ? 'sarima' : '';
-        
+          model.id.includes('prophet') ? 'prophet' :
+            model.id.includes('linear-regression') ? 'linear_regression' :
+              model.id.includes('xgboost') ? 'xgboost' :
+                model.id.includes('lstm') ? 'lstm' :
+                  model.id.includes('sarima') ? 'sarima' : '';
+
         let modelResult: TrainingResult | undefined;
-        if (metricKey === 'expenses' && results.expenses) {
-          modelResult = (results.expenses as Record<string, TrainingResult | undefined>)[methodKey];
-        } else if (metricKey === 'revenue' && results.revenue) {
-          modelResult = (results.revenue as Record<string, TrainingResult | undefined>)[methodKey];
-        } else if (metricKey === 'inventory' && results.inventory) {
-          modelResult = (results.inventory as Record<string, TrainingResult | undefined>)[methodKey];
+        if (results[metricKey] && typeof results[metricKey] === 'object') {
+          modelResult = (results[metricKey] as Record<string, TrainingResult>)[methodKey];
         }
-        
-        if (modelResult?.status === 'trained') {
+
+        if (modelResult?.status === 'trained' || (modelResult?.model_type && modelResult?.status !== 'error')) {
           return {
             ...model,
             status: 'trained',
@@ -696,16 +694,25 @@ const MLTrainingPage: React.FC = () => {
             }
           };
         } else {
-          // Check errors
+          // Check for specific error for this model in the errors array
           const errors: string[] = results.errors || [];
-          const error = errors.find((e: string) => 
-            e.toLowerCase().includes(model.metric) && 
-            e.toLowerCase().includes(methodKey)
+          const errorMatch = errors.find((e: string) =>
+            e.toLowerCase().includes(model.metric.toLowerCase()) &&
+            e.toLowerCase().includes(methodKey.toLowerCase().replace('_', ' '))
           );
+
+          let specificError = errorMatch;
+          if (specificError) {
+            const errorLower = specificError.toLowerCase();
+            if (errorLower.includes('stan_backend') || errorLower.includes('cmdstanpy')) {
+              specificError = 'Prophet issue on Windows/Python 3.12. Use alternative models.';
+            }
+          }
+
           return {
             ...model,
-            status: error ? 'error' : 'pending',
-            error: error || undefined
+            status: specificError ? 'error' : 'pending',
+            error: specificError || undefined
           };
         }
       }));
@@ -725,7 +732,7 @@ const MLTrainingPage: React.FC = () => {
     } catch (error: unknown) {
       // Extract error message from various response formats
       let errorMessage = 'Training failed';
-      
+
       const apiError = error as ApiError;
       if (apiError?.response?.data?.detail) {
         errorMessage = apiError.response.data.detail;
@@ -744,24 +751,21 @@ const MLTrainingPage: React.FC = () => {
         const errorResults = apiError.response.data.results;
         // Update models based on partial results
         setModels(prev => prev.map(model => {
-          const metricKey = model.metric === 'expense' ? 'expenses' : 
-                           model.metric === 'revenue' ? 'revenue' : 'inventory';
+          const metricKey = model.metric === 'expense' ? 'expenses' :
+            model.metric === 'revenue' ? 'revenue' : 'inventory';
           const methodKey = model.id.includes('arima') ? 'arima' :
-                           model.id.includes('prophet') ? 'prophet' :
-                           model.id.includes('linear-regression') ? 'linear_regression' :
-                           model.id.includes('xgboost') ? 'xgboost' :
-                           model.id.includes('lstm') ? 'lstm' :
-                           model.id.includes('sarima') ? 'sarima' : '';
-          
+            model.id.includes('prophet') ? 'prophet' :
+              model.id.includes('linear-regression') ? 'linear_regression' :
+                model.id.includes('xgboost') ? 'xgboost' :
+                  model.id.includes('lstm') ? 'lstm' :
+                    model.id.includes('sarima') ? 'sarima' : '';
+
           let modelResult: TrainingResult | undefined;
-          if (metricKey === 'expenses' && errorResults.expenses) {
-            modelResult = (errorResults.expenses as Record<string, TrainingResult | undefined>)[methodKey];
-          } else if (metricKey === 'revenue' && errorResults.revenue) {
-            modelResult = (errorResults.revenue as Record<string, TrainingResult | undefined>)[methodKey];
-          } else if (metricKey === 'inventory' && errorResults.inventory) {
-            modelResult = (errorResults.inventory as Record<string, TrainingResult | undefined>)[methodKey];
+          if (errorResults[metricKey] && typeof errorResults[metricKey] === 'object') {
+            modelResult = (errorResults[metricKey] as Record<string, TrainingResult>)[methodKey];
           }
-          if (modelResult?.status === 'trained') {
+
+          if (modelResult?.status === 'trained' || (modelResult?.model_type && modelResult?.status !== 'error')) {
             return {
               ...model,
               status: 'trained',
@@ -815,12 +819,12 @@ const MLTrainingPage: React.FC = () => {
             <Info size={20} style={{ color: '#1e40af', marginTop: '2px', flexShrink: 0 }} />
             <div>
               <p>
-                <strong>Training Period:</strong> Select the date range for historical data used to train models. 
-                More data generally leads to better model performance. 
+                <strong>Training Period:</strong> Select the date range for historical data used to train models.
+                More data generally leads to better model performance.
                 Models are saved and can be used for future forecasts.
               </p>
               <p style={{ marginTop: theme.spacing.sm }}>
-                <strong>Note:</strong> Training may take several minutes. Large datasets or complex models (LSTM, XGBoost) 
+                <strong>Note:</strong> Training may take several minutes. Large datasets or complex models (LSTM, XGBoost)
                 may require more time. You can train individual models or train all models at once.
               </p>
             </div>
@@ -882,7 +886,7 @@ const MLTrainingPage: React.FC = () => {
                 )}
               </Button>
             </div>
-            
+
             {autoLearnStatus && (
               <>
                 <StatusGrid>
@@ -918,7 +922,7 @@ const MLTrainingPage: React.FC = () => {
                       const status = autoLearnStatus.should_retrain?.[metric];
                       const dataCount = autoLearnStatus.new_data_counts?.[metric] || 0;
                       const lastTraining = autoLearnStatus.last_training_times?.[metric];
-                      
+
                       return (
                         <StatusItem key={metric}>
                           <div className="label">{metric.charAt(0).toUpperCase() + metric.slice(1)}</div>
@@ -962,7 +966,7 @@ const MLTrainingPage: React.FC = () => {
               <List size={20} />
               Trained Models ({trainedModels.length})
             </SectionTitle>
-            
+
             {trainedModels.length > 0 ? (
               trainedModels.map((model: any, index: number) => (
                 <TrainedModelCard key={index}>
@@ -1009,7 +1013,7 @@ const MLTrainingPage: React.FC = () => {
                 <Clock size={20} />
                 Training Scheduler
               </SectionTitle>
-              
+
               <StatusGrid>
                 <StatusItem>
                   <div className="label">Scheduler</div>
@@ -1031,9 +1035,9 @@ const MLTrainingPage: React.FC = () => {
                     Scheduled Jobs:
                   </div>
                   {Object.entries(schedulerStatus.scheduled_jobs || {}).map(([jobId, job]: [string, any]) => (
-                    <div key={jobId} style={{ 
-                      padding: theme.spacing.sm, 
-                      background: '#f9fafb', 
+                    <div key={jobId} style={{
+                      padding: theme.spacing.sm,
+                      background: '#f9fafb',
                       borderRadius: theme.borderRadius.sm,
                       marginBottom: theme.spacing.xs,
                       fontSize: theme.typography.fontSizes.sm
@@ -1067,7 +1071,7 @@ const MLTrainingPage: React.FC = () => {
                     {model.status || 'Pending'}
                   </StatusBadge>
                 </ModelHeader>
-                
+
                 <ModelDescription>{model.description}</ModelDescription>
 
                 {model.metrics && (
@@ -1076,7 +1080,7 @@ const MLTrainingPage: React.FC = () => {
                       <MetricItem>
                         <div className="label">MAE</div>
                         <div className="value">
-                          {typeof model.metrics.mae === 'number' 
+                          {typeof model.metrics.mae === 'number'
                             ? model.metrics.mae.toLocaleString(undefined, { maximumFractionDigits: 2 })
                             : String(model.metrics.mae)}
                         </div>

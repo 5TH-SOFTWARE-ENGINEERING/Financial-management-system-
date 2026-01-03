@@ -248,18 +248,19 @@ def _train_multiple_models(
     return results
 
 
-def trigger_auto_learn(metric: str, db: Optional[Session] = None) -> Optional[Dict[str, Any]]:
+def trigger_auto_learn(metric: str, db: Optional[Session] = None, force: bool = False) -> Optional[Dict[str, Any]]:
     """
     Trigger automatic learning/retraining for a specific metric
     
     Args:
         metric: "expense", "revenue", or "inventory"
         db: Optional database session (creates new one if not provided)
+        force: If True, bypass should_retrain checks
     
     Returns:
         Training results dictionary or None if training wasn't triggered
     """
-    if not should_retrain(metric):
+    if not force and not should_retrain(metric):
         logger.debug(f"Auto-learning skipped for {metric}: conditions not met")
         return None
     

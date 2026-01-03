@@ -1058,7 +1058,7 @@ def trigger_auto_learn_manual(
     
     try:
         from ...services.ml_auto_learn import trigger_auto_learn
-        result = trigger_auto_learn(metric, db=db)
+        result = trigger_auto_learn(metric, db=db, force=True)
         
         if result:
             return {
