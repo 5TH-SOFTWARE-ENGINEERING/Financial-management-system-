@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
-import { AlertCircle, FolderKanban, Plus, Edit, Trash2, Search, Loader2, Eye, EyeOff, Lock, XCircle } from 'lucide-react';
+import { AlertCircle, FolderKanban, Plus, Edit, Trash2, Search, Loader2, Eye, EyeOff, Lock, XCircle, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 import { theme } from '@/components/common/theme';
@@ -133,7 +133,7 @@ const FiltersCard = styled.div`
   box-shadow: ${CardShadow};
   margin-bottom: ${theme.spacing.lg};
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   gap: ${theme.spacing.md};
   align-items: center;
   
@@ -603,7 +603,7 @@ export default function ProjectListPage() {
   const loadProjects = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiClient.getProjects();
       setProjects((response.data || []) as Project[]);
@@ -635,7 +635,7 @@ export default function ProjectListPage() {
 
   const verifyPassword = async (password: string): Promise<boolean> => {
     if (!user) return false;
-    
+
     try {
       // Use login endpoint to verify password
       const identifier = user.email || '';
@@ -685,7 +685,7 @@ export default function ProjectListPage() {
     try {
       // First verify password
       const isValid = await verifyPassword(deletePassword.trim());
-      
+
       if (!isValid) {
         setDeletePasswordError('Incorrect password. Please try again.');
         setVerifyingPassword(false);
@@ -714,20 +714,78 @@ export default function ProjectListPage() {
 
   // Filter projects
   const filteredProjects = projects.filter(project => {
-    const matchesSearch = 
+    const matchesSearch =
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.department_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDepartment = departmentFilter === 'all' || 
+
+    const matchesDepartment = departmentFilter === 'all' ||
       project.department_id?.toString() === departmentFilter;
-    
-    const matchesStatus = statusFilter === 'all' || 
+
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'active' && project.is_active) ||
       (statusFilter === 'inactive' && !project.is_active);
-    
+
     return matchesSearch && matchesDepartment && matchesStatus;
   });
+
+  const handleExportProjects = () => {
+    try {
+      if (filteredProjects.length === 0) {
+        toast.error('No projects to export');
+        return;
+      }
+
+      // Define columns to export
+      const headers = [
+        'Name',
+        'Description',
+        'Department',
+        'Budget',
+        'Start Date',
+        'End Date',
+        'Status'
+      ];
+
+      // Format data as CSV
+      const csvRows = filteredProjects.map(project => {
+        const statusLabel = project.is_active ? 'Active' : 'Inactive';
+        const budgetValue = project.budget ? project.budget.toFixed(2) : '0.00';
+        const startDate = formatDate(project.start_date);
+        const endDate = project.end_date ? formatDate(project.end_date) : '-';
+
+        return [
+          `"${(project.name || '').replace(/"/g, '""')}"`,
+          `"${(project.description || '').replace(/"/g, '""')}"`,
+          `"${(project.department_name || '-').replace(/"/g, '""')}"`,
+          `"${budgetValue}"`,
+          `"${startDate}"`,
+          `"${endDate}"`,
+          `"${statusLabel}"`
+        ].join(',');
+      });
+
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `projects_export_${date}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Project list exported successfully');
+    } catch (err) {
+      console.error('Export failed:', err);
+      toast.error('Failed to export project list');
+    }
+  };
 
   if (loading) {
     return (
@@ -799,6 +857,15 @@ export default function ProjectListPage() {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </StyledSelect>
+            <Button
+              variant="outline"
+              onClick={handleExportProjects}
+              disabled={filteredProjects.length === 0}
+              style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}
+            >
+              <Download size={16} />
+              Export
+            </Button>
           </FiltersCard>
 
           <Card>
@@ -870,7 +937,7 @@ export default function ProjectListPage() {
                           <ActionButtons>
                             <Link href={`/project/edit/${project.id}`}>
                               <IconButton variant="ghost" size="sm">
-                                <Edit size={14}className="h-4 w-4" />
+                                <Edit size={14} className="h-4 w-4" />
                               </IconButton>
                             </Link>
                             <DeleteIconButton
@@ -896,197 +963,197 @@ export default function ProjectListPage() {
           </Card>
 
           {/* Delete Confirmation Modal */}
-      {showDeleteModal && projectToDelete && (
-        <ModalOverlay $isOpen={showDeleteModal} onClick={handleDeleteCancel}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>
-                <Trash2 size={20} style={{ color: '#ef4444' }} />
-                Delete Project
-              </ModalTitle>
-              <button onClick={handleDeleteCancel} title="Close" type="button">
-                <XCircle />
-              </button>
-            </ModalHeader>
-            <WarningBox>
-              <p>
-                <strong>Warning:</strong> You are about to permanently delete this project. 
-                This action cannot be undone. Please enter your password to confirm this deletion.
-              </p>
-            </WarningBox>
-
-            <div style={{
-              background: theme.colors.backgroundSecondary,
-              border: '1px solid ' + theme.colors.border,
-              borderRadius: theme.borderRadius.md,
-              padding: theme.spacing.lg,
-              marginBottom: theme.spacing.lg
-            }}>
-              <h4 style={{
-                fontSize: theme.typography.fontSizes.md,
-                fontWeight: theme.typography.fontWeights.bold,
-                color: TEXT_COLOR_DARK,
-                margin: `0 0 ${theme.spacing.md} 0`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: theme.spacing.sm
-              }}>
-                <FolderKanban size={18} />
-                Project Details to be Deleted
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
-                  <div style={{ flex: '1 1 200px' }}>
-                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
-                      {projectToDelete.name || 'N/A'}
-                    </span>
-                  </div>
-                  {projectToDelete.budget && (
-                    <div style={{ flex: '1 1 200px' }}>
-                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Budget</strong>
-                      <span style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
-                        ${projectToDelete.budget.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {projectToDelete.description && (
-                  <div>
-                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK, lineHeight: 1.6 }}>
-                      {projectToDelete.description}
-                    </span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md, flexWrap: 'wrap' }}>
-                  {projectToDelete.department_name && (
-                    <div>
-                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</strong>
-                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                        {projectToDelete.department_name}
-                      </span>
-                    </div>
-                  )}
-                  <div>
-                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</strong>
-                    <StatusBadge $active={projectToDelete.is_active}>
-                      {projectToDelete.is_active ? 'Active' : 'Inactive'}
-                    </StatusBadge>
-                  </div>
-                </div>
-                {(projectToDelete.start_date || projectToDelete.end_date) && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                    <div style={{ flex: '1 1 200px' }}>
-                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Start Date</strong>
-                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                        {formatDate(projectToDelete.start_date)}
-                      </span>
-                    </div>
-                    {projectToDelete.end_date && (
-                      <div style={{ flex: '1 1 200px' }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>End Date</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                          {formatDate(projectToDelete.end_date)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {(projectToDelete.assigned_users_names && projectToDelete.assigned_users_names.length > 0) || projectToDelete.created_at ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm, paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                    {projectToDelete.assigned_users_names && projectToDelete.assigned_users_names.length > 0 && (
-                      <div>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Assigned Users</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                          {projectToDelete.assigned_users_names.join(', ')}
-                        </span>
-                      </div>
-                    )}
-                    {projectToDelete.created_at && (
-                      <div>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Created</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                          {formatDate(projectToDelete.created_at)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <FormGroup>
-              <Label htmlFor="delete-password">
-                <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
-                Enter <strong>your own password</strong> to confirm deletion of <strong>{projectToDelete.name}</strong>:
-              </Label>
-              <PasswordInputWrapper>
-                <input
-                  id="delete-password"
-                  type={showDeletePassword ? 'text' : 'password'}
-                  value={deletePassword}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setDeletePassword(e.target.value);
-                    setDeletePasswordError(null);
-                  }}
-                  placeholder="Enter your password"
-                  autoFocus
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                    if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword && !deleting) {
-                      handleDelete();
-                    }
-                  }}
-                  disabled={verifyingPassword || deleting}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowDeletePassword(!showDeletePassword)}
-                  title={showDeletePassword ? 'Hide password' : 'Show password'}
-                  disabled={verifyingPassword || deleting}
-                >
-                  {showDeletePassword ? <EyeOff /> : <Eye />}
-                </button>
-              </PasswordInputWrapper>
-              {deletePasswordError && (
-                <ErrorText>{deletePasswordError}</ErrorText>
-              )}
-            </FormGroup>
-
-            <ModalActions>
-              <Button
-                variant="outline"
-                onClick={handleDeleteCancel}
-                disabled={deleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={!deletePassword.trim() || deleting || verifyingPassword}
-              >
-                {verifyingPassword ? (
-                  <ButtonContent>
-                    <Loader2 size={16} className="animate-spin" />
-                    Verifying...
-                  </ButtonContent>
-                ) : deleting ? (
-                  <ButtonContent>
-                    <Loader2 size={16} className="animate-spin" />
-                    Deleting...
-                  </ButtonContent>
-                ) : (
-                  <ButtonContent>
-                    <Trash2 size={16} />
+          {showDeleteModal && projectToDelete && (
+            <ModalOverlay $isOpen={showDeleteModal} onClick={handleDeleteCancel}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalHeader>
+                  <ModalTitle>
+                    <Trash2 size={20} style={{ color: '#ef4444' }} />
                     Delete Project
-                  </ButtonContent>
-                )}
-              </Button>
-            </ModalActions>
-          </ModalContent>
-        </ModalOverlay>
-      )}
+                  </ModalTitle>
+                  <button onClick={handleDeleteCancel} title="Close" type="button">
+                    <XCircle />
+                  </button>
+                </ModalHeader>
+                <WarningBox>
+                  <p>
+                    <strong>Warning:</strong> You are about to permanently delete this project.
+                    This action cannot be undone. Please enter your password to confirm this deletion.
+                  </p>
+                </WarningBox>
+
+                <div style={{
+                  background: theme.colors.backgroundSecondary,
+                  border: '1px solid ' + theme.colors.border,
+                  borderRadius: theme.borderRadius.md,
+                  padding: theme.spacing.lg,
+                  marginBottom: theme.spacing.lg
+                }}>
+                  <h4 style={{
+                    fontSize: theme.typography.fontSizes.md,
+                    fontWeight: theme.typography.fontWeights.bold,
+                    color: TEXT_COLOR_DARK,
+                    margin: `0 0 ${theme.spacing.md} 0`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm
+                  }}>
+                    <FolderKanban size={18} />
+                    Project Details to be Deleted
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1 1 200px' }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
+                          {projectToDelete.name || 'N/A'}
+                        </span>
+                      </div>
+                      {projectToDelete.budget && (
+                        <div style={{ flex: '1 1 200px' }}>
+                          <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Budget</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
+                            ${projectToDelete.budget.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {projectToDelete.description && (
+                      <div>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK, lineHeight: 1.6 }}>
+                          {projectToDelete.description}
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+                      {projectToDelete.department_name && (
+                        <div>
+                          <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                            {projectToDelete.department_name}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</strong>
+                        <StatusBadge $active={projectToDelete.is_active}>
+                          {projectToDelete.is_active ? 'Active' : 'Inactive'}
+                        </StatusBadge>
+                      </div>
+                    </div>
+                    {(projectToDelete.start_date || projectToDelete.end_date) && (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                        <div style={{ flex: '1 1 200px' }}>
+                          <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Start Date</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                            {formatDate(projectToDelete.start_date)}
+                          </span>
+                        </div>
+                        {projectToDelete.end_date && (
+                          <div style={{ flex: '1 1 200px' }}>
+                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>End Date</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                              {formatDate(projectToDelete.end_date)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {(projectToDelete.assigned_users_names && projectToDelete.assigned_users_names.length > 0) || projectToDelete.created_at ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm, paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                        {projectToDelete.assigned_users_names && projectToDelete.assigned_users_names.length > 0 && (
+                          <div>
+                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Assigned Users</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                              {projectToDelete.assigned_users_names.join(', ')}
+                            </span>
+                          </div>
+                        )}
+                        {projectToDelete.created_at && (
+                          <div>
+                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Created</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                              {formatDate(projectToDelete.created_at)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <FormGroup>
+                  <Label htmlFor="delete-password">
+                    <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                    Enter <strong>your own password</strong> to confirm deletion of <strong>{projectToDelete.name}</strong>:
+                  </Label>
+                  <PasswordInputWrapper>
+                    <input
+                      id="delete-password"
+                      type={showDeletePassword ? 'text' : 'password'}
+                      value={deletePassword}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setDeletePassword(e.target.value);
+                        setDeletePasswordError(null);
+                      }}
+                      placeholder="Enter your password"
+                      autoFocus
+                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                        if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword && !deleting) {
+                          handleDelete();
+                        }
+                      }}
+                      disabled={verifyingPassword || deleting}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowDeletePassword(!showDeletePassword)}
+                      title={showDeletePassword ? 'Hide password' : 'Show password'}
+                      disabled={verifyingPassword || deleting}
+                    >
+                      {showDeletePassword ? <EyeOff /> : <Eye />}
+                    </button>
+                  </PasswordInputWrapper>
+                  {deletePasswordError && (
+                    <ErrorText>{deletePasswordError}</ErrorText>
+                  )}
+                </FormGroup>
+
+                <ModalActions>
+                  <Button
+                    variant="outline"
+                    onClick={handleDeleteCancel}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={!deletePassword.trim() || deleting || verifyingPassword}
+                  >
+                    {verifyingPassword ? (
+                      <ButtonContent>
+                        <Loader2 size={16} className="animate-spin" />
+                        Verifying...
+                      </ButtonContent>
+                    ) : deleting ? (
+                      <ButtonContent>
+                        <Loader2 size={16} className="animate-spin" />
+                        Deleting...
+                      </ButtonContent>
+                    ) : (
+                      <ButtonContent>
+                        <Trash2 size={16} />
+                        Delete Project
+                      </ButtonContent>
+                    )}
+                  </Button>
+                </ModalActions>
+              </ModalContent>
+            </ModalOverlay>
+          )}
         </ContentContainer>
       </PageContainer>
     </Layout>
