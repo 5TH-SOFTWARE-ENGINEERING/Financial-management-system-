@@ -722,15 +722,15 @@ const AdminDashboard: React.FC = () => {
         const isFinanceAdminRole = userRole === 'finance_admin' || userRole === 'finance_manager';
         const isAccountantRole = userRole === 'accountant';
 
-        if (isFinanceAdminRole && user?.id) {
+        if ((isFinanceAdminRole || isManager) && user?.id) {
           try {
-            // Finance Admin: Get their own subordinates
+            // Finance Admin or Manager: Get their own subordinates
             const userIdRaw = user.id;
             const userId = typeof userIdRaw === 'string' ? parseInt(userIdRaw, 10) : Number(userIdRaw);
             if (Number.isNaN(userId)) throw new Error('Invalid user id');
             const subordinatesRes = await apiClient.getSubordinates(userId);
             const subordinates: Subordinate[] = subordinatesRes?.data || [];
-            // Include the finance admin themselves
+            // Include themselves
             accessibleUserIds = [
               userId,
               ...subordinates
@@ -742,14 +742,14 @@ const AdminDashboard: React.FC = () => {
             ];
 
             if (process.env.NODE_ENV === 'development') {
-              console.log('Finance Admin - Accessible User IDs:', {
+              console.log(`${userRole} - Accessible User IDs:`, {
                 userId: userId,
                 subordinatesCount: subordinates.length,
                 accessibleUserIds: accessibleUserIds
               });
             }
           } catch (err) {
-            console.warn('Failed to fetch subordinates, using only finance admin ID:', err);
+            console.warn('Failed to fetch subordinates, using only user ID:', err);
             const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
             accessibleUserIds = [userId];
           }
@@ -975,8 +975,8 @@ const AdminDashboard: React.FC = () => {
                   const saleStatus = (saleStatusRaw ?? 'pending').toString().toLowerCase();
                   const isPending = saleStatus === 'pending';
 
-                  // For finance admins and accountants, also check if sold by them or their subordinates
-                  if (isPending && (isFinanceAdminRole || isAccountantRole) && accessibleUserIds.length > 0) {
+                  // For finance admins, accountants, and managers, also check if sold by them or their subordinates
+                  if (isPending && (isFinanceAdminRole || isAccountantRole || isManager) && accessibleUserIds.length > 0) {
                     const soldByIdRaw = s.sold_by_id || s.soldBy || s.sold_by || s.created_by_id || s.createdBy;
                     const soldById = typeof soldByIdRaw === 'string'
                       ? parseInt(soldByIdRaw, 10)
@@ -1167,13 +1167,9 @@ const AdminDashboard: React.FC = () => {
 
   const totalExpenses = safeNumber(overview?.financials?.total_expenses);
 
-  // Net profit calculation - use backend profit if available, otherwise calculate
-  const backendProfit = safeNumber(overview?.financials?.profit);
-  const calculatedProfit = totalRevenue - totalExpenses;
-  // Use backend profit if it's a valid non-zero value, otherwise calculate from revenue and expenses
-  const netProfit = (overview?.financials?.profit !== undefined && overview?.financials?.profit !== null && backendProfit !== 0)
-    ? backendProfit
-    : calculatedProfit;
+  // Net profit calculation - always calculate from (Base Revenue + Sales Revenue) - Total Expenses
+  // for maximum accuracy since we are manually aggregating sales data in the frontend.
+  const netProfit = totalRevenue - totalExpenses;
 
   // Use the pending approvals count from state (fetched from multiple sources)
   const pendingApprovals = pendingApprovalsCount;
@@ -1199,7 +1195,7 @@ const AdminDashboard: React.FC = () => {
 
     return (
       <HeaderContent>
-        <h1>Welcome, {user.username || 'Admin'} </h1>
+        <h1>Welcome, {user.full_name || user.username || 'User'} </h1>
         <RoleBadge $role={user.role}>{user.role}</RoleBadge>
       </HeaderContent>
     );
