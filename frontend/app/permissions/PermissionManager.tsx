@@ -5,7 +5,21 @@ import styled from 'styled-components';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Save, Filter, Copy, Check, Loader2 } from 'lucide-react';
+import {
+  Save,
+  Filter,
+  Copy,
+  Check,
+  Loader2,
+  Eye,
+  Plus,
+  Pencil,
+  Trash2,
+  ShieldAlert,
+  Users,
+  Search,
+  RotateCcw
+} from 'lucide-react';
 import { Resource, Action, UserType } from '@/lib/rbac/models';
 import {
   Table,
@@ -19,71 +33,81 @@ import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 
 // Styled components
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = '#111827';
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#6b7280';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+const PRIMARY_COLOR = '#1877F2'; // Facebook Blue
+const SECONDARY_BLUE = '#E7F3FF';
+const TEXT_COLOR_DARK = '#1C1E21';
+const TEXT_COLOR_MUTED = '#65676B';
+const BACKGROUND_GRAY = '#F0F2F5'; // Facebook Background
 
 const Container = styled.div`
   min-height: 100vh;
-  background: ${BACKGROUND_GRADIENT};
+  background: ${BACKGROUND_GRAY};
   padding: ${theme.spacing.lg};
+  font-family: Segoe UI, Helvetica, Arial, sans-serif;
 `;
 
 const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
-  color: #ffffff;
+  background: #ffffff;
+  color: ${TEXT_COLOR_DARK};
   padding: ${theme.spacing.xl};
   margin: -${theme.spacing.lg} -${theme.spacing.lg} ${theme.spacing.xl};
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #dddfe2;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.xs};
 `;
 
 const Title = styled.h1`
-  font-size: clamp(28px, 3.5vw, 36px);
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: 24px;
+  font-weight: 700;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
-`;
-
-const Subtitle = styled.h2`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
-  margin-bottom: ${theme.spacing.md};
-  margin-top: ${theme.spacing.xl};
+  gap: ${theme.spacing.sm};
+  letter-spacing: normal;
   color: ${TEXT_COLOR_DARK};
 `;
 
+const Subtitle = styled.h3`
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: ${theme.spacing.md};
+  color: ${TEXT_COLOR_DARK};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
 const Card = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: ${theme.spacing.xl};
-  margin-bottom: ${theme.spacing.xl};
-  border: 1px solid ${theme.colors.border};
-  transition: box-shadow 0.2s ease;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  padding: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
+  border: 1px solid #dddfe2;
+  transition: transform 0.1s ease;
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
   }
 `;
 
 const SearchInput = styled.input`
-  width: 100%;
+  width: 85%;
   max-width: 400px;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  font-size: ${theme.typography.fontSizes.sm};
-  transition: all 0.2s ease;
-  background: ${theme.colors.background};
+  padding: 10px 16px;
+  border: 1px solid #dddfe2;
+  border-radius: 999px; // Facebook style pill search
+  font-size: 15px;
+  transition: background-color 0.2s ease;
+  background: #f0f2f5;
 
   &:focus {
     outline: none;
+    background: #ffffff;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
   }
 
   &::placeholder {
@@ -94,39 +118,56 @@ const SearchInput = styled.input`
 const ButtonGroup = styled.div`
   display: flex;
   gap: ${theme.spacing.md};
-  margin-top: ${theme.spacing.xl};
-  justify-content: space-between;
+  margin-top: ${theme.spacing.lg};
+  justify-content: flex-end;
   align-items: center;
   width: 100%;
   flex-wrap: wrap;
+  padding-top: ${theme.spacing.lg};
+  border-top: 1px solid #dddfe2;
 `;
 
 const ConfirmOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: ${theme.spacing.lg};
-  z-index: 50;
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 `;
 
 const ConfirmDialog = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.lg};
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  padding: ${theme.spacing.xl};
-  max-width: 720px;
+  background: white;
+  border-radius: ${theme.borderRadius.md};
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: ${theme.spacing.xl} * 1.5;
+  max-width: 800px;
   width: 100%;
-  border: 1px solid ${theme.colors.border};
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transform-origin: center;
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  @keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
 `;
 
 const ConfirmTitle = styled.h3`
-  margin: 0 0 ${theme.spacing.md};
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
+  margin: 0 0 ${theme.spacing.lg};
+  font-size: ${theme.typography.fontSizes.xxl};
+  font-weight: 800;
   color: ${TEXT_COLOR_DARK};
+  letter-spacing: -0.01em;
 `;
 
 const ConfirmBody = styled.div`
@@ -161,7 +202,7 @@ const SelectionHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.xl};
   flex-wrap: wrap;
   gap: ${theme.spacing.md};
 `;
@@ -169,30 +210,39 @@ const SelectionHeader = styled.div`
 const FilterContainer = styled.div`
   display: flex;
   gap: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.xl};
+  margin-bottom: ${theme.spacing.lg};
   align-items: center;
   flex-wrap: wrap;
-  background: ${theme.colors.background};
-  padding: ${theme.spacing.lg};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
 `;
 
 const Select = styled.select`
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  font-size: ${theme.typography.fontSizes.sm};
-  background-color: ${theme.colors.background};
+  padding: 8px 32px 8px 12px;
+  border: 1px solid #dddfe2;
+  border-radius: 6px;
+  font-size: 15px;
+  background-color: #f0f2f5;
   color: ${TEXT_COLOR_DARK};
   cursor: pointer;
   transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2365676B' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+
+  &:hover {
+    background-color: #e4e6eb;
+  }
 
   &:focus {
     outline: none;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    background-color: #ffffff;
   }
 `;
 
@@ -210,12 +260,12 @@ const FilterLabel = styled.label`
 `;
 
 const TemplateContainer = styled.div`
-  margin-top: ${theme.spacing.xl};
+  margin-top: ${theme.spacing.lg};
   margin-bottom: ${theme.spacing.xl};
-  padding: ${theme.spacing.lg};
-  background: ${PRIMARY_COLOR}05;
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${PRIMARY_COLOR}20;
+  padding: ${theme.spacing.md};
+  background: #f0f2f5;
+  border-radius: 8px;
+  border: 1px solid #dddfe2;
 `;
 
 const TemplateControls = styled.div`
@@ -270,6 +320,12 @@ const SuccessMessage = styled.div`
   background: #d1fae5;
   border-radius: ${theme.borderRadius.sm};
   border: 1px solid #6ee7b7;
+  animation: fadeIn 0.3s ease;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 `;
 
 const ErrorMessage = styled.div`
@@ -283,6 +339,13 @@ const ErrorMessage = styled.div`
   border-radius: ${theme.borderRadius.md};
   border: 1px solid #fecaca;
   margin-bottom: ${theme.spacing.lg};
+  animation: shake 0.4s ease;
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
 `;
 
 const LoadingContainer = styled.div`
@@ -295,9 +358,9 @@ const LoadingContainer = styled.div`
 `;
 
 const Spinner = styled.div`
-  width: 40px;
-  height: 40px;
-  border: 3px solid ${theme.colors.border};
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f0f2f5;
   border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -307,42 +370,106 @@ const Spinner = styled.div`
   }
 `;
 
+const SkeletonRow = styled.div`
+  height: 48px;
+  width: 100%;
+  background: #f0f2f5;
+  margin-bottom: 2px;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
+`;
+
 const StatusBadge = styled.span<{ $active: boolean }>`
-  display: inline-block;
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
-  background: ${props => props.$active ? '#d1fae5' : '#fecaca'};
-  color: ${props => props.$active ? '#065f46' : '#991b1b'};
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  background: ${props => props.$active ? '#e7f3ff' : '#ffe9e9'};
+  color: ${props => props.$active ? PRIMARY_COLOR : '#fa383e'};
 `;
 
 const UserTypeBadge = styled.span`
   display: inline-block;
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
-  background: #dbeafe;
-  color: #1e40af;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f0f2f5;
+  color: #65676B;
+  border: 1px solid #dddfe2;
   text-transform: capitalize;
 `;
 
 const TableWrapper = styled.div`
   overflow-x: auto;
-  margin-top: ${theme.spacing.lg};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  border-radius: 0;
+  border: none;
+  background: transparent;
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th {
+    background: #ffffff;
+    font-weight: 600;
+    color: #65676B;
+    text-transform: none;
+    font-size: 14px;
+    letter-spacing: normal;
+    padding: 12px 16px;
+    border-bottom: 1px solid #dddfe2;
+    text-align: left;
+  }
+
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f2f5;
+    vertical-align: middle;
+  }
+
+  tr:hover td {
+    background-color: #f0f2f5;
+  }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: ${theme.spacing.xl} * 2;
+  padding: ${theme.spacing.xl} * 3 ${theme.spacing.xl};
   color: ${TEXT_COLOR_MUTED};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  
+  svg {
+    opacity: 0.2;
+    margin-bottom: ${theme.spacing.sm};
+  }
   
   p {
-    font-size: ${theme.typography.fontSizes.md};
-    margin-top: ${theme.spacing.md};
+    font-size: ${theme.typography.fontSizes.lg};
+    font-weight: 500;
   }
 `;
 
@@ -709,6 +836,19 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
     );
   };
 
+  const handleResetToDefaults = () => {
+    if (!selectedUser) return;
+    const user = userPermissions.find(u => u.userId === selectedUser);
+    if (!user) return;
+
+    const defaults = getDefaultPermissions(user.userType);
+    setUserPermissions(prev => prev.map(u =>
+      u.userId === selectedUser ? { ...u, permissions: mergePermissionsByResource(defaults) } : u
+    ));
+    setSuccess(`Permissions reset to default ${user.userType.replace(/_/g, ' ')} settings. Don't forget to save!`);
+    setTimeout(() => setSuccess(null), 4000);
+  };
+
   const areAllActionsSelected = (permissions: PermissionItem[], resource: Resource): boolean => {
     const resourcePermission = permissions.find(p => p.resource === resource);
     if (!resourcePermission) return false;
@@ -932,11 +1072,15 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
       )}
 
       <FilterContainer>
-        <SearchInput
-          placeholder="Search users..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <SearchInput
+            placeholder="Search team members by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ paddingLeft: '48px' }}
+          />
+        </div>
 
         <FilterLabel>
           <Filter size={16} />
@@ -955,29 +1099,35 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
       </FilterContainer>
 
       <Card>
-        {filteredUsers.length === 0 ? (
+        {loading && userPermissions.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+          </div>
+        ) : filteredUsers.length === 0 ? (
           <EmptyState>
-            <p>No users found matching your criteria.</p>
+            <Search size={64} />
+            <p>No results found for "{searchTerm}"</p>
+            <span style={{ fontSize: '14px' }}>Try adjusting your search or filters</span>
           </EmptyState>
         ) : (
           <TableWrapper>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>Name</div></TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>User Type</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Action</TableHead>
+                  <TableHead style={{ textAlign: 'right' }}>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.map(user => (
                   <TableRow key={user.userId}>
-                    <TableCell style={{ fontWeight: theme.typography.fontWeights.medium }}>
+                    <TableCell style={{ fontWeight: 600 }}>
                       {user.userName}
                     </TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell style={{ color: TEXT_COLOR_MUTED }}>{user.email}</TableCell>
                     <TableCell>
                       <UserTypeBadge>
                         {user.userType.replace(/_/g, ' ')}
@@ -988,13 +1138,24 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                         {user.isActive ? 'Active' : 'Inactive'}
                       </StatusBadge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell style={{ textAlign: 'right' }}>
                       <Button
                         size="sm"
                         variant={selectedUser === user.userId ? "default" : "secondary"}
                         onClick={() => setSelectedUser(user.userId)}
+                        style={{
+                          borderRadius: '6px',
+                          fontWeight: 600,
+                          backgroundColor: selectedUser === user.userId ? PRIMARY_COLOR : '#E4E6EB',
+                          color: selectedUser === user.userId ? '#FFFFFF' : TEXT_COLOR_DARK,
+                          border: 'none'
+                        }}
                       >
-                        {selectedUser === user.userId ? 'Editing' : 'Edit Permissions'}
+                        {selectedUser === user.userId ? (
+                          'Editing'
+                        ) : (
+                          'Settings'
+                        )}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -1065,13 +1226,43 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead style={{ fontWeight: theme.typography.fontWeights.bold }}>Resource</TableHead>
-                  <TableHead style={{ textAlign: 'center' }}>View</TableHead>
-                  <TableHead style={{ textAlign: 'center' }}>Create</TableHead>
-                  <TableHead style={{ textAlign: 'center' }}>Edit</TableHead>
-                  <TableHead style={{ textAlign: 'center' }}>Delete</TableHead>
-                  <TableHead style={{ textAlign: 'center' }}>Manage All</TableHead>
-                  <TableHead style={{ textAlign: 'center', fontWeight: theme.typography.fontWeights.bold }}>Select All</TableHead>
+                  <TableHead style={{ width: '30%' }}>Resource</TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <Eye size={16} color="#6366f1" />
+                      View
+                    </div>
+                  </TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <Plus size={16} color="#10b981" />
+                      Create
+                    </div>
+                  </TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <Pencil size={16} color="#f59e0b" />
+                      Edit
+                    </div>
+                  </TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <Trash2 size={16} color="#ef4444" />
+                      Delete
+                    </div>
+                  </TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <ShieldAlert size={16} color="#8b5cf6" />
+                      Manage All
+                    </div>
+                  </TableHead>
+                  <TableHead style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <Check size={16} color={PRIMARY_COLOR} />
+                      Select All
+                    </div>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1086,9 +1277,10 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
 
                   return (
                     <TableRow key={resource} style={{
-                      backgroundColor: allSelected ? `${PRIMARY_COLOR}08` : 'transparent'
+                      backgroundColor: allSelected ? `${PRIMARY_COLOR}05` : 'transparent',
+                      transition: 'background-color 0.2s ease'
                     }}>
-                      <TableCell style={{ fontWeight: theme.typography.fontWeights.medium }}>
+                      <TableCell style={{ fontWeight: 600, color: TEXT_COLOR_DARK, fontSize: '14px' }}>
                         {resource.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
                       </TableCell>
                       <TableCell style={{ textAlign: 'center' }}>
@@ -1164,19 +1356,30 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
           </TableWrapper>
 
           <ButtonGroup>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setSelectedUser(null);
-                setError(null);
-                setSuccess(null);
-              }}
-            >
-              Cancel
-            </Button>
+            <div style={{ display: 'flex', gap: theme.spacing.md }}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSelectedUser(null);
+                  setError(null);
+                  setSuccess(null);
+                }}
+                style={{ backgroundColor: '#E4E6EB', color: TEXT_COLOR_DARK, fontWeight: 600 }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleResetToDefaults}
+                style={{ borderColor: '#dddfe2', color: TEXT_COLOR_DARK, fontWeight: 600 }}
+              >
+                Reset to Defaults
+              </Button>
+            </div>
             <Button
               onClick={handleSaveClick}
               disabled={loading || !selectedUser}
+              style={{ backgroundColor: PRIMARY_COLOR, fontWeight: 600 }}
             >
               {loading ? (
                 <>
@@ -1184,10 +1387,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                   Saving...
                 </>
               ) : (
-                <>
-                  <Save size={16} style={{ marginRight: theme.spacing.sm }} />
-                  Save Permissions
-                </>
+                'Save Permissions'
               )}
             </Button>
           </ButtonGroup>
@@ -1200,17 +1400,26 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             <ConfirmTitle>Review permissions before saving</ConfirmTitle>
             <ConfirmBody>
               <div>
-                <strong>User:</strong> {confirmUser.userName} ({confirmUser.email})
+                <strong style={{ color: TEXT_COLOR_MUTED, fontSize: '14px', marginRight: '8px' }}>User:</strong>
+                <span style={{ fontWeight: 600 }}>{confirmUser.userName}</span>
+                <span style={{ color: TEXT_COLOR_MUTED, fontSize: '14px', marginLeft: '4px' }}>({confirmUser.email})</span>
               </div>
-              <div>
-                <strong>User Type:</strong> {confirmUser.userType.replace(/_/g, ' ')}
+              <div style={{ marginTop: '8px' }}>
+                <strong style={{ color: TEXT_COLOR_MUTED, fontSize: '14px', marginRight: '8px' }}>User Type:</strong>
+                <UserTypeBadge>{confirmUser.userType.replace(/_/g, ' ')}</UserTypeBadge>
               </div>
-              <div>
-                <strong>Status:</strong> {confirmUser.isActive ? 'Active' : 'Inactive'}
-              </div>
-              <div>
-                <strong>Permissions preview:</strong>
-                <div style={{ marginTop: theme.spacing.sm, display: 'flex', flexDirection: 'column', gap: theme.spacing.xs }}>
+              <div style={{ marginTop: '16px' }}>
+                <strong style={{ color: TEXT_COLOR_DARK, fontSize: '16px' }}>Permissions Summary</strong>
+                <div style={{
+                  marginTop: '12px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                  background: '#f8fafc',
+                  padding: '20px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0'
+                }}>
                   {confirmUser.permissions.map((perm) => {
                     const enabledActions = Object.entries(perm.actions || {})
                       .filter(([, value]) => value === true)
