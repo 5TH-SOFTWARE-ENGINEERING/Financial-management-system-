@@ -8,7 +8,7 @@ import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Wallet, Shield, UserPlus, List, Calculator,
     DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3, Package, ShoppingCart, BookOpen,
-    Key, ChevronLeft, ChevronRight, Brain, Activity, Bell, Database
+    Key, ChevronLeft, ChevronRight, Brain, Activity, Bell, Database, History
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -1122,6 +1122,12 @@ const Sidebar: React.FC = () => {
                                                 <Shield />
                                             </NavIcon>
                                             {!collapsed && 'Security Control'}
+                                        </NavItem>
+                                                                                <NavItem href="/settings/history" $active={pathname === '/settings/history'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/settings/history'} $collapsed={collapsed} $size={16} $iconType="history">
+                                                <History />
+                                            </NavIcon>
+                                            {!collapsed && 'History'}
                                         </NavItem>
                                     </SubMenu>
                                 )}

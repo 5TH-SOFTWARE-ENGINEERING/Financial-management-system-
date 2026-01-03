@@ -556,10 +556,11 @@ export default function LogsPage() {
             </FormGroup>
 
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-              <Button variant="ghost" onClick={handleClearFilters} style={{ width: '100%' }}>
+              <Button variant="ghost" onClick={handleClearFilters} style={{ width: '50%', justifyContent: 'flex-end', alignItems: 'flex-end', marginRight: '1rem',position: 'relative', right: '0' }}>
                 Clear Filters
               </Button>
             </div>
+
           </FilterSection>
 
           <TableContainer>
