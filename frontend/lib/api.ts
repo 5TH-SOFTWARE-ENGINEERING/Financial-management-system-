@@ -342,6 +342,10 @@ class ApiClient {
     return this.post('/users/me/change-password', { current_password: currentPassword, new_password: newPassword });
   }
 
+  async adminResetPassword(usernameOrEmail: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post('/users/admin-reset-password', { username_or_email: usernameOrEmail, new_password: newPassword });
+  }
+
   async getUsers(): Promise<ApiResponse<User[]>> {
     try {
       const response = await this.get<User[]>('/users/');

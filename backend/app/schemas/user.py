@@ -143,3 +143,15 @@ class UserChangePassword(BaseModel):
 # ------------------------------------------------------------------
 class UserPermissionsUpdate(BaseModel):
     permissions: list[dict]  # [{"resource": "REVENUES", "actions": {"READ": true, "CREATE": true}}]
+
+
+class AdminResetPasswordRequest(BaseModel):
+    username_or_email: str
+    new_password: str
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        return v

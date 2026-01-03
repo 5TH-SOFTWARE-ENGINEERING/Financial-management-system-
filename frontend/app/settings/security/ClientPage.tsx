@@ -11,39 +11,39 @@ import { toast } from 'sonner';
 
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
-    if (active) {
-        // Active state colors (brighter)
-        const activeColors: Record<string, string> = {
-            'save': '#22c55e',              // Green
-            'lock': '#3b82f6',              // Blue
-            'shield': '#8b5cf6',            // Purple
-            'key': '#f59e0b',               // Amber
-            'alert-triangle': '#f59e0b',     // Amber
-            'eye': '#6366f1',               // Indigo
-            'eye-off': '#6b7280',           // Gray
-            'check-circle': '#22c55e',       // Green
-            'alert-circle': '#ef4444',       // Red
-            'x': '#6b7280',                 // Gray
-            'qr-code': '#06b6d4',           // Cyan
-        };
-        return activeColors[iconType] || '#6b7280';
-    } else {
-        // Inactive state colors (muted but colorful)
-        const inactiveColors: Record<string, string> = {
-            'save': '#4ade80',              // Light Green
-            'lock': '#60a5fa',              // Light Blue
-            'shield': '#a78bfa',            // Light Purple
-            'key': '#fbbf24',               // Light Amber
-            'alert-triangle': '#fbbf24',     // Light Amber
-            'eye': '#818cf8',               // Light Indigo
-            'eye-off': '#9ca3af',           // Light Gray
-            'check-circle': '#4ade80',       // Light Green
-            'alert-circle': '#f87171',       // Light Red
-            'x': '#9ca3af',                 // Light Gray
-            'qr-code': '#22d3ee',           // Light Cyan
-        };
-        return inactiveColors[iconType] || '#9ca3af';
-    }
+  if (active) {
+    // Active state colors (brighter)
+    const activeColors: Record<string, string> = {
+      'save': '#22c55e',              // Green
+      'lock': '#3b82f6',              // Blue
+      'shield': '#8b5cf6',            // Purple
+      'key': '#f59e0b',               // Amber
+      'alert-triangle': '#f59e0b',     // Amber
+      'eye': '#6366f1',               // Indigo
+      'eye-off': '#6b7280',           // Gray
+      'check-circle': '#22c55e',       // Green
+      'alert-circle': '#ef4444',       // Red
+      'x': '#6b7280',                 // Gray
+      'qr-code': '#06b6d4',           // Cyan
+    };
+    return activeColors[iconType] || '#6b7280';
+  } else {
+    // Inactive state colors (muted but colorful)
+    const inactiveColors: Record<string, string> = {
+      'save': '#4ade80',              // Light Green
+      'lock': '#60a5fa',              // Light Blue
+      'shield': '#a78bfa',            // Light Purple
+      'key': '#fbbf24',               // Light Amber
+      'alert-triangle': '#fbbf24',     // Light Amber
+      'eye': '#818cf8',               // Light Indigo
+      'eye-off': '#9ca3af',           // Light Gray
+      'check-circle': '#4ade80',       // Light Green
+      'alert-circle': '#f87171',       // Light Red
+      'x': '#9ca3af',                 // Light Gray
+      'qr-code': '#22d3ee',           // Light Cyan
+    };
+    return inactiveColors[iconType] || '#9ca3af';
+  }
 };
 
 // Icon styled components
@@ -305,11 +305,11 @@ const PasswordStrengthLabel = styled.div<{ strength: number }>`
   
   span:first-child {
     color: ${props => {
-      if (props.strength < 25) return '#ef4444'; // Red (weak)
-      if (props.strength < 50) return '#f97316'; // Orange (fair)
-      if (props.strength < 75) return '#eab308'; // Yellow (good)
-      return '#22c55e'; // Green (strong)
-    }};
+    if (props.strength < 25) return '#ef4444'; // Red (weak)
+    if (props.strength < 50) return '#f97316'; // Orange (fair)
+    if (props.strength < 75) return '#eab308'; // Yellow (good)
+    return '#22c55e'; // Green (strong)
+  }};
     font-weight: 500;
   }
   
@@ -482,7 +482,7 @@ export default function SecuritySettingsPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Password change state
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -497,7 +497,7 @@ export default function SecuritySettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Security settings state
   const [securitySettings, setSecuritySettings] = useState({
     twoFactorEnabled: false,
@@ -506,7 +506,7 @@ export default function SecuritySettingsPage() {
     allowMultipleSessions: true,
     ipRestriction: false
   });
-  
+
   // 2FA state
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
   const [loading2FAStatus, setLoading2FAStatus] = useState(true);
@@ -517,14 +517,14 @@ export default function SecuritySettingsPage() {
   const [verificationCode, setVerificationCode] = useState('');
   const [disablePassword, setDisablePassword] = useState('');
   const [setupStep, setSetupStep] = useState<'qr' | 'verify'>('qr');
-  
+
   // Password strength
   const [passwordStrength, setPasswordStrength] = useState(0);
-  
+
   // Verification history
   const [verificationHistory, setVerificationHistory] = useState<VerificationHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  
+
   // IP Restriction state
   const [ipRestrictionEnabled, setIpRestrictionEnabled] = useState(false);
   const [allowedIPs, setAllowedIPs] = useState<string[]>([]);
@@ -699,20 +699,20 @@ export default function SecuritySettingsPage() {
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPasswordForm(prev => ({ ...prev, [name]: value }));
-    
+
     // Reset specific error when user is typing
     setPasswordErrors(prev => ({ ...prev, [name]: '' }));
-    
+
     // Clear general error when user starts typing
     if (error) {
       setError(null);
     }
-    
+
     // Calculate password strength if changing new password
     if (name === 'newPassword') {
       calculatePasswordStrength(value);
     }
-    
+
     // Re-validate confirm password if new password changes
     if (name === 'newPassword' && passwordForm.confirmPassword) {
       if (value !== passwordForm.confirmPassword) {
@@ -725,7 +725,7 @@ export default function SecuritySettingsPage() {
 
   const handleSecuritySettingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setSecuritySettings(prev => ({ ...prev, [name]: checked }));
@@ -737,17 +737,17 @@ export default function SecuritySettingsPage() {
   const calculatePasswordStrength = (password: string) => {
     // Basic password strength calculation
     let strength = 0;
-    
+
     // Length contribution (up to 25%)
     const lengthFactor = Math.min(password.length / 12, 1) * 25;
     strength += lengthFactor;
-    
+
     // Character variety contribution (up to 75% more)
     if (/[A-Z]/.test(password)) strength += 15; // Uppercase
     if (/[a-z]/.test(password)) strength += 15; // Lowercase
     if (/[0-9]/.test(password)) strength += 15; // Numbers
     if (/[^A-Za-z0-9]/.test(password)) strength += 30; // Special characters
-    
+
     setPasswordStrength(Math.min(strength, 100));
   };
 
@@ -764,11 +764,11 @@ export default function SecuritySettingsPage() {
       newPassword: '',
       confirmPassword: ''
     };
-    
+
     if (!passwordForm.currentPassword) {
       errors.currentPassword = 'Current password is required';
     }
-    
+
     if (!passwordForm.newPassword) {
       errors.newPassword = 'New password is required';
     } else if (passwordForm.newPassword.length < 8) {
@@ -776,15 +776,15 @@ export default function SecuritySettingsPage() {
     } else if (passwordForm.newPassword === passwordForm.currentPassword) {
       errors.newPassword = 'New password must be different from current password';
     }
-    
+
     if (!passwordForm.confirmPassword) {
       errors.confirmPassword = 'Please confirm your new password';
     } else if (passwordForm.confirmPassword !== passwordForm.newPassword) {
       errors.confirmPassword = 'Passwords do not match';
     }
-    
+
     setPasswordErrors(errors);
-    
+
     // Check if there are any errors
     return !Object.values(errors).some(error => error !== '');
   };
@@ -793,20 +793,20 @@ export default function SecuritySettingsPage() {
     // Clear previous errors
     setError(null);
     setSuccess(null);
-    
+
     // Validate form
     if (!validatePasswordForm()) {
       // Validation errors are already set in passwordErrors state
       toast.error('Please fix the errors in the form before submitting');
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       // Call API to change password
       const response = await apiClient.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
-      
+
       // Reset form on success
       setPasswordForm({
         currentPassword: '',
@@ -814,19 +814,19 @@ export default function SecuritySettingsPage() {
         confirmPassword: ''
       });
       setPasswordStrength(0);
-      
+
       // Clear password errors
       setPasswordErrors({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
-      
+
       // Show success message
       const successMessage = response.data?.message || 'Password updated successfully';
       setSuccess(successMessage);
       toast.success(successMessage);
-      
+
       // Clear success message after 5 seconds
       setTimeout(() => {
         setSuccess(null);
@@ -835,14 +835,14 @@ export default function SecuritySettingsPage() {
       const errorMessage =
         typeof err === 'object' && err !== null && 'response' in err
           ? ((err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail ||
-             (err as { response?: { data?: { message?: string } } }).response?.data?.message ||
-             'Failed to update password. Please try again.')
+            (err as { response?: { data?: { message?: string } } }).response?.data?.message ||
+            'Failed to update password. Please try again.')
           : err instanceof Error
             ? err.message
             : 'Failed to update password. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
-      
+
       // Set specific field error if it's about current password
       if (errorMessage.toLowerCase().includes('current password') || errorMessage.toLowerCase().includes('incorrect')) {
         setPasswordErrors(prev => ({ ...prev, currentPassword: errorMessage }));
@@ -856,15 +856,15 @@ export default function SecuritySettingsPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       // Save to localStorage (these are client-side preferences)
       if (typeof window !== 'undefined') {
         localStorage.setItem('user_security_settings', JSON.stringify(securitySettings));
       }
-      
+
       setSuccess('Security settings updated successfully');
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccess(null);
@@ -918,7 +918,7 @@ export default function SecuritySettingsPage() {
             <span>{error}</span>
           </Message>
         )}
-        
+
         {success && (
           <Message type="success">
             <MessageIcon $iconType="check-circle" $size={16} $active={true}>
@@ -984,7 +984,7 @@ export default function SecuritySettingsPage() {
               {passwordErrors.newPassword && (
                 <ErrorText>{passwordErrors.newPassword}</ErrorText>
               )}
-              
+
               {passwordForm.newPassword && (
                 <PasswordStrengthMeter>
                   <PasswordStrengthLabel strength={passwordStrength}>
@@ -996,7 +996,7 @@ export default function SecuritySettingsPage() {
                   </PasswordStrengthBar>
                 </PasswordStrengthMeter>
               )}
-              
+
               <HelperText>
                 Password must be at least 8 characters and include uppercase, lowercase, numbers, and special characters.
               </HelperText>
@@ -1026,10 +1026,10 @@ export default function SecuritySettingsPage() {
               )}
             </FormGroup>
 
-              <ActionButtons>
-              <Button 
-                variant="default" 
-                onClick={handleSavePassword} 
+            <ActionButtons>
+              <Button
+                variant="default"
+                onClick={handleSavePassword}
                 disabled={loading || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               >
@@ -1116,7 +1116,7 @@ export default function SecuritySettingsPage() {
             </SwitchContainer>
 
             <Divider />
-            
+
             <SwitchContainer>
               <div>
                 <Label htmlFor="loginAlerts">Login Alerts</Label>
@@ -1135,7 +1135,7 @@ export default function SecuritySettingsPage() {
             </SwitchContainer>
 
             <Divider />
-            
+
             <FormGroup>
               <Label htmlFor="requirePasswordChange">Password Expiry</Label>
               <select
@@ -1143,7 +1143,7 @@ export default function SecuritySettingsPage() {
                 name="requirePasswordChange"
                 value={securitySettings.requirePasswordChange}
                 onChange={handleSecuritySettingChange}
-                style={{ 
+                style={{
                   width: '100%',
                   padding: '0.5rem 0.75rem',
                   border: '1px solid #d1d5db',
@@ -1181,7 +1181,7 @@ export default function SecuritySettingsPage() {
             </SwitchContainer>
 
             <Divider />
-            
+
             <FormGroup>
               <SwitchContainer>
                 <div>
@@ -1228,7 +1228,7 @@ export default function SecuritySettingsPage() {
                   <HelperText style={{ marginBottom: '0.75rem' }}>
                     Only these IP addresses will be allowed to log in. You can use CIDR notation (e.g., 192.168.1.0/24).
                   </HelperText>
-                  
+
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                     <Input
                       type="text"
@@ -1249,7 +1249,7 @@ export default function SecuritySettingsPage() {
                       Add IP
                     </Button>
                   </div>
-                  
+
                   {ipError && (
                     <ErrorText style={{ marginBottom: '0.75rem' }}>{ipError}</ErrorText>
                   )}
@@ -1298,9 +1298,9 @@ export default function SecuritySettingsPage() {
             </FormGroup>
 
             <ActionButtons>
-              <Button 
-                variant="default" 
-                onClick={handleSaveSecuritySettings} 
+              <Button
+                variant="default"
+                onClick={handleSaveSecuritySettings}
                 disabled={loading}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               >

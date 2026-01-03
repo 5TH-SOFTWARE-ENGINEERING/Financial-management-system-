@@ -1127,6 +1127,12 @@ const Sidebar: React.FC = () => {
                                                 </NavItem>
                                             </>
                                         )}
+                                        <NavItem href="/settings/passwordmanagement" $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed} $size={16} $iconType="key">
+                                                <Key />
+                                            </NavIcon>
+                                            {!collapsed && 'Password Management'}
+                                        </NavItem>
                                         <NavItem href="/settings/history" $active={pathname === '/settings/history'} $collapsed={collapsed}>
                                             <NavIcon $active={pathname === '/settings/history'} $collapsed={collapsed} $size={16} $iconType="history">
                                                 <History />

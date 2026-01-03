@@ -8,7 +8,7 @@ import logging
 from ...core.database import get_db
 from ...crud.user import user as user_crud
 from ...crud import login_history as login_history_crud
-from ...schemas.user import UserCreate, UserOut, UserUpdate, UserChangePassword, UserPermissionsUpdate
+from ...schemas.user import UserCreate, UserOut, UserUpdate, UserChangePassword, UserPermissionsUpdate, AdminResetPasswordRequest
 from ...models.user import User, UserRole
 from ...api.deps import get_current_active_user, require_min_role
 from ...core.security import verify_password
@@ -339,9 +339,10 @@ def change_password(
     """Change user password"""
     from ...core.security import verify_password, get_password_hash
     
-    # Verify current password
-    if not verify_password(password_data.current_password, current_user.hashed_password):
-        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    # Verify current password if provided (it's optional now as per user request)
+    if password_data.current_password:
+        if not verify_password(password_data.current_password, current_user.hashed_password):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
     
     # Validate new password
     if len(password_data.new_password) < 8:
@@ -353,6 +354,55 @@ def change_password(
     db.refresh(current_user)
     
     return {"message": "Password changed successfully"}
+
+
+@router.post("/admin-reset-password", response_model=dict)
+def admin_reset_password(
+    reset_data: AdminResetPasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Administrative password reset.
+    Allowed for:
+    - SUPER_ADMIN/ADMIN: Can reset anyone except SUPER_ADMIN (only SUPER_ADMIN can reset SUPER_ADMIN)
+    - FINANCE_ADMIN/MANAGER: Can only reset their subordinates (accountants and employees)
+    """
+    from ...core.security import get_password_hash
+    
+    # 1. Look up target user by email or username
+    target_user = db.query(User).filter(
+        (User.email == reset_data.username_or_email) | (User.username == reset_data.username_or_email)
+    ).first()
+    
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # 2. RBAC & Hierarchy Checks
+    has_permission = False
+    
+    if current_user.role == UserRole.SUPER_ADMIN:
+        has_permission = True
+    elif current_user.role == UserRole.ADMIN:
+        # Admin cannot reset Super Admin
+        if target_user.role != UserRole.SUPER_ADMIN:
+            has_permission = True
+    elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+        # Check if target is a subordinate
+        if target_user.manager_id == current_user.id:
+            # Only allow resetting accountants and employees
+            if target_user.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]:
+                has_permission = True
+    
+    if not has_permission:
+        raise HTTPException(status_code=403, detail="Insufficient permissions to reset this user's password")
+        
+    # 3. Update password
+    target_user.hashed_password = get_password_hash(reset_data.new_password)
+    db.commit()
+    
+    # 4. Success message
+    return {"message": f"Password for {target_user.username} has been reset successfully"}
 
 
 # ------------------------------------------------------------------
