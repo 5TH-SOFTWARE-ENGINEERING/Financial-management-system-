@@ -39,7 +39,7 @@ describe('LogsPage', () => {
     
     // Wait for "Audit Logs" heading to appear after loading completes
     await waitFor(() => {
-      expect(screen.getByText(/Audit Logs/i)).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /Audit Logs/i })).toBeInTheDocument()
     }, { timeout: 5000 })
   })
 })
