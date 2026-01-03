@@ -1033,6 +1033,7 @@ class ApiClient {
   }
 
   // Admin endpoints
+
   async getAdminSystemStats(): Promise<ApiResponse<unknown>> {
     return this.get('/admin/system/stats');
   }

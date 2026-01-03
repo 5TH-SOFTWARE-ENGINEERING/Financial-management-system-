@@ -4,8 +4,10 @@ export interface Theme {
     background: string;
     backgroundSecondary: string;
     primary: string;
+    text: string;
     textSecondary: string;
     border: string;
+    error: string;
   };
   borderRadius: {
     sm: string;
@@ -47,8 +49,10 @@ export const theme: Theme = {
     background: "#fff",
     backgroundSecondary: "#f5f5f5",
     primary: "#00AA00",
+    text: "#333",
     textSecondary: "#666",
     border: "#ddd",
+    error: "#ef4444",
   },
   borderRadius: {
     sm: "4px",
@@ -69,9 +73,9 @@ export const theme: Theme = {
       sm: "12px",
       md: "14px",
       lg: "18px",
-      xs:"10px",
+      xs: "10px",
       xxl: "36px"
-      
+
     },
     fontWeights: {
       medium: 500,

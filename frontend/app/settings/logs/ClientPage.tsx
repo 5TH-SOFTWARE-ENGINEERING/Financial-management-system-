@@ -1,300 +1,267 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
-import { 
-  FileText, 
-  RefreshCw, 
+import {
+  FileText,
+  RefreshCw,
   Filter,
   Calendar,
   User,
   Activity,
   AlertTriangle,
   Download,
-  Loader
+  Loader,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import apiClient from '@/lib/api';
+import apiClient, { AuditLog } from '@/lib/api';
 import { toast } from 'sonner';
+import { theme } from '@/components/common/theme';
 
-// Styled components
-const Container = styled.div`
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
+// --- Styled Components ---
+
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 `;
 
-const Header = styled.div`
+const PageContainer = styled.div`
+  padding: ${theme.spacing.xl};
+  max-width: 1600px;
+  margin: 0 auto;
+  animation: ${fadeIn} 0.4s ease-out;
+`;
+
+const HeaderContainer = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: ${theme.spacing.xl};
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: ${theme.spacing.md};
+  }
 `;
 
 const Title = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
+  font-size: ${theme.typography.fontSizes.xxl};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${theme.colors.text};
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: ${theme.spacing.sm};
+`;
+
+const Subtitle = styled.p`
+  color: ${theme.colors.textSecondary};
+  font-size: ${theme.typography.fontSizes.md};
+  margin-top: ${theme.spacing.xs};
 `;
 
 const Card = styled.div`
-  background-color: white;
-  border-radius: 0.375rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.25rem;
+  background: white;
+  border-radius: ${theme.borderRadius.lg};
+  box-shadow: ${theme.shadows.sm};
+  border: 1px solid ${theme.colors.border};
+  overflow: hidden;
+  margin-bottom: ${theme.spacing.xl};
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: ${theme.shadows.md};
+  }
 `;
 
-const CardHeader = styled.div`
-  padding: 1rem 1.25rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #f3f4f6;
-`;
-
-const CardTitle = styled.h3`
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const CardContent = styled.div`
-  padding: 1.25rem;
-`;
-
-const FiltersContainer = styled.div`
+const FilterSection = styled.div`
+  padding: ${theme.spacing.lg};
+  background: ${theme.colors.backgroundSecondary};
+  border-bottom: 1px solid ${theme.colors.border};
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: ${theme.spacing.md};
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: ${theme.spacing.xs};
 `;
 
 const Label = styled.label`
-  font-size: 0.875rem;
+  font-size: ${theme.typography.fontSizes.sm};
   font-weight: 500;
-  color: #4b5563;
+  color: ${theme.colors.textSecondary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
 `;
 
 const Input = styled.input`
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  transition: border-color 0.15s ease;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.typography.fontSizes.sm};
+  transition: all 0.2s;
   
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
+    border-color: ${theme.colors.primary};
+    box-shadow: 0 0 0 2px ${theme.colors.primary}20;
   }
 `;
 
 const Select = styled.select`
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.typography.fontSizes.sm};
   background-color: white;
-  transition: border-color 0.15s ease;
+  transition: all 0.2s;
   
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
+    border-color: ${theme.colors.primary};
+    box-shadow: 0 0 0 2px ${theme.colors.primary}20;
   }
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  flex-wrap: wrap;
+const TableContainer = styled.div`
+  overflow-x: auto;
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: ${theme.typography.fontSizes.sm};
 `;
 
-const TableHeader = styled.thead`
-  background-color: #f9fafb;
-  border-bottom: 2px solid #e5e7eb;
-`;
-
-const TableHeaderCell = styled.th`
-  padding: 0.75rem 1rem;
+const Th = styled.th`
   text-align: left;
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  background: ${theme.colors.backgroundSecondary};
+  color: ${theme.colors.textSecondary};
   font-weight: 600;
-  color: #374151;
-  font-size: 0.75rem;
   text-transform: uppercase;
+  font-size: 0.75rem;
   letter-spacing: 0.05em;
+  border-bottom: 1px solid ${theme.colors.border};
+  white-space: nowrap;
 `;
 
-const TableBody = styled.tbody``;
+const Td = styled.td`
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  color: ${theme.colors.text};
+  border-bottom: 1px solid ${theme.colors.border};
+  vertical-align: middle;
+`;
 
-const TableRow = styled.tr`
-  border-bottom: 1px solid #f3f4f6;
+const Tr = styled.tr`
   transition: background-color 0.15s ease;
   
   &:hover {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary}50;
+  }
+
+  &:last-child td {
+    border-bottom: none;
   }
 `;
 
-const TableCell = styled.td`
-  padding: 0.75rem 1rem;
-  color: #111827;
-  vertical-align: top;
-`;
-
-const Badge = styled.span<{ $variant?: 'success' | 'warning' | 'danger' | 'info' }>`
+const Badge = styled.span<{ $variant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }>`
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.025em;
   
   ${props => {
     switch (props.$variant) {
       case 'success':
-        return 'background-color: #dcfce7; color: #166534;';
+        return `background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;`;
       case 'warning':
-        return 'background-color: #fef3c7; color: #92400e;';
+        return `background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;`;
       case 'danger':
-        return 'background-color: #fee2e2; color: #991b1b;';
+        return `background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca;`;
+      case 'neutral':
+        return `background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb;`;
       case 'info':
       default:
-        return 'background-color: #dbeafe; color: #1e40af;';
+        return `background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;`;
     }
   }}
 `;
 
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 3rem 1rem;
-  color: #6b7280;
-`;
-
-const Message = styled.div<{ type: 'error' | 'success' | 'warning' }>`
-  background-color: ${props => 
-    props.type === 'error' ? '#fee2e2' : 
-    props.type === 'warning' ? '#fef3c7' : 
-    '#dcfce7'};
-  color: ${props => 
-    props.type === 'error' ? '#b91c1c' : 
-    props.type === 'warning' ? '#92400e' : 
-    '#166534'};
-  padding: 0.75rem;
-  border-radius: 0.25rem;
-  margin-bottom: 1.25rem;
+const ActionButtons = styled.div`
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  gap: ${theme.spacing.md};
+  
+  @media (max-width: 640px) {
+    width: 100%;
+    
+    button {
+      flex: 1;
+    }
+  }
 `;
 
-const AccessDeniedContainer = styled.div`
-  text-align: center;
-  padding: 4rem 2rem;
-  background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+const UserCell = styled.div`
+  display: flex;
+  flex-direction: column;
 `;
 
-const AccessDeniedTitle = styled.h2`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
+const UserSubtext = styled.span`
+  font-size: 0.75rem;
+  color: ${theme.colors.textSecondary};
 `;
 
-const AccessDeniedMessage = styled.p`
-  color: #6b7280;
-  font-size: 1rem;
-  margin-bottom: 1rem;
-`;
-
-const PaginationContainer = styled.div`
+const Pagination = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  border-top: 1px solid ${theme.colors.border};
+  background: ${theme.colors.backgroundSecondary};
 `;
 
-const PaginationInfo = styled.span`
-  font-size: 0.875rem;
-  color: #6b7280;
-`;
-
-const PaginationButtons = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
-const LoadingContainer = styled.div`
+const LoadingState = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem;
-  color: #6b7280;
+  padding: 4rem;
+  color: ${theme.colors.textSecondary};
+  gap: ${theme.spacing.md};
 `;
 
-const HelperText = styled.p`
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
+const ErrorState = styled.div`
+  padding: ${theme.spacing.lg};
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: ${theme.borderRadius.md};
+  color: #991b1b;
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.lg};
 `;
 
-const DetailsText = styled.div`
-  font-size: 0.75rem;
-  color: #6b7280;
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 4rem 2rem;
+  color: ${theme.colors.textSecondary};
 `;
 
-interface AuditLog {
-  id: number;
-  user_id: number;
-  action: string;
-  resource_type: string;
-  resource_id?: number | null;
-  old_values?: string | null;
-  new_values?: string | null;
-  ip_address?: string | null;
-  user_agent?: string | null;
-  created_at: string;
-  user?: {
-    id: number;
-    username?: string;
-    full_name?: string;
-    email?: string;
-  };
-}
+// --- Helpers ---
 
 const ACTIONS = [
   { value: '', label: 'All Actions' },
@@ -318,29 +285,31 @@ const RESOURCE_TYPES = [
   { value: 'project', label: 'Project' },
   { value: 'department', label: 'Department' },
   { value: 'approval', label: 'Approval' },
+  { value: 'budget', label: 'Budget' },
+  { value: 'inventory', label: 'Inventory' },
 ];
 
 function formatDate(dateString: string): string {
   try {
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: true
-    });
+    }).format(date);
   } catch {
     return dateString;
   }
 }
 
-function getActionBadgeVariant(action: string): 'success' | 'warning' | 'danger' | 'info' {
+function getActionBadgeVariant(action: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
   switch (action.toLowerCase()) {
     case 'create':
     case 'approve':
+    case 'restore':
       return 'success';
     case 'update':
     case 'export':
@@ -353,171 +322,111 @@ function getActionBadgeVariant(action: string): 'success' | 'warning' | 'danger'
     case 'logout':
       return 'warning';
     default:
-      return 'info';
+      return 'neutral';
   }
 }
+
+// --- Component ---
 
 export default function LogsPage() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [users, setUsers] = useState<AuditLog['user'][]>([]);
+  const [users, setUsers] = useState<Partial<AuditLog['user'] & { id: number }>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  
+
   // Filters
   const [userIdFilter, setUserIdFilter] = useState<string>('');
   const [actionFilter, setActionFilter] = useState<string>('');
   const [resourceTypeFilter, setResourceTypeFilter] = useState<string>('');
+  const [search, setSearch] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [limit] = useState(50);
-  const [totalCount, setTotalCount] = useState(0);
+  const [limit] = useState(20);
+  const [hasMore, setHasMore] = useState(false);
 
-  // Check if user has required role (ADMIN or SUPER_ADMIN)
-  const hasRequiredRole = React.useMemo(() => {
-    if (!user) return false;
-    const userRole = user.role?.toLowerCase();
-    // Check normalized roles: admin (could be admin or super_admin)
-    return userRole === 'admin';
-  }, [user]);
+  // Check permission
+  const hasPermission = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'super_admin';
 
   useEffect(() => {
-    if (!user) return;
-    
-    // Check role upfront for better UX (optimistic permission check)
-    if (hasRequiredRole) {
-      setHasPermission(true);
-    }
-    
-    // Load users for filter dropdown
-    loadUsers();
-    
-    // Load logs
-    loadLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // Reload logs when filters or pagination changes
-  useEffect(() => {
-    if (hasPermission === true) {
+    if (hasPermission) {
+      loadUsers();
       loadLogs();
+    } else {
+      setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, userIdFilter, actionFilter, resourceTypeFilter, startDate, endDate]);
+  }, [hasPermission, currentPage, userIdFilter, actionFilter, resourceTypeFilter, startDate, endDate]); // Trigger on filter changes
+
+  // Debounced search effect could be added here, but direct search button is simpler for now
 
   const loadUsers = async () => {
     try {
       const response = await apiClient.getUsers();
-      const userList = (response.data || []).map((u: { id?: unknown; username?: unknown; full_name?: unknown; email?: unknown }) => ({
-        id: typeof u.id === 'number' ? u.id : parseInt(String(u.id ?? 0), 10),
-        username: typeof u.username === 'string' ? u.username : undefined,
-        full_name: typeof u.full_name === 'string' ? u.full_name : undefined,
-        email: typeof u.email === 'string' ? u.email : undefined,
-      }));
-      setUsers(userList);
-    } catch {
-      // Silently fail - users are optional for filtering
-      setUsers([]);
+      setUsers(response.data || []);
+    } catch (err) {
+      console.error('Failed to load users for filter', err);
     }
   };
 
   const loadLogs = async () => {
-    if (hasPermission === false) return;
-
     setLoading(true);
     setError(null);
-
     try {
       const filters: Record<string, unknown> = {
         skip: (currentPage - 1) * limit,
-        limit: limit,
+        limit: limit + 1, // Fetch one extra to check for "next page"
+        user_id: userIdFilter || undefined,
+        action: actionFilter || undefined,
+        resource_type: resourceTypeFilter || undefined,
+        search: search || undefined,
+        start_date: startDate || undefined,
+        end_date: endDate || undefined,
       };
 
-      if (userIdFilter) {
-        filters.user_id = parseInt(userIdFilter, 10);
-      }
-      if (actionFilter) {
-        filters.action = actionFilter;
-      }
-      if (resourceTypeFilter) {
-        filters.resource_type = resourceTypeFilter;
-      }
-      if (startDate) {
-        filters.start_date = startDate;
-      }
-      if (endDate) {
-        filters.end_date = endDate;
-      }
+      const response = await apiClient.getAuditLogs(filters as any);
+      const data = response.data || [];
 
-      const response = await apiClient.getAuditLogs(filters);
-      const logsData = Array.isArray(response.data)
-        ? (response.data as unknown[]).filter((item): item is AuditLog => {
-            const record = item as Partial<AuditLog>;
-            return typeof record.id === 'number' && typeof record.user_id === 'number' && typeof record.created_at === 'string';
-          })
-        : [];
-      
-      // Use user information from API response or fallback to users list
-      const enrichedLogs = logsData.map((log) => ({
-        ...log,
-        user:
-          log.user ||
-          users.find((u) => u?.id === log.user_id) || {
-            id: log.user_id,
-            username: `User ${log.user_id}`,
-            full_name: `User ${log.user_id}`,
-          },
-      }));
-
-      setLogs(enrichedLogs);
-      setTotalCount(logsData.length); // Note: Backend doesn't return total count, so we use current page count
-      
-      // If we got a full page, there might be more
-      if (logsData.length === limit) {
-        // Could fetch next page to check, but for now we'll just show current count
-      }
-    } catch (err: unknown) {
-      console.error('Failed to load logs:', err);
-      const status = typeof err === 'object' && err !== null && 'response' in err
-        ? (err as { response?: { status?: number } }).response?.status
-        : undefined;
-      const detail = typeof err === 'object' && err !== null && 'response' in err
-        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-        : err instanceof Error
-          ? err.message
-          : undefined;
-
-      if (status === 403) {
-        setError('Access denied. Logs view requires ADMIN role.');
-        setHasPermission(false);
-        toast.error('Access denied. Logs view requires ADMIN role.');
+      if (data.length > limit) {
+        setHasMore(true);
+        setLogs(data.slice(0, limit));
       } else {
-        const message = detail || 'Failed to load logs. Please try again.';
-        setError(message);
-        toast.error(message);
+        setHasMore(false);
+        setLogs(data);
       }
+    } catch (err) {
+      console.error('Failed to load logs:', err);
+      setError('Failed to fetch audit logs. Please try again later.');
       setLogs([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(1);
+    loadLogs();
+  };
+
   const handleClearFilters = () => {
     setUserIdFilter('');
     setActionFilter('');
     setResourceTypeFilter('');
+    setSearch('');
     setStartDate('');
     setEndDate('');
     setCurrentPage(1);
+    // Explicitly reload after clearing (useEffect might not trigger if values were already empty)
+    setTimeout(() => loadLogs(), 0);
   };
 
   const handleExport = () => {
-    // Create CSV content
-    const headers = ['ID', 'Timestamp', 'User', 'Action', 'Resource Type', 'Resource ID', 'IP Address', 'User Agent'];
+    // Basic CSV export logic
+    const headers = ['ID', 'Timestamp', 'User', 'Action', 'Resource', 'Resource ID', 'IP Address', 'User Agent'];
     const rows = logs.map(log => [
       log.id,
       formatDate(log.created_at),
@@ -531,326 +440,217 @@ export default function LogsPage() {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ...rows.map(row => row.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
-    // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `audit-logs-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
     toast.success('Logs exported successfully');
   };
 
-  if (!user) {
-    return (
-      <Container>
-        <LoadingContainer>
-          <Loader size={24} className="animate-spin" />
-          <p>Loading...</p>
-        </LoadingContainer>
-      </Container>
-    );
-  }
-
-  // Show access denied message if user doesn't have permission
-  if (hasPermission === false) {
+  if (!hasPermission) {
     return (
       <ComponentGate componentId={ComponentId.SETTINGS_VIEW}>
-        <Container>
-          <Header>
-            <Title>
-              <FileText size={24} />
-              Audit Logs
-            </Title>
-          </Header>
-          <AccessDeniedContainer>
-            <AlertTriangle size={48} color="#ef4444" />
-            <AccessDeniedTitle>Access Denied</AccessDeniedTitle>
-            <AccessDeniedMessage>
-              You do not have the necessary permissions to view audit logs.
-              <br />
-              Audit logs view requires an <strong>ADMIN</strong> role.
-            </AccessDeniedMessage>
-            <HelperText>Please contact your administrator if you believe this is an error.</HelperText>
-          </AccessDeniedContainer>
-        </Container>
+        <PageContainer>
+          <HeaderContainer>
+            <div>
+              <Title><FileText size={32} /> Audit Logs</Title>
+              <Subtitle>View and manage system audit logs</Subtitle>
+            </div>
+          </HeaderContainer>
+          <EmptyState>
+            <AlertTriangle size={48} style={{ margin: '0 auto', color: theme.colors.error }} />
+            <h3 style={{ marginTop: '1rem', fontSize: '1.25rem', fontWeight: 600 }}>Access Denied</h3>
+            <p style={{ marginTop: '0.5rem' }}>You do not have permission to view audit logs.</p>
+          </EmptyState>
+        </PageContainer>
       </ComponentGate>
-    );
+    )
   }
 
   return (
     <ComponentGate componentId={ComponentId.SETTINGS_VIEW}>
-      <Container>
-        <Header>
-          <Title>
-            <FileText size={24} />
-            Audit Logs
-          </Title>
+      <PageContainer>
+        <HeaderContainer>
+          <div>
+            <Title>
+              <FileText size={32} className="text-blue-600" />
+              Audit Logs
+            </Title>
+            <Subtitle>Track system activity, user actions, and security events</Subtitle>
+          </div>
           <ActionButtons>
-            <Button
-              variant="secondary"
-              onClick={loadLogs}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={loadLogs} disabled={loading}>
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
               Refresh
             </Button>
-            {logs.length > 0 && (
-              <Button
-                variant="default"
-                onClick={handleExport}
-                disabled={loading}
-              >
-                <Download size={16} />
-                Export CSV
-              </Button>
-            )}
+            <Button onClick={handleExport} disabled={loading || logs.length === 0}>
+              <Download size={16} />
+              Export
+            </Button>
           </ActionButtons>
-        </Header>
+        </HeaderContainer>
 
         {error && (
-          <Message type="error">
-            <AlertTriangle size={16} />
+          <ErrorState>
+            <AlertTriangle size={20} />
             <span>{error}</span>
-          </Message>
+            <Button variant="ghost" size="sm" onClick={() => setError(null)}><X size={16} /></Button>
+          </ErrorState>
         )}
 
         <Card>
-          <CardHeader>
-            <CardTitle>
-              <Filter size={18} />
-              Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FiltersContainer>
-              <FormGroup>
-                <Label htmlFor="user-filter">
-                  <User size={14} className="inline mr-1" />
-                  User
-                </Label>
-                <Select
-                  id="user-filter"
-                  value={userIdFilter}
-                  onChange={(e) => {
-                    setUserIdFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value="">All Users</option>
-                  {users.map((u) => (
-                    u ? (
-                      <option key={u.id} value={u.id}>
-                        {u.full_name || u.username || u.email}
-                      </option>
-                    ) : null
-                  ))}
-                </Select>
-              </FormGroup>
-
-              <FormGroup>
-                <Label htmlFor="action-filter">
-                  <Activity size={14} className="inline mr-1" />
-                  Action
-                </Label>
-                <Select
-                  id="action-filter"
-                  value={actionFilter}
-                  onChange={(e) => {
-                    setActionFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  {ACTIONS.map((action) => (
-                    <option key={action.value} value={action.value}>
-                      {action.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormGroup>
-
-              <FormGroup>
-                <Label htmlFor="resource-filter">
-                  <FileText size={14} className="inline mr-1" />
-                  Resource Type
-                </Label>
-                <Select
-                  id="resource-filter"
-                  value={resourceTypeFilter}
-                  onChange={(e) => {
-                    setResourceTypeFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  {RESOURCE_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormGroup>
-
-              <FormGroup>
-                <Label htmlFor="start-date">
-                  <Calendar size={14} className="inline mr-1" />
-                  Start Date
-                </Label>
+          <FilterSection>
+            <FormGroup>
+              <Label><Search size={14} /> Search</Label>
+              <form onSubmit={handleSearch} style={{ display: 'flex' }}>
                 <Input
-                  id="start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
-                    setCurrentPage(1);
-                  }}
+                  placeholder="Search by user name or email..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{ width: '100%' }}
                 />
-              </FormGroup>
+              </form>
+            </FormGroup>
 
-              <FormGroup>
-                <Label htmlFor="end-date">
-                  <Calendar size={14} className="inline mr-1" />
-                  End Date
-                </Label>
-                <Input
-                  id="end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FormGroup>
-            </FiltersContainer>
+            <FormGroup>
+              <Label><User size={14} /> User</Label>
+              <Select value={userIdFilter} onChange={(e) => { setUserIdFilter(e.target.value); setCurrentPage(1); }}>
+                <option value="">All Users</option>
+                {users.map((u) => (
+                  u && <option key={u.id} value={u.id}>{u.full_name || u.username || u.email}</option>
+                ))}
+              </Select>
+            </FormGroup>
 
-            <ActionButtons>
-              <Button
-                variant="secondary"
-                onClick={handleClearFilters}
-                disabled={loading}
-              >
+            <FormGroup>
+              <Label><Activity size={14} /> Action</Label>
+              <Select value={actionFilter} onChange={(e) => { setActionFilter(e.target.value); setCurrentPage(1); }}>
+                {ACTIONS.map((action) => (
+                  <option key={action.value} value={action.value}>{action.label}</option>
+                ))}
+              </Select>
+            </FormGroup>
+
+            <FormGroup>
+              <Label><FileText size={14} /> Resource</Label>
+              <Select value={resourceTypeFilter} onChange={(e) => { setResourceTypeFilter(e.target.value); setCurrentPage(1); }}>
+                {RESOURCE_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </Select>
+            </FormGroup>
+
+            <FormGroup>
+              <Label><Calendar size={14} /> Date Range</Label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }} />
+                <Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }} />
+              </div>
+            </FormGroup>
+
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <Button variant="ghost" onClick={handleClearFilters} style={{ width: '100%' }}>
                 Clear Filters
               </Button>
-            </ActionButtons>
-          </CardContent>
-        </Card>
+            </div>
+          </FilterSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <FileText size={18} />
-              Log Entries
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <TableContainer>
             {loading ? (
-              <LoadingContainer>
-                <Loader size={24} className="animate-spin" />
-                <p>Loading logs...</p>
-              </LoadingContainer>
+              <LoadingState>
+                <Loader size={32} className="animate-spin" />
+                <p>Loading audit logs...</p>
+              </LoadingState>
             ) : logs.length === 0 ? (
               <EmptyState>
-                <FileText size={48} className="mx-auto mb-4 text-gray-400" />
-                <p>No logs found</p>
-                <HelperText>
-                  {userIdFilter || actionFilter || resourceTypeFilter || startDate || endDate
-                    ? 'Try adjusting your filters'
-                    : 'Audit logs will appear here as users perform actions'}
-                </HelperText>
+                <FileText size={48} style={{ margin: '0 auto', opacity: 0.2 }} />
+                <p>No audit logs found matching your criteria.</p>
               </EmptyState>
             ) : (
-              <>
-                <div style={{ overflowX: 'auto' }}>
-                  <Table>
-                    <TableHeader>
-                      <tr>
-                        <TableHeaderCell>ID</TableHeaderCell>
-                        <TableHeaderCell>Timestamp</TableHeaderCell>
-                        <TableHeaderCell>User</TableHeaderCell>
-                        <TableHeaderCell>Action</TableHeaderCell>
-                        <TableHeaderCell>Resource</TableHeaderCell>
-                        <TableHeaderCell>Resource ID</TableHeaderCell>
-                        <TableHeaderCell>IP Address</TableHeaderCell>
-                        <TableHeaderCell>Details</TableHeaderCell>
-                      </tr>
-                    </TableHeader>
-                    <TableBody>
-                      {logs.map((log) => (
-                        <TableRow key={log.id}>
-                          <TableCell>#{log.id}</TableCell>
-                          <TableCell>
-                            <div style={{ whiteSpace: 'nowrap' }}>
-                              {formatDate(log.created_at)}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {log.user?.full_name || log.user?.username || `User ${log.user_id}`}
-                          </TableCell>
-                          <TableCell>
-                            <Badge $variant={getActionBadgeVariant(log.action)}>
-                              {log.action.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {log.resource_type}
-                          </TableCell>
-                          <TableCell>
-                            {log.resource_id || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {log.ip_address || '-'}
-                          </TableCell>
-                          <TableCell>
-                            <DetailsText title={log.user_agent || ''}>
-                              {log.user_agent || '-'}
-                            </DetailsText>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                <PaginationContainer>
-                  <PaginationInfo>
-                    Showing {logs.length} log{logs.length !== 1 ? 's' : ''}
-                    {totalCount > logs.length && ` of ${totalCount}+`}
-                  </PaginationInfo>
-                  <PaginationButtons>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1 || loading}
-                    >
-                      Previous
-                    </Button>
-                    <span style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
-                      Page {currentPage}
-                    </span>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => prev + 1)}
-                      disabled={logs.length < limit || loading}
-                    >
-                      Next
-                    </Button>
-                  </PaginationButtons>
-                </PaginationContainer>
-              </>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Time</Th>
+                    <Th>User</Th>
+                    <Th>Action</Th>
+                    <Th>Resource</Th>
+                    <Th>Details</Th>
+                    <Th>IP Address</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map((log) => (
+                    <Tr key={log.id}>
+                      <Td style={{ whiteSpace: 'nowrap' }}>
+                        <div style={{ fontWeight: 500 }}>{formatDate(log.created_at).split(',')[0]}</div>
+                        <div style={{ fontSize: '0.75rem', color: theme.colors.textSecondary }}>
+                          {formatDate(log.created_at).split(',')[1]}
+                        </div>
+                      </Td>
+                      <Td>
+                        <UserCell>
+                          <span style={{ fontWeight: 500 }}>{log.user?.full_name || log.user?.username || `User #${log.user_id}`}</span>
+                          <UserSubtext>{log.user?.email}</UserSubtext>
+                        </UserCell>
+                      </Td>
+                      <Td>
+                        <Badge $variant={getActionBadgeVariant(log.action)}>
+                          {log.action.toUpperCase()}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ textTransform: 'capitalize' }}>{log.resource_type}</span>
+                          {log.resource_id && <UserSubtext>ID: {log.resource_id}</UserSubtext>}
+                        </div>
+                      </Td>
+                      <Td>
+                        <div style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${log.new_values || ''} ${log.old_values || ''}`}>
+                          {log.new_values || log.old_values || '-'}
+                        </div>
+                      </Td>
+                      <Td>
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{log.ip_address || '-'}</span>
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
             )}
-          </CardContent>
+          </TableContainer>
+
+          <Pagination>
+            <span style={{ fontSize: '0.875rem', color: theme.colors.textSecondary }}>
+              Page {currentPage}
+            </span>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1 || loading}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              >
+                <ChevronLeft size={16} /> Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!hasMore || loading}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
+                Next <ChevronRight size={16} />
+              </Button>
+            </div>
+          </Pagination>
         </Card>
-      </Container>
+      </PageContainer>
     </ComponentGate>
   );
 }
-
