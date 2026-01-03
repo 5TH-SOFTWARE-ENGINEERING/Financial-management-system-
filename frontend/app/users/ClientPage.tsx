@@ -24,6 +24,7 @@ import {
   EyeOff,
   Lock,
   XCircle,
+  Download,
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { formatDate } from '@/lib/utils';
@@ -659,7 +660,7 @@ export default function UsersPage() {
 
   const verifyPassword = async (password: string): Promise<boolean> => {
     if (!user) return false;
-    
+
     try {
       // Use login endpoint to verify password
       const identifier = user.email || '';
@@ -690,7 +691,7 @@ export default function UsersPage() {
     try {
       // First verify password
       const isValid = await verifyPassword(deletePassword.trim());
-      
+
       if (!isValid) {
         setDeletePasswordError('Incorrect password. Please try again.');
         setDeleting(false);
@@ -829,7 +830,7 @@ export default function UsersPage() {
   // Get accessible users based on role
   const getAccessibleUsers = (): DisplayUser[] => {
     if (!user) return [];
-    
+
     if (user.role === 'admin') {
       // Admin sees all users
       return allUsers as DisplayUser[];
@@ -841,7 +842,7 @@ export default function UsersPage() {
         const role = (u.role || '').toLowerCase();
         return role === 'accountant' || role === 'employee';
       }) as DisplayUser[];
-      
+
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
         console.log('Finance Admin - allUsers from backend:', allUsers.length);
@@ -854,7 +855,7 @@ export default function UsersPage() {
           manager_id: getManagerId(u),
         })));
       }
-      
+
       return filtered;
     } else if (user.role === 'finance_manager') {
       // Finance manager: Backend already filters to return only their subordinates (accountants and employees)
@@ -864,7 +865,7 @@ export default function UsersPage() {
         const role = (u.role || '').toLowerCase();
         return role === 'accountant' || role === 'employee';
       }) as DisplayUser[];
-      
+
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
         console.log('Finance Manager - allUsers from backend:', allUsers.length);
@@ -877,27 +878,82 @@ export default function UsersPage() {
           manager_id: getManagerId(u),
         })));
       }
-      
+
       return filtered;
     }
-    
+
     return [];
   };
 
   // Get users that match search/filter criteria from accessible users
   const accessibleUsers = getAccessibleUsers();
-  
+
   const filteredUsers = accessibleUsers.filter((userItem) => {
     const userRole = (userItem.role || '').toLowerCase();
     const userName = getDisplayName(userItem);
     const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (userItem.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (userItem.email || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole === 'all' || userRole === filterRole;
-    const matchesStatus = filterStatus === 'all' || 
-                          (filterStatus === 'active' && getIsActive(userItem)) ||
-                          (filterStatus === 'inactive' && !getIsActive(userItem));
+    const matchesStatus = filterStatus === 'all' ||
+      (filterStatus === 'active' && getIsActive(userItem)) ||
+      (filterStatus === 'inactive' && !getIsActive(userItem));
     return matchesSearch && matchesRole && matchesStatus;
   });
+
+  const handleExport = () => {
+    try {
+      if (filteredUsers.length === 0) {
+        toast.error('No users to export');
+        return;
+      }
+
+      // Define columns to export
+      const headers = [
+        'Full Name',
+        'Email',
+        'Phone',
+        'Role',
+        'Status',
+        'Joined Date'
+      ];
+
+      // Format data as CSV
+      const csvRows = filteredUsers.map(userItem => {
+        const roleLabel = getRoleDisplayName((userItem.role || '').toLowerCase());
+        const statusLabel = getIsActive(userItem) ? 'Active' : 'Inactive';
+        const joinedDate = getCreatedAt(userItem) ? formatDate(getCreatedAt(userItem)!) : 'N/A';
+
+        return [
+          `"${(getDisplayName(userItem)).replace(/"/g, '""')}"`,
+          `"${(userItem.email || '').replace(/"/g, '""')}"`,
+          `"${(userItem.phone || '').replace(/"/g, '""')}"`,
+          `"${roleLabel.replace(/"/g, '""')}"`,
+          `"${statusLabel.replace(/"/g, '""')}"`,
+          `"${joinedDate.replace(/"/g, '""')}"`
+        ].join(',');
+      });
+
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `users_export_${date}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('User list exported successfully');
+    } catch (err) {
+      console.error('Export failed:', err);
+      toast.error('Failed to export user list');
+    }
+  };
 
   const getRoleBadgeVariant = (role: string): 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'default' => {
     switch (role) {
@@ -949,7 +1005,7 @@ export default function UsersPage() {
       const userId = userItem.id?.toString() || userItem.id;
       const subordinates = getSubordinates(userId, accessibleUsers);
       const isExpanded = expandedUsers.has(userId);
-      
+
       return (
         <UserItem key={userId} level={level}>
           <UserRow onClick={() => subordinates.length > 0 && toggleUserExpansion(userId)}>
@@ -958,11 +1014,11 @@ export default function UsersPage() {
                 isExpanded ? <ChevronDown size={16} style={{ color: TEXT_COLOR_MUTED }} /> : <ChevronRight size={16} style={{ color: TEXT_COLOR_MUTED }} />
               )}
             </ChevronWrapper>
-            
+
             <AvatarWrapper>
               {getRoleIcon(userRole)}
             </AvatarWrapper>
-            
+
             <UserDetails>
               <UserHeaderRow>
                 <UserName>
@@ -994,7 +1050,7 @@ export default function UsersPage() {
                 )}
               </UserMeta>
             </UserDetails>
-            
+
             <UserActions>
               {subordinates.length > 0 && (
                 <SubordinateCount>
@@ -1030,75 +1086,75 @@ export default function UsersPage() {
               </ActionButton>
               {/* Activate/Deactivate toggle button - for finance_admin, finance_manager, and admin */}
               {user &&
-               (user.role === 'admin' || user.role === 'finance_manager' || (user.role as string) === 'finance_admin') &&
-               toNumberId(userItem.id) !== toNumberId(user.id) &&
-               (() => {
-                 const roleLower = (userItem.role || '').toLowerCase();
-                 return roleLower !== 'admin' && roleLower !== 'super_admin';
-               })() && (
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const userName = getDisplayName(userItem);
-                    const userId = toNumberId(userItem.id);
-                    const isActive = getIsActive(userItem);
-                    
-                    if (isActive) {
-                      // User is active, show deactivate modal
-                      setUserToDeactivate({ id: userId, name: userName });
-                      setShowDeactivateModal(true);
-                      setDeactivatePassword('');
-                      setDeactivatePasswordError(null);
-                    } else {
-                      // User is inactive, show activate modal
-                      setUserToActivate({ id: userId, name: userName });
-                      setShowActivateModal(true);
-                      setActivatePassword('');
-                      setActivatePasswordError(null);
-                    }
-                  }}
-                  title={getIsActive(userItem) ? "Deactivate user" : "Activate user"}
-                  disabled={deactivatingUserId === toNumberId(userItem.id) || activatingUserId === toNumberId(userItem.id)}
-                  style={{
-                    color: getIsActive(userItem) ? '#dc2626' : '#16a34a'
-                  }}
-                >
-                  {(deactivatingUserId === toNumberId(userItem.id) || activatingUserId === toNumberId(userItem.id)) ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : getIsActive(userItem) ? (
-                    <Shield size={16} />
-                  ) : (
-                    <UserCheck size={16} />
-                  )}
-                </ActionButton>
-              )}
-              
+                (user.role === 'admin' || user.role === 'finance_manager' || (user.role as string) === 'finance_admin') &&
+                toNumberId(userItem.id) !== toNumberId(user.id) &&
+                (() => {
+                  const roleLower = (userItem.role || '').toLowerCase();
+                  return roleLower !== 'admin' && roleLower !== 'super_admin';
+                })() && (
+                  <ActionButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const userName = getDisplayName(userItem);
+                      const userId = toNumberId(userItem.id);
+                      const isActive = getIsActive(userItem);
+
+                      if (isActive) {
+                        // User is active, show deactivate modal
+                        setUserToDeactivate({ id: userId, name: userName });
+                        setShowDeactivateModal(true);
+                        setDeactivatePassword('');
+                        setDeactivatePasswordError(null);
+                      } else {
+                        // User is inactive, show activate modal
+                        setUserToActivate({ id: userId, name: userName });
+                        setShowActivateModal(true);
+                        setActivatePassword('');
+                        setActivatePasswordError(null);
+                      }
+                    }}
+                    title={getIsActive(userItem) ? "Deactivate user" : "Activate user"}
+                    disabled={deactivatingUserId === toNumberId(userItem.id) || activatingUserId === toNumberId(userItem.id)}
+                    style={{
+                      color: getIsActive(userItem) ? '#dc2626' : '#16a34a'
+                    }}
+                  >
+                    {(deactivatingUserId === toNumberId(userItem.id) || activatingUserId === toNumberId(userItem.id)) ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : getIsActive(userItem) ? (
+                      <Shield size={16} />
+                    ) : (
+                      <UserCheck size={16} />
+                    )}
+                  </ActionButton>
+                )}
+
               {/* Delete button - for admin, finance_manager, and finance_admin */}
-              {(user?.role === 'admin' || user?.role === 'finance_manager' || (user?.role as string) === 'finance_admin') && 
-               toNumberId(userItem.id) !== (user ? toNumberId(user.id) : -1) &&
-               (() => {
-                 const roleLower = (userItem.role || '').toLowerCase();
-                 return roleLower !== 'admin' && roleLower !== 'super_admin';
-               })() && (
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const userName = getDisplayName(userItem);
-                    const userId = toNumberId(userItem.id);
-                    setUserToDelete({ id: userId, name: userName });
-                    setShowDeleteModal(true);
-                    setDeletePassword('');
-                    setDeletePasswordError(null);
-                  }}
-                  data-destructive="true"
-                  title="Delete user"
-                >
-                  <Trash2 size={16} />
-                </ActionButton>
-              )}
+              {(user?.role === 'admin' || user?.role === 'finance_manager' || (user?.role as string) === 'finance_admin') &&
+                toNumberId(userItem.id) !== (user ? toNumberId(user.id) : -1) &&
+                (() => {
+                  const roleLower = (userItem.role || '').toLowerCase();
+                  return roleLower !== 'admin' && roleLower !== 'super_admin';
+                })() && (
+                  <ActionButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const userName = getDisplayName(userItem);
+                      const userId = toNumberId(userItem.id);
+                      setUserToDelete({ id: userId, name: userName });
+                      setShowDeleteModal(true);
+                      setDeletePassword('');
+                      setDeletePasswordError(null);
+                    }}
+                    data-destructive="true"
+                    title="Delete user"
+                  >
+                    <Trash2 size={16} />
+                  </ActionButton>
+                )}
             </UserActions>
           </UserRow>
-          
+
           {isExpanded && subordinates.length > 0 && (
             <SubordinateList>
               {renderUserHierarchy(subordinates, level + 1)}
@@ -1198,11 +1254,11 @@ export default function UsersPage() {
               <StatInfo>
                 <p>Team Size</p>
                 <p>
-                  {user.role === 'admin' 
-                    ? 'All' 
+                  {user.role === 'admin'
+                    ? 'All'
                     : (user.role as string) === 'finance_admin' || user.role === 'finance_manager'
-                    ? accessibleUsers.length // Backend already filters to only show subordinates (accountants and employees)
-                    : accessibleUsers.length
+                      ? accessibleUsers.length // Backend already filters to only show subordinates (accountants and employees)
+                      : accessibleUsers.length
                   }
                 </p>
               </StatInfo>
@@ -1245,41 +1301,50 @@ export default function UsersPage() {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </Select>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={filteredUsers.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}
+          >
+            <Download size={16} />
+            Export
+          </Button>
         </FiltersContainer>
 
         <UsersCard>
           <CardHeader>
             <h2>
-              {user.role === 'admin' 
-                ? 'All Users' 
+              {user.role === 'admin'
+                ? 'All Users'
                 : (user.role as string) === 'finance_admin'
-                ? 'Your Users (Accountants & Employees)'
-                : 'Your Team'
+                  ? 'Your Users (Accountants & Employees)'
+                  : 'Your Team'
               }
             </h2>
             <p>
-              {user.role === 'admin' 
+              {user.role === 'admin'
                 ? 'View and manage all users in the system'
                 : (user.role as string) === 'finance_admin'
-                ? 'View and manage your own users: accountants and employees under your management. You have full access to activate, deactivate, delete, edit, and view these users.'
-                : user.role === 'finance_manager'
-                ? 'View and manage users in your team hierarchy (accountants and employees)'
-                : 'View users in your team hierarchy'
+                  ? 'View and manage your own users: accountants and employees under your management. You have full access to activate, deactivate, delete, edit, and view these users.'
+                  : user.role === 'finance_manager'
+                    ? 'View and manage users in your team hierarchy (accountants and employees)'
+                    : 'View users in your team hierarchy'
               }
             </p>
           </CardHeader>
-          
+
           <UsersList>
             {filteredUsers.length > 0 ? (
               <>
                 {renderUserHierarchy(
-                  user.role === 'admin' 
+                  user.role === 'admin'
                     ? filteredUsers.filter((u) => !getManagerId(u))
                     : (() => {
-                        const currentUserId = user.id.toString();
-                        const directSubordinates = filteredUsers.filter((u) => getManagerId(u) === currentUserId);
-                        return directSubordinates.length > 0 ? directSubordinates : filteredUsers;
-                      })()
+                      const currentUserId = user.id.toString();
+                      const directSubordinates = filteredUsers.filter((u) => getManagerId(u) === currentUserId);
+                      return directSubordinates.length > 0 ? directSubordinates : filteredUsers;
+                    })()
                 )}
               </>
             ) : (
@@ -1289,8 +1354,8 @@ export default function UsersPage() {
                   {user.role === 'admin'
                     ? 'No users found'
                     : (user.role as string) === 'finance_admin'
-                    ? 'No accountants or employees found. Create new users to add them to your team.'
-                    : 'No users found in your team'
+                      ? 'No accountants or employees found. Create new users to add them to your team.'
+                      : 'No users found in your team'
                   }
                 </p>
               </EmptyState>
@@ -1324,7 +1389,7 @@ export default function UsersPage() {
                 const userIdNum = typeof u.id === 'string' ? parseInt(u.id, 10) : u.id;
                 return userIdNum === userToDelete.id;
               });
-              
+
               return userDetails ? (
                 <div style={{
                   background: '#f9fafb',
@@ -1545,7 +1610,7 @@ export default function UsersPage() {
 
             {(() => {
               const userDetails = accessibleUsers.find((u) => toNumberId(u.id) === userToDeactivate.id);
-              
+
               return userDetails ? (
                 <div style={{
                   background: '#f9fafb',
