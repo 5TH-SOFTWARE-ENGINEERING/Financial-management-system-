@@ -6,7 +6,7 @@ import styled from 'styled-components';
 import {
   Package, Plus, Edit, Trash2, Search,
   DollarSign, TrendingUp, AlertCircle,
-  Loader2, Save, X, Power, PowerOff
+  Loader2, Save, X, Power, PowerOff, Download
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -19,51 +19,53 @@ import { Label } from '@/components/ui/label';
 
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
-    if (active) {
-        // Active state colors (brighter)
-        const activeColors: Record<string, string> = {
-            'package': '#3b82f6',           // Blue
-            'plus': '#22c55e',              // Green
-            'edit': '#3b82f6',              // Blue
-            'trash2': '#ef4444',            // Red
-            'search': '#6366f1',            // Indigo
-            'filter': '#8b5cf6',            // Purple
-            'dollar-sign': '#16a34a',        // Green
-            'trending-up': '#22c55e',       // Green
-            'alert-circle': '#f59e0b',       // Amber
-            'check-circle': '#22c55e',      // Green
-            'loader2': '#3b82f6',           // Blue
-            'eye': '#6366f1',               // Indigo
-            'eye-off': '#6b7280',           // Gray
-            'save': '#22c55e',              // Green
-            'x': '#6b7280',                 // Gray
-            'power': '#22c55e',             // Green
-            'power-off': '#f59e0b',         // Amber
-        };
-        return activeColors[iconType] || '#6b7280';
-    } else {
-        // Inactive state colors (muted but colorful)
-        const inactiveColors: Record<string, string> = {
-            'package': '#60a5fa',           // Light Blue
-            'plus': '#4ade80',              // Light Green
-            'edit': '#60a5fa',              // Light Blue
-            'trash2': '#f87171',            // Light Red
-            'search': '#818cf8',            // Light Indigo
-            'filter': '#a78bfa',            // Light Purple
-            'dollar-sign': '#4ade80',        // Light Green
-            'trending-up': '#4ade80',       // Light Green
-            'alert-circle': '#fbbf24',       // Light Amber
-            'check-circle': '#4ade80',      // Light Green
-            'loader2': '#60a5fa',           // Light Blue
-            'eye': '#818cf8',               // Light Indigo
-            'eye-off': '#9ca3af',           // Light Gray
-            'save': '#4ade80',              // Light Green
-            'x': '#9ca3af',                 // Light Gray
-            'power': '#4ade80',             // Light Green
-            'power-off': '#fbbf24',         // Light Amber
-        };
-        return inactiveColors[iconType] || '#9ca3af';
-    }
+  if (active) {
+    // Active state colors (brighter)
+    const activeColors: Record<string, string> = {
+      'package': '#3b82f6',           // Blue
+      'plus': '#22c55e',              // Green
+      'edit': '#3b82f6',              // Blue
+      'trash2': '#ef4444',            // Red
+      'search': '#6366f1',            // Indigo
+      'filter': '#8b5cf6',            // Purple
+      'dollar-sign': '#16a34a',        // Green
+      'trending-up': '#22c55e',       // Green
+      'alert-circle': '#f59e0b',       // Amber
+      'check-circle': '#22c55e',      // Green
+      'loader2': '#3b82f6',           // Blue
+      'eye': '#6366f1',               // Indigo
+      'eye-off': '#6b7280',           // Gray
+      'save': '#22c55e',              // Green
+      'x': '#6b7280',                 // Gray
+      'power': '#22c55e',             // Green
+      'power-off': '#f59e0b',         // Amber
+      'download': '#3b82f6',          // Blue
+    };
+    return activeColors[iconType] || '#6b7280';
+  } else {
+    // Inactive state colors (muted but colorful)
+    const inactiveColors: Record<string, string> = {
+      'package': '#60a5fa',           // Light Blue
+      'plus': '#4ade80',              // Light Green
+      'edit': '#60a5fa',              // Light Blue
+      'trash2': '#f87171',            // Light Red
+      'search': '#818cf8',            // Light Indigo
+      'filter': '#a78bfa',            // Light Purple
+      'dollar-sign': '#4ade80',        // Light Green
+      'trending-up': '#4ade80',       // Light Green
+      'alert-circle': '#fbbf24',       // Light Amber
+      'check-circle': '#4ade80',      // Light Green
+      'loader2': '#60a5fa',           // Light Blue
+      'eye': '#818cf8',               // Light Indigo
+      'eye-off': '#9ca3af',           // Light Gray
+      'save': '#4ade80',              // Light Green
+      'x': '#9ca3af',                 // Light Gray
+      'power': '#4ade80',             // Light Green
+      'power-off': '#fbbf24',         // Light Amber
+      'download': '#60a5fa',          // Light Blue
+    };
+    return inactiveColors[iconType] || '#9ca3af';
+  }
 };
 
 // Icon styled components
@@ -217,7 +219,7 @@ const StatInfo = styled.div`
 
 const FiltersContainer = styled.div`
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: ${theme.spacing.md};
   margin-bottom: ${theme.spacing.lg};
   align-items: center;
@@ -365,7 +367,7 @@ const ItemsTable = styled.div`
 
 const TableHeader = styled.div<{ $isAccountant?: boolean }>`
   display: grid;
-  grid-template-columns: ${props => props.$isAccountant 
+  grid-template-columns: ${props => props.$isAccountant
     ? '3fr 1.2fr 1fr 1fr'  // Accountant: Item Name, Selling Price, Stock, Status
     : '2.5fr 1fr 0.9fr 1fr 1.2fr 1fr 1fr 1fr 1fr 100px'};  // Full: Item Name, Buying Price, Expense, Total Cost, Selling Price, Stock, Profit/Unit, Margin %, Status, Actions
   gap: ${theme.spacing.md};
@@ -377,9 +379,9 @@ const TableHeader = styled.div<{ $isAccountant?: boolean }>`
   color: ${TEXT_COLOR_DARK};
   
   @media (max-width: 1200px) {
-    grid-template-columns: ${props => props.$isAccountant 
-      ? '2.5fr 1.2fr 1fr 1fr'
-      : '2fr 0.9fr 0.8fr 0.9fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 90px'};
+    grid-template-columns: ${props => props.$isAccountant
+    ? '2.5fr 1.2fr 1fr 1fr'
+    : '2fr 0.9fr 0.8fr 0.9fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 90px'};
     gap: ${theme.spacing.sm};
     font-size: ${theme.typography.fontSizes.xs};
   }
@@ -387,7 +389,7 @@ const TableHeader = styled.div<{ $isAccountant?: boolean }>`
 
 const TableRow = styled.div<{ $isAccountant?: boolean }>`
   display: grid;
-  grid-template-columns: ${props => props.$isAccountant 
+  grid-template-columns: ${props => props.$isAccountant
     ? '3fr 1.2fr 1fr 1fr'  // Accountant: Item Name, Selling Price, Stock, Status
     : '2.5fr 1fr 0.9fr 1fr 1.2fr 1fr 1fr 1fr 1fr 100px'};  // Full: Item Name, Buying Price, Expense, Total Cost, Selling Price, Stock, Profit/Unit, Margin %, Status, Actions
   gap: ${theme.spacing.md};
@@ -405,9 +407,9 @@ const TableRow = styled.div<{ $isAccountant?: boolean }>`
   }
   
   @media (max-width: 1200px) {
-    grid-template-columns: ${props => props.$isAccountant 
-      ? '2.5fr 1.2fr 1fr 1fr'
-      : '2fr 0.9fr 0.8fr 0.9fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 90px'};
+    grid-template-columns: ${props => props.$isAccountant
+    ? '2.5fr 1.2fr 1fr 1fr'
+    : '2fr 0.9fr 0.8fr 0.9fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 90px'};
     gap: ${theme.spacing.sm};
     padding: ${theme.spacing.sm};
   }
@@ -632,7 +634,7 @@ export default function InventoryManagePage() {
         // Get the accountant's manager_id (Finance Admin)
         const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
         let managerId: number | null = null;
-        
+
         // Try to get managerId from storeUser first
         const managerIdStr = storeUser?.managerId;
         if (managerIdStr) {
@@ -643,32 +645,32 @@ export default function InventoryManagePage() {
             const currentUserRes = await apiClient.getCurrentUser();
             const currentUserData = currentUserRes?.data;
             if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
-              managerId = typeof currentUserData.manager_id === 'string' 
-                ? parseInt(currentUserData.manager_id, 10) 
+              managerId = typeof currentUserData.manager_id === 'string'
+                ? parseInt(currentUserData.manager_id, 10)
                 : Number(currentUserData.manager_id);
             }
           } catch (err) {
             console.warn('Failed to fetch current user profile for manager_id:', err);
           }
         }
-        
+
         if (managerId) {
           try {
             const financeAdminId = managerId;
-            
+
             // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
             const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
             const subordinates = Array.isArray(subordinatesRes?.data) ? (subordinatesRes.data as Subordinate[]) : [];
-            
+
             // Include the Finance Admin themselves and all their subordinates
             currentAccessibleUserIds = [financeAdminId, ...subordinates.map((sub) => {
               const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
               return subId;
             })];
-            
+
             // Store in state for use in filtering
             setAccessibleUserIds(currentAccessibleUserIds);
-            
+
             if (process.env.NODE_ENV === 'development') {
               console.log('Accountant - Accessible User IDs for Inventory (from Finance Admin):', {
                 accountantId: accountantId,
@@ -683,7 +685,7 @@ export default function InventoryManagePage() {
             // This prevents all items from vanishing if there's a temporary API issue
             currentAccessibleUserIds = [managerId];
             setAccessibleUserIds(currentAccessibleUserIds);
-            
+
             if (process.env.NODE_ENV === 'development') {
               console.log('Accountant - Using fallback (Finance Admin only):', {
                 accountantId: accountantId,
@@ -845,7 +847,7 @@ export default function InventoryManagePage() {
     const currentUserRole = user?.role?.toLowerCase();
     const isAdmin = currentUserRole === 'admin' || currentUserRole === 'super_admin';
     const isFinanceAdminRole = currentUserRole === 'finance_admin' || currentUserRole === 'finance_manager';
-    
+
     // Admins can edit any item
     if (isAdmin) {
       // No access check needed
@@ -931,7 +933,7 @@ export default function InventoryManagePage() {
     const currentUserRole = user?.role?.toLowerCase();
     const isAdmin = currentUserRole === 'admin' || currentUserRole === 'super_admin';
     const isFinanceAdminRole = currentUserRole === 'finance_admin' || currentUserRole === 'finance_manager';
-    
+
     // Admins can delete any item
     if (isAdmin) {
       // No access check needed
@@ -987,7 +989,7 @@ export default function InventoryManagePage() {
     const currentUserRole = user?.role?.toLowerCase();
     const isAdmin = currentUserRole === 'admin' || currentUserRole === 'super_admin';
     const isFinanceAdminRole = currentUserRole === 'finance_admin' || currentUserRole === 'finance_manager';
-    
+
     // Admins can activate/deactivate any item
     if (isAdmin) {
       // No access check needed
@@ -1038,9 +1040,70 @@ export default function InventoryManagePage() {
     }
   };
 
+  const handleExport = () => {
+    try {
+      if (filteredItems.length === 0) {
+        toast.error('No items to export');
+        return;
+      }
+
+      // Define columns to export
+      const headers = [
+        'Item Name',
+        'SKU',
+        'Category',
+        'Buying Price',
+        'Expense Amount',
+        'Total Cost',
+        'Selling Price',
+        'Quantity',
+        'Profit Per Unit',
+        'Profit Margin %',
+        'Status',
+        'Description'
+      ];
+
+      // Format data as CSV
+      const csvRows = filteredItems.map(item => [
+        `"${(item.item_name || '').replace(/"/g, '""')}"`,
+        `"${(item.sku || '').replace(/"/g, '""')}"`,
+        `"${(item.category || '').replace(/"/g, '""')}"`,
+        item.buying_price || 0,
+        item.expense_amount || 0,
+        item.total_cost || 0,
+        item.selling_price || 0,
+        item.quantity || 0,
+        item.profit_per_unit || 0,
+        item.profit_margin || 0,
+        item.is_active ? 'Active' : 'Inactive',
+        `"${(item.description || '').replace(/"/g, '""')}"`
+      ].join(','));
+
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `inventory_export_${date}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Inventory exported successfully');
+    } catch (err) {
+      console.error('Export failed:', err);
+      toast.error('Failed to export inventory');
+    }
+  };
+
   const filteredItems = items.filter((item) => {
     const matchesSearch = item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -1050,7 +1113,7 @@ export default function InventoryManagePage() {
   const userRole = user?.role?.toLowerCase() || '';
   const isAccountant = userRole === 'accountant';
   const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'manager', 'accountant'];
-  
+
   if (!user || !allowedRoles.includes(userRole)) {
     return null;
   }
@@ -1068,7 +1131,7 @@ export default function InventoryManagePage() {
                 {isAccountant ? 'Inventory Items' : 'Inventory Management'}
               </h1>
               <p>
-                {isAccountant 
+                {isAccountant
                   ? 'View inventory items, selling prices, and quantities (Read Only)'
                   : 'Manage inventory items, costs, and pricing (Finance Admin Only)'
                 }
@@ -1171,6 +1234,16 @@ export default function InventoryManagePage() {
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </StyledSelect>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}
+          >
+            <ButtonIcon $iconType="download" $size={16} $active={true}>
+              <Download size={16} />
+            </ButtonIcon>
+            Export
+          </Button>
         </FiltersContainer>
 
         {loading ? (
@@ -1231,22 +1304,22 @@ export default function InventoryManagePage() {
                   </TableCell>
                   {!isAccountant && (
                     <TableCell>
-                      {item.buying_price !== undefined && item.buying_price !== null 
-                        ? `$${Number(item.buying_price).toFixed(2)}` 
+                      {item.buying_price !== undefined && item.buying_price !== null
+                        ? `$${Number(item.buying_price).toFixed(2)}`
                         : 'N/A'}
                     </TableCell>
                   )}
                   {!isAccountant && (
                     <TableCell>
-                      {item.expense_amount !== undefined && item.expense_amount !== null 
-                        ? `$${Number(item.expense_amount).toFixed(2)}` 
+                      {item.expense_amount !== undefined && item.expense_amount !== null
+                        ? `$${Number(item.expense_amount).toFixed(2)}`
                         : '$0.00'}
                     </TableCell>
                   )}
                   {!isAccountant && (
                     <TableCell>
-                      {item.total_cost !== undefined && item.total_cost !== null 
-                        ? `$${Number(item.total_cost).toFixed(2)}` 
+                      {item.total_cost !== undefined && item.total_cost !== null
+                        ? `$${Number(item.total_cost).toFixed(2)}`
                         : 'N/A'}
                     </TableCell>
                   )}
@@ -1259,14 +1332,14 @@ export default function InventoryManagePage() {
                   {!isAccountant && (
                     <TableCell>
                       {item.profit_per_unit !== undefined && item.profit_per_unit !== null
-                        ? `$${Number(item.profit_per_unit).toFixed(2)}` 
+                        ? `$${Number(item.profit_per_unit).toFixed(2)}`
                         : 'N/A'}
                     </TableCell>
                   )}
                   {!isAccountant && (
                     <TableCell>
                       {item.profit_margin !== undefined && item.profit_margin !== null
-                        ? `${Number(item.profit_margin).toFixed(1)}%` 
+                        ? `${Number(item.profit_margin).toFixed(1)}%`
                         : 'N/A'}
                     </TableCell>
                   )}
@@ -1283,7 +1356,7 @@ export default function InventoryManagePage() {
                             <Edit size={16} />
                           </ActionIcon>
                         </ActionButton>
-                        <ActionButton 
+                        <ActionButton
                           onClick={() => {
                             setItemToDelete(item);
                             setShowDeleteModal(true);
@@ -1298,7 +1371,7 @@ export default function InventoryManagePage() {
                           </ActionIcon>
                         </ActionButton>
                         {item.is_active ? (
-                          <ActionButton 
+                          <ActionButton
                             onClick={() => {
                               setItemToActivateDeactivate(item);
                               setIsActivating(false);
@@ -1313,7 +1386,7 @@ export default function InventoryManagePage() {
                             </ActionIcon>
                           </ActionButton>
                         ) : (
-                          <ActionButton 
+                          <ActionButton
                             onClick={() => {
                               setItemToActivateDeactivate(item);
                               setIsActivating(true);
@@ -1479,9 +1552,9 @@ export default function InventoryManagePage() {
                 </ActionButton>
               </ModalHeader>
 
-              <div style={{ 
-                padding: theme.spacing.md, 
-                background: 'rgba(239, 68, 68, 0.1)', 
+              <div style={{
+                padding: theme.spacing.md,
+                background: 'rgba(239, 68, 68, 0.1)',
                 border: '1px solid rgba(239, 68, 68, 0.3)',
                 borderRadius: theme.borderRadius.md,
                 marginBottom: theme.spacing.lg
@@ -1521,8 +1594,8 @@ export default function InventoryManagePage() {
               </FormGroup>
 
               <ModalActions>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setShowDeleteModal(false);
                     setItemToDelete(null);
@@ -1533,7 +1606,7 @@ export default function InventoryManagePage() {
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   variant="destructive"
                   onClick={handleDelete}
                   disabled={!deletePassword.trim() || deleting}
@@ -1582,9 +1655,9 @@ export default function InventoryManagePage() {
                 </ActionButton>
               </ModalHeader>
 
-              <div style={{ 
-                padding: theme.spacing.md, 
-                background: isActivating ? 'rgba(16, 185, 129, 0.1)' : 'rgba(251, 191, 36, 0.1)', 
+              <div style={{
+                padding: theme.spacing.md,
+                background: isActivating ? 'rgba(16, 185, 129, 0.1)' : 'rgba(251, 191, 36, 0.1)',
                 border: isActivating ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(251, 191, 36, 0.3)',
                 borderRadius: theme.borderRadius.md,
                 marginBottom: theme.spacing.lg
@@ -1625,8 +1698,8 @@ export default function InventoryManagePage() {
               </FormGroup>
 
               <ModalActions>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setShowActivateDeactivateModal(false);
                     setItemToActivateDeactivate(null);
@@ -1637,7 +1710,7 @@ export default function InventoryManagePage() {
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   variant={isActivating ? 'default' : 'destructive'}
                   onClick={handleActivateDeactivate}
                   disabled={!activateDeactivatePassword.trim() || activatingDeactivating}
