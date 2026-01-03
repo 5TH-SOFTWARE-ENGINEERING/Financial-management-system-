@@ -15,6 +15,8 @@ import useUserStore from '@/store/userStore';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -410,7 +412,7 @@ export default function SalesPage() {
   const [notes, setNotes] = useState('');
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [showReceipt, setShowReceipt] = useState(false);
-  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+  const [completedSales, setCompletedSales] = useState<ReceiptData[]>([]);
   const [processing, setProcessing] = useState(false);
 
   const loadItems = useCallback(async () => {
@@ -475,34 +477,18 @@ export default function SalesPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, searchTerm]); // Remove accessibleUserIds dependency - backend handles role-based filtering
+  }, [searchTerm]); // Removed user dependency to avoid unnecessary reloads
 
   useEffect(() => {
-    if (!user) {
-      router.push('/dashboard');
-      return;
-    }
-
-    // Allow Admin, Finance Admin, Accountant, and Employee to access sales page
-    const userRole = user?.role?.toLowerCase() || '';
-    const allowedRoles = ['admin', 'super_admin', 'finance_manager', 'finance_admin', 'accountant', 'employee'];
-
-    if (!allowedRoles.includes(userRole)) {
-      router.push('/dashboard');
-      return;
-    }
-
-    // Backend handles role-based filtering, so we just need to load items
-    // Items will be filtered by backend based on user's role
-  }, [user, router]);
+    // Initial load
+    loadItems();
+  }, [loadItems]);
 
   // Debounce search to avoid too many API calls
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load items when user or search term changes
   useEffect(() => {
-    if (!user) return;
-
     // Clear existing timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -518,7 +504,7 @@ export default function SalesPage() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [user, searchTerm, loadItems]);
+  }, [searchTerm, loadItems]);
 
 
   const handleAddToSale = () => {
@@ -596,7 +582,6 @@ export default function SalesPage() {
 
     setProcessing(true);
     try {
-      // Process each sale item sequentially to avoid race conditions
       const sales: ReceiptData[] = [];
       for (const item of saleItems) {
         try {
@@ -607,8 +592,23 @@ export default function SalesPage() {
             customer_email: customerEmail || undefined,
             notes: notes || undefined,
           });
+
           const saleData = (saleResponse?.data as unknown) ?? (saleResponse as unknown);
-          sales.push((saleData as ReceiptData) || {});
+          const saleObj = (saleData as ReceiptData) || {};
+
+          // Try to get a full receipt for each sale if possible
+          if (saleObj.id) {
+            try {
+              const receiptResponse = await apiClient.getReceipt(saleObj.id);
+              const receipt = (receiptResponse?.data as unknown) ?? (receiptResponse as unknown);
+              sales.push(receipt as ReceiptData);
+            } catch (err) {
+              console.warn(`Failed to load receipt for sale ${saleObj.id}:`, err);
+              sales.push(saleObj);
+            }
+          } else {
+            sales.push(saleObj);
+          }
         } catch (err: unknown) {
           const errorMessage =
             (typeof err === 'object' && err !== null && 'response' in err
@@ -616,23 +616,13 @@ export default function SalesPage() {
               : undefined) ||
             (err instanceof Error ? err.message : `Failed to create sale for ${item.item_name}`);
           toast.error(errorMessage);
-          throw err; // Stop processing if one sale fails
+          throw err;
         }
       }
 
-      // Get receipt for the first sale
-      if (sales.length > 0 && sales[0]?.id) {
-        try {
-          const receiptResponse = await apiClient.getReceipt(sales[0].id as number);
-          const receipt = (receiptResponse?.data as unknown) ?? (receiptResponse as unknown);
-          setReceiptData(receipt as ReceiptData);
-          setShowReceipt(true);
-        } catch (err: unknown) {
-          console.warn('Failed to load receipt, but sale was successful:', err);
-          // Sale was successful, just show success message
-          toast.success('Sale completed successfully!');
-        }
-      }
+      setCompletedSales(sales);
+      setShowReceipt(true);
+      toast.success('Sale completed successfully!');
 
       // Reset form
       setSaleItems([]);
@@ -644,17 +634,7 @@ export default function SalesPage() {
 
       // Reload items to update stock
       await loadItems();
-
-      if (!showReceipt) {
-        toast.success('Sale completed successfully!');
-      }
     } catch (err: unknown) {
-      const errorMessage =
-        (typeof err === 'object' && err !== null && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-          : undefined) ||
-        (err instanceof Error ? err.message : 'Failed to complete sale');
-      toast.error(errorMessage);
       console.error('Error completing sale:', err);
     } finally {
       setProcessing(false);
@@ -683,307 +663,318 @@ export default function SalesPage() {
 
   return (
     <Layout>
-      <PageContainer>
-        <HeaderContainer>
-          <HeaderContent>
-            <HeaderText>
-              <h1>
-                <ShoppingCart size={32} style={{ marginRight: theme.spacing.md, display: 'inline' }} />
-                Sales
-              </h1>
-              <p>Sell items and generate receipts</p>
-            </HeaderText>
-          </HeaderContent>
-        </HeaderContainer>
+      <ComponentGate componentId={ComponentId.INVENTORY_SALES}>
+        <PageContainer>
+          <HeaderContainer>
+            <HeaderContent>
+              <HeaderText>
+                <h1>
+                  <ShoppingCart size={32} style={{ marginRight: theme.spacing.md, display: 'inline' }} />
+                  Sales
+                </h1>
+                <p>Sell items and generate receipts</p>
+              </HeaderText>
+            </HeaderContent>
+          </HeaderContainer>
 
-        <TwoColumnLayout>
-          <Card>
-            <CardTitle>Available Items</CardTitle>
-            <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
-              <StyledInput
-                type="text"
-                placeholder="Search items by name or SKU..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <Button
-                variant="outline"
-                onClick={() => loadItems()}
-                disabled={loading}
-                title="Refresh items"
-                style={{ minWidth: 'auto', padding: `${theme.spacing.sm} ${theme.spacing.md}` }}
-              >
-                {loading ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <span style={{ fontSize: theme.typography.fontSizes.sm }}>Refresh</span>
-                )}
-              </Button>
-            </div>
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: theme.spacing.xxl }}>
-                <Loader2 size={32} className="animate-spin" style={{ color: PRIMARY_COLOR, margin: '0 auto' }} />
+          <TwoColumnLayout>
+            <Card>
+              <CardTitle>Available Items</CardTitle>
+              <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+                <StyledInput
+                  type="text"
+                  placeholder="Search items by name or SKU..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => loadItems()}
+                  disabled={loading}
+                  title="Refresh items"
+                  style={{ minWidth: 'auto', padding: `${theme.spacing.sm} ${theme.spacing.md}` }}
+                >
+                  {loading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <span style={{ fontSize: theme.typography.fontSizes.sm }}>Refresh</span>
+                  )}
+                </Button>
               </div>
-            ) : (
-              <ItemsGrid>
-                {filteredItems.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: theme.spacing.xxl, color: TEXT_COLOR_MUTED }}>
-                    <Package size={48} style={{ margin: '0 auto', opacity: 0.5, marginBottom: theme.spacing.md }} />
-                    <p>No items available</p>
-                  </div>
-                ) : (
-                  filteredItems.map((item) => (
-                    <ItemCard
-                      key={item.id}
-                      selected={selectedItem?.id === item.id}
-                      onClick={() => {
-                        const itemQty = Number(item.quantity || 0);
-                        if (itemQty > 0) {
-                          setSelectedItem({
-                            ...item,
-                            quantity: itemQty,
-                            selling_price: Number(item.selling_price || 0),
-                          });
-                          setQuantity('1');
-                        } else {
-                          toast.error('This item is out of stock');
-                        }
-                      }}
-                      style={{
-                        opacity: Number(item.quantity || 0) === 0 ? 0.6 : 1,
-                        cursor: Number(item.quantity || 0) === 0 ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      <ItemInfoRow>
-                        <ItemName>{item.item_name}</ItemName>
-                        <ItemPrice>
-                          <span style={{ color: '#dc2626' }}>selling price:</span> ${Number(item.selling_price).toFixed(2)}
-                        </ItemPrice>
-                        <ItemStock>
-                          <span>Stock:</span>
-                          <Badge $variant={Number(item.quantity || 0) < 10 ? 'danger' : Number(item.quantity || 0) < 50 ? 'warning' : 'success'}>
-                            {Number(item.quantity || 0)}
-                          </Badge>
-                        </ItemStock>
-                      </ItemInfoRow>
-                      {Number(item.quantity || 0) === 0 && (
-                        <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: '#dc2626' }}>
-                          Out of Stock
-                        </div>
-                      )}
-                      {item.category && (
-                        <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
-                          {item.category}
-                        </div>
-                      )}
-                      {item.sku && (
-                        <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
-                          SKU: {item.sku}
-                        </div>
-                      )}
-                    </ItemCard>
-                  ))
-                )}
-              </ItemsGrid>
-            )}
-          </Card>
-
-          <Card>
-            <CardTitle>Current Sale</CardTitle>
-            {selectedItem && (
-              <SaleForm>
-                <FormGroup>
-                  <StyledLabel>Selected Item: {selectedItem.item_name}</StyledLabel>
-                  <HelpText>
-                    Price: ${Number(selectedItem.selling_price).toFixed(2)} | Available: {selectedItem.quantity}
-                  </HelpText>
-                </FormGroup>
-                <FormRow>
-                  <FormGroup>
-                    <StyledLabel htmlFor="quantity">Quantity</StyledLabel>
-                    <StyledInput
-                      id="quantity"
-                      type="number"
-                      min="1"
-                      max={selectedItem.quantity}
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                    />
-                  </FormGroup>
-                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <Button onClick={handleAddToSale} style={{ width: '100%' }}>
-                      <Plus size={16} style={{ marginRight: theme.spacing.sm }} />
-                      Add to Sale
-                    </Button>
-                  </div>
-                </FormRow>
-              </SaleForm>
-            )}
-
-            {saleItems.length > 0 && (
-              <>
-                <FormGroup>
-                  <StyledLabel>Sale Items</StyledLabel>
-                  <div style={{ marginTop: theme.spacing.sm }}>
-                    {saleItems.map((item) => (
-                      <div
-                        key={item.item_id}
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: theme.spacing.xxl }}>
+                  <Loader2 size={32} className="animate-spin" style={{ color: PRIMARY_COLOR, margin: '0 auto' }} />
+                </div>
+              ) : (
+                <ItemsGrid>
+                  {filteredItems.length === 0 ? (
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: theme.spacing.xxl, color: TEXT_COLOR_MUTED }}>
+                      <Package size={48} style={{ margin: '0 auto', opacity: 0.5, marginBottom: theme.spacing.md }} />
+                      <p>No items available</p>
+                    </div>
+                  ) : (
+                    filteredItems.map((item) => (
+                      <ItemCard
+                        key={item.id}
+                        selected={selectedItem?.id === item.id}
+                        onClick={() => {
+                          const itemQty = Number(item.quantity || 0);
+                          if (itemQty > 0) {
+                            setSelectedItem({
+                              ...item,
+                              quantity: itemQty,
+                              selling_price: Number(item.selling_price || 0),
+                            });
+                            setQuantity('1');
+                          } else {
+                            toast.error('This item is out of stock');
+                          }
+                        }}
                         style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: theme.spacing.sm,
-                          background: theme.colors.backgroundSecondary,
-                          borderRadius: theme.borderRadius.md,
-                          marginBottom: theme.spacing.xs,
+                          opacity: Number(item.quantity || 0) === 0 ? 0.6 : 1,
+                          cursor: Number(item.quantity || 0) === 0 ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>{item.item_name}</div>
+                        <ItemInfoRow>
+                          <ItemName>{item.item_name}</ItemName>
+                          <ItemPrice>
+                            <span style={{ color: '#dc2626' }}>selling price:</span> ${Number(item.selling_price).toFixed(2)}
+                          </ItemPrice>
+                          <ItemStock>
+                            <span>Stock:</span>
+                            <Badge $variant={Number(item.quantity || 0) < 10 ? 'danger' : Number(item.quantity || 0) < 50 ? 'warning' : 'success'}>
+                              {Number(item.quantity || 0)}
+                            </Badge>
+                          </ItemStock>
+                        </ItemInfoRow>
+                        {Number(item.quantity || 0) === 0 && (
+                          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: '#dc2626' }}>
+                            Out of Stock
+                          </div>
+                        )}
+                        {item.category && (
+                          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                            {item.category}
+                          </div>
+                        )}
+                        {item.sku && (
+                          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                            SKU: {item.sku}
+                          </div>
+                        )}
+                      </ItemCard>
+                    ))
+                  )}
+                </ItemsGrid>
+              )}
+            </Card>
+
+            <Card>
+              <CardTitle>Current Sale</CardTitle>
+              {selectedItem && (
+                <SaleForm>
+                  <FormGroup>
+                    <StyledLabel>Selected Item: {selectedItem.item_name}</StyledLabel>
+                    <HelpText>
+                      Price: ${Number(selectedItem.selling_price).toFixed(2)} | Available: {selectedItem.quantity}
+                    </HelpText>
+                  </FormGroup>
+                  <FormRow>
+                    <FormGroup>
+                      <StyledLabel htmlFor="quantity">Quantity</StyledLabel>
+                      <StyledInput
+                        id="quantity"
+                        type="number"
+                        min="1"
+                        max={selectedItem.quantity}
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                      />
+                    </FormGroup>
+                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                      <Button onClick={handleAddToSale} style={{ width: '100%' }}>
+                        <Plus size={16} style={{ marginRight: theme.spacing.sm }} />
+                        Add to Sale
+                      </Button>
+                    </div>
+                  </FormRow>
+                </SaleForm>
+              )}
+
+              {saleItems.length > 0 && (
+                <>
+                  <FormGroup>
+                    <StyledLabel>Sale Items</StyledLabel>
+                    <div style={{ marginTop: theme.spacing.sm }}>
+                      {saleItems.map((item) => (
+                        <div
+                          key={item.item_id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: theme.spacing.sm,
+                            background: theme.colors.backgroundSecondary,
+                            borderRadius: theme.borderRadius.md,
+                            marginBottom: theme.spacing.xs,
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>{item.item_name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                              <StyledInput
+                                type="number"
+                                min="1"
+                                max={Number(items.find(i => i.id === item.item_id)?.quantity || item.quantity || 0)}
+                                value={item.quantity}
+                                onChange={(e) => handleUpdateQuantity(item.item_id, parseInt(e.target.value) || 1)}
+                                style={{ width: '80px', padding: theme.spacing.xs }}
+                              />
+                              <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                                × ${Number(item.selling_price).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                            <StyledInput
-                              type="number"
-                              min="1"
-                              max={Number(items.find(i => i.id === item.item_id)?.quantity || item.quantity || 0)}
-                              value={item.quantity}
-                              onChange={(e) => handleUpdateQuantity(item.item_id, parseInt(e.target.value) || 1)}
-                              style={{ width: '80px', padding: theme.spacing.xs }}
-                            />
-                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                              × ${Number(item.selling_price).toFixed(2)}
-                            </span>
+                            <div style={{ fontWeight: 'bold', minWidth: '80px', textAlign: 'right' }}>
+                              ${item.total.toFixed(2)}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRemoveFromSale(item.item_id)}
+                              title="Remove item"
+                            >
+                              <X size={16} />
+                            </Button>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                          <div style={{ fontWeight: 'bold', minWidth: '80px', textAlign: 'right' }}>
-                            ${item.total.toFixed(2)}
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveFromSale(item.item_id)}
-                            title="Remove item"
-                          >
-                            <X size={16} />
-                          </Button>
+                      ))}
+                    </div>
+                  </FormGroup>
+
+                  <SummaryCard>
+                    <SummaryRow>
+                      <span>Subtotal:</span>
+                      <span>${totalSale.toFixed(2)}</span>
+                    </SummaryRow>
+                    <SummaryRow>
+                      <span>Total:</span>
+                      <span style={{ color: PRIMARY_COLOR }}>${totalSale.toFixed(2)}</span>
+                    </SummaryRow>
+                  </SummaryCard>
+
+                  <CustomerInfoSection>
+                    <FormGroup>
+                      <StyledLabel htmlFor="customer_name">Customer Name (Optional)</StyledLabel>
+                      <StyledInput
+                        id="customer_name"
+                        type="text"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="Enter customer name"
+                      />
+                    </FormGroup>
+                    <FormGroup>
+                      <StyledLabel htmlFor="customer_email">Customer Email (Optional)</StyledLabel>
+                      <StyledInput
+                        id="customer_email"
+                        type="email"
+                        value={customerEmail}
+                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        placeholder="Enter customer email"
+                      />
+                    </FormGroup>
+                    <FormGroup>
+                      <StyledLabel htmlFor="notes">Notes (Optional)</StyledLabel>
+                      <StyledTextarea
+                        id="notes"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Add any additional notes about this sale..."
+                      />
+                    </FormGroup>
+                    <CompleteSaleButton
+                      onClick={handleCompleteSale}
+                      disabled={processing}
+                    >
+                      {processing ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Receipt size={16} />
+                          Complete Sale
+                        </>
+                      )}
+                    </CompleteSaleButton>
+                  </CustomerInfoSection>
+                </>
+              )}
+            </Card>
+          </TwoColumnLayout>
+
+          {showReceipt && completedSales.length > 0 && (
+            <ReceiptModal onClick={() => setShowReceipt(false)}>
+              <ReceiptContent onClick={(e) => e.stopPropagation()}>
+                <div style={{ textAlign: 'center', marginBottom: theme.spacing.lg }}>
+                  <h2 style={{ margin: 0, marginBottom: theme.spacing.sm }}>Receipt</h2>
+                  {completedSales[0]?.receipt_number && (
+                    <p style={{ color: TEXT_COLOR_MUTED, margin: 0 }}>#{completedSales[0].receipt_number}</p>
+                  )}
+                </div>
+                <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: theme.spacing.md }}>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: theme.spacing.md }}>
+                    {completedSales.map((sale, idx) => (
+                      <div key={idx} style={{ marginBottom: theme.spacing.md, paddingBottom: theme.spacing.sm, borderBottom: idx < completedSales.length - 1 ? `1px dashed ${theme.colors.border}` : 'none' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>
+                          {sale.item_name || 'Sale Item'}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                          <span>
+                            Quantity: {sale.quantity_sold || 0} × ${Number(sale.selling_price || 0).toFixed(2)}
+                          </span>
+                          <span style={{ fontWeight: 'bold', color: TEXT_COLOR_DARK }}>
+                            ${Number(sale.total_sale || 0).toFixed(2)}
+                          </span>
                         </div>
                       </div>
                     ))}
                   </div>
-                </FormGroup>
 
-                <SummaryCard>
-                  <SummaryRow>
-                    <span>Subtotal:</span>
-                    <span>${totalSale.toFixed(2)}</span>
-                  </SummaryRow>
-                  <SummaryRow>
-                    <span>Total:</span>
-                    <span style={{ color: PRIMARY_COLOR }}>${totalSale.toFixed(2)}</span>
-                  </SummaryRow>
-                </SummaryCard>
-
-                <CustomerInfoSection>
-                  <FormGroup>
-                    <StyledLabel htmlFor="customer_name">Customer Name (Optional)</StyledLabel>
-                    <StyledInput
-                      id="customer_name"
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Enter customer name"
-                    />
-                  </FormGroup>
-                  <FormGroup>
-                    <StyledLabel htmlFor="customer_email">Customer Email (Optional)</StyledLabel>
-                    <StyledInput
-                      id="customer_email"
-                      type="email"
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                      placeholder="Enter customer email"
-                    />
-                  </FormGroup>
-                  <FormGroup>
-                    <StyledLabel htmlFor="notes">Notes (Optional)</StyledLabel>
-                    <StyledTextarea
-                      id="notes"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Add any additional notes about this sale..."
-                    />
-                  </FormGroup>
-                  <CompleteSaleButton
-                    onClick={handleCompleteSale}
-                    disabled={processing}
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Receipt size={16} />
-                        Complete Sale
-                      </>
-                    )}
-                  </CompleteSaleButton>
-                </CustomerInfoSection>
-              </>
-            )}
-          </Card>
-        </TwoColumnLayout>
-
-        {/* Receipt Modal */}
-        {showReceipt && receiptData && (
-          <ReceiptModal onClick={() => setShowReceipt(false)}>
-            <ReceiptContent onClick={(e) => e.stopPropagation()}>
-              <div style={{ textAlign: 'center', marginBottom: theme.spacing.lg }}>
-                <h2 style={{ margin: 0, marginBottom: theme.spacing.sm }}>Receipt</h2>
-                <p style={{ color: TEXT_COLOR_MUTED, margin: 0 }}>#{receiptData.receipt_number}</p>
-              </div>
-              <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: theme.spacing.md }}>
-                <div style={{ marginBottom: theme.spacing.md }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>
-                    {receiptData.item_name || 'Sale Items'}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: theme.typography.fontSizes.lg, paddingTop: theme.spacing.md, borderTop: `2px solid ${theme.colors.border}` }}>
+                    <span>Grand Total:</span>
+                    <span style={{ color: PRIMARY_COLOR }}>
+                      ${completedSales.reduce((sum, s) => sum + Number(s.total_sale || 0), 0).toFixed(2)}
+                    </span>
                   </div>
-                  <div style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                    Quantity: {receiptData.quantity_sold || 0} × ${Number(receiptData.selling_price || 0).toFixed(2)}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: theme.typography.fontSizes.lg, paddingTop: theme.spacing.md, borderTop: `1px solid ${theme.colors.border}` }}>
-                  <span>Total:</span>
-                  <span style={{ color: PRIMARY_COLOR }}>${Number(receiptData.total_sale || 0).toFixed(2)}</span>
-                </div>
-                {receiptData.customer_name && (
+
+                  {completedSales[0]?.customer_name && (
+                    <div style={{ marginTop: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                      Customer: {completedSales[0].customer_name}
+                    </div>
+                  )}
                   <div style={{ marginTop: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                    Customer: {receiptData.customer_name}
+                    Date: {completedSales[0]?.created_at ? new Date(completedSales[0].created_at).toLocaleString() : new Date().toLocaleString()}
                   </div>
-                )}
-                {receiptData.customer_email && (
-                  <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                    Email: {receiptData.customer_email}
-                  </div>
-                )}
-                <div style={{ marginTop: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                  Date: {receiptData.created_at ? new Date(receiptData.created_at).toLocaleString() : new Date().toLocaleString()}
                 </div>
-              </div>
-              <div style={{ display: 'flex', gap: theme.spacing.md, marginTop: theme.spacing.lg, justifyContent: 'space-between' }}>
-                <Button variant="outline" onClick={() => setShowReceipt(false)} style={{ flex: 1 }}>
-                  Close
-                </Button>
-                <Button onClick={() => window.print()} style={{ flex: 1 }}>
-                  <Printer size={16} style={{ marginRight: theme.spacing.sm }} />
-                  Print
-                </Button>
-              </div>
-            </ReceiptContent>
-          </ReceiptModal>
-        )}
-      </PageContainer>
+                <div style={{ display: 'flex', gap: theme.spacing.md, marginTop: theme.spacing.lg, justifyContent: 'space-between' }}>
+                  <Button variant="outline" onClick={() => setShowReceipt(false)} style={{ flex: 1 }}>
+                    Close
+                  </Button>
+                  <Button onClick={() => window.print()} style={{ flex: 1 }}>
+                    <Printer size={16} style={{ marginRight: theme.spacing.sm }} />
+                    Print
+                  </Button>
+                </div>
+              </ReceiptContent>
+            </ReceiptModal>
+          )}
+        </PageContainer>
+      </ComponentGate>
     </Layout>
   );
 }

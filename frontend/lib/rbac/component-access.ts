@@ -131,12 +131,13 @@ export enum ComponentId {
     SIDEBAR_PROJECT = 'sidebar.project',
     SIDEBAR_INVENTORY = 'sidebar.inventory',
     SIDEBAR_SALES = 'sidebar.sales',
-
-    // NEW ADMINISTRATION SECTION SIDEBAR IDs
     SIDEBAR_FINANCE_ADMINS = 'sidebar.finance_admins',
     SIDEBAR_ACCOUNTANTS = 'sidebar.accountants',
     SIDEBAR_EMPLOYEES = 'sidebar.employees',
     SIDEBAR_AUDIT_LOGS = 'sidebar.audit_logs',
+
+    // Inventory Sales components
+    INVENTORY_SALES = 'inventory.sales',
 }
 
 /**
@@ -229,13 +230,13 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_FORECAST,
         ComponentId.SIDEBAR_SCENARIO,
         ComponentId.SIDEBAR_VARIANCE,
-        ComponentId.SIDEBAR_BUDGETS,
         ComponentId.SIDEBAR_DEPARTMENT,
         ComponentId.SIDEBAR_PROJECT,
         ComponentId.SIDEBAR_FINANCE_ADMINS,
         ComponentId.SIDEBAR_ACCOUNTANTS,
         ComponentId.SIDEBAR_EMPLOYEES,
         ComponentId.SIDEBAR_AUDIT_LOGS,
+        ComponentId.INVENTORY_SALES,
     ],
 
     [UserType.FINANCE_ADMIN]: [
@@ -245,7 +246,6 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_DASHBOARD,
         ComponentId.SIDEBAR_PROFILE,
         ComponentId.SIDEBAR_SETTINGS,
-
         ComponentId.USER_LIST,
         ComponentId.USER_CREATE,
         ComponentId.USER_EDIT,
@@ -320,6 +320,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_ACCOUNTANTS,
         ComponentId.SIDEBAR_EMPLOYEES,
         ComponentId.SIDEBAR_AUDIT_LOGS,
+        ComponentId.INVENTORY_SALES,
     ],
 
     [UserType.ACCOUNTANT]: [
@@ -351,6 +352,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_FORECAST,
         ComponentId.SIDEBAR_INVENTORY,
         ComponentId.SIDEBAR_SALES,
+        ComponentId.INVENTORY_SALES,
     ],
 
     [UserType.EMPLOYEE]: [
@@ -371,6 +373,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_REVENUE,
         ComponentId.SIDEBAR_EXPENSE,
         ComponentId.SIDEBAR_FORECAST,
+        ComponentId.INVENTORY_SALES,
     ],
 };
 
