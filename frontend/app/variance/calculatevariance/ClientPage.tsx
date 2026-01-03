@@ -11,6 +11,8 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -340,7 +342,7 @@ const CalculateVariancePage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.budget_id || !formData.period_start || !formData.period_end) {
       toast.error('Please fill in all fields');
       return;
@@ -394,161 +396,163 @@ const CalculateVariancePage: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <BackLink href="/variance">
-            <ArrowLeft size={16} />
-            Back to Variance Analysis
-          </BackLink>
+        <ComponentGate componentId={ComponentId.VARIANCE_CALCULATE}>
+          <ContentContainer>
+            <BackLink href="/variance">
+              <ArrowLeft size={16} />
+              Back to Variance Analysis
+            </BackLink>
 
-          <HeaderContainer>
-            <h1>
-              <Calculator size={36} />
-              Calculate Variance
-            </h1>
-            <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
-              Compare budgeted amounts with actual revenue and expenses for a specific period
-            </p>
-          </HeaderContainer>
-
-          <form onSubmit={handleSubmit}>
-            <FormCard>
-              <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
-                Select Budget and Period
-              </h2>
-
-              <FormGroup>
-                <label>Budget </label>
-                <StyledSelect
-                  value={formData.budget_id}
-                  onChange={(e) => setFormData({ ...formData, budget_id: e.target.value })}
-                  required
-                >
-                  <option value="">Select a budget...</option>
-                  {budgets.map((budget) => (
-                    <option key={budget.id} value={budget.id}>
-                      {budget.name} ({budget.status})
-                    </option>
-                  ))}
-                </StyledSelect>
-              </FormGroup>
-
-              <TwoColumnGrid>
-                <FormGroup>
-                  <label>Period Start Date </label>
-                  <StyledInput
-                    type="date"
-                    value={formData.period_start}
-                    onChange={(e) => setFormData({ ...formData, period_start: e.target.value })}
-                    required
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <label>Period End Date </label>
-                  <StyledInput
-                    type="date"
-                    value={formData.period_end}
-                    onChange={(e) => setFormData({ ...formData, period_end: e.target.value })}
-                    required
-                  />
-                </FormGroup>
-              </TwoColumnGrid>
-
-              <ActionButtons>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.back()}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={calculating}
-                >
-                  <Calculator size={16} />
-                  {calculating ? 'Calculating...' : 'Calculate Variance'}
-                </Button>
-              </ActionButtons>
-            </FormCard>
-          </form>
-
-          {varianceResult && (
-            <ResultCard>
-              <h2 style={{ marginBottom: theme.spacing.md, color: TEXT_COLOR_DARK }}>
-                Variance Results
-              </h2>
-              <p style={{ color: TEXT_COLOR_MUTED, fontSize: theme.typography.fontSizes.sm, marginBottom: theme.spacing.md }}>
-                Period: {new Date(varianceResult.period_start).toLocaleDateString()} - {new Date(varianceResult.period_end).toLocaleDateString()}
+            <HeaderContainer>
+              <h1>
+                <Calculator size={36} />
+                Calculate Variance
+              </h1>
+              <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
+                Compare budgeted amounts with actual revenue and expenses for a specific period
               </p>
+            </HeaderContainer>
 
-              <ResultGrid>
-                <ResultItem>
-                  <div className="label">Budgeted Revenue</div>
-                  <div className="value">{formatCurrency(varianceResult.budgeted_revenue)}</div>
-                </ResultItem>
-                <ResultItem>
-                  <div className="label">Actual Revenue</div>
-                  <div className="value">{formatCurrency(varianceResult.actual_revenue)}</div>
-                  <div className={`variance ${varianceResult.revenue_variance >= 0 ? 'positive' : 'negative'}`}>
-                    {formatCurrency(varianceResult.revenue_variance)} ({formatPercent(varianceResult.revenue_variance_percent)})
-                  </div>
-                </ResultItem>
-                <ResultItem>
-                  <div className="label">Revenue Variance</div>
-                  <div className={`value ${varianceResult.revenue_variance >= 0 ? 'positive' : 'negative'}`}>
-                    {formatCurrency(varianceResult.revenue_variance)}
-                  </div>
-                  <div className="variance">
-                    {formatPercent(varianceResult.revenue_variance_percent)}
-                  </div>
-                </ResultItem>
+            <form onSubmit={handleSubmit}>
+              <FormCard>
+                <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
+                  Select Budget and Period
+                </h2>
 
-                <ResultItem>
-                  <div className="label">Budgeted Expenses</div>
-                  <div className="value">{formatCurrency(varianceResult.budgeted_expenses)}</div>
-                </ResultItem>
-                <ResultItem>
-                  <div className="label">Actual Expenses</div>
-                  <div className="value">{formatCurrency(varianceResult.actual_expenses)}</div>
-                  <div className={`variance ${varianceResult.expense_variance <= 0 ? 'positive' : 'negative'}`}>
-                    {formatCurrency(varianceResult.expense_variance)} ({formatPercent(varianceResult.expense_variance_percent)})
-                  </div>
-                </ResultItem>
-                <ResultItem>
-                  <div className="label">Expense Variance</div>
-                  <div className={`value ${varianceResult.expense_variance <= 0 ? 'positive' : 'negative'}`}>
-                    {formatCurrency(varianceResult.expense_variance)}
-                  </div>
-                  <div className="variance">
-                    {formatPercent(varianceResult.expense_variance_percent)}
-                  </div>
-                </ResultItem>
+                <FormGroup>
+                  <label>Budget </label>
+                  <StyledSelect
+                    value={formData.budget_id}
+                    onChange={(e) => setFormData({ ...formData, budget_id: e.target.value })}
+                    required
+                  >
+                    <option value="">Select a budget...</option>
+                    {budgets.map((budget) => (
+                      <option key={budget.id} value={budget.id}>
+                        {budget.name} ({budget.status})
+                      </option>
+                    ))}
+                  </StyledSelect>
+                </FormGroup>
 
-                <ResultItem>
-                  <div className="label">Budgeted Profit</div>
-                  <div className="value">{formatCurrency(varianceResult.budgeted_profit)}</div>
-                </ResultItem>
-                <ResultItem>
-                  <div className="label">Actual Profit</div>
-                  <div className="value">{formatCurrency(varianceResult.actual_profit)}</div>
-                  <div className={`variance ${varianceResult.profit_variance >= 0 ? 'positive' : 'negative'}`}>
-                    {formatCurrency(varianceResult.profit_variance)} ({formatPercent(varianceResult.profit_variance_percent)})
-                  </div>
-                </ResultItem>
-                <ResultItem>
-                  <div className="label">Profit Variance</div>
-                  <div className={`value ${varianceResult.profit_variance >= 0 ? 'positive' : 'negative'}`}>
-                    {formatCurrency(varianceResult.profit_variance)}
-                  </div>
-                  <div className="variance">
-                    {formatPercent(varianceResult.profit_variance_percent)}
-                  </div>
-                </ResultItem>
-              </ResultGrid>
-            </ResultCard>
-          )}
-        </ContentContainer>
+                <TwoColumnGrid>
+                  <FormGroup>
+                    <label>Period Start Date </label>
+                    <StyledInput
+                      type="date"
+                      value={formData.period_start}
+                      onChange={(e) => setFormData({ ...formData, period_start: e.target.value })}
+                      required
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <label>Period End Date </label>
+                    <StyledInput
+                      type="date"
+                      value={formData.period_end}
+                      onChange={(e) => setFormData({ ...formData, period_end: e.target.value })}
+                      required
+                    />
+                  </FormGroup>
+                </TwoColumnGrid>
+
+                <ActionButtons>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.back()}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={calculating}
+                  >
+                    <Calculator size={16} />
+                    {calculating ? 'Calculating...' : 'Calculate Variance'}
+                  </Button>
+                </ActionButtons>
+              </FormCard>
+            </form>
+
+            {varianceResult && (
+              <ResultCard>
+                <h2 style={{ marginBottom: theme.spacing.md, color: TEXT_COLOR_DARK }}>
+                  Variance Results
+                </h2>
+                <p style={{ color: TEXT_COLOR_MUTED, fontSize: theme.typography.fontSizes.sm, marginBottom: theme.spacing.md }}>
+                  Period: {new Date(varianceResult.period_start).toLocaleDateString()} - {new Date(varianceResult.period_end).toLocaleDateString()}
+                </p>
+
+                <ResultGrid>
+                  <ResultItem>
+                    <div className="label">Budgeted Revenue</div>
+                    <div className="value">{formatCurrency(varianceResult.budgeted_revenue)}</div>
+                  </ResultItem>
+                  <ResultItem>
+                    <div className="label">Actual Revenue</div>
+                    <div className="value">{formatCurrency(varianceResult.actual_revenue)}</div>
+                    <div className={`variance ${varianceResult.revenue_variance >= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(varianceResult.revenue_variance)} ({formatPercent(varianceResult.revenue_variance_percent)})
+                    </div>
+                  </ResultItem>
+                  <ResultItem>
+                    <div className="label">Revenue Variance</div>
+                    <div className={`value ${varianceResult.revenue_variance >= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(varianceResult.revenue_variance)}
+                    </div>
+                    <div className="variance">
+                      {formatPercent(varianceResult.revenue_variance_percent)}
+                    </div>
+                  </ResultItem>
+
+                  <ResultItem>
+                    <div className="label">Budgeted Expenses</div>
+                    <div className="value">{formatCurrency(varianceResult.budgeted_expenses)}</div>
+                  </ResultItem>
+                  <ResultItem>
+                    <div className="label">Actual Expenses</div>
+                    <div className="value">{formatCurrency(varianceResult.actual_expenses)}</div>
+                    <div className={`variance ${varianceResult.expense_variance <= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(varianceResult.expense_variance)} ({formatPercent(varianceResult.expense_variance_percent)})
+                    </div>
+                  </ResultItem>
+                  <ResultItem>
+                    <div className="label">Expense Variance</div>
+                    <div className={`value ${varianceResult.expense_variance <= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(varianceResult.expense_variance)}
+                    </div>
+                    <div className="variance">
+                      {formatPercent(varianceResult.expense_variance_percent)}
+                    </div>
+                  </ResultItem>
+
+                  <ResultItem>
+                    <div className="label">Budgeted Profit</div>
+                    <div className="value">{formatCurrency(varianceResult.budgeted_profit)}</div>
+                  </ResultItem>
+                  <ResultItem>
+                    <div className="label">Actual Profit</div>
+                    <div className="value">{formatCurrency(varianceResult.actual_profit)}</div>
+                    <div className={`variance ${varianceResult.profit_variance >= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(varianceResult.profit_variance)} ({formatPercent(varianceResult.profit_variance_percent)})
+                    </div>
+                  </ResultItem>
+                  <ResultItem>
+                    <div className="label">Profit Variance</div>
+                    <div className={`value ${varianceResult.profit_variance >= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(varianceResult.profit_variance)}
+                    </div>
+                    <div className="variance">
+                      {formatPercent(varianceResult.profit_variance_percent)}
+                    </div>
+                  </ResultItem>
+                </ResultGrid>
+              </ResultCard>
+            )}
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );

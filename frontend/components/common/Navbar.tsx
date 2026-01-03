@@ -1748,7 +1748,7 @@ export default function Navbar() {
     } else if (pathname?.includes('/project')) {
       router.push('/project/create');
     } else if (pathname?.includes('/employees')) {
-      router.push('/app/employees/create');
+      router.push('/employees/create');
     } else if (pathname?.includes('/finance')) {
       router.push('/finance/create');
     } else if (pathname?.includes('/accountants')) {

@@ -11,6 +11,8 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 import { useAuth } from '@/lib/rbac/auth-context';
 
 // Type definitions for error handling
@@ -629,7 +631,7 @@ const ScenarioListPage: React.FC = () => {
 
   const verifyPassword = async (password: string): Promise<boolean> => {
     if (!user) return false;
-    
+
     try {
       // Use login endpoint to verify password
       const identifier = user.email || '';
@@ -679,7 +681,7 @@ const ScenarioListPage: React.FC = () => {
     try {
       // First verify password
       const isValid = await verifyPassword(deletePassword.trim());
-      
+
       if (!isValid) {
         setDeletePasswordError('Incorrect password. Please try again.');
         setVerifyingPassword(false);
@@ -724,323 +726,325 @@ const ScenarioListPage: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <BackLink href="/budgets">
-            <ArrowLeft size={16} />
-            Back to Budgets
-          </BackLink>
+        <ComponentGate componentId={ComponentId.SCENARIO_LIST}>
+          <ContentContainer>
+            <BackLink href="/budgets">
+              <ArrowLeft size={16} />
+              Back to Budgets
+            </BackLink>
 
-          <HeaderContainer>
-            <HeaderContent>
-              <div>
-                <h1>
-                  <Target size={36} />
-                  Budget Scenarios
-                </h1>
-                <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
-                  Create and manage what-if scenarios for budgets
-                </p>
-              </div>
-              {selectedBudgetId && (
-                <Button
-                  onClick={() => router.push(`/scenarios/create?budget_id=${selectedBudgetId}`)}
-                  style={{ background: 'white', color: PRIMARY_COLOR }}
-                >
-                  <Plus size={16} />
-                  New Scenario
-                </Button>
-              )}
-            </HeaderContent>
-          </HeaderContainer>
-
-          <FiltersContainer>
-            <FilterGroup>
-              <Building2 size={20} color={TEXT_COLOR_MUTED} />
-              <label style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK, whiteSpace: 'nowrap' }}>
-                Select Budget:
-              </label>
-            </FilterGroup>
-            <StyledSelect
-              value={selectedBudgetId}
-              onChange={(e) => setSelectedBudgetId(e.target.value)}
-              style={{ minWidth: '250px' }}
-            >
-              <option value="">Select a budget...</option>
-              {budgets.map((budget) => (
-                <option key={budget.id} value={budget.id}>
-                  {budget.name} ({budget.status})
-                </option>
-              ))}
-            </StyledSelect>
-            {selectedBudgetId && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, position: 'relative' }}>
-                  <Search size={20} color={TEXT_COLOR_MUTED} style={{ position: 'absolute', left: '12px', zIndex: 1 }} />
-                  <StyledInput
-                    type="text"
-                    placeholder="Search scenarios..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ paddingLeft: '40px' }}
-                  />
+            <HeaderContainer>
+              <HeaderContent>
+                <div>
+                  <h1>
+                    <Target size={36} />
+                    Budget Scenarios
+                  </h1>
+                  <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
+                    Create and manage what-if scenarios for budgets
+                  </p>
                 </div>
-                <FilterGroup>
-                  <Filter size={20} color={TEXT_COLOR_MUTED} />
-                  <StyledSelect
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
+                {selectedBudgetId && (
+                  <Button
+                    onClick={() => router.push(`/scenarios/create?budget_id=${selectedBudgetId}`)}
+                    style={{ background: 'white', color: PRIMARY_COLOR }}
                   >
-                    <option value="">All Types</option>
-                    <option value="best_case">Best Case</option>
-                    <option value="worst_case">Worst Case</option>
-                    <option value="most_likely">Most Likely</option>
-                    <option value="custom">Custom</option>
-                  </StyledSelect>
-                </FilterGroup>
-              </>
-            )}
-          </FiltersContainer>
+                    <Plus size={16} />
+                    New Scenario
+                  </Button>
+                )}
+              </HeaderContent>
+            </HeaderContainer>
 
-          {selectedBudgetId ? (
-            loadingScenarios ? (
-              <LoadingContainer>
-                <Spinner />
-                <p>Loading scenarios...</p>
-              </LoadingContainer>
-            ) : filteredScenarios.length === 0 ? (
+            <FiltersContainer>
+              <FilterGroup>
+                <Building2 size={20} color={TEXT_COLOR_MUTED} />
+                <label style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK, whiteSpace: 'nowrap' }}>
+                  Select Budget:
+                </label>
+              </FilterGroup>
+              <StyledSelect
+                value={selectedBudgetId}
+                onChange={(e) => setSelectedBudgetId(e.target.value)}
+                style={{ minWidth: '250px' }}
+              >
+                <option value="">Select a budget...</option>
+                {budgets.map((budget) => (
+                  <option key={budget.id} value={budget.id}>
+                    {budget.name} ({budget.status})
+                  </option>
+                ))}
+              </StyledSelect>
+              {selectedBudgetId && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, position: 'relative' }}>
+                    <Search size={20} color={TEXT_COLOR_MUTED} style={{ position: 'absolute', left: '12px', zIndex: 1 }} />
+                    <StyledInput
+                      type="text"
+                      placeholder="Search scenarios..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{ paddingLeft: '40px' }}
+                    />
+                  </div>
+                  <FilterGroup>
+                    <Filter size={20} color={TEXT_COLOR_MUTED} />
+                    <StyledSelect
+                      value={selectedType}
+                      onChange={(e) => setSelectedType(e.target.value)}
+                    >
+                      <option value="">All Types</option>
+                      <option value="best_case">Best Case</option>
+                      <option value="worst_case">Worst Case</option>
+                      <option value="most_likely">Most Likely</option>
+                      <option value="custom">Custom</option>
+                    </StyledSelect>
+                  </FilterGroup>
+                </>
+              )}
+            </FiltersContainer>
+
+            {selectedBudgetId ? (
+              loadingScenarios ? (
+                <LoadingContainer>
+                  <Spinner />
+                  <p>Loading scenarios...</p>
+                </LoadingContainer>
+              ) : filteredScenarios.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                  <Target size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                  <p>No scenarios found. Create your first scenario to get started.</p>
+                </div>
+              ) : (
+                <ScenariosGrid>
+                  {filteredScenarios.map((scenario) => (
+                    <ScenarioCard
+                      key={scenario.id}
+                      onClick={() => router.push(`/scenarios/compare?budget_id=${selectedBudgetId}`)}
+                    >
+                      <ScenarioHeader>
+                        <ScenarioTitle>{scenario.name}</ScenarioTitle>
+                        <ActionButtons>
+                          <ScenarioTypeBadge $type={scenario.scenario_type}>
+                            {scenario.scenario_type.replace('_', ' ')}
+                          </ScenarioTypeBadge>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={(e) => handleDeleteClick(scenario, e)}
+                            disabled={deleting}
+                            style={{ padding: '6px', minWidth: 'auto' }}
+                            title="Delete scenario"
+                          >
+                            {deleting && scenarioToDelete?.id === scenario.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
+                          </Button>
+                        </ActionButtons>
+                      </ScenarioHeader>
+
+                      {scenario.description && (
+                        <p style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.md }}>
+                          {scenario.description}
+                        </p>
+                      )}
+
+                      <ScenarioInfo>
+                        <InfoItem>
+                          <div className="label">Revenue</div>
+                          <div className="value">{formatCurrency(scenario.total_revenue)}</div>
+                        </InfoItem>
+                        <InfoItem>
+                          <div className="label">Expenses</div>
+                          <div className="value">{formatCurrency(scenario.total_expenses)}</div>
+                        </InfoItem>
+                        <InfoItem>
+                          <div className="label">Profit</div>
+                          <div className="value">{formatCurrency(scenario.total_profit)}</div>
+                        </InfoItem>
+                      </ScenarioInfo>
+
+                      <div style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                        Created: {formatDate(scenario.created_at)}
+                      </div>
+                    </ScenarioCard>
+                  ))}
+                </ScenariosGrid>
+              )
+            ) : (
               <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
                 <Target size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                <p>No scenarios found. Create your first scenario to get started.</p>
+                <p>Please select a budget to view scenarios.</p>
               </div>
-            ) : (
-              <ScenariosGrid>
-                {filteredScenarios.map((scenario) => (
-                  <ScenarioCard
-                    key={scenario.id}
-                    onClick={() => router.push(`/scenarios/campare?budget_id=${selectedBudgetId}`)}
-                  >
-                    <ScenarioHeader>
-                      <ScenarioTitle>{scenario.name}</ScenarioTitle>
-                      <ActionButtons>
-                        <ScenarioTypeBadge $type={scenario.scenario_type}>
-                          {scenario.scenario_type.replace('_', ' ')}
-                        </ScenarioTypeBadge>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={(e) => handleDeleteClick(scenario, e)}
-                          disabled={deleting}
-                          style={{ padding: '6px', minWidth: 'auto' }}
-                          title="Delete scenario"
-                        >
-                          {deleting && scenarioToDelete?.id === scenario.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Trash2 size={14} />
-                          )}
-                        </Button>
-                      </ActionButtons>
-                    </ScenarioHeader>
-                    
-                    {scenario.description && (
-                      <p style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.md }}>
-                        {scenario.description}
-                      </p>
-                    )}
+            )}
 
-                    <ScenarioInfo>
-                      <InfoItem>
-                        <div className="label">Revenue</div>
-                        <div className="value">{formatCurrency(scenario.total_revenue)}</div>
-                      </InfoItem>
-                      <InfoItem>
-                        <div className="label">Expenses</div>
-                        <div className="value">{formatCurrency(scenario.total_expenses)}</div>
-                      </InfoItem>
-                      <InfoItem>
-                        <div className="label">Profit</div>
-                        <div className="value">{formatCurrency(scenario.total_profit)}</div>
-                      </InfoItem>
-                    </ScenarioInfo>
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && scenarioToDelete && (
+              <ModalOverlay $isOpen={showDeleteModal} onClick={handleDeleteCancel}>
+                <ModalContent onClick={(e) => e.stopPropagation()}>
+                  <ModalHeader>
+                    <ModalTitle>
+                      <Trash2 size={20} style={{ color: '#ef4444' }} />
+                      Delete Scenario
+                    </ModalTitle>
+                    <button onClick={handleDeleteCancel} title="Close" type="button">
+                      <XCircle />
+                    </button>
+                  </ModalHeader>
 
-                    <div style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
-                      Created: {formatDate(scenario.created_at)}
-                    </div>
-                  </ScenarioCard>
-                ))}
-              </ScenariosGrid>
-            )
-          ) : (
-            <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-              <Target size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-              <p>Please select a budget to view scenarios.</p>
-            </div>
-          )}
+                  <WarningBox>
+                    <p>
+                      <strong>Warning:</strong> You are about to permanently delete this scenario.
+                      This action cannot be undone. Please enter <strong>your own password</strong> to verify this action.
+                    </p>
+                  </WarningBox>
 
-          {/* Delete Confirmation Modal */}
-          {showDeleteModal && scenarioToDelete && (
-            <ModalOverlay $isOpen={showDeleteModal} onClick={handleDeleteCancel}>
-              <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalHeader>
-                  <ModalTitle>
-                    <Trash2 size={20} style={{ color: '#ef4444' }} />
-                    Delete Scenario
-                  </ModalTitle>
-                  <button onClick={handleDeleteCancel} title="Close" type="button">
-                    <XCircle />
-                  </button>
-                </ModalHeader>
-                
-                <WarningBox>
-                  <p>
-                    <strong>Warning:</strong> You are about to permanently delete this scenario. 
-                    This action cannot be undone. Please enter <strong>your own password</strong> to verify this action.
-                  </p>
-                </WarningBox>
-
-                <div style={{
-                  background: theme.colors.backgroundSecondary,
-                  border: '1px solid ' + theme.colors.border,
-                  borderRadius: theme.borderRadius.md,
-                  padding: theme.spacing.lg,
-                  marginBottom: theme.spacing.lg
-                }}>
-                  <h4 style={{
-                    fontSize: theme.typography.fontSizes.md,
-                    fontWeight: theme.typography.fontWeights.bold,
-                    color: TEXT_COLOR_DARK,
-                    margin: `0 0 ${theme.spacing.md} 0`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.sm
+                  <div style={{
+                    background: theme.colors.backgroundSecondary,
+                    border: '1px solid ' + theme.colors.border,
+                    borderRadius: theme.borderRadius.md,
+                    padding: theme.spacing.lg,
+                    marginBottom: theme.spacing.lg
                   }}>
-                    <Target size={18} />
-                    Scenario Details to be Deleted
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
-                      <div style={{ flex: '1 1 200px' }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Scenario Name</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
-                          {scenarioToDelete.name || 'N/A'}
-                        </span>
+                    <h4 style={{
+                      fontSize: theme.typography.fontSizes.md,
+                      fontWeight: theme.typography.fontWeights.bold,
+                      color: TEXT_COLOR_DARK,
+                      margin: `0 0 ${theme.spacing.md} 0`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: theme.spacing.sm
+                    }}>
+                      <Target size={18} />
+                      Scenario Details to be Deleted
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+                        <div style={{ flex: '1 1 200px' }}>
+                          <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Scenario Name</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
+                            {scenarioToDelete.name || 'N/A'}
+                          </span>
+                        </div>
+                        <div style={{ flex: '1 1 200px' }}>
+                          <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Type</strong>
+                          <ScenarioTypeBadge $type={scenarioToDelete.scenario_type}>
+                            {scenarioToDelete.scenario_type.replace('_', ' ')}
+                          </ScenarioTypeBadge>
+                        </div>
                       </div>
-                      <div style={{ flex: '1 1 200px' }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Type</strong>
-                        <ScenarioTypeBadge $type={scenarioToDelete.scenario_type}>
-                          {scenarioToDelete.scenario_type.replace('_', ' ')}
-                        </ScenarioTypeBadge>
+                      {scenarioToDelete.description && (
+                        <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                          <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK, lineHeight: 1.6 }}>
+                            {scenarioToDelete.description}
+                          </span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                        <div style={{ flex: '1 1 150px' }}>
+                          <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Revenue</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.md, color: '#10b981', fontWeight: theme.typography.fontWeights.bold }}>
+                            {formatCurrency(scenarioToDelete.total_revenue)}
+                          </span>
+                        </div>
+                        <div style={{ flex: '1 1 150px' }}>
+                          <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Expenses</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.md, color: '#ef4444', fontWeight: theme.typography.fontWeights.bold }}>
+                            {formatCurrency(scenarioToDelete.total_expenses)}
+                          </span>
+                        </div>
+                        <div style={{ flex: '1 1 150px' }}>
+                          <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Profit</strong>
+                          <span style={{ fontSize: theme.typography.fontSizes.md, color: scenarioToDelete.total_profit >= 0 ? '#10b981' : '#ef4444', fontWeight: theme.typography.fontWeights.bold }}>
+                            {formatCurrency(scenarioToDelete.total_profit)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    {scenarioToDelete.description && (
                       <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK, lineHeight: 1.6 }}>
-                          {scenarioToDelete.description}
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Created Date</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                          {formatDate(scenarioToDelete.created_at)}
                         </span>
                       </div>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                      <div style={{ flex: '1 1 150px' }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Revenue</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.md, color: '#10b981', fontWeight: theme.typography.fontWeights.bold }}>
-                          {formatCurrency(scenarioToDelete.total_revenue)}
-                        </span>
-                      </div>
-                      <div style={{ flex: '1 1 150px' }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Expenses</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.md, color: '#ef4444', fontWeight: theme.typography.fontWeights.bold }}>
-                          {formatCurrency(scenarioToDelete.total_expenses)}
-                        </span>
-                      </div>
-                      <div style={{ flex: '1 1 150px' }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Profit</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.md, color: scenarioToDelete.total_profit >= 0 ? '#10b981' : '#ef4444', fontWeight: theme.typography.fontWeights.bold }}>
-                          {formatCurrency(scenarioToDelete.total_profit)}
-                        </span>
-                      </div>
-                    </div>
-                    <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Created Date</strong>
-                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                        {formatDate(scenarioToDelete.created_at)}
-                      </span>
                     </div>
                   </div>
-                </div>
 
-                <FormGroup>
-                  <Label htmlFor="delete-password">
-                    <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
-                    Enter <strong>your own password</strong> to confirm deletion of <strong>{scenarioToDelete.name || 'this scenario'}</strong>:
-                  </Label>
-                  <PasswordInputWrapper>
-                    <input
-                      id="delete-password"
-                      type={showDeletePassword ? 'text' : 'password'}
-                      value={deletePassword}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        setDeletePassword(e.target.value);
-                        setDeletePasswordError(null);
-                      }}
-                      placeholder="Enter your password"
-                      autoFocus
-                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                        if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword && !deleting) {
-                          handleDelete();
-                        }
-                      }}
-                      disabled={verifyingPassword || deleting}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowDeletePassword(!showDeletePassword)}
-                      title={showDeletePassword ? 'Hide password' : 'Show password'}
-                      disabled={verifyingPassword || deleting}
-                    >
-                      {showDeletePassword ? <EyeOff /> : <Eye />}
-                    </button>
-                  </PasswordInputWrapper>
-                  {deletePasswordError && (
-                    <ErrorText>{deletePasswordError}</ErrorText>
-                  )}
-                </FormGroup>
-
-                <ModalActions>
-                  <Button
-                    variant="outline"
-                    onClick={handleDeleteCancel}
-                    disabled={deleting || verifyingPassword}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDelete}
-                    disabled={!deletePassword.trim() || deleting || verifyingPassword}
-                  >
-                    {verifyingPassword ? (
-                      <>
-                        <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
-                        Verifying...
-                      </>
-                    ) : deleting ? (
-                      <>
-                        <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
-                        Delete Scenario
-                      </>
+                  <FormGroup>
+                    <Label htmlFor="delete-password">
+                      <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                      Enter <strong>your own password</strong> to confirm deletion of <strong>{scenarioToDelete.name || 'this scenario'}</strong>:
+                    </Label>
+                    <PasswordInputWrapper>
+                      <input
+                        id="delete-password"
+                        type={showDeletePassword ? 'text' : 'password'}
+                        value={deletePassword}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          setDeletePassword(e.target.value);
+                          setDeletePasswordError(null);
+                        }}
+                        placeholder="Enter your password"
+                        autoFocus
+                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                          if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword && !deleting) {
+                            handleDelete();
+                          }
+                        }}
+                        disabled={verifyingPassword || deleting}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowDeletePassword(!showDeletePassword)}
+                        title={showDeletePassword ? 'Hide password' : 'Show password'}
+                        disabled={verifyingPassword || deleting}
+                      >
+                        {showDeletePassword ? <EyeOff /> : <Eye />}
+                      </button>
+                    </PasswordInputWrapper>
+                    {deletePasswordError && (
+                      <ErrorText>{deletePasswordError}</ErrorText>
                     )}
-                  </Button>
-                </ModalActions>
-              </ModalContent>
-            </ModalOverlay>
-          )}
-        </ContentContainer>
+                  </FormGroup>
+
+                  <ModalActions>
+                    <Button
+                      variant="outline"
+                      onClick={handleDeleteCancel}
+                      disabled={deleting || verifyingPassword}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={!deletePassword.trim() || deleting || verifyingPassword}
+                    >
+                      {verifyingPassword ? (
+                        <>
+                          <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                          Verifying...
+                        </>
+                      ) : deleting ? (
+                        <>
+                          <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                          Delete Scenario
+                        </>
+                      )}
+                    </Button>
+                  </ModalActions>
+                </ModalContent>
+              </ModalOverlay>
+            )}
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );

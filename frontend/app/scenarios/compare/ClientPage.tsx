@@ -10,6 +10,8 @@ import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -238,7 +240,7 @@ const CompareScenariosPageInner: React.FC = () => {
   const searchParams = useSearchParams();
   const budgetIdParam = searchParams?.get('budget_id');
   const scenariosParam = searchParams?.get('scenarios');
-  
+
   const [loading, setLoading] = useState(true);
   const [loadingComparison, setLoadingComparison] = useState(false);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -248,14 +250,14 @@ const CompareScenariosPageInner: React.FC = () => {
 
   const loadScenarios = useCallback(async () => {
     if (!budgetIdParam) return;
-    
+
     try {
       setLoading(true);
       const [scenariosResponse, budgetResponse] = await Promise.all([
         apiClient.getScenarios(parseInt(budgetIdParam)),
         apiClient.getBudget(parseInt(budgetIdParam))
       ]);
-      
+
       setScenarios(Array.isArray(scenariosResponse.data) ? scenariosResponse.data : []);
       const budget = budgetResponse.data as { name?: string };
       setBudgetName(budget.name || 'Budget');
@@ -269,7 +271,7 @@ const CompareScenariosPageInner: React.FC = () => {
 
   const compareScenarios = useCallback(async () => {
     if (!budgetIdParam || selectedScenarios.length === 0) return;
-    
+
     try {
       setLoadingComparison(true);
       const response = await apiClient.compareScenarios(parseInt(budgetIdParam), selectedScenarios);
@@ -287,7 +289,7 @@ const CompareScenariosPageInner: React.FC = () => {
     if (!searchParams) {
       return; // Still loading
     }
-    
+
     if (budgetIdParam) {
       loadScenarios();
       if (scenariosParam) {
@@ -349,168 +351,170 @@ const CompareScenariosPageInner: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <BackLink href={`/scenarios/list?budget_id=${budgetIdParam}`}>
-            <ArrowLeft size={16} />
-            Back to Scenarios
-          </BackLink>
+        <ComponentGate componentId={ComponentId.SCENARIO_COMPARE}>
+          <ContentContainer>
+            <BackLink href={`/scenarios/list?budget_id=${budgetIdParam}`}>
+              <ArrowLeft size={16} />
+              Back to Scenarios
+            </BackLink>
 
-          <HeaderContainer>
-            <h1>
-              <GitCompare size={36} />
-              Compare Scenarios: {budgetName}
-            </h1>
-            <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
-              Select scenarios to compare side by side with the base budget
-            </p>
-          </HeaderContainer>
+            <HeaderContainer>
+              <h1>
+                <GitCompare size={36} />
+                Compare Scenarios: {budgetName}
+              </h1>
+              <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
+                Select scenarios to compare side by side with the base budget
+              </p>
+            </HeaderContainer>
 
-          <ComparisonCard>
-            <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
-              Select Scenarios to Compare
-            </h2>
-            <ScenarioSelector>
-              {scenarios.length === 0 ? (
-                <p style={{ color: TEXT_COLOR_MUTED, textAlign: 'center', padding: theme.spacing.lg }}>
-                  No scenarios available. Create scenarios first.
-                </p>
-              ) : (
-                scenarios.map((scenario) => (
-                  <ScenarioCheckbox key={scenario.id}>
-                    <input
-                      type="checkbox"
-                      checked={selectedScenarios.includes(scenario.id)}
-                      onChange={() => handleScenarioToggle(scenario.id)}
-                    />
-                    <span>{scenario.name}</span>
-                    <span style={{ marginLeft: 'auto', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
-                      ({scenario.scenario_type.replace('_', ' ')})
-                    </span>
-                  </ScenarioCheckbox>
-                ))
-              )}
-            </ScenarioSelector>
-          </ComparisonCard>
-
-          {loadingComparison ? (
-            <LoadingContainer>
-              <Spinner />
-              <p>Comparing scenarios...</p>
-            </LoadingContainer>
-          ) : comparison && comparison.scenarios.length > 0 ? (
             <ComparisonCard>
               <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
-                Comparison Results
+                Select Scenarios to Compare
               </h2>
-              
-              <div style={{ overflowX: 'auto', marginTop: 0 }}>
-                <ComparisonTable>
-                  <thead>
-                    <tr>
-                      <th>Metric</th>
-                      <th className="base-budget">Base Budget</th>
-                      {comparison.scenarios.map((scenario) => (
-                        <th key={scenario.id}>{scenario.name}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>Total Revenue</strong></td>
-                      <td className="base-budget">{formatCurrency(comparison.base.total_revenue)}</td>
-                      {comparison.scenarios.map((scenario) => {
-                        const diff = calculateDifference(comparison.base.total_revenue, scenario.total_revenue);
-                        const percent = calculatePercentChange(comparison.base.total_revenue, scenario.total_revenue);
-                        return (
-                          <td key={scenario.id}>
-                            {formatCurrency(scenario.total_revenue)}
-                            <br />
-                            <span style={{ 
-                              fontSize: theme.typography.fontSizes.xs,
-                              color: diff >= 0 ? '#10b981' : '#ef4444'
-                            }}>
-                              {diff >= 0 ? '+' : ''}{formatCurrency(diff)} ({percent >= 0 ? '+' : ''}{percent.toFixed(2)}%)
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                    <tr>
-                      <td><strong>Total Expenses</strong></td>
-                      <td className="base-budget">{formatCurrency(comparison.base.total_expenses)}</td>
-                      {comparison.scenarios.map((scenario) => {
-                        const diff = calculateDifference(comparison.base.total_expenses, scenario.total_expenses);
-                        const percent = calculatePercentChange(comparison.base.total_expenses, scenario.total_expenses);
-                        return (
-                          <td key={scenario.id}>
-                            {formatCurrency(scenario.total_expenses)}
-                            <br />
-                            <span style={{ 
-                              fontSize: theme.typography.fontSizes.xs,
-                              color: diff <= 0 ? '#10b981' : '#ef4444'
-                            }}>
-                              {diff >= 0 ? '+' : ''}{formatCurrency(diff)} ({percent >= 0 ? '+' : ''}{percent.toFixed(2)}%)
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                    <tr>
-                      <td><strong>Total Profit</strong></td>
-                      <td className="base-budget">{formatCurrency(comparison.base.total_profit)}</td>
-                      {comparison.scenarios.map((scenario) => {
-                        const diff = calculateDifference(comparison.base.total_profit, scenario.total_profit);
-                        const percent = calculatePercentChange(comparison.base.total_profit, scenario.total_profit);
-                        return (
-                          <td key={scenario.id}>
-                            {formatCurrency(scenario.total_profit)}
-                            <br />
-                            <span style={{ 
-                              fontSize: theme.typography.fontSizes.xs,
-                              color: diff >= 0 ? '#10b981' : '#ef4444'
-                            }}>
-                              {diff >= 0 ? '+' : ''}{formatCurrency(diff)} ({percent >= 0 ? '+' : ''}{percent.toFixed(2)}%)
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  </tbody>
-                </ComparisonTable>
-              </div>
+              <ScenarioSelector>
+                {scenarios.length === 0 ? (
+                  <p style={{ color: TEXT_COLOR_MUTED, textAlign: 'center', padding: theme.spacing.lg }}>
+                    No scenarios available. Create scenarios first.
+                  </p>
+                ) : (
+                  scenarios.map((scenario) => (
+                    <ScenarioCheckbox key={scenario.id}>
+                      <input
+                        type="checkbox"
+                        checked={selectedScenarios.includes(scenario.id)}
+                        onChange={() => handleScenarioToggle(scenario.id)}
+                      />
+                      <span>{scenario.name}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                        ({scenario.scenario_type.replace('_', ' ')})
+                      </span>
+                    </ScenarioCheckbox>
+                  ))
+                )}
+              </ScenarioSelector>
+            </ComparisonCard>
 
-              <ComparisonGrid>
-                {comparison.scenarios.map((scenario) => {
-                  const profitDiff = calculateDifference(comparison.base.total_profit, scenario.total_profit);
-                  const isBest = profitDiff === Math.max(...comparison.scenarios.map(s => 
-                    calculateDifference(comparison.base.total_profit, s.total_profit)
-                  ));
-                  
-                  return (
-                    <MetricCard key={scenario.id} $highlight={isBest}>
-                      <div className="label">{scenario.name}</div>
-                      <div className="value">{formatCurrency(scenario.total_profit)}</div>
-                      <div style={{ 
-                        fontSize: theme.typography.fontSizes.xs,
-                        color: profitDiff >= 0 ? '#10b981' : '#ef4444',
-                        marginTop: theme.spacing.xs
-                      }}>
-                        {profitDiff >= 0 ? '+' : ''}{formatCurrency(profitDiff)} vs Base
-                      </div>
-                    </MetricCard>
-                  );
-                })}
-              </ComparisonGrid>
-            </ComparisonCard>
-          ) : selectedScenarios.length === 0 ? (
-            <ComparisonCard>
-              <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-                <GitCompare size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                <p>Select at least one scenario to compare.</p>
-              </div>
-            </ComparisonCard>
-          ) : null}
-        </ContentContainer>
+            {loadingComparison ? (
+              <LoadingContainer>
+                <Spinner />
+                <p>Comparing scenarios...</p>
+              </LoadingContainer>
+            ) : comparison && comparison.scenarios.length > 0 ? (
+              <ComparisonCard>
+                <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
+                  Comparison Results
+                </h2>
+
+                <div style={{ overflowX: 'auto', marginTop: 0 }}>
+                  <ComparisonTable>
+                    <thead>
+                      <tr>
+                        <th>Metric</th>
+                        <th className="base-budget">Base Budget</th>
+                        {comparison.scenarios.map((scenario) => (
+                          <th key={scenario.id}>{scenario.name}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Total Revenue</strong></td>
+                        <td className="base-budget">{formatCurrency(comparison.base.total_revenue)}</td>
+                        {comparison.scenarios.map((scenario) => {
+                          const diff = calculateDifference(comparison.base.total_revenue, scenario.total_revenue);
+                          const percent = calculatePercentChange(comparison.base.total_revenue, scenario.total_revenue);
+                          return (
+                            <td key={scenario.id}>
+                              {formatCurrency(scenario.total_revenue)}
+                              <br />
+                              <span style={{
+                                fontSize: theme.typography.fontSizes.xs,
+                                color: diff >= 0 ? '#10b981' : '#ef4444'
+                              }}>
+                                {diff >= 0 ? '+' : ''}{formatCurrency(diff)} ({percent >= 0 ? '+' : ''}{percent.toFixed(2)}%)
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                      <tr>
+                        <td><strong>Total Expenses</strong></td>
+                        <td className="base-budget">{formatCurrency(comparison.base.total_expenses)}</td>
+                        {comparison.scenarios.map((scenario) => {
+                          const diff = calculateDifference(comparison.base.total_expenses, scenario.total_expenses);
+                          const percent = calculatePercentChange(comparison.base.total_expenses, scenario.total_expenses);
+                          return (
+                            <td key={scenario.id}>
+                              {formatCurrency(scenario.total_expenses)}
+                              <br />
+                              <span style={{
+                                fontSize: theme.typography.fontSizes.xs,
+                                color: diff <= 0 ? '#10b981' : '#ef4444'
+                              }}>
+                                {diff >= 0 ? '+' : ''}{formatCurrency(diff)} ({percent >= 0 ? '+' : ''}{percent.toFixed(2)}%)
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                      <tr>
+                        <td><strong>Total Profit</strong></td>
+                        <td className="base-budget">{formatCurrency(comparison.base.total_profit)}</td>
+                        {comparison.scenarios.map((scenario) => {
+                          const diff = calculateDifference(comparison.base.total_profit, scenario.total_profit);
+                          const percent = calculatePercentChange(comparison.base.total_profit, scenario.total_profit);
+                          return (
+                            <td key={scenario.id}>
+                              {formatCurrency(scenario.total_profit)}
+                              <br />
+                              <span style={{
+                                fontSize: theme.typography.fontSizes.xs,
+                                color: diff >= 0 ? '#10b981' : '#ef4444'
+                              }}>
+                                {diff >= 0 ? '+' : ''}{formatCurrency(diff)} ({percent >= 0 ? '+' : ''}{percent.toFixed(2)}%)
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    </tbody>
+                  </ComparisonTable>
+                </div>
+
+                <ComparisonGrid>
+                  {comparison.scenarios.map((scenario) => {
+                    const profitDiff = calculateDifference(comparison.base.total_profit, scenario.total_profit);
+                    const isBest = profitDiff === Math.max(...comparison.scenarios.map(s =>
+                      calculateDifference(comparison.base.total_profit, s.total_profit)
+                    ));
+
+                    return (
+                      <MetricCard key={scenario.id} $highlight={isBest}>
+                        <div className="label">{scenario.name}</div>
+                        <div className="value">{formatCurrency(scenario.total_profit)}</div>
+                        <div style={{
+                          fontSize: theme.typography.fontSizes.xs,
+                          color: profitDiff >= 0 ? '#10b981' : '#ef4444',
+                          marginTop: theme.spacing.xs
+                        }}>
+                          {profitDiff >= 0 ? '+' : ''}{formatCurrency(profitDiff)} vs Base
+                        </div>
+                      </MetricCard>
+                    );
+                  })}
+                </ComparisonGrid>
+              </ComparisonCard>
+            ) : selectedScenarios.length === 0 ? (
+              <ComparisonCard>
+                <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                  <GitCompare size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                  <p>Select at least one scenario to compare.</p>
+                </div>
+              </ComparisonCard>
+            ) : null}
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );

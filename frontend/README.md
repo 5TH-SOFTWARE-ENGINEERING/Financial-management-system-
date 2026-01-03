@@ -81,7 +81,7 @@ frontend/
 │   │   ├── page.tsx                  # Main scenarios hub
 │   │   ├── list/page.tsx             # Scenario list
 │   │   ├── create/page.tsx           # Create scenario
-│   │   └── campare/page.tsx          # Compare scenarios
+│   │   └── compare/page.tsx          # Compare scenarios
 │   │
 │   ├── forecast/                     # Financial forecasting
 │   │   ├── page.tsx                  # Main forecast hub

@@ -11,6 +11,8 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -503,7 +505,7 @@ const BudgetEditPage: React.FC = () => {
       setLoading(true);
       const response = await apiClient.getBudget(id);
       const budget = response.data as Budget | undefined;
-      
+
       setFormData({
         name: budget?.name || '',
         description: budget?.description || '',
@@ -562,7 +564,7 @@ const BudgetEditPage: React.FC = () => {
   };
 
   const handleItemChange = (index: number, field: keyof BudgetItem, value: string | number) => {
-    setItems(prev => prev.map((item, i) => 
+    setItems(prev => prev.map((item, i) =>
       i === index ? { ...item, [field]: value } : item
     ));
   };
@@ -625,7 +627,7 @@ const BudgetEditPage: React.FC = () => {
 
   const handleSaveItem = async (index: number, item: BudgetItem) => {
     if (!budgetId) return;
-    
+
     try {
       if (item.id) {
         // Update existing item
@@ -648,7 +650,7 @@ const BudgetEditPage: React.FC = () => {
         });
         // Update the item with the new ID
         const newItem = response.data as BudgetItem | undefined;
-        setItems(prev => prev.map((it, i) => 
+        setItems(prev => prev.map((it, i) =>
           i === index ? { ...it, id: newItem?.id } : it
         ));
         toast.success('Item added');
@@ -669,20 +671,20 @@ const BudgetEditPage: React.FC = () => {
 
   const handleValidate = async () => {
     const errors: string[] = [];
-    
+
     if (!formData.name.trim()) errors.push('Budget name is required');
     if (!formData.start_date) errors.push('Start date is required');
     if (!formData.end_date) errors.push('End date is required');
     if (new Date(formData.end_date) < new Date(formData.start_date)) {
       errors.push('End date must be after start date');
     }
-    
+
     items.forEach((item, index) => {
       if (!item.name.trim()) errors.push(`Item ${index + 1}: Name is required`);
       if (!item.category.trim()) errors.push(`Item ${index + 1}: Category is required`);
       if (item.amount < 0) errors.push(`Item ${index + 1}: Amount cannot be negative`);
     });
-    
+
     setValidationErrors(errors);
     if (errors.length === 0 && budgetId) {
       // Validate on server
@@ -711,7 +713,7 @@ const BudgetEditPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!budgetId) return;
     if (!(await handleValidate())) {
       toast.error('Please fix validation errors before saving');
@@ -755,340 +757,342 @@ const BudgetEditPage: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <BackLink href={`/budgets/${budgetId}`}>
-            <ArrowLeft size={16} />
-            Back to Budget
-          </BackLink>
+        <ComponentGate componentId={ComponentId.BUDGET_EDIT}>
+          <ContentContainer>
+            <BackLink href={`/budgets/${budgetId}`}>
+              <ArrowLeft size={16} />
+              Back to Budget
+            </BackLink>
 
-          <HeaderContainer>
-            <h1>
-              <DollarSign size={36} />
-              Edit Budget
-            </h1>
-          </HeaderContainer>
+            <HeaderContainer>
+              <h1>
+                <DollarSign size={36} />
+                Edit Budget
+              </h1>
+            </HeaderContainer>
 
-          <form onSubmit={handleSubmit}>
-            <FormCard>
-              <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
-                Budget Information
-              </h2>
-
-              <FormGroup>
-                <label>Budget Name </label>
-                <StyledInput
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="e.g., Q1 2024 Budget"
-                  required
-                />
-              </FormGroup>
-
-              <FormGroup>
-                <label>Description</label>
-                <StyledTextarea
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="Budget description..."
-                  rows={4}
-                />
-              </FormGroup>
-
-              <TwoColumnGrid>
-                <FormGroup>
-                  <label>Period </label>
-                  <StyledSelect
-                    value={formData.period}
-                    onChange={(e) => handleInputChange('period', e.target.value)}
-                    required
-                  >
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="yearly">Yearly</option>
-                    <option value="custom">Custom</option>
-                  </StyledSelect>
-                </FormGroup>
+            <form onSubmit={handleSubmit}>
+              <FormCard>
+                <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
+                  Budget Information
+                </h2>
 
                 <FormGroup>
-                  <label>Status</label>
-                  <StyledSelect
-                    value={formData.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="approved">Approved</option>
-                    <option value="active">Active</option>
-                  </StyledSelect>
-                </FormGroup>
-              </TwoColumnGrid>
-
-              <TwoColumnGrid>
-                <FormGroup>
-                  <label>Start Date </label>
-                  <StyledInput
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => handleInputChange('start_date', e.target.value)}
-                    required
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <label>End Date </label>
-                  <StyledInput
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => handleInputChange('end_date', e.target.value)}
-                    required
-                  />
-                </FormGroup>
-              </TwoColumnGrid>
-
-              <TwoColumnGrid>
-                <FormGroup>
-                  <label>Department</label>
+                  <label>Budget Name </label>
                   <StyledInput
                     type="text"
-                    value={formData.department}
-                    onChange={(e) => handleInputChange('department', e.target.value)}
-                    placeholder="e.g., Sales, Marketing"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="e.g., Q1 2024 Budget"
+                    required
                   />
                 </FormGroup>
 
                 <FormGroup>
-                  <label>Project</label>
-                  <StyledInput
-                    type="text"
-                    value={formData.project}
-                    onChange={(e) => handleInputChange('project', e.target.value)}
-                    placeholder="Project name"
+                  <label>Description</label>
+                  <StyledTextarea
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Budget description..."
+                    rows={4}
                   />
                 </FormGroup>
-              </TwoColumnGrid>
-            </FormCard>
 
-            <FormCard>
-              <ItemsSection>
-                <ItemsHeader>
-                  <h3>Budget Items</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleAddItem}
-                  >
-                    <Plus size={16} />
-                    Add Item
-                  </Button>
-                </ItemsHeader>
+                <TwoColumnGrid>
+                  <FormGroup>
+                    <label>Period </label>
+                    <StyledSelect
+                      value={formData.period}
+                      onChange={(e) => handleInputChange('period', e.target.value)}
+                      required
+                    >
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="yearly">Yearly</option>
+                      <option value="custom">Custom</option>
+                    </StyledSelect>
+                  </FormGroup>
 
-                {validationErrors.length > 0 && (
-                  <ValidationErrors>
-                    <h4>
-                      <AlertCircle size={16} />
-                      Validation Errors
-                    </h4>
-                    <ul>
-                      {validationErrors.map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
-                    </ul>
-                  </ValidationErrors>
-                )}
+                  <FormGroup>
+                    <label>Status</label>
+                    <StyledSelect
+                      value={formData.status}
+                      onChange={(e) => handleInputChange('status', e.target.value)}
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="submitted">Submitted</option>
+                      <option value="approved">Approved</option>
+                      <option value="active">Active</option>
+                    </StyledSelect>
+                  </FormGroup>
+                </TwoColumnGrid>
 
-                {items.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-                    <p>No items added yet. Click &quot;Add Item&quot; to get started.</p>
-                  </div>
-                ) : (
-                  <ItemsTable>
-                    <ItemsTableHeader>
-                      <div>Name</div>
-                      <div>Type</div>
-                      <div>Category</div>
-                      <div>Amount</div>
-                      <div>Description</div>
-                      <div></div>
-                    </ItemsTableHeader>
-                    {items.map((item, index) => (
-                      <ItemsTableRow key={item.id || index}>
-                        <StyledInput
-                          type="text"
-                          value={item.name}
-                          onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                          onBlur={() => handleSaveItem(index, item)}
-                          placeholder="Item name"
-                        />
-                        <StyledSelect
-                          value={item.type}
-                          onChange={(e) => handleItemChange(index, 'type', e.target.value)}
-                          onBlur={() => handleSaveItem(index, item)}
-                        >
-                          <option value="revenue">Revenue</option>
-                          <option value="expense">Expense</option>
-                        </StyledSelect>
-                        <StyledInput
-                          type="text"
-                          value={item.category}
-                          onChange={(e) => handleItemChange(index, 'category', e.target.value)}
-                          onBlur={() => handleSaveItem(index, item)}
-                          placeholder="Category"
-                        />
-                        <StyledInput
-                          type="number"
-                          value={item.amount}
-                          onChange={(e) => handleItemChange(index, 'amount', parseFloat(e.target.value) || 0)}
-                          onBlur={() => handleSaveItem(index, item)}
-                          min="0"
-                          step="0.01"
-                        />
-                        <StyledInput
-                          type="text"
-                          value={item.description}
-                          onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                          onBlur={() => handleSaveItem(index, item)}
-                          placeholder="Description"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRemoveItemClick(index, item.id)}
-                          style={{ color: '#ef4444', borderColor: '#ef4444' }}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </ItemsTableRow>
-                    ))}
-                  </ItemsTable>
-                )}
+                <TwoColumnGrid>
+                  <FormGroup>
+                    <label>Start Date </label>
+                    <StyledInput
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => handleInputChange('start_date', e.target.value)}
+                      required
+                    />
+                  </FormGroup>
 
-                <div style={{ marginTop: theme.spacing.md, padding: theme.spacing.md, background: '#f3f4f6', borderRadius: theme.borderRadius.sm }}>
-                  <strong>Total Revenue: </strong>
-                  ${items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  <br />
-                  <strong>Total Expenses: </strong>
-                  ${items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  <br />
-                  <strong>Total Profit: </strong>
-                  <span style={{ color: (items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0) - items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0)) >= 0 ? '#059669' : '#ef4444' }}>
-                    ${(items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0) - items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </ItemsSection>
-            </FormCard>
+                  <FormGroup>
+                    <label>End Date </label>
+                    <StyledInput
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) => handleInputChange('end_date', e.target.value)}
+                      required
+                    />
+                  </FormGroup>
+                </TwoColumnGrid>
 
-            <ActionButtons>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-              >
-                <X size={16} />
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleValidate}
-              >
-                <CheckCircle size={16} />
-                Validate
-              </Button>
-              <Button
-                type="submit"
-                disabled={saving}
-              >
-                <Save size={16} />
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </ActionButtons>
-          </form>
+                <TwoColumnGrid>
+                  <FormGroup>
+                    <label>Department</label>
+                    <StyledInput
+                      type="text"
+                      value={formData.department}
+                      onChange={(e) => handleInputChange('department', e.target.value)}
+                      placeholder="e.g., Sales, Marketing"
+                    />
+                  </FormGroup>
 
-          {/* Delete Modal with Password Verification */}
-          {showDeleteModal && (
-            <ModalOverlay onClick={() => {
-              setShowDeleteModal(false);
-              setDeleteItemIndex(null);
-              setDeleteItemId(null);
-              setDeletePassword('');
-              setDeletePasswordError(null);
-            }}>
-              <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalTitle>
-                  <Trash2 size={20} style={{ color: '#ef4444' }} />
-                  Delete Budget Item
-                </ModalTitle>
-                
-                <WarningBox>
-                  <p>
-                    <strong>Warning:</strong> You are about to permanently delete this budget item. 
-                    This action cannot be undone. Please enter your password to confirm this deletion.
-                  </p>
-                </WarningBox>
+                  <FormGroup>
+                    <label>Project</label>
+                    <StyledInput
+                      type="text"
+                      value={formData.project}
+                      onChange={(e) => handleInputChange('project', e.target.value)}
+                      placeholder="Project name"
+                    />
+                  </FormGroup>
+                </TwoColumnGrid>
+              </FormCard>
 
-                <FormGroup>
-                  <Label htmlFor="delete-password">
-                    Enter your password to confirm deletion:
-                  </Label>
-                  <PasswordInput
-                    id="delete-password"
-                    type="password"
-                    value={deletePassword}
-                    onChange={(e) => {
-                      setDeletePassword(e.target.value);
-                      setDeletePasswordError(null);
-                    }}
-                    placeholder="Enter your password"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && deletePassword.trim()) {
-                        handleDeleteItem(deletePassword);
-                      }
-                    }}
-                    autoFocus
-                  />
-                  {deletePasswordError && (
-                    <ErrorText>{deletePasswordError}</ErrorText>
+              <FormCard>
+                <ItemsSection>
+                  <ItemsHeader>
+                    <h3>Budget Items</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddItem}
+                    >
+                      <Plus size={16} />
+                      Add Item
+                    </Button>
+                  </ItemsHeader>
+
+                  {validationErrors.length > 0 && (
+                    <ValidationErrors>
+                      <h4>
+                        <AlertCircle size={16} />
+                        Validation Errors
+                      </h4>
+                      <ul>
+                        {validationErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </ValidationErrors>
                   )}
-                </FormGroup>
 
-                <ModalActions>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowDeleteModal(false);
-                      setDeleteItemIndex(null);
-                      setDeleteItemId(null);
-                      setDeletePassword('');
-                      setDeletePasswordError(null);
-                    }}
-                    disabled={deleting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDeleteItem(deletePassword)}
-                    disabled={!deletePassword.trim() || deleting}
-                  >
-                    {deleting ? (
-                      <>
-                        <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
-                        Delete
-                      </>
+                  {items.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                      <p>No items added yet. Click &quot;Add Item&quot; to get started.</p>
+                    </div>
+                  ) : (
+                    <ItemsTable>
+                      <ItemsTableHeader>
+                        <div>Name</div>
+                        <div>Type</div>
+                        <div>Category</div>
+                        <div>Amount</div>
+                        <div>Description</div>
+                        <div></div>
+                      </ItemsTableHeader>
+                      {items.map((item, index) => (
+                        <ItemsTableRow key={item.id || index}>
+                          <StyledInput
+                            type="text"
+                            value={item.name}
+                            onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                            onBlur={() => handleSaveItem(index, item)}
+                            placeholder="Item name"
+                          />
+                          <StyledSelect
+                            value={item.type}
+                            onChange={(e) => handleItemChange(index, 'type', e.target.value)}
+                            onBlur={() => handleSaveItem(index, item)}
+                          >
+                            <option value="revenue">Revenue</option>
+                            <option value="expense">Expense</option>
+                          </StyledSelect>
+                          <StyledInput
+                            type="text"
+                            value={item.category}
+                            onChange={(e) => handleItemChange(index, 'category', e.target.value)}
+                            onBlur={() => handleSaveItem(index, item)}
+                            placeholder="Category"
+                          />
+                          <StyledInput
+                            type="number"
+                            value={item.amount}
+                            onChange={(e) => handleItemChange(index, 'amount', parseFloat(e.target.value) || 0)}
+                            onBlur={() => handleSaveItem(index, item)}
+                            min="0"
+                            step="0.01"
+                          />
+                          <StyledInput
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                            onBlur={() => handleSaveItem(index, item)}
+                            placeholder="Description"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveItemClick(index, item.id)}
+                            style={{ color: '#ef4444', borderColor: '#ef4444' }}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </ItemsTableRow>
+                      ))}
+                    </ItemsTable>
+                  )}
+
+                  <div style={{ marginTop: theme.spacing.md, padding: theme.spacing.md, background: '#f3f4f6', borderRadius: theme.borderRadius.sm }}>
+                    <strong>Total Revenue: </strong>
+                    ${items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <br />
+                    <strong>Total Expenses: </strong>
+                    ${items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <br />
+                    <strong>Total Profit: </strong>
+                    <span style={{ color: (items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0) - items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0)) >= 0 ? '#059669' : '#ef4444' }}>
+                      ${(items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0) - items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </ItemsSection>
+              </FormCard>
+
+              <ActionButtons>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                >
+                  <X size={16} />
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleValidate}
+                >
+                  <CheckCircle size={16} />
+                  Validate
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={saving}
+                >
+                  <Save size={16} />
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </ActionButtons>
+            </form>
+
+            {/* Delete Modal with Password Verification */}
+            {showDeleteModal && (
+              <ModalOverlay onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteItemIndex(null);
+                setDeleteItemId(null);
+                setDeletePassword('');
+                setDeletePasswordError(null);
+              }}>
+                <ModalContent onClick={(e) => e.stopPropagation()}>
+                  <ModalTitle>
+                    <Trash2 size={20} style={{ color: '#ef4444' }} />
+                    Delete Budget Item
+                  </ModalTitle>
+
+                  <WarningBox>
+                    <p>
+                      <strong>Warning:</strong> You are about to permanently delete this budget item.
+                      This action cannot be undone. Please enter your password to confirm this deletion.
+                    </p>
+                  </WarningBox>
+
+                  <FormGroup>
+                    <Label htmlFor="delete-password">
+                      Enter your password to confirm deletion:
+                    </Label>
+                    <PasswordInput
+                      id="delete-password"
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => {
+                        setDeletePassword(e.target.value);
+                        setDeletePasswordError(null);
+                      }}
+                      placeholder="Enter your password"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && deletePassword.trim()) {
+                          handleDeleteItem(deletePassword);
+                        }
+                      }}
+                      autoFocus
+                    />
+                    {deletePasswordError && (
+                      <ErrorText>{deletePasswordError}</ErrorText>
                     )}
-                  </Button>
-                </ModalActions>
-              </ModalContent>
-            </ModalOverlay>
-          )}
-        </ContentContainer>
+                  </FormGroup>
+
+                  <ModalActions>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowDeleteModal(false);
+                        setDeleteItemIndex(null);
+                        setDeleteItemId(null);
+                        setDeletePassword('');
+                        setDeletePasswordError(null);
+                      }}
+                      disabled={deleting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeleteItem(deletePassword)}
+                      disabled={!deletePassword.trim() || deleting}
+                    >
+                      {deleting ? (
+                        <>
+                          <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                          Delete
+                        </>
+                      )}
+                    </Button>
+                  </ModalActions>
+                </ModalContent>
+              </ModalOverlay>
+            )}
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );

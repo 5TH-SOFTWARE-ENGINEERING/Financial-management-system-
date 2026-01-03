@@ -11,6 +11,8 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -336,7 +338,7 @@ const ScenarioCreatePageInner: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const budgetIdParam = searchParams?.get('budget_id');
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [budget, setBudget] = useState<Budget | null>(null);
@@ -355,7 +357,7 @@ const ScenarioCreatePageInner: React.FC = () => {
       const response = await apiClient.getBudget(parseInt(budgetIdParam));
       const budgetData = response.data as Budget;
       setBudget(budgetData);
-      
+
       // Initialize adjustments with multiplier 1.0 for all items
       const adjustments: Record<string, { amount_multiplier: number }> = {};
       if (budgetData.items && Array.isArray(budgetData.items)) {
@@ -378,7 +380,7 @@ const ScenarioCreatePageInner: React.FC = () => {
     if (!searchParams) {
       return; // Still loading
     }
-    
+
     if (budgetIdParam) {
       loadBudget();
     } else {
@@ -403,7 +405,7 @@ const ScenarioCreatePageInner: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       toast.error('Scenario name is required');
       return;
@@ -434,11 +436,11 @@ const ScenarioCreatePageInner: React.FC = () => {
   const calculateAdjustedAmount = (item: BudgetItem): number => {
     const adjustment = formData.adjustments[item.id.toString()];
     if (!adjustment) return item.amount;
-    
+
     if (adjustment.amount !== undefined) {
       return adjustment.amount;
     }
-    
+
     const multiplier = adjustment.amount_multiplier || 1.0;
     return item.amount * multiplier;
   };
@@ -462,15 +464,17 @@ const ScenarioCreatePageInner: React.FC = () => {
     return (
       <Layout>
         <PageContainer>
-          <ContentContainer>
-            <div style={{ textAlign: 'center', padding: theme.spacing.xl }}>
-              <AlertCircle size={48} style={{ margin: '0 auto 16px', color: TEXT_COLOR_MUTED }} />
-              <p>Budget not found</p>
-              <Button onClick={() => router.push('/scenarios/list')} style={{ marginTop: theme.spacing.md }}>
-                Back to Scenarios
-              </Button>
-            </div>
-          </ContentContainer>
+          <ComponentGate componentId={ComponentId.SCENARIO_CREATE}>
+            <ContentContainer>
+              <div style={{ textAlign: 'center', padding: theme.spacing.xl }}>
+                <AlertCircle size={48} style={{ margin: '0 auto 16px', color: TEXT_COLOR_MUTED }} />
+                <p>Budget not found</p>
+                <Button onClick={() => router.push('/scenarios/list')} style={{ marginTop: theme.spacing.md }}>
+                  Back to Scenarios
+                </Button>
+              </div>
+            </ContentContainer>
+          </ComponentGate>
         </PageContainer>
       </Layout>
     );
@@ -479,144 +483,146 @@ const ScenarioCreatePageInner: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <BackLink href={`/scenarios/list?budget_id=${budgetIdParam}`}>
-            <ArrowLeft size={16} />
-            Back to Scenarios
-          </BackLink>
+        <ComponentGate componentId={ComponentId.SCENARIO_CREATE}>
+          <ContentContainer>
+            <BackLink href={`/scenarios/list?budget_id=${budgetIdParam}`}>
+              <ArrowLeft size={16} />
+              Back to Scenarios
+            </BackLink>
 
-          <HeaderContainer>
-            <h1>
-              <Target size={36} />
-              Create Scenario: {budget.name}
-            </h1>
-          </HeaderContainer>
+            <HeaderContainer>
+              <h1>
+                <Target size={36} />
+                Create Scenario: {budget.name}
+              </h1>
+            </HeaderContainer>
 
-          <form onSubmit={handleSubmit}>
-            <FormCard>
-              <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
-                Scenario Information
-              </h2>
+            <form onSubmit={handleSubmit}>
+              <FormCard>
+                <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
+                  Scenario Information
+                </h2>
 
-              <FormGroup>
-                <label>Scenario Name </label>
-                <StyledInput
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Best Case - 20% Growth"
-                  required
-                />
-              </FormGroup>
+                <FormGroup>
+                  <label>Scenario Name </label>
+                  <StyledInput
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Best Case - 20% Growth"
+                    required
+                  />
+                </FormGroup>
 
-              <FormGroup>
-                <label>Description</label>
-                <StyledTextarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Scenario description..."
-                  rows={4}
-                />
-              </FormGroup>
+                <FormGroup>
+                  <label>Description</label>
+                  <StyledTextarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Scenario description..."
+                    rows={4}
+                  />
+                </FormGroup>
 
-              <FormGroup>
-                <label>Scenario Type </label>
-                <StyledSelect
-                  value={formData.scenario_type}
-                  onChange={(e) => setFormData({ ...formData, scenario_type: e.target.value })}
-                  required
-                >
-                  <option value="best_case">Best Case</option>
-                  <option value="worst_case">Worst Case</option>
-                  <option value="most_likely">Most Likely</option>
-                  <option value="custom">Custom</option>
-                </StyledSelect>
-              </FormGroup>
-            </FormCard>
+                <FormGroup>
+                  <label>Scenario Type </label>
+                  <StyledSelect
+                    value={formData.scenario_type}
+                    onChange={(e) => setFormData({ ...formData, scenario_type: e.target.value })}
+                    required
+                  >
+                    <option value="best_case">Best Case</option>
+                    <option value="worst_case">Worst Case</option>
+                    <option value="most_likely">Most Likely</option>
+                    <option value="custom">Custom</option>
+                  </StyledSelect>
+                </FormGroup>
+              </FormCard>
 
-            <FormCard>
-              <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
-                Budget Items Adjustments
-              </h2>
-              <p style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, margin: 0 }}>
-                Adjust budget items using multipliers (e.g., 1.2 for 20% increase) or fixed amounts.
-              </p>
-
-              {budget.items && budget.items.length > 0 ? (
-                budget.items.map((item) => {
-                  const adjustedAmount = calculateAdjustedAmount(item);
-                  const adjustment = formData.adjustments[item.id.toString()] || {};
-                  
-                  return (
-                    <ItemCard key={item.id}>
-                      <ItemHeader>
-                        <span className="item-name">{item.name}</span>
-                        <span className="item-type">{item.type}</span>
-                      </ItemHeader>
-                      <div style={{ marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
-                        Original: {formatCurrency(item.amount)} → Adjusted: {formatCurrency(adjustedAmount)}
-                      </div>
-                      <AdjustmentInputs>
-                        <FormGroup>
-                          <label style={{ fontSize: theme.typography.fontSizes.xs, margin: 0 }}>Multiplier (e.g., 1.2 = +20%)</label>
-                          <StyledInput
-                            type="number"
-                            step="0.1"
-                            value={adjustment.amount_multiplier !== undefined ? adjustment.amount_multiplier : ''}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (!isNaN(val)) {
-                                handleAdjustmentChange(item.id, 'amount_multiplier', val);
-                              }
-                            }}
-                            placeholder="1.0"
-                          />
-                        </FormGroup>
-                        <FormGroup>
-                          <label style={{ fontSize: theme.typography.fontSizes.xs, margin: 0 }}>Fixed Amount</label>
-                          <StyledInput
-                            type="number"
-                            step="0.01"
-                            value={adjustment.amount !== undefined ? adjustment.amount : ''}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (!isNaN(val)) {
-                                handleAdjustmentChange(item.id, 'amount', val);
-                              }
-                            }}
-                            placeholder="Fixed amount"
-                          />
-                        </FormGroup>
-                      </AdjustmentInputs>
-                    </ItemCard>
-                  );
-                })
-              ) : (
-                <p style={{ color: TEXT_COLOR_MUTED, textAlign: 'center', padding: theme.spacing.xl }}>
-                  No budget items found. Please add items to the budget first.
+              <FormCard>
+                <h2 style={{ marginTop: 0, marginBottom: 0, fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
+                  Budget Items Adjustments
+                </h2>
+                <p style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED, margin: 0 }}>
+                  Adjust budget items using multipliers (e.g., 1.2 for 20% increase) or fixed amounts.
                 </p>
-              )}
-            </FormCard>
 
-            <ActionButtons>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-              >
-                <X size={16} />
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={saving}
-              >
-                <Save size={16} />
-                {saving ? 'Creating...' : 'Create Scenario'}
-              </Button>
-            </ActionButtons>
-          </form>
-        </ContentContainer>
+                {budget.items && budget.items.length > 0 ? (
+                  budget.items.map((item) => {
+                    const adjustedAmount = calculateAdjustedAmount(item);
+                    const adjustment = formData.adjustments[item.id.toString()] || {};
+
+                    return (
+                      <ItemCard key={item.id}>
+                        <ItemHeader>
+                          <span className="item-name">{item.name}</span>
+                          <span className="item-type">{item.type}</span>
+                        </ItemHeader>
+                        <div style={{ marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                          Original: {formatCurrency(item.amount)} → Adjusted: {formatCurrency(adjustedAmount)}
+                        </div>
+                        <AdjustmentInputs>
+                          <FormGroup>
+                            <label style={{ fontSize: theme.typography.fontSizes.xs, margin: 0 }}>Multiplier (e.g., 1.2 = +20%)</label>
+                            <StyledInput
+                              type="number"
+                              step="0.1"
+                              value={adjustment.amount_multiplier !== undefined ? adjustment.amount_multiplier : ''}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val)) {
+                                  handleAdjustmentChange(item.id, 'amount_multiplier', val);
+                                }
+                              }}
+                              placeholder="1.0"
+                            />
+                          </FormGroup>
+                          <FormGroup>
+                            <label style={{ fontSize: theme.typography.fontSizes.xs, margin: 0 }}>Fixed Amount</label>
+                            <StyledInput
+                              type="number"
+                              step="0.01"
+                              value={adjustment.amount !== undefined ? adjustment.amount : ''}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val)) {
+                                  handleAdjustmentChange(item.id, 'amount', val);
+                                }
+                              }}
+                              placeholder="Fixed amount"
+                            />
+                          </FormGroup>
+                        </AdjustmentInputs>
+                      </ItemCard>
+                    );
+                  })
+                ) : (
+                  <p style={{ color: TEXT_COLOR_MUTED, textAlign: 'center', padding: theme.spacing.xl }}>
+                    No budget items found. Please add items to the budget first.
+                  </p>
+                )}
+              </FormCard>
+
+              <ActionButtons>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                >
+                  <X size={16} />
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={saving}
+                >
+                  <Save size={16} />
+                  {saving ? 'Creating...' : 'Create Scenario'}
+                </Button>
+              </ActionButtons>
+            </form>
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );

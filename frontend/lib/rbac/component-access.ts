@@ -48,6 +48,12 @@ export enum ComponentId {
     SCENARIO_CREATE = 'scenario.create',
     SCENARIO_COMPARE = 'scenario.compare',
 
+    // Budget management components
+    BUDGET_LIST = 'budget.list',
+    BUDGET_CREATE = 'budget.create',
+    BUDGET_EDIT = 'budget.edit',
+    BUDGET_DELETE = 'budget.delete',
+
     // Variance management components
     VARIANCE_CALCULATE = 'variance.calculate',
     VARIANCE_HISTORY = 'variance.history',
@@ -177,6 +183,10 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.VARIANCE_CALCULATE,
         ComponentId.VARIANCE_HISTORY,
         ComponentId.VARIANCE_SUMMARY,
+        ComponentId.BUDGET_LIST,
+        ComponentId.BUDGET_CREATE,
+        ComponentId.BUDGET_EDIT,
+        ComponentId.BUDGET_DELETE,
         ComponentId.DEPARTMENT_LIST,
         ComponentId.DEPARTMENT_CREATE,
         ComponentId.DEPARTMENT_EDIT,
@@ -266,6 +276,10 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.VARIANCE_CALCULATE,
         ComponentId.VARIANCE_HISTORY,
         ComponentId.VARIANCE_SUMMARY,
+        ComponentId.BUDGET_LIST,
+        ComponentId.BUDGET_CREATE,
+        ComponentId.BUDGET_EDIT,
+        ComponentId.BUDGET_DELETE,
         ComponentId.DEPARTMENT_LIST,
         ComponentId.DEPARTMENT_CREATE,
         ComponentId.DEPARTMENT_EDIT,

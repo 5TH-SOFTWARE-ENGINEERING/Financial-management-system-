@@ -1,16 +1,15 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
-import {
-  History, ArrowLeft,
-  Filter, RefreshCw
-} from 'lucide-react';
+import {History, ArrowLeft, Filter, RefreshCw} from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -203,7 +202,7 @@ const VarianceHistoryPage: React.FC = () => {
 
   const loadHistory = useCallback(async () => {
     if (!selectedBudgetId) return;
-    
+
     try {
       setLoadingHistory(true);
       const response = await apiClient.getVarianceHistory(parseInt(selectedBudgetId), { limit: 50 });
@@ -258,146 +257,148 @@ const VarianceHistoryPage: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <BackLink href="/variance">
-            <ArrowLeft size={16} />
-            Back to Variance Analysis
-          </BackLink>
+        <ComponentGate componentId={ComponentId.VARIANCE_HISTORY}>
+          <ContentContainer>
+            <BackLink href="/variance">
+              <ArrowLeft size={16} />
+              Back to Variance Analysis
+            </BackLink>
 
-          <HeaderContainer>
-            <h1>
-              <History size={36} />
-              Variance History
-            </h1>
-            <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
-              View historical variance calculations for budgets
-            </p>
-          </HeaderContainer>
+            <HeaderContainer>
+              <h1>
+                <History size={36} />
+                Variance History
+              </h1>
+              <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
+                View historical variance calculations for budgets
+              </p>
+            </HeaderContainer>
 
-          <FiltersContainer>
-            <Filter size={20} color={TEXT_COLOR_MUTED} />
-            <label style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
-              Select Budget:
-            </label>
-            <select
-              value={selectedBudgetId}
-              onChange={(e) => setSelectedBudgetId(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                fontSize: theme.typography.fontSizes.sm,
-                minWidth: '250px'
-              }}
-            >
-              <option value="">Select a budget...</option>
-              {budgets.map((budget) => (
-                <option key={budget.id} value={budget.id}>
-                  {budget.name} ({budget.status})
-                </option>
-              ))}
-            </select>
-            {selectedBudgetId && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadHistory}
-                disabled={loadingHistory}
+            <FiltersContainer>
+              <Filter size={20} color={TEXT_COLOR_MUTED} />
+              <label style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
+                Select Budget:
+              </label>
+              <select
+                value={selectedBudgetId}
+                onChange={(e) => setSelectedBudgetId(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  fontSize: theme.typography.fontSizes.sm,
+                  minWidth: '250px'
+                }}
               >
-                <RefreshCw size={16} />
-                Refresh
-              </Button>
-            )}
-          </FiltersContainer>
+                <option value="">Select a budget...</option>
+                {budgets.map((budget) => (
+                  <option key={budget.id} value={budget.id}>
+                    {budget.name} ({budget.status})
+                  </option>
+                ))}
+              </select>
+              {selectedBudgetId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadHistory}
+                  disabled={loadingHistory}
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </Button>
+              )}
+            </FiltersContainer>
 
-          {selectedBudgetId ? (
-            loadingHistory ? (
-              <LoadingContainer>
-                <Spinner />
-                <p>Loading variance history...</p>
-              </LoadingContainer>
-            ) : history.length === 0 ? (
+            {selectedBudgetId ? (
+              loadingHistory ? (
+                <LoadingContainer>
+                  <Spinner />
+                  <p>Loading variance history...</p>
+                </LoadingContainer>
+              ) : history.length === 0 ? (
+                <HistoryCard>
+                  <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                    <History size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                    <p>No variance history found for this budget. Calculate variance first.</p>
+                  </div>
+                </HistoryCard>
+              ) : (
+                <HistoryCard>
+                  <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
+                    Variance History ({history.length} records)
+                  </h2>
+                  <div style={{ overflowX: 'auto' }}>
+                    <HistoryTable>
+                      <thead>
+                        <tr>
+                          <th>Period</th>
+                          <th>Budgeted Revenue</th>
+                          <th>Actual Revenue</th>
+                          <th>Revenue Variance</th>
+                          <th>Budgeted Expenses</th>
+                          <th>Actual Expenses</th>
+                          <th>Expense Variance</th>
+                          <th>Budgeted Profit</th>
+                          <th>Actual Profit</th>
+                          <th>Profit Variance</th>
+                          <th>Calculated At</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((variance) => (
+                          <tr key={variance.id}>
+                            <td>
+                              {formatDate(variance.period_start)}<br />
+                              <span style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                                to {formatDate(variance.period_end)}
+                              </span>
+                            </td>
+                            <td>{formatCurrency(variance.budgeted_revenue)}</td>
+                            <td>{formatCurrency(variance.actual_revenue)}</td>
+                            <td>
+                              <VarianceBadge $isPositive={variance.revenue_variance >= 0}>
+                                {formatCurrency(variance.revenue_variance)} ({formatPercent(variance.revenue_variance_percent)})
+                              </VarianceBadge>
+                            </td>
+                            <td>{formatCurrency(variance.budgeted_expenses)}</td>
+                            <td>{formatCurrency(variance.actual_expenses)}</td>
+                            <td>
+                              <VarianceBadge $isPositive={variance.expense_variance <= 0}>
+                                {formatCurrency(variance.expense_variance)} ({formatPercent(variance.expense_variance_percent)})
+                              </VarianceBadge>
+                            </td>
+                            <td>{formatCurrency(variance.budgeted_profit)}</td>
+                            <td>{formatCurrency(variance.actual_profit)}</td>
+                            <td>
+                              <VarianceBadge $isPositive={variance.profit_variance >= 0}>
+                                {formatCurrency(variance.profit_variance)} ({formatPercent(variance.profit_variance_percent)})
+                              </VarianceBadge>
+                            </td>
+                            <td>
+                              {formatDate(variance.calculated_at)}
+                              <br />
+                              <span style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                                {new Date(variance.calculated_at).toLocaleTimeString()}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </HistoryTable>
+                  </div>
+                </HistoryCard>
+              )
+            ) : (
               <HistoryCard>
                 <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
                   <History size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                  <p>No variance history found for this budget. Calculate variance first.</p>
+                  <p>Please select a budget to view variance history.</p>
                 </div>
               </HistoryCard>
-            ) : (
-              <HistoryCard>
-                <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
-                  Variance History ({history.length} records)
-                </h2>
-                <div style={{ overflowX: 'auto' }}>
-                  <HistoryTable>
-                    <thead>
-                      <tr>
-                        <th>Period</th>
-                        <th>Budgeted Revenue</th>
-                        <th>Actual Revenue</th>
-                        <th>Revenue Variance</th>
-                        <th>Budgeted Expenses</th>
-                        <th>Actual Expenses</th>
-                        <th>Expense Variance</th>
-                        <th>Budgeted Profit</th>
-                        <th>Actual Profit</th>
-                        <th>Profit Variance</th>
-                        <th>Calculated At</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.map((variance) => (
-                        <tr key={variance.id}>
-                          <td>
-                            {formatDate(variance.period_start)}<br />
-                            <span style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
-                              to {formatDate(variance.period_end)}
-                            </span>
-                          </td>
-                          <td>{formatCurrency(variance.budgeted_revenue)}</td>
-                          <td>{formatCurrency(variance.actual_revenue)}</td>
-                          <td>
-                            <VarianceBadge $isPositive={variance.revenue_variance >= 0}>
-                              {formatCurrency(variance.revenue_variance)} ({formatPercent(variance.revenue_variance_percent)})
-                            </VarianceBadge>
-                          </td>
-                          <td>{formatCurrency(variance.budgeted_expenses)}</td>
-                          <td>{formatCurrency(variance.actual_expenses)}</td>
-                          <td>
-                            <VarianceBadge $isPositive={variance.expense_variance <= 0}>
-                              {formatCurrency(variance.expense_variance)} ({formatPercent(variance.expense_variance_percent)})
-                            </VarianceBadge>
-                          </td>
-                          <td>{formatCurrency(variance.budgeted_profit)}</td>
-                          <td>{formatCurrency(variance.actual_profit)}</td>
-                          <td>
-                            <VarianceBadge $isPositive={variance.profit_variance >= 0}>
-                              {formatCurrency(variance.profit_variance)} ({formatPercent(variance.profit_variance_percent)})
-                            </VarianceBadge>
-                          </td>
-                          <td>
-                            {formatDate(variance.calculated_at)}
-                            <br />
-                            <span style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
-                              {new Date(variance.calculated_at).toLocaleTimeString()}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </HistoryTable>
-                </div>
-              </HistoryCard>
-            )
-          ) : (
-            <HistoryCard>
-              <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-                <History size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                <p>Please select a budget to view variance history.</p>
-              </div>
-            </HistoryCard>
-          )}
-        </ContentContainer>
+            )}
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );

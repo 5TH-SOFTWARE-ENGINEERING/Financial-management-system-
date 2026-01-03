@@ -12,6 +12,8 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/rbac/auth-context';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const PRIMARY_LIGHT = '#e8f5e9';
@@ -608,7 +610,7 @@ const BudgetsPage: React.FC = () => {
 
   const verifyPassword = async (password: string): Promise<boolean> => {
     if (!user) return false;
-    
+
     try {
       // Use login endpoint to verify password
       const identifier = user.email || '';
@@ -657,7 +659,7 @@ const BudgetsPage: React.FC = () => {
     try {
       // First verify password
       const isValid = await verifyPassword(password.trim());
-      
+
       if (!isValid) {
         setDeletePasswordError('Incorrect password. Please try again.');
         setVerifyingPassword(false);
@@ -731,379 +733,381 @@ const BudgetsPage: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <HeaderContainer>
-            <HeaderContent>
-              <div>
-                <h1>
-                  <DollarSign size={36} />
-                  Budget Management
-                </h1>
-                <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
-                  Create and manage budgets for revenues, expenses, and projects
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: theme.spacing.sm }}>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowTemplateModal(true)}
-                  style={{ background: 'rgba(255, 255, 255, 0.2)', color: 'white', borderColor: 'rgba(255, 255, 255, 0.3)' }}
-                >
-                  <FileText size={16} />
-                  From Template
-                </Button>
-                <Button
-                  onClick={() => router.push('/budgets/create')}
-                  style={{ background: 'white', color: PRIMARY_COLOR }}
-                >
-                  <Plus size={16} />
-                  New Budget
-                </Button>
-              </div>
-            </HeaderContent>
-          </HeaderContainer>
-
-          <FiltersContainer>
-            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, position: 'relative' }}>
-              <Search size={20} color={TEXT_COLOR_MUTED} style={{ position: 'absolute', left: '12px', zIndex: 1 }} />
-              <StyledInput
-                type="text"
-                placeholder="Search budgets..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ paddingLeft: '40px' }}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-              <Filter size={20} color={TEXT_COLOR_MUTED} />
-              <StyledSelect
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-              >
-                <option value="">All Statuses</option>
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted</option>
-                <option value="approved">Approved</option>
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
-              </StyledSelect>
-            </div>
-          </FiltersContainer>
-
-          {filteredBudgets.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-              <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-              <p>No budgets found. Create your first budget to get started.</p>
-            </div>
-          ) : (
-            <BudgetsGrid>
-              {filteredBudgets.map((budget) => (
-                <BudgetCard
-                  key={budget.id}
-                  onClick={() => router.push(`/budgets/${budget.id}`)}
-                >
-                  <BudgetHeader>
-                    <h3>{budget.name}</h3>
-                    <StatusBadge $status={budget.status}>
-                      {budget.status.toUpperCase()}
-                    </StatusBadge>
-                  </BudgetHeader>
-                  
-                  <BudgetMeta>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
-                      <Calendar size={14} />
-                      <span>
-                        {formatDate(budget.start_date)} - {formatDate(budget.end_date)}
-                      </span>
-                    </div>
-                    {budget.department && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
-                        <Building2 size={14} />
-                        <span>{budget.department}</span>
-                      </div>
-                    )}
-                    {budget.project && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
-                        <FolderKanban size={14} />
-                        <span>{budget.project}</span>
-                      </div>
-                    )}
-                  </BudgetMeta>
-
-                  <BudgetTotals>
-                    <TotalItem>
-                      <div className="label">Revenue</div>
-                      <div className="value" style={{ color: '#059669' }}>
-                        {formatCurrency(budget.total_revenue)}
-                      </div>
-                    </TotalItem>
-                    <TotalItem>
-                      <div className="label">Expenses</div>
-                      <div className="value" style={{ color: '#ef4444' }}>
-                        {formatCurrency(budget.total_expenses)}
-                      </div>
-                    </TotalItem>
-                    <TotalItem>
-                      <div className="label">Profit</div>
-                      <div className="value" style={{ color: budget.total_profit >= 0 ? '#059669' : '#ef4444' }}>
-                        {formatCurrency(budget.total_profit)}
-                      </div>
-                    </TotalItem>
-                  </BudgetTotals>
-
-                  <BudgetActions onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/budgets/edit/${budget.id}`)}
-                    >
-                      <Edit size={14} />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(budget.id);
-                      }}
-                      style={{ color: '#ef4444', borderColor: '#ef4444' }}
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </Button>
-                  </BudgetActions>
-                </BudgetCard>
-              ))}
-            </BudgetsGrid>
-          )}
-
-          {/* Template Modal */}
-          {showTemplateModal && (
-            <ModalOverlay $isOpen={showTemplateModal} onClick={() => setShowTemplateModal(false)}>
-              <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalHeaderStyled>
-                  <h2>Create Budget from Template</h2>
-                  <button
-                    type="button"
-                    onClick={() => setShowTemplateModal(false)}
-                    title="Close"
-                  >
-                    <X size={20} />
-                  </button>
-                </ModalHeaderStyled>
-                
-                <TemplateForm
-                  onClose={() => setShowTemplateModal(false)}
-                  onSuccess={() => {
-                    setShowTemplateModal(false);
-                    loadBudgets();
-                  }}
-                />
-              </ModalContent>
-            </ModalOverlay>
-          )}
-
-          {/* Delete Modal with Password Verification */}
-          {showDeleteModal && deleteBudgetId && (() => {
-            const budgetToDelete = budgets.find((b: Budget) => b.id === deleteBudgetId);
-            
-            return (
-              <ModalOverlay $isOpen={showDeleteModal} onClick={handleDeleteCancel}>
-                <ModalContent onClick={(e) => e.stopPropagation()}>
-                  <ModalHeader>
-                    <ModalTitle>
-                      <Trash2 size={20} style={{ color: '#ef4444' }} />
-                      Delete Budget
-                    </ModalTitle>
-                    <button onClick={handleDeleteCancel} title="Close" type="button">
-                      <XCircle />
-                    </button>
-                  </ModalHeader>
-                  
-                  <WarningBox>
-                    <p>
-                      <strong>Warning:</strong> You are about to permanently delete this budget. 
-                      This action cannot be undone. Please enter <strong>your own password</strong> to verify this action.
-                    </p>
-                  </WarningBox>
-
-                  {budgetToDelete && (
-                    <div style={{
-                      background: theme.colors.backgroundSecondary,
-                      border: '1px solid ' + theme.colors.border,
-                      borderRadius: theme.borderRadius.md,
-                      padding: theme.spacing.lg,
-                      marginBottom: theme.spacing.lg
-                    }}>
-                      <h4 style={{
-                        fontSize: theme.typography.fontSizes.md,
-                        fontWeight: theme.typography.fontWeights.bold,
-                        color: TEXT_COLOR_DARK,
-                        margin: `0 0 ${theme.spacing.md} 0`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: theme.spacing.sm
-                      }}>
-                        <DollarSign size={18} />
-                        Budget Details to be Deleted
-                      </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
-                          <div style={{ flex: '1 1 200px' }}>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Budget Name</strong>
-                            <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
-                              {budgetToDelete.name || 'N/A'}
-                            </span>
-                          </div>
-                          <div style={{ flex: '1 1 200px' }}>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</strong>
-                            <StatusBadge $status={budgetToDelete.status}>
-                              {budgetToDelete.status.toUpperCase()}
-                            </StatusBadge>
-                          </div>
-                        </div>
-                        {budgetToDelete.description && (
-                          <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</strong>
-                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK, lineHeight: 1.6 }}>
-                              {budgetToDelete.description}
-                            </span>
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                          <div style={{ flex: '1 1 200px' }}>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Period</strong>
-                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                              {formatDate(budgetToDelete.start_date)} - {formatDate(budgetToDelete.end_date)}
-                            </span>
-                          </div>
-                          {budgetToDelete.department && (
-                            <div style={{ flex: '1 1 200px' }}>
-                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</strong>
-                              <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                                {budgetToDelete.department}
-                              </span>
-                            </div>
-                          )}
-                          {budgetToDelete.project && (
-                            <div style={{ flex: '1 1 200px' }}>
-                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Project</strong>
-                              <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
-                                {budgetToDelete.project}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md, paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                          <div>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Revenue</strong>
-                            <span style={{ 
-                              fontSize: theme.typography.fontSizes.md, 
-                              fontWeight: theme.typography.fontWeights.bold, 
-                              color: '#059669'
-                            }}>
-                              {formatCurrency(budgetToDelete.total_revenue)}
-                            </span>
-                          </div>
-                          <div>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Expenses</strong>
-                            <span style={{ 
-                              fontSize: theme.typography.fontSizes.md, 
-                              fontWeight: theme.typography.fontWeights.bold, 
-                              color: '#ef4444'
-                            }}>
-                              {formatCurrency(budgetToDelete.total_expenses)}
-                            </span>
-                          </div>
-                          <div>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Profit</strong>
-                            <span style={{ 
-                              fontSize: theme.typography.fontSizes.md, 
-                              fontWeight: theme.typography.fontWeights.bold, 
-                              color: budgetToDelete.total_profit >= 0 ? '#059669' : '#ef4444'
-                            }}>
-                              {formatCurrency(budgetToDelete.total_profit)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <FormGroup>
-                    <Label htmlFor="delete-password">
-                      <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
-                      Enter <strong>your own password</strong> to confirm deletion of <strong>{budgetToDelete?.name || 'this budget'}</strong>:
-                    </Label>
-                    <PasswordInputWrapper>
-                      <input
-                        id="delete-password"
-                        type={showDeletePassword ? 'text' : 'password'}
-                        value={deletePassword}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setDeletePassword(e.target.value);
-                          setDeletePasswordError(null);
-                        }}
-                        placeholder="Enter your password"
-                        autoFocus
-                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                          if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword && !deleting) {
-                            handleDelete(deletePassword);
-                          }
-                        }}
-                        disabled={verifyingPassword || deleting}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowDeletePassword(!showDeletePassword)}
-                        title={showDeletePassword ? 'Hide password' : 'Show password'}
-                        disabled={verifyingPassword || deleting}
-                      >
-                        {showDeletePassword ? <EyeOff /> : <Eye />}
-                      </button>
-                    </PasswordInputWrapper>
-                    {deletePasswordError && (
-                      <ErrorText>{deletePasswordError}</ErrorText>
-                    )}
-                  </FormGroup>
-
-                <ModalActions>
+        <ComponentGate componentId={ComponentId.BUDGET_LIST}>
+          <ContentContainer>
+            <HeaderContainer>
+              <HeaderContent>
+                <div>
+                  <h1>
+                    <DollarSign size={36} />
+                    Budget Management
+                  </h1>
+                  <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
+                    Create and manage budgets for revenues, expenses, and projects
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: theme.spacing.sm }}>
                   <Button
                     variant="outline"
-                    onClick={handleDeleteCancel}
-                    disabled={deleting || verifyingPassword}
+                    onClick={() => setShowTemplateModal(true)}
+                    style={{ background: 'rgba(255, 255, 255, 0.2)', color: 'white', borderColor: 'rgba(255, 255, 255, 0.3)' }}
                   >
-                    Cancel
+                    <FileText size={16} />
+                    From Template
                   </Button>
                   <Button
-                    variant="destructive"
-                    onClick={() => handleDelete(deletePassword)}
-                    disabled={!deletePassword.trim() || deleting || verifyingPassword}
+                    onClick={() => router.push('/budgets/create')}
+                    style={{ background: 'white', color: PRIMARY_COLOR }}
                   >
-                    {verifyingPassword ? (
-                      <>
-                        <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
-                        Verifying...
-                      </>
-                    ) : deleting ? (
-                      <>
-                        <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
-                        Delete Budget
-                      </>
-                    )}
+                    <Plus size={16} />
+                    New Budget
                   </Button>
-                </ModalActions>
-              </ModalContent>
-            </ModalOverlay>
-            );
-          })()}
-        </ContentContainer>
+                </div>
+              </HeaderContent>
+            </HeaderContainer>
+
+            <FiltersContainer>
+              <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, position: 'relative' }}>
+                <Search size={20} color={TEXT_COLOR_MUTED} style={{ position: 'absolute', left: '12px', zIndex: 1 }} />
+                <StyledInput
+                  type="text"
+                  placeholder="Search budgets..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ paddingLeft: '40px' }}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                <Filter size={20} color={TEXT_COLOR_MUTED} />
+                <StyledSelect
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="approved">Approved</option>
+                  <option value="active">Active</option>
+                  <option value="archived">Archived</option>
+                </StyledSelect>
+              </div>
+            </FiltersContainer>
+
+            {filteredBudgets.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                <p>No budgets found. Create your first budget to get started.</p>
+              </div>
+            ) : (
+              <BudgetsGrid>
+                {filteredBudgets.map((budget) => (
+                  <BudgetCard
+                    key={budget.id}
+                    onClick={() => router.push(`/budgets/${budget.id}`)}
+                  >
+                    <BudgetHeader>
+                      <h3>{budget.name}</h3>
+                      <StatusBadge $status={budget.status}>
+                        {budget.status.toUpperCase()}
+                      </StatusBadge>
+                    </BudgetHeader>
+
+                    <BudgetMeta>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
+                        <Calendar size={14} />
+                        <span>
+                          {formatDate(budget.start_date)} - {formatDate(budget.end_date)}
+                        </span>
+                      </div>
+                      {budget.department && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
+                          <Building2 size={14} />
+                          <span>{budget.department}</span>
+                        </div>
+                      )}
+                      {budget.project && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
+                          <FolderKanban size={14} />
+                          <span>{budget.project}</span>
+                        </div>
+                      )}
+                    </BudgetMeta>
+
+                    <BudgetTotals>
+                      <TotalItem>
+                        <div className="label">Revenue</div>
+                        <div className="value" style={{ color: '#059669' }}>
+                          {formatCurrency(budget.total_revenue)}
+                        </div>
+                      </TotalItem>
+                      <TotalItem>
+                        <div className="label">Expenses</div>
+                        <div className="value" style={{ color: '#ef4444' }}>
+                          {formatCurrency(budget.total_expenses)}
+                        </div>
+                      </TotalItem>
+                      <TotalItem>
+                        <div className="label">Profit</div>
+                        <div className="value" style={{ color: budget.total_profit >= 0 ? '#059669' : '#ef4444' }}>
+                          {formatCurrency(budget.total_profit)}
+                        </div>
+                      </TotalItem>
+                    </BudgetTotals>
+
+                    <BudgetActions onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/budgets/edit/${budget.id}`)}
+                      >
+                        <Edit size={14} />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(budget.id);
+                        }}
+                        style={{ color: '#ef4444', borderColor: '#ef4444' }}
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </Button>
+                    </BudgetActions>
+                  </BudgetCard>
+                ))}
+              </BudgetsGrid>
+            )}
+
+            {/* Template Modal */}
+            {showTemplateModal && (
+              <ModalOverlay $isOpen={showTemplateModal} onClick={() => setShowTemplateModal(false)}>
+                <ModalContent onClick={(e) => e.stopPropagation()}>
+                  <ModalHeaderStyled>
+                    <h2>Create Budget from Template</h2>
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplateModal(false)}
+                      title="Close"
+                    >
+                      <X size={20} />
+                    </button>
+                  </ModalHeaderStyled>
+
+                  <TemplateForm
+                    onClose={() => setShowTemplateModal(false)}
+                    onSuccess={() => {
+                      setShowTemplateModal(false);
+                      loadBudgets();
+                    }}
+                  />
+                </ModalContent>
+              </ModalOverlay>
+            )}
+
+            {/* Delete Modal with Password Verification */}
+            {showDeleteModal && deleteBudgetId && (() => {
+              const budgetToDelete = budgets.find((b: Budget) => b.id === deleteBudgetId);
+
+              return (
+                <ModalOverlay $isOpen={showDeleteModal} onClick={handleDeleteCancel}>
+                  <ModalContent onClick={(e) => e.stopPropagation()}>
+                    <ModalHeader>
+                      <ModalTitle>
+                        <Trash2 size={20} style={{ color: '#ef4444' }} />
+                        Delete Budget
+                      </ModalTitle>
+                      <button onClick={handleDeleteCancel} title="Close" type="button">
+                        <XCircle />
+                      </button>
+                    </ModalHeader>
+
+                    <WarningBox>
+                      <p>
+                        <strong>Warning:</strong> You are about to permanently delete this budget.
+                        This action cannot be undone. Please enter <strong>your own password</strong> to verify this action.
+                      </p>
+                    </WarningBox>
+
+                    {budgetToDelete && (
+                      <div style={{
+                        background: theme.colors.backgroundSecondary,
+                        border: '1px solid ' + theme.colors.border,
+                        borderRadius: theme.borderRadius.md,
+                        padding: theme.spacing.lg,
+                        marginBottom: theme.spacing.lg
+                      }}>
+                        <h4 style={{
+                          fontSize: theme.typography.fontSizes.md,
+                          fontWeight: theme.typography.fontWeights.bold,
+                          color: TEXT_COLOR_DARK,
+                          margin: `0 0 ${theme.spacing.md} 0`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: theme.spacing.sm
+                        }}>
+                          <DollarSign size={18} />
+                          Budget Details to be Deleted
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+                            <div style={{ flex: '1 1 200px' }}>
+                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Budget Name</strong>
+                              <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
+                                {budgetToDelete.name || 'N/A'}
+                              </span>
+                            </div>
+                            <div style={{ flex: '1 1 200px' }}>
+                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</strong>
+                              <StatusBadge $status={budgetToDelete.status}>
+                                {budgetToDelete.status.toUpperCase()}
+                              </StatusBadge>
+                            </div>
+                          </div>
+                          {budgetToDelete.description && (
+                            <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</strong>
+                              <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK, lineHeight: 1.6 }}>
+                                {budgetToDelete.description}
+                              </span>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                            <div style={{ flex: '1 1 200px' }}>
+                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Period</strong>
+                              <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                                {formatDate(budgetToDelete.start_date)} - {formatDate(budgetToDelete.end_date)}
+                              </span>
+                            </div>
+                            {budgetToDelete.department && (
+                              <div style={{ flex: '1 1 200px' }}>
+                                <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</strong>
+                                <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                                  {budgetToDelete.department}
+                                </span>
+                              </div>
+                            )}
+                            {budgetToDelete.project && (
+                              <div style={{ flex: '1 1 200px' }}>
+                                <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Project</strong>
+                                <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                                  {budgetToDelete.project}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md, paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                            <div>
+                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Revenue</strong>
+                              <span style={{
+                                fontSize: theme.typography.fontSizes.md,
+                                fontWeight: theme.typography.fontWeights.bold,
+                                color: '#059669'
+                              }}>
+                                {formatCurrency(budgetToDelete.total_revenue)}
+                              </span>
+                            </div>
+                            <div>
+                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Expenses</strong>
+                              <span style={{
+                                fontSize: theme.typography.fontSizes.md,
+                                fontWeight: theme.typography.fontWeights.bold,
+                                color: '#ef4444'
+                              }}>
+                                {formatCurrency(budgetToDelete.total_expenses)}
+                              </span>
+                            </div>
+                            <div>
+                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Profit</strong>
+                              <span style={{
+                                fontSize: theme.typography.fontSizes.md,
+                                fontWeight: theme.typography.fontWeights.bold,
+                                color: budgetToDelete.total_profit >= 0 ? '#059669' : '#ef4444'
+                              }}>
+                                {formatCurrency(budgetToDelete.total_profit)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <FormGroup>
+                      <Label htmlFor="delete-password">
+                        <Lock size={16} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                        Enter <strong>your own password</strong> to confirm deletion of <strong>{budgetToDelete?.name || 'this budget'}</strong>:
+                      </Label>
+                      <PasswordInputWrapper>
+                        <input
+                          id="delete-password"
+                          type={showDeletePassword ? 'text' : 'password'}
+                          value={deletePassword}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            setDeletePassword(e.target.value);
+                            setDeletePasswordError(null);
+                          }}
+                          placeholder="Enter your password"
+                          autoFocus
+                          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                            if (e.key === 'Enter' && deletePassword.trim() && !verifyingPassword && !deleting) {
+                              handleDelete(deletePassword);
+                            }
+                          }}
+                          disabled={verifyingPassword || deleting}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowDeletePassword(!showDeletePassword)}
+                          title={showDeletePassword ? 'Hide password' : 'Show password'}
+                          disabled={verifyingPassword || deleting}
+                        >
+                          {showDeletePassword ? <EyeOff /> : <Eye />}
+                        </button>
+                      </PasswordInputWrapper>
+                      {deletePasswordError && (
+                        <ErrorText>{deletePasswordError}</ErrorText>
+                      )}
+                    </FormGroup>
+
+                    <ModalActions>
+                      <Button
+                        variant="outline"
+                        onClick={handleDeleteCancel}
+                        disabled={deleting || verifyingPassword}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleDelete(deletePassword)}
+                        disabled={!deletePassword.trim() || deleting || verifyingPassword}
+                      >
+                        {verifyingPassword ? (
+                          <>
+                            <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                            Verifying...
+                          </>
+                        ) : deleting ? (
+                          <>
+                            <Loader2 size={16} style={{ marginRight: theme.spacing.sm }} className="animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 size={16} style={{ marginRight: theme.spacing.sm }} />
+                            Delete Budget
+                          </>
+                        )}
+                      </Button>
+                    </ModalActions>
+                  </ModalContent>
+                </ModalOverlay>
+              );
+            })()}
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );
@@ -1135,7 +1139,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.start_date || !formData.end_date) {
       toast.error('Please select start and end dates');
       return;
@@ -1150,7 +1154,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({ onClose, onSuccess }) => {
         department: formData.department || undefined,
         project: formData.project || undefined
       });
-      
+
       toast.success('Budget created from template successfully!');
       onSuccess();
       router.push('/budgets');

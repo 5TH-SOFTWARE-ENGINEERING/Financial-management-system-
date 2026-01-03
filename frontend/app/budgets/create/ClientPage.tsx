@@ -9,7 +9,11 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import Link from 'next/link';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
+import { toast } from 'sonner'; 
+
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -356,7 +360,7 @@ const BudgetCreatePage: React.FC = () => {
   };
 
   const handleItemChange = (index: number, field: keyof BudgetItem, value: string | number) => {
-    setItems(prev => prev.map((item, i) => 
+    setItems(prev => prev.map((item, i) =>
       i === index ? { ...item, [field]: value } : item
     ));
   };
@@ -367,27 +371,27 @@ const BudgetCreatePage: React.FC = () => {
 
   const handleValidate = async () => {
     const errors: string[] = [];
-    
+
     if (!formData.name.trim()) errors.push('Budget name is required');
     if (!formData.start_date) errors.push('Start date is required');
     if (!formData.end_date) errors.push('End date is required');
     if (new Date(formData.end_date) < new Date(formData.start_date)) {
       errors.push('End date must be after start date');
     }
-    
+
     items.forEach((item, index) => {
       if (!item.name.trim()) errors.push(`Item ${index + 1}: Name is required`);
       if (!item.category.trim()) errors.push(`Item ${index + 1}: Category is required`);
       if (item.amount < 0) errors.push(`Item ${index + 1}: Amount cannot be negative`);
     });
-    
+
     setValidationErrors(errors);
     return errors.length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!(await handleValidate())) {
       toast.error('Please fix validation errors before saving');
       return;
@@ -395,21 +399,21 @@ const BudgetCreatePage: React.FC = () => {
 
     try {
       setLoading(true);
-      
+
       // Convert dates to ISO datetime strings (backend expects datetime objects)
       // Pydantic accepts ISO 8601 format datetime strings
-      const startDate = formData.start_date 
-        ? new Date(formData.start_date + 'T00:00:00').toISOString() 
+      const startDate = formData.start_date
+        ? new Date(formData.start_date + 'T00:00:00').toISOString()
         : '';
-      const endDate = formData.end_date 
-        ? new Date(formData.end_date + 'T23:59:59').toISOString() 
+      const endDate = formData.end_date
+        ? new Date(formData.end_date + 'T23:59:59').toISOString()
         : '';
-      
+
       if (!startDate || !endDate) {
         toast.error('Start date and end date are required');
         return;
       }
-      
+
       const budgetData = {
         name: formData.name.trim(),
         description: formData.description?.trim() || null,
@@ -434,14 +438,14 @@ const BudgetCreatePage: React.FC = () => {
     } catch (error: unknown) {
       console.error('Budget creation error:', error);
       console.error('Error response:', (error as { response?: unknown })?.response);
-      
+
       let errorMessage = 'Failed to create budget';
-      
+
       const errorResponse = (error as { response?: { data?: unknown } }).response?.data;
 
       if (errorResponse) {
         const errorData = errorResponse as { detail?: unknown; message?: string };
-        
+
         // Handle Pydantic validation errors
         const detail = errorData.detail;
         if (Array.isArray(detail)) {
@@ -465,7 +469,7 @@ const BudgetCreatePage: React.FC = () => {
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-      
+
       toast.error(errorMessage);
       setValidationErrors(errorMessage.split('\n'));
     } finally {
@@ -476,247 +480,249 @@ const BudgetCreatePage: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <HeaderContainer>
-            <h1>
-              <DollarSign size={36} />
-              Create New Budget
-            </h1>
-          </HeaderContainer>
+        <ComponentGate componentId={ComponentId.BUDGET_CREATE}>
+          <ContentContainer>
+            <HeaderContainer>
+              <h1>
+                <DollarSign size={36} />
+                Create New Budget
+              </h1>
+            </HeaderContainer>
 
-          <form onSubmit={handleSubmit}>
-            <FormCard>
-              <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
-                Budget Information
-              </h2>
-
-              <FormGroup>
-                <label>Budget Name </label>
-                <StyledInput
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="e.g., Q1 2024 Budget"
-                  required
-                />
-              </FormGroup>
-
-              <FormGroup>
-                <label>Description</label>
-                <StyledTextarea
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="Budget description..."
-                  rows={4}
-                />
-              </FormGroup>
-
-              <TwoColumnGrid>
-                <FormGroup>
-                  <label>Period </label>
-                  <StyledSelect
-                    value={formData.period}
-                    onChange={(e) => handleInputChange('period', e.target.value)}
-                    required
-                  >
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="yearly">Yearly</option>
-                    <option value="custom">Custom</option>
-                  </StyledSelect>
-                </FormGroup>
+            <form onSubmit={handleSubmit}>
+              <FormCard>
+                <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
+                  Budget Information
+                </h2>
 
                 <FormGroup>
-                  <label>Status</label>
-                  <StyledSelect
-                    value={formData.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="approved">Approved</option>
-                    <option value="active">Active</option>
-                  </StyledSelect>
-                </FormGroup>
-              </TwoColumnGrid>
-
-              <TwoColumnGrid>
-                <FormGroup>
-                  <label>Start Date </label>
-                  <StyledInput
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => handleInputChange('start_date', e.target.value)}
-                    required
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <label>End Date </label>
-                  <StyledInput
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => handleInputChange('end_date', e.target.value)}
-                    required
-                  />
-                </FormGroup>
-              </TwoColumnGrid>
-
-              <TwoColumnGrid>
-                <FormGroup>
-                  <label>Department</label>
+                  <label>Budget Name </label>
                   <StyledInput
                     type="text"
-                    value={formData.department}
-                    onChange={(e) => handleInputChange('department', e.target.value)}
-                    placeholder="e.g., Sales, Marketing"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="e.g., Q1 2024 Budget"
+                    required
                   />
                 </FormGroup>
 
                 <FormGroup>
-                  <label>Project</label>
-                  <StyledInput
-                    type="text"
-                    value={formData.project}
-                    onChange={(e) => handleInputChange('project', e.target.value)}
-                    placeholder="Project name"
+                  <label>Description</label>
+                  <StyledTextarea
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Budget description..."
+                    rows={4}
                   />
                 </FormGroup>
-              </TwoColumnGrid>
-            </FormCard>
 
-            <FormCard>
-              <ItemsSection>
-                <ItemsHeader>
-                  <h3>Budget Items</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleAddItem}
-                  >
-                    <Plus size={16} />
-                    Add Item
-                  </Button>
-                </ItemsHeader>
+                <TwoColumnGrid>
+                  <FormGroup>
+                    <label>Period </label>
+                    <StyledSelect
+                      value={formData.period}
+                      onChange={(e) => handleInputChange('period', e.target.value)}
+                      required
+                    >
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="yearly">Yearly</option>
+                      <option value="custom">Custom</option>
+                    </StyledSelect>
+                  </FormGroup>
 
-                {validationErrors.length > 0 && (
-                  <ValidationErrors>
-                    <h4>
-                      <AlertCircle size={16} />
-                      Validation Errors
-                    </h4>
-                    <ul>
-                      {validationErrors.map((error, index) => (
-                        <li key={index}>{error}</li>
+                  <FormGroup>
+                    <label>Status</label>
+                    <StyledSelect
+                      value={formData.status}
+                      onChange={(e) => handleInputChange('status', e.target.value)}
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="submitted">Submitted</option>
+                      <option value="approved">Approved</option>
+                      <option value="active">Active</option>
+                    </StyledSelect>
+                  </FormGroup>
+                </TwoColumnGrid>
+
+                <TwoColumnGrid>
+                  <FormGroup>
+                    <label>Start Date </label>
+                    <StyledInput
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => handleInputChange('start_date', e.target.value)}
+                      required
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <label>End Date </label>
+                    <StyledInput
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) => handleInputChange('end_date', e.target.value)}
+                      required
+                    />
+                  </FormGroup>
+                </TwoColumnGrid>
+
+                <TwoColumnGrid>
+                  <FormGroup>
+                    <label>Department</label>
+                    <StyledInput
+                      type="text"
+                      value={formData.department}
+                      onChange={(e) => handleInputChange('department', e.target.value)}
+                      placeholder="e.g., Sales, Marketing"
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <label>Project</label>
+                    <StyledInput
+                      type="text"
+                      value={formData.project}
+                      onChange={(e) => handleInputChange('project', e.target.value)}
+                      placeholder="Project name"
+                    />
+                  </FormGroup>
+                </TwoColumnGrid>
+              </FormCard>
+
+              <FormCard>
+                <ItemsSection>
+                  <ItemsHeader>
+                    <h3>Budget Items</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddItem}
+                    >
+                      <Plus size={16} />
+                      Add Item
+                    </Button>
+                  </ItemsHeader>
+
+                  {validationErrors.length > 0 && (
+                    <ValidationErrors>
+                      <h4>
+                        <AlertCircle size={16} />
+                        Validation Errors
+                      </h4>
+                      <ul>
+                        {validationErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </ValidationErrors>
+                  )}
+
+                  {items.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                      <p>No items added yet. Click &quot;Add Item&quot; to get started.</p>
+                    </div>
+                  ) : (
+                    <ItemsTable>
+                      <ItemsTableHeader>
+                        <div>Name</div>
+                        <div>Type</div>
+                        <div>Category</div>
+                        <div>Amount</div>
+                        <div>Description</div>
+                        <div></div>
+                      </ItemsTableHeader>
+                      {items.map((item, index) => (
+                        <ItemsTableRow key={index}>
+                          <StyledInput
+                            type="text"
+                            value={item.name}
+                            onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                            placeholder="Item name"
+                          />
+                          <StyledSelect
+                            value={item.type}
+                            onChange={(e) => handleItemChange(index, 'type', e.target.value)}
+                          >
+                            <option value="revenue">Revenue</option>
+                            <option value="expense">Expense</option>
+                          </StyledSelect>
+                          <StyledInput
+                            type="text"
+                            value={item.category}
+                            onChange={(e) => handleItemChange(index, 'category', e.target.value)}
+                            placeholder="Category"
+                          />
+                          <StyledInput
+                            type="number"
+                            value={item.amount}
+                            onChange={(e) => handleItemChange(index, 'amount', parseFloat(e.target.value) || 0)}
+                            min="0"
+                            step="0.01"
+                          />
+                          <StyledInput
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                            placeholder="Description"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveItem(index)}
+                            style={{ color: '#ef4444', borderColor: '#ef4444' }}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </ItemsTableRow>
                       ))}
-                    </ul>
-                  </ValidationErrors>
-                )}
+                    </ItemsTable>
+                  )}
 
-                {items.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-                    <p>No items added yet. Click &quot;Add Item&quot; to get started.</p>
+                  <div style={{ marginTop: theme.spacing.md, padding: theme.spacing.md, background: '#f3f4f6', borderRadius: theme.borderRadius.sm }}>
+                    <strong>Total Revenue: </strong>
+                    ${items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <br />
+                    <strong>Total Expenses: </strong>
+                    ${items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <br />
+                    <strong>Total Profit: </strong>
+                    <span style={{ color: (items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0) - items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0)) >= 0 ? '#059669' : '#ef4444' }}>
+                      ${(items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0) - items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
-                ) : (
-                  <ItemsTable>
-                    <ItemsTableHeader>
-                      <div>Name</div>
-                      <div>Type</div>
-                      <div>Category</div>
-                      <div>Amount</div>
-                      <div>Description</div>
-                      <div></div>
-                    </ItemsTableHeader>
-                    {items.map((item, index) => (
-                      <ItemsTableRow key={index}>
-                        <StyledInput
-                          type="text"
-                          value={item.name}
-                          onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                          placeholder="Item name"
-                        />
-                        <StyledSelect
-                          value={item.type}
-                          onChange={(e) => handleItemChange(index, 'type', e.target.value)}
-                        >
-                          <option value="revenue">Revenue</option>
-                          <option value="expense">Expense</option>
-                        </StyledSelect>
-                        <StyledInput
-                          type="text"
-                          value={item.category}
-                          onChange={(e) => handleItemChange(index, 'category', e.target.value)}
-                          placeholder="Category"
-                        />
-                        <StyledInput
-                          type="number"
-                          value={item.amount}
-                          onChange={(e) => handleItemChange(index, 'amount', parseFloat(e.target.value) || 0)}
-                          min="0"
-                          step="0.01"
-                        />
-                        <StyledInput
-                          type="text"
-                          value={item.description}
-                          onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                          placeholder="Description"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRemoveItem(index)}
-                          style={{ color: '#ef4444', borderColor: '#ef4444' }}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </ItemsTableRow>
-                    ))}
-                  </ItemsTable>
-                )}
+                </ItemsSection>
+              </FormCard>
 
-                <div style={{ marginTop: theme.spacing.md, padding: theme.spacing.md, background: '#f3f4f6', borderRadius: theme.borderRadius.sm }}>
-                  <strong>Total Revenue: </strong>
-                  ${items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  <br />
-                  <strong>Total Expenses: </strong>
-                  ${items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  <br />
-                  <strong>Total Profit: </strong>
-                  <span style={{ color: (items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0) - items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0)) >= 0 ? '#059669' : '#ef4444' }}>
-                    ${(items.filter(i => i.type === 'revenue').reduce((sum, i) => sum + (i.amount || 0), 0) - items.filter(i => i.type === 'expense').reduce((sum, i) => sum + (i.amount || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </ItemsSection>
-            </FormCard>
-
-            <ActionButtons>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-              >
-                <X size={16} />
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleValidate}
-              >
-                <CheckCircle size={16} />
-                Validate
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-              >
-                <Save size={16} />
-                {loading ? 'Creating...' : 'Create Budget'}
-              </Button>
-            </ActionButtons>
-          </form>
-        </ContentContainer>
+              <ActionButtons>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                >
+                  <X size={16} />
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleValidate}
+                >
+                  <CheckCircle size={16} />
+                  Validate
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                >
+                  <Save size={16} />
+                  {loading ? 'Creating...' : 'Create Budget'}
+                </Button>
+              </ActionButtons>
+            </form>
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );

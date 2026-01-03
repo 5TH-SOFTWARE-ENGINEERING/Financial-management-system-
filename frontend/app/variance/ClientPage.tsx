@@ -8,6 +8,8 @@ import {
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
 import Link from 'next/link';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -118,61 +120,63 @@ const VariancePage: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <HeaderContainer>
-            <h1>
-              <BarChart3 size={36} />
-              Variance Analysis
-            </h1>
-            <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
-              Monitor and analyze budget performance against actuals
-            </p>
-          </HeaderContainer>
-
-          <OptionsGrid>
-            <OptionCard href="/variance/calculatevariance">
-              <div className="icon">
-                <Calculator size={24} />
-              </div>
-              <h2>Calculate Variance</h2>
-              <p>
-                Compare budgeted amounts with actual revenue and expenses for a specific period. 
-                Calculate variance metrics including revenue, expense, and profit variances.
+        <ComponentGate componentId={ComponentId.SIDEBAR_VARIANCE}>
+          <ContentContainer>
+            <HeaderContainer>
+              <h1>
+                <BarChart3 size={36} />
+                Variance Analysis
+              </h1>
+              <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
+                Monitor and analyze budget performance against actuals
               </p>
-              <div className="link">
-                Calculate Variance <ArrowRight size={16} />
-              </div>
-            </OptionCard>
+            </HeaderContainer>
 
-            <OptionCard href="/variance/variancehistory">
-              <div className="icon">
-                <History size={24} />
-              </div>
-              <h2>Variance History</h2>
-              <p>
-                View historical variance calculations for budgets. Track variance trends over time 
-                and analyze performance across multiple periods.
-              </p>
-              <div className="link">
-                View History <ArrowRight size={16} />
-              </div>
-            </OptionCard>
+            <OptionsGrid>
+              <OptionCard href="/variance/calculatevariance">
+                <div className="icon">
+                  <Calculator size={24} />
+                </div>
+                <h2>Calculate Variance</h2>
+                <p>
+                  Compare budgeted amounts with actual revenue and expenses for a specific period.
+                  Calculate variance metrics including revenue, expense, and profit variances.
+                </p>
+                <div className="link">
+                  Calculate Variance <ArrowRight size={16} />
+                </div>
+              </OptionCard>
 
-            <OptionCard href="/variance/variancesummery">
-              <div className="icon">
-                <BarChart3 size={24} />
-              </div>
-              <h2>Variance Summary</h2>
-              <p>
-                Get an overview of budget variance performance across all periods. 
-                View overall statistics and period-by-period summaries.
-              </p>
-              <div className="link">
-                View Summary <ArrowRight size={16} />
-              </div>
-            </OptionCard>
-          </OptionsGrid>
-        </ContentContainer>
+              <OptionCard href="/variance/variancehistory">
+                <div className="icon">
+                  <History size={24} />
+                </div>
+                <h2>Variance History</h2>
+                <p>
+                  View historical variance calculations for budgets. Track variance trends over time
+                  and analyze performance across multiple periods.
+                </p>
+                <div className="link">
+                  View History <ArrowRight size={16} />
+                </div>
+              </OptionCard>
+
+              <OptionCard href="/variance/variancesummery">
+                <div className="icon">
+                  <BarChart3 size={24} />
+                </div>
+                <h2>Variance Summary</h2>
+                <p>
+                  Get an overview of budget variance performance across all periods.
+                  View overall statistics and period-by-period summaries.
+                </p>
+                <div className="link">
+                  View Summary <ArrowRight size={16} />
+                </div>
+              </OptionCard>
+            </OptionsGrid>
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );

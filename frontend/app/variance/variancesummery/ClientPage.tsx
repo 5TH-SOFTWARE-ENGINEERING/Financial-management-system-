@@ -11,6 +11,8 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { ComponentGate } from '@/lib/rbac/component-gate';
+import { ComponentId } from '@/lib/rbac/component-access';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -250,7 +252,7 @@ const VarianceSummaryPage: React.FC = () => {
 
   const loadSummary = useCallback(async () => {
     if (!selectedBudgetId) return;
-    
+
     try {
       setLoadingSummary(true);
       const response = await apiClient.getVarianceSummary(parseInt(selectedBudgetId));
@@ -319,201 +321,203 @@ const VarianceSummaryPage: React.FC = () => {
   return (
     <Layout>
       <PageContainer>
-        <ContentContainer>
-          <BackLink href="/variance">
-            <ArrowLeft size={16} />
-            Back to Variance Analysis
-          </BackLink>
+        <ComponentGate componentId={ComponentId.VARIANCE_SUMMARY}>
+          <ContentContainer>
+            <BackLink href="/variance">
+              <ArrowLeft size={16} />
+              Back to Variance Analysis
+            </BackLink>
 
-          <HeaderContainer>
-            <h1>
-              <BarChart3 size={36} />
-              Variance Summary
-            </h1>
-            <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
-              Overview of budget variance performance across all periods
-            </p>
-          </HeaderContainer>
+            <HeaderContainer>
+              <h1>
+                <BarChart3 size={36} />
+                Variance Summary
+              </h1>
+              <p style={{ marginTop: theme.spacing.sm, opacity: 0.9 }}>
+                Overview of budget variance performance across all periods
+              </p>
+            </HeaderContainer>
 
-          <FiltersContainer>
-            <Filter size={20} color={TEXT_COLOR_MUTED} />
-            <label style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
-              Select Budget:
-            </label>
-            <select
-              value={selectedBudgetId}
-              onChange={(e) => setSelectedBudgetId(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                fontSize: theme.typography.fontSizes.sm,
-                minWidth: '250px'
-              }}
-            >
-              <option value="">Select a budget...</option>
-              {budgets.map((budget) => (
-                <option key={budget.id} value={budget.id}>
-                  {budget.name} ({budget.status})
-                </option>
-              ))}
-            </select>
-            {selectedBudgetId && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadSummary}
-                disabled={loadingSummary}
+            <FiltersContainer>
+              <Filter size={20} color={TEXT_COLOR_MUTED} />
+              <label style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
+                Select Budget:
+              </label>
+              <select
+                value={selectedBudgetId}
+                onChange={(e) => setSelectedBudgetId(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  fontSize: theme.typography.fontSizes.sm,
+                  minWidth: '250px'
+                }}
               >
-                <RefreshCw size={16} />
-                Refresh
-              </Button>
-            )}
-          </FiltersContainer>
+                <option value="">Select a budget...</option>
+                {budgets.map((budget) => (
+                  <option key={budget.id} value={budget.id}>
+                    {budget.name} ({budget.status})
+                  </option>
+                ))}
+              </select>
+              {selectedBudgetId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadSummary}
+                  disabled={loadingSummary}
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </Button>
+              )}
+            </FiltersContainer>
 
-          {selectedBudgetId ? (
-            loadingSummary ? (
-              <LoadingContainer>
-                <Spinner />
-                <p>Loading variance summary...</p>
-              </LoadingContainer>
-            ) : summary.length === 0 ? (
+            {selectedBudgetId ? (
+              loadingSummary ? (
+                <LoadingContainer>
+                  <Spinner />
+                  <p>Loading variance summary...</p>
+                </LoadingContainer>
+              ) : summary.length === 0 ? (
+                <SummaryCard>
+                  <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
+                    <BarChart3 size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                    <p>No variance summary available. Calculate variance first.</p>
+                  </div>
+                </SummaryCard>
+              ) : (
+                <>
+                  {overallStats && (
+                    <SummaryCard>
+                      <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
+                        Overall Summary ({summary.length} periods)
+                      </h2>
+                      <SummaryGrid>
+                        <SummaryItem className={overallStats.totalRevenueVariance >= 0 ? 'positive' : 'negative'}>
+                          <div className="label">
+                            <TrendingUpIcon size={16} />
+                            Total Revenue Variance
+                          </div>
+                          <div className="value">{formatCurrency(overallStats.totalRevenueVariance)}</div>
+                          <div className="subvalue">
+                            Avg: {formatCurrency(overallStats.avgRevenueVariance)} per period
+                          </div>
+                        </SummaryItem>
+                        <SummaryItem className={overallStats.totalExpenseVariance <= 0 ? 'positive' : 'negative'}>
+                          <div className="label">
+                            <TrendingDown size={16} />
+                            Total Expense Variance
+                          </div>
+                          <div className="value">{formatCurrency(overallStats.totalExpenseVariance)}</div>
+                          <div className="subvalue">
+                            Avg: {formatCurrency(overallStats.avgExpenseVariance)} per period
+                          </div>
+                        </SummaryItem>
+                        <SummaryItem className={overallStats.totalProfitVariance >= 0 ? 'positive' : 'negative'}>
+                          <div className="label">
+                            <BarChart3 size={16} />
+                            Total Profit Variance
+                          </div>
+                          <div className="value">{formatCurrency(overallStats.totalProfitVariance)}</div>
+                          <div className="subvalue">
+                            Avg: {formatCurrency(overallStats.avgProfitVariance)} per period
+                          </div>
+                        </SummaryItem>
+                        <SummaryItem>
+                          <div className="label">Total Budgeted Revenue</div>
+                          <div className="value">{formatCurrency(overallStats.totalBudgetedRevenue)}</div>
+                          <div className="subvalue">
+                            vs Actual: {formatCurrency(overallStats.totalActualRevenue)}
+                          </div>
+                        </SummaryItem>
+                        <SummaryItem>
+                          <div className="label">Total Budgeted Expenses</div>
+                          <div className="value">{formatCurrency(overallStats.totalBudgetedExpenses)}</div>
+                          <div className="subvalue">
+                            vs Actual: {formatCurrency(overallStats.totalActualExpenses)}
+                          </div>
+                        </SummaryItem>
+                        <SummaryItem>
+                          <div className="label">Performance Ratio</div>
+                          <div className="value">
+                            {overallStats.totalBudgetedRevenue > 0
+                              ? ((overallStats.totalActualRevenue / overallStats.totalBudgetedRevenue) * 100).toFixed(1)
+                              : '0'}%
+                          </div>
+                          <div className="subvalue">
+                            Revenue vs Budget
+                          </div>
+                        </SummaryItem>
+                      </SummaryGrid>
+                    </SummaryCard>
+                  )}
+
+                  <SummaryCard>
+                    <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
+                      Period-by-Period Summary
+                    </h2>
+                    <div style={{ overflowX: 'auto' }}>
+                      <PeriodTable>
+                        <thead>
+                          <tr>
+                            <th>Period</th>
+                            <th>Revenue Variance</th>
+                            <th>Expense Variance</th>
+                            <th>Profit Variance</th>
+                            <th>Budgeted vs Actual Revenue</th>
+                            <th>Budgeted vs Actual Expenses</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {summary.map((item, index) => (
+                            <tr key={index}>
+                              <td>
+                                {formatDate(item.period_start)}<br />
+                                <span style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                                  to {formatDate(item.period_end)}
+                                </span>
+                              </td>
+                              <td>
+                                <VarianceBadge $isPositive={item.revenue_variance >= 0}>
+                                  {formatCurrency(item.revenue_variance)} ({formatPercent(item.revenue_variance_percent)})
+                                </VarianceBadge>
+                              </td>
+                              <td>
+                                <VarianceBadge $isPositive={item.expense_variance <= 0}>
+                                  {formatCurrency(item.expense_variance)} ({formatPercent(item.expense_variance_percent)})
+                                </VarianceBadge>
+                              </td>
+                              <td>
+                                <VarianceBadge $isPositive={item.profit_variance >= 0}>
+                                  {formatCurrency(item.profit_variance)} ({formatPercent(item.profit_variance_percent)})
+                                </VarianceBadge>
+                              </td>
+                              <td>
+                                {formatCurrency(item.budgeted_revenue)} → {formatCurrency(item.actual_revenue)}
+                              </td>
+                              <td>
+                                {formatCurrency(item.budgeted_expenses)} → {formatCurrency(item.actual_expenses)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </PeriodTable>
+                    </div>
+                  </SummaryCard>
+                </>
+              )
+            ) : (
               <SummaryCard>
                 <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
                   <BarChart3 size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                  <p>No variance summary available. Calculate variance first.</p>
+                  <p>Please select a budget to view variance summary.</p>
                 </div>
               </SummaryCard>
-            ) : (
-              <>
-                {overallStats && (
-                  <SummaryCard>
-                    <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
-                      Overall Summary ({summary.length} periods)
-                    </h2>
-                    <SummaryGrid>
-                      <SummaryItem className={overallStats.totalRevenueVariance >= 0 ? 'positive' : 'negative'}>
-                        <div className="label">
-                          <TrendingUpIcon size={16} />
-                          Total Revenue Variance
-                        </div>
-                        <div className="value">{formatCurrency(overallStats.totalRevenueVariance)}</div>
-                        <div className="subvalue">
-                          Avg: {formatCurrency(overallStats.avgRevenueVariance)} per period
-                        </div>
-                      </SummaryItem>
-                      <SummaryItem className={overallStats.totalExpenseVariance <= 0 ? 'positive' : 'negative'}>
-                        <div className="label">
-                          <TrendingDown size={16} />
-                          Total Expense Variance
-                        </div>
-                        <div className="value">{formatCurrency(overallStats.totalExpenseVariance)}</div>
-                        <div className="subvalue">
-                          Avg: {formatCurrency(overallStats.avgExpenseVariance)} per period
-                        </div>
-                      </SummaryItem>
-                      <SummaryItem className={overallStats.totalProfitVariance >= 0 ? 'positive' : 'negative'}>
-                        <div className="label">
-                          <BarChart3 size={16} />
-                          Total Profit Variance
-                        </div>
-                        <div className="value">{formatCurrency(overallStats.totalProfitVariance)}</div>
-                        <div className="subvalue">
-                          Avg: {formatCurrency(overallStats.avgProfitVariance)} per period
-                        </div>
-                      </SummaryItem>
-                      <SummaryItem>
-                        <div className="label">Total Budgeted Revenue</div>
-                        <div className="value">{formatCurrency(overallStats.totalBudgetedRevenue)}</div>
-                        <div className="subvalue">
-                          vs Actual: {formatCurrency(overallStats.totalActualRevenue)}
-                        </div>
-                      </SummaryItem>
-                      <SummaryItem>
-                        <div className="label">Total Budgeted Expenses</div>
-                        <div className="value">{formatCurrency(overallStats.totalBudgetedExpenses)}</div>
-                        <div className="subvalue">
-                          vs Actual: {formatCurrency(overallStats.totalActualExpenses)}
-                        </div>
-                      </SummaryItem>
-                      <SummaryItem>
-                        <div className="label">Performance Ratio</div>
-                        <div className="value">
-                          {overallStats.totalBudgetedRevenue > 0
-                            ? ((overallStats.totalActualRevenue / overallStats.totalBudgetedRevenue) * 100).toFixed(1)
-                            : '0'}%
-                        </div>
-                        <div className="subvalue">
-                          Revenue vs Budget
-                        </div>
-                      </SummaryItem>
-                    </SummaryGrid>
-                  </SummaryCard>
-                )}
-
-                <SummaryCard>
-                  <h2 style={{ marginBottom: theme.spacing.lg, color: TEXT_COLOR_DARK }}>
-                    Period-by-Period Summary
-                  </h2>
-                  <div style={{ overflowX: 'auto' }}>
-                    <PeriodTable>
-                      <thead>
-                        <tr>
-                          <th>Period</th>
-                          <th>Revenue Variance</th>
-                          <th>Expense Variance</th>
-                          <th>Profit Variance</th>
-                          <th>Budgeted vs Actual Revenue</th>
-                          <th>Budgeted vs Actual Expenses</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {summary.map((item, index) => (
-                          <tr key={index}>
-                            <td>
-                              {formatDate(item.period_start)}<br />
-                              <span style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
-                                to {formatDate(item.period_end)}
-                              </span>
-                            </td>
-                            <td>
-                              <VarianceBadge $isPositive={item.revenue_variance >= 0}>
-                                {formatCurrency(item.revenue_variance)} ({formatPercent(item.revenue_variance_percent)})
-                              </VarianceBadge>
-                            </td>
-                            <td>
-                              <VarianceBadge $isPositive={item.expense_variance <= 0}>
-                                {formatCurrency(item.expense_variance)} ({formatPercent(item.expense_variance_percent)})
-                              </VarianceBadge>
-                            </td>
-                            <td>
-                              <VarianceBadge $isPositive={item.profit_variance >= 0}>
-                                {formatCurrency(item.profit_variance)} ({formatPercent(item.profit_variance_percent)})
-                              </VarianceBadge>
-                            </td>
-                            <td>
-                              {formatCurrency(item.budgeted_revenue)} → {formatCurrency(item.actual_revenue)}
-                            </td>
-                            <td>
-                              {formatCurrency(item.budgeted_expenses)} → {formatCurrency(item.actual_expenses)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </PeriodTable>
-                  </div>
-                </SummaryCard>
-              </>
-            )
-          ) : (
-            <SummaryCard>
-              <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: TEXT_COLOR_MUTED }}>
-                <BarChart3 size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                <p>Please select a budget to view variance summary.</p>
-              </div>
-            </SummaryCard>
-          )}
-        </ContentContainer>
+            )}
+          </ContentContainer>
+        </ComponentGate>
       </PageContainer>
     </Layout>
   );

@@ -724,8 +724,8 @@ const Sidebar: React.FC = () => {
                                         </NavItem>
                                     </ComponentGate>
                                     <ComponentGate componentId={ComponentId.SCENARIO_COMPARE}>
-                                        <NavItem href="/scenarios/campare" $active={pathname.includes('/scenarios/campare')} $collapsed={collapsed}>
-                                            <NavIcon $active={pathname.includes('/scenarios/campare')} $collapsed={collapsed} $size={16} $iconType="git-compare">
+                                        <NavItem href="/scenarios/compare" $active={pathname.includes('/scenarios/compare')} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname.includes('/scenarios/compare')} $collapsed={collapsed} $size={16} $iconType="git-compare">
                                                 <GitCompare />
                                             </NavIcon>
                                             {!collapsed && 'compare scenarios'}
