@@ -508,19 +508,19 @@ type Trends = {
 };
 
 type InventorySummary = {
-    total_items?: number;
-    total_cost_value?: number;
-    total_selling_value?: number;
-    potential_profit?: number;
-    total_quantity_in_stock?: number;
-  } | null;
+  total_items?: number;
+  total_cost_value?: number;
+  total_selling_value?: number;
+  potential_profit?: number;
+  total_quantity_in_stock?: number;
+} | null;
 
 type SalesSummary = {
-    total_sales?: number;
-    total_revenue?: number;
-    pending_sales?: number;
-    posted_sales?: number;
-  } | null;
+  total_sales?: number;
+  total_revenue?: number;
+  pending_sales?: number;
+  posted_sales?: number;
+} | null;
 
 interface AnalyticsData {
   kpis?: KPIMetrics | null;
@@ -545,7 +545,19 @@ const AnalyticsPage: React.FC = () => {
     y: 0,
     text: ''
   });
-  const profitValue = analyticsData?.kpis?.current_period?.profit ?? 0;
+
+  // Derived Financial Metrics (Aggregating Revenue + Sales)
+  // We must calculate these on the frontend because the analytics backend 
+  // currently calculates KPIs based on Revenue/Expense entries only, not Sales.
+  const baseRevenue = analyticsData?.kpis?.current_period?.revenue || 0;
+  const salesRevenue = analyticsData?.sales?.total_revenue || 0;
+  const totalRevenue = baseRevenue + salesRevenue;
+
+  const totalExpenses = analyticsData?.kpis?.current_period?.expenses || 0;
+  const netProfit = totalRevenue - totalExpenses;
+
+  const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+  const expenseRatio = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0;
 
   const loadAnalytics = useCallback(async () => {
     if (!user) return;
@@ -576,12 +588,12 @@ const AnalyticsPage: React.FC = () => {
       }
     } catch (err: unknown) {
       let errorMessage = 'Failed to load analytics data';
-      
+
       if (typeof err === 'object' && err !== null && 'response' in err) {
         const typedErr = err as { response?: { status?: number; data?: { detail?: string; message?: string } } };
         const status = typedErr.response?.status;
         const detail = typedErr.response?.data?.detail || typedErr.response?.data?.message;
-        
+
         if (status === 403) {
           errorMessage = detail || 'You do not have permission to view analytics';
         } else if (status === 400) {
@@ -594,7 +606,7 @@ const AnalyticsPage: React.FC = () => {
       } else if ((err as { message?: string }).message) {
         errorMessage = (err as { message?: string }).message as string;
       }
-      
+
       setError(errorMessage);
       // Clear data on error
       setAnalyticsData(null);
@@ -638,19 +650,19 @@ const AnalyticsPage: React.FC = () => {
       });
     }
   };
-  
+
   const handlePointLeave = () => {
     setTooltip({ visible: false, x: 0, y: 0, text: '' });
   };
 
   const renderLineChart = (labels: string[], revenueData: number[], expenseData: number[]) => {
     if (!revenueData || revenueData.length === 0) return null;
-    
+
     // Filter data for month period - show every 5th day
     let filteredLabels = labels;
     let filteredRevenue = revenueData;
     let filteredExpenses = expenseData;
-    
+
     if (period === 'month' && labels.length > 6) {
       // Show every 5th day (day 0, 5, 10, 15, 20, 25, 30...)
       const step = 5;
@@ -658,33 +670,33 @@ const AnalyticsPage: React.FC = () => {
       filteredRevenue = revenueData.filter((_, index) => index % step === 0 || index === revenueData.length - 1);
       filteredExpenses = expenseData.filter((_, index) => index % step === 0 || index === expenseData.length - 1);
     }
-    
+
     const allValues = [...(filteredRevenue || []), ...(filteredExpenses || [])];
     const maxValue = Math.max(...allValues, 1) * 1.1; // Add 10% padding
-    
+
     const padding = { top: 20, right: 20, bottom: 60, left: 60 };
     const chartWidth = 800; // Approximate width
     const chartHeight = 350;
     const plotWidth = chartWidth - padding.left - padding.right;
     const plotHeight = chartHeight - padding.top - padding.bottom;
-    
+
     const revenueColor = '#22c55e';
     const expenseColor = '#ef4444';
-    
+
     // Generate path data for revenue line
     const revenuePath = filteredRevenue.map((value, index) => {
       const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
       const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
       return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
     }).join(' ');
-    
+
     // Generate path data for expense line
     const expensePath = filteredExpenses.map((value, index) => {
       const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
       const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
       return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
     }).join(' ');
-    
+
     // Generate grid lines
     const gridLines = [];
     for (let i = 0; i <= 5; i++) {
@@ -699,7 +711,7 @@ const AnalyticsPage: React.FC = () => {
         />
       );
     }
-    
+
     return (
       <>
         <ChartLegend>
@@ -716,19 +728,19 @@ const AnalyticsPage: React.FC = () => {
           <LineChartSVG viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
             {/* Grid lines */}
             {gridLines}
-            
+
             {/* Revenue line */}
             <LinePath
               d={revenuePath}
               stroke={revenueColor}
             />
-            
+
             {/* Expense line */}
             <LinePath
               d={expensePath}
               stroke={expenseColor}
             />
-            
+
             {/* Revenue data points */}
             {filteredRevenue.map((value, index) => {
               const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
@@ -746,7 +758,7 @@ const AnalyticsPage: React.FC = () => {
                 />
               );
             })}
-            
+
             {/* Expense data points */}
             {filteredExpenses.map((value, index) => {
               const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
@@ -764,7 +776,7 @@ const AnalyticsPage: React.FC = () => {
                 />
               );
             })}
-            
+
             {/* X-axis labels */}
             {filteredLabels.map((label, index) => {
               const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
@@ -778,7 +790,7 @@ const AnalyticsPage: React.FC = () => {
                 </AxisLabel>
               );
             })}
-            
+
             {/* Y-axis labels */}
             {[0, 1, 2, 3, 4, 5].map((i) => {
               const value = (maxValue / 5) * (5 - i);
@@ -931,12 +943,12 @@ const AnalyticsPage: React.FC = () => {
           {analyticsData ? (
             <>
               <SectionTitle>Key Performance Indicators</SectionTitle>
-              
+
               <KPIPairGrid>
                 <KPICard>
                   <KPILabel>Total Revenue</KPILabel>
                   <KPIValue style={{ color: '#059669' }}>
-                    {formatCurrency(analyticsData.kpis?.current_period?.revenue || 0)}
+                    {formatCurrency(totalRevenue)}
                   </KPIValue>
                   {analyticsData.kpis?.growth?.revenue_growth_percent !== undefined && (
                     <GrowthIndicator $positive={analyticsData.kpis.growth.revenue_growth_percent >= 0}>
@@ -953,7 +965,7 @@ const AnalyticsPage: React.FC = () => {
                 <KPICard>
                   <KPILabel>Total Expenses</KPILabel>
                   <KPIValue style={{ color: '#ef4444' }}>
-                    {formatCurrency(analyticsData.kpis?.current_period?.expenses || 0)}
+                    {formatCurrency(totalExpenses)}
                   </KPIValue>
                   {analyticsData.kpis?.growth?.expense_growth_percent !== undefined && (
                     <GrowthIndicator $positive={analyticsData.kpis.growth.expense_growth_percent <= 0}>
@@ -971,8 +983,8 @@ const AnalyticsPage: React.FC = () => {
               <KPIPairGrid>
                 <KPICard>
                   <KPILabel>Net Profit</KPILabel>
-                  <KPIValue style={{ color: profitValue >= 0 ? '#059669' : '#ef4444' }}>
-                    {formatCurrency(profitValue)}
+                  <KPIValue style={{ color: netProfit >= 0 ? '#059669' : '#ef4444' }}>
+                    {formatCurrency(netProfit)}
                   </KPIValue>
                   {analyticsData.kpis?.growth?.profit_growth_percent !== undefined && (
                     <GrowthIndicator $positive={analyticsData.kpis.growth.profit_growth_percent >= 0}>
@@ -989,14 +1001,10 @@ const AnalyticsPage: React.FC = () => {
                 <KPICard>
                   <KPILabel>Profit Margin</KPILabel>
                   <KPIValue>
-                    {analyticsData.kpis?.current_period?.profit_margin !== undefined 
-                      ? `${Number(analyticsData.kpis?.current_period?.profit_margin ?? 0).toFixed(2)}%`
-                      : '0%'}
+                    {`${profitMargin.toFixed(2)}%`}
                   </KPIValue>
                   <KPILabel style={{ marginTop: '8px' }}>
-                    Expense Ratio: {analyticsData.kpis?.current_period?.expense_ratio !== undefined
-                      ? `${Number(analyticsData.kpis.current_period.expense_ratio).toFixed(2)}%`
-                      : '0%'}
+                    Expense Ratio: {`${expenseRatio.toFixed(2)}%`}
                   </KPILabel>
                 </KPICard>
               </KPIPairGrid>
@@ -1024,7 +1032,7 @@ const AnalyticsPage: React.FC = () => {
                     <Package size={24} style={{ marginRight: theme.spacing.sm }} />
                     Inventory & Sales Overview
                   </SectionTitle>
-                  
+
                   {analyticsData.inventory && (
                     <KPIPairGrid>
                       <KPICard>
@@ -1117,17 +1125,17 @@ const AnalyticsPage: React.FC = () => {
                     )}
                   </>
                 )}
-                
-                <div style={{ 
-                  marginTop: theme.spacing.xl, 
-                  paddingTop: theme.spacing.xl, 
+
+                <div style={{
+                  marginTop: theme.spacing.xl,
+                  paddingTop: theme.spacing.xl,
                   borderTop: `1px solid ${theme.colors.border}`,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   textAlign: 'center'
                 }}>
-                  <h4 style={{ 
+                  <h4 style={{
                     fontSize: `clamp(${theme.typography.fontSizes.lg}, 1.5vw, 22px)`,
                     fontWeight: theme.typography.fontWeights.bold,
                     color: TEXT_COLOR_DARK,
@@ -1140,8 +1148,8 @@ const AnalyticsPage: React.FC = () => {
                     fontSize: theme.typography.fontSizes.lg,
                     margin: `${theme.spacing.lg} 0`,
                     transition: `transform ${theme.transitions.default}`,
-                    color: analyticsData.trends?.profit?.trend?.direction === 'increasing' ? '#059669' : 
-                           analyticsData.trends?.profit?.trend?.direction === 'decreasing' ? '#ef4444' : TEXT_COLOR_MUTED
+                    color: analyticsData.trends?.profit?.trend?.direction === 'increasing' ? '#059669' :
+                      analyticsData.trends?.profit?.trend?.direction === 'decreasing' ? '#ef4444' : TEXT_COLOR_MUTED
                   }}>
                     {analyticsData.trends?.profit?.trend?.direction === 'increasing' && (
                       <TrendingUp size={48} />
