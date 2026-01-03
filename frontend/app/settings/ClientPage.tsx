@@ -1,9 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import styled, { css } from 'styled-components';
-import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import Layout from '@/components/layout';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { UserType } from '@/lib/rbac/models';
@@ -113,28 +111,12 @@ const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: 
     }
 `;
 
-const HeaderIcon = styled(IconWrapper)`
-    margin-right: ${theme.spacing.md};
-`;
-
-const NavIcon = styled(IconWrapper)`
-    margin-right: ${theme.spacing.sm};
-`;
-
-const ButtonIcon = styled(IconWrapper)`
-    margin-right: 0.5rem;
-`;
-
 const QuickActionIconWrapper = styled(IconWrapper)`
     width: 36px;
     height: 36px;
     border-radius: 50%;
     background: rgba(0, 170, 0, 0.1);
-    color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : PRIMARY_COLOR};
-`;
-
-const StatusIcon = styled(IconWrapper)`
-    margin-right: 0.25rem;
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : '#10b981'};
 `;
 
 const MessageIcon = styled(IconWrapper)`
@@ -142,9 +124,7 @@ const MessageIcon = styled(IconWrapper)`
 `;
 
 const PRIMARY_COLOR = '#10b981'; // Modern emerald green
-const PRIMARY_HOVER = '#059669';
 const ACCENT_BLUE = '#3b82f6';
-const ACCENT_PURPLE = '#8b5cf6';
 const TEXT_COLOR_DARK = '#0f172a';
 const TEXT_COLOR_MUTED = '#64748b';
 
@@ -160,109 +140,21 @@ const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.03),
   inset 0 0 0 1px rgba(255, 255, 255, 0.1)
 `;
-const CardShadowHover = `
-  0 20px 25px -5px rgba(0, 0, 0, 0.1),
-  0 10px 10px -5px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(255, 255, 255, 0.2)
-`;
 
-const PageContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-height: 100vh;
-  background: #f8fafc;
-`;
-
-const ContentContainer = styled.div`
-  flex: 1;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: ${theme.spacing.lg};
-`;
-
-const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, ${PRIMARY_HOVER} 100%);
-  color: #ffffff;
-  padding: 40px;
+const DashboardHeader = styled.div`
   margin-bottom: ${theme.spacing.xl};
-  border-radius: 24px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.3);
   
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-    border-radius: 50%;
-  }
-
   h1 {
-    font-size: clamp(28px, 4vw, 42px);
+    font-size: 28px;
     font-weight: 800;
-    margin: 0;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    gap: ${theme.spacing.lg};
+    color: ${TEXT_COLOR_DARK};
+    margin: 0 auto;
     letter-spacing: -0.02em;
   }
-`;
-
-const SettingsGrid = styled.div`
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: ${theme.spacing.xl};
   
-  @media (max-width: 1024px) {
-    grid-template-columns: 1fr;
-    gap: ${theme.spacing.lg};
-  }
-`;
-
-const Nav = styled.nav`
-  ${glassBackground};
-  border-radius: 20px;
-  box-shadow: ${CardShadow};
-  padding: ${theme.spacing.md};
-  height: fit-content;
-  position: sticky;
-  top: 100px;
-`;
-
-const NavItem = styled(Link) <{ $active: boolean }>`
-  display: flex;
-  align-items: center;
-  padding: 14px 18px;
-  margin-bottom: 6px;
-  border-radius: 12px;
-  font-weight: ${props => props.$active ? '700' : '500'};
-  color: ${props => props.$active ? PRIMARY_COLOR : TEXT_COLOR_MUTED};
-  background: ${props => props.$active ? `${PRIMARY_COLOR}10` : 'transparent'};
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid ${props => props.$active ? `${PRIMARY_COLOR}20` : 'transparent'};
-
-  &:hover {
-    background: ${props => props.$active ? `${PRIMARY_COLOR}15` : '#f1f5f9'};
-    color: ${PRIMARY_COLOR};
-    transform: translateX(4px);
-  }
-
-  svg {
-    margin-right: 12px;
-    width: 20px;
-    height: 20px;
-    transition: transform 0.2s ease;
-  }
-
-  &:hover svg {
-    transform: scale(1.1);
+  p {
+    color: ${TEXT_COLOR_MUTED};
+    margin-top: 80px auto;
   }
 `;
 
@@ -271,7 +163,7 @@ const SettingContent = styled.div`
   border-radius: 24px;
   box-shadow: ${CardShadow};
   padding: 40px;
-  min-height: 600px;
+  min-height: 400px;
 `;
 
 const ContentHeader = styled.div`
@@ -491,7 +383,6 @@ const RoleCard = styled.div`
 `;
 
 const SettingsPage: React.FC = () => {
-  const pathname = usePathname();
   const { user } = useAuth();
   // Allow access for both admin and super_admin roles
   const isAdmin = user?.role?.toLowerCase() === 'admin' ||
@@ -504,21 +395,6 @@ const SettingsPage: React.FC = () => {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Determine active tab based on pathname
-  const getActiveTab = () => {
-    if (!pathname) return 'general';
-    if (pathname.includes('/history')) return 'history';
-    if (pathname.includes('/logs')) return 'logs';
-    if (pathname.includes('/backup')) return 'backup';
-    if (pathname.includes('/users-roles')) return 'users-roles';
-    if (pathname.includes('/security')) return 'security';
-    if (pathname.includes('/notifications')) return 'notifications';
-    if (pathname.includes('/general')) return 'general';
-    return 'general';
-  };
-
-  const activeTab = getActiveTab();
 
   const fetchSystemData = async () => {
     if (!isAdmin) {
@@ -713,252 +589,198 @@ const SettingsPage: React.FC = () => {
 
   return (
     <ComponentGate componentId={ComponentId.SETTINGS_VIEW}>
-      <Layout>
-        <PageContainer>
-          <ContentContainer>
-            <HeaderContainer>
-              <h1>
-                <HeaderIcon $iconType="settings" $size={32} $active={true}>
-                  <Settings size={32} />
-                </HeaderIcon>
-                Settings
-              </h1>
-            </HeaderContainer>
-            <SettingsGrid>
-              <Nav>
-                <NavItem href="/settings/general" $active={activeTab === 'general'}>
-                  <NavIcon $iconType="globe" $size={20} $active={activeTab === 'general'}>
-                    <Globe size={20} />
-                  </NavIcon>
-                  General
-                </NavItem>
-                <NavItem href="/settings/notifications" $active={activeTab === 'notifications'}>
-                  <NavIcon $iconType="bell" $size={20} $active={activeTab === 'notifications'}>
-                    <Bell size={20} />
-                  </NavIcon>
-                  Notifications
-                </NavItem>
-                <NavItem href="/settings/security" $active={activeTab === 'security'}>
-                  <NavIcon $iconType="lock" $size={20} $active={activeTab === 'security'}>
-                    <Lock size={20} />
-                  </NavIcon>
-                  Security
-                </NavItem>
-                <NavItem href="/settings/users-roles/user-roles" $active={activeTab === 'users-roles'}>
-                  <NavIcon $iconType="users" $size={20} $active={activeTab === 'users-roles'}>
-                    <Users size={20} />
-                  </NavIcon>
-                  Users & Roles
-                </NavItem>
-                <NavItem href="/settings/backup" $active={activeTab === 'backup'}>
-                  <NavIcon $iconType="database" $size={20} $active={activeTab === 'backup'}>
-                    <Database size={20} />
-                  </NavIcon>
-                  Backup
-                </NavItem>
-                <NavItem href="/settings/logs" $active={activeTab === 'logs'}>
-                  <NavIcon $iconType="list" $size={20} $active={activeTab === 'logs'}>
-                    <List size={20} />
-                  </NavIcon>
-                  Logs
-                </NavItem>
-                <NavItem href="/settings/history" $active={activeTab === 'history'}>
-                  <NavIcon $iconType="history" $size={20} $active={activeTab === 'history'}>
-                    <History size={20} />
-                  </NavIcon>
-                  History
-                </NavItem>
-              </Nav>
+      <div style={{ width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+          <DashboardHeader style={{ marginBottom: 0 }}>
+            <h1>System Overview</h1>
+            <p>Real-time metrics and system health indicators.</p>
+          </DashboardHeader>
 
-              <SettingContent>
-                <ContentHeader>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <IconWrapper $iconType="activity" $size={24} $active={true}>
-                      <Settings size={24} />
-                    </IconWrapper>
-                    <h2>System Overview</h2>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchSystemData}
-                    disabled={loading}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.8rem',
-                      borderRadius: '12px',
-                      padding: '8px 16px',
-                      fontWeight: '600'
-                    }}
-                  >
-                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                    {loading ? 'Updating...' : 'Refresh Data'}
-                  </Button>
-                </ContentHeader>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchSystemData}
+            disabled={loading}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.8rem',
+              borderRadius: '12px',
+              padding: '8px 16px',
+              fontWeight: '600',
+              height: '40px'
+            }}
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            {loading ? 'Updating...' : 'Refresh Data'}
+          </Button>
+        </div>
 
-                {error && (
-                  <ErrorBanner>
-                    <MessageIcon $iconType="alert-triangle" $size={20} $active={true}>
-                      <AlertTriangle size={20} />
-                    </MessageIcon>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '700', marginBottom: '4px' }}>Connection Error</div>
-                      <div style={{ opacity: 0.9 }}>{error}</div>
-                    </div>
-                  </ErrorBanner>
-                )}
+        {error && (
+          <ErrorBanner>
+            <MessageIcon $iconType="alert-triangle" $size={20} $active={true}>
+              <AlertTriangle size={20} />
+            </MessageIcon>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: '700', marginBottom: '4px' }}>Connection Error</div>
+              <div style={{ opacity: 0.9 }}>{error}</div>
+            </div>
+          </ErrorBanner>
+        )}
 
-                {loading && isAdmin && !systemStats ? (
-                  <LoadingState>
-                    <IconWrapper $iconType="loader2" $size={40} $active={true}>
-                      <Loader2 size={40} className="animate-spin" />
-                    </IconWrapper>
-                    <p style={{ fontWeight: '600', fontSize: '16px' }}>Synchronizing system metrics...</p>
-                  </LoadingState>
-                ) : (
-                  <>
-                    {isAdmin ? (
-                      <>
-                        <StatGrid>
-                          <StatCard>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <StatLabel>Total Users</StatLabel>
-                                <StatValue>{formatNumber(systemStats?.users?.total)}</StatValue>
-                              </div>
-                              <IconWrapper $iconType="users" $size={24} $active={true}>
-                                <Users size={24} />
-                              </IconWrapper>
-                            </div>
-                            <StatSubtext>{formatNumber(systemStats?.users?.active)} active members</StatSubtext>
-                          </StatCard>
-
-                          <StatCard>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <StatLabel>Pending Actions</StatLabel>
-                                <StatValue>{formatNumber(systemStats?.pending_approvals)}</StatValue>
-                              </div>
-                              <IconWrapper $iconType="history" $size={24} $active={true}>
-                                <History size={24} />
-                              </IconWrapper>
-                            </div>
-                            <StatSubtext>Awaiting administrative review</StatSubtext>
-                          </StatCard>
-
-                          <StatCard>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <StatLabel>Monthly Revenue</StatLabel>
-                                <StatValue style={{ color: PRIMARY_COLOR }}>{formatCurrency(systemStats?.financials?.total_revenue)}</StatValue>
-                              </div>
-                              <IconWrapper $iconType="globe" $size={24} $active={true}>
-                                <Globe size={24} />
-                              </IconWrapper>
-                            </div>
-                            <StatSubtext>Net profit: {formatCurrency(systemStats?.financials?.net_profit)}</StatSubtext>
-                          </StatCard>
-
-                          <StatCard>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <StatLabel>Operational Costs</StatLabel>
-                                <StatValue style={{ color: '#ef4444' }}>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
-                              </div>
-                              <IconWrapper $iconType="alert-triangle" $size={24} $active={true}>
-                                <AlertTriangle size={24} />
-                              </IconWrapper>
-                            </div>
-                            <StatSubtext>Expenditure tracking active</StatSubtext>
-                          </StatCard>
-                        </StatGrid>
-
-                        <SectionHeader>Service Infrastructure</SectionHeader>
-                        <ServiceList>
-                          {serviceStatuses.map((service) => (
-                            <ServiceRow key={service.label}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <IconWrapper
-                                  $iconType={service.label.toLowerCase().includes('database') ? 'database' :
-                                    service.label.toLowerCase().includes('email') ? 'bell' :
-                                      service.label.toLowerCase().includes('redis') ? 'refresh-cw' : 'globe'}
-                                  $size={18}
-                                  $active={true}
-                                >
-                                  {service.label.toLowerCase().includes('database') && <Database size={18} />}
-                                  {service.label.toLowerCase().includes('email') && <Bell size={18} />}
-                                  {service.label.toLowerCase().includes('redis') && <RefreshCw size={18} />}
-                                  {service.label.toLowerCase().includes('s3') && <Globe size={18} />}
-                                </IconWrapper>
-                                <span>{service.label}</span>
-                              </div>
-                              <StatusPill $healthy={service.healthy}>
-                                {service.healthy ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />}
-                                {service.status}
-                              </StatusPill>
-                            </ServiceRow>
-                          ))}
-                        </ServiceList>
-
-                        <SectionHeader>Global Accessibility</SectionHeader>
-                        <RoleList>
-                          {roleDistribution.map(([role, count]) => (
-                            <RoleCard key={role}>
-                              <div>
-                                <strong style={{ textTransform: 'capitalize' }}>{role.replace('_', ' ')}</strong>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: TEXT_COLOR_MUTED }}>System Role</p>
-                              </div>
-                              <StatValue style={{ fontSize: '24px', margin: 0 }}>{formatNumber(count as number)}</StatValue>
-                            </RoleCard>
-                          ))}
-                        </RoleList>
-                      </>
-                    ) : (
-                      <div style={{
-                        padding: '40px',
-                        textAlign: 'center',
-                        background: '#f8fafc',
-                        borderRadius: '20px',
-                        border: '1px dashed #e2e8f0'
-                      }}>
-                        <IconWrapper $iconType="lock" $size={48} $active={true} style={{ margin: '0 auto 20px' }}>
-                          <Lock size={48} />
-                        </IconWrapper>
-                        <h3 style={{ fontWeight: '800', marginBottom: '12px' }}>Administrator Access Only</h3>
-                        <p style={{ color: TEXT_COLOR_MUTED, maxWidth: '400px', margin: '0 auto' }}>
-                          Detailed system metrics and infrastructure controls are reserved for administrators.
-                          Please use the shortcuts below for your personal settings.
-                        </p>
+        {loading && isAdmin && !systemStats ? (
+          <LoadingState>
+            <IconWrapper $iconType="loader2" $size={40} $active={true}>
+              <Loader2 size={40} className="animate-spin" />
+            </IconWrapper>
+            <p style={{ fontWeight: '600', fontSize: '16px' }}>Synchronizing system metrics...</p>
+          </LoadingState>
+        ) : (
+          <>
+            {isAdmin ? (
+              <>
+                <StatGrid>
+                  <StatCard>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <StatLabel>Total Users</StatLabel>
+                        <StatValue>{formatNumber(systemStats?.users?.total)}</StatValue>
                       </div>
-                    )}
+                      <IconWrapper $iconType="users" $size={24} $active={true}>
+                        <Users size={24} />
+                      </IconWrapper>
+                    </div>
+                    <StatSubtext>{formatNumber(systemStats?.users?.active)} active members</StatSubtext>
+                  </StatCard>
 
-                    <SectionHeader>Control Center Shortcuts</SectionHeader>
-                    <QuickActionsGrid>
-                      {quickLinks.map((link) => (
-                        <QuickActionCard key={link.href} href={link.href}>
-                          <QuickActionIconWrapper $iconType={link.iconType} $size={20} $active={true}>
-                            {link.iconType === 'globe' && <Globe size={20} />}
-                            {link.iconType === 'bell' && <Bell size={20} />}
-                            {link.iconType === 'lock' && <Lock size={20} />}
-                            {link.iconType === 'database' && <Database size={20} />}
-                            {link.iconType === 'list' && <List size={20} />}
-                            {link.iconType === 'users' && <Users size={20} />}
-                          </QuickActionIconWrapper>
-                          <QuickActionContent>
-                            <h4>{link.title}</h4>
-                            <p>{link.description}</p>
-                          </QuickActionContent>
-                        </QuickActionCard>
+                  <StatCard>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <StatLabel>Pending Actions</StatLabel>
+                        <StatValue>{formatNumber(systemStats?.pending_approvals)}</StatValue>
+                      </div>
+                      <IconWrapper $iconType="history" $size={24} $active={true}>
+                        <History size={24} />
+                      </IconWrapper>
+                    </div>
+                    <StatSubtext>Awaiting administrative review</StatSubtext>
+                  </StatCard>
+
+                  <StatCard>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <StatLabel>Monthly Revenue</StatLabel>
+                        <StatValue style={{ color: PRIMARY_COLOR }}>{formatCurrency(systemStats?.financials?.total_revenue)}</StatValue>
+                      </div>
+                      <IconWrapper $iconType="globe" $size={24} $active={true}>
+                        <Globe size={24} />
+                      </IconWrapper>
+                    </div>
+                    <StatSubtext>Net profit: {formatCurrency(systemStats?.financials?.net_profit)}</StatSubtext>
+                  </StatCard>
+
+                  <StatCard>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <StatLabel>Operational Costs</StatLabel>
+                        <StatValue style={{ color: '#ef4444' }}>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
+                      </div>
+                      <IconWrapper $iconType="alert-triangle" $size={24} $active={true}>
+                        <AlertTriangle size={24} />
+                      </IconWrapper>
+                    </div>
+                    <StatSubtext>Expenditure tracking active</StatSubtext>
+                  </StatCard>
+                </StatGrid>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+                  <div>
+                    <SectionHeader>Service Infrastructure</SectionHeader>
+                    <ServiceList>
+                      {serviceStatuses.map((service) => (
+                        <ServiceRow key={service.label}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <IconWrapper
+                              $iconType={service.label.toLowerCase().includes('database') ? 'database' :
+                                service.label.toLowerCase().includes('email') ? 'bell' :
+                                  service.label.toLowerCase().includes('redis') ? 'refresh-cw' : 'globe'}
+                              $size={18}
+                              $active={true}
+                            >
+                              {service.label.toLowerCase().includes('database') && <Database size={18} />}
+                              {service.label.toLowerCase().includes('email') && <Bell size={18} />}
+                              {service.label.toLowerCase().includes('redis') && <RefreshCw size={18} />}
+                              {service.label.toLowerCase().includes('s3') && <Globe size={18} />}
+                            </IconWrapper>
+                            <span>{service.label}</span>
+                          </div>
+                          <StatusPill $healthy={service.healthy}>
+                            {service.healthy ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />}
+                            {service.status}
+                          </StatusPill>
+                        </ServiceRow>
                       ))}
-                    </QuickActionsGrid>
-                  </>
-                )}
-              </SettingContent>
-            </SettingsGrid>
-          </ContentContainer>
-        </PageContainer>
-      </Layout>
+                    </ServiceList>
+                  </div>
+
+                  <div>
+                    <SectionHeader>Global Accessibility</SectionHeader>
+                    <RoleList>
+                      {roleDistribution.map(([role, count]) => (
+                        <RoleCard key={role}>
+                          <div>
+                            <strong style={{ textTransform: 'capitalize' }}>{role.replace('_', ' ')}</strong>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: TEXT_COLOR_MUTED }}>System Role</p>
+                          </div>
+                          <StatValue style={{ fontSize: '24px', margin: 0 }}>{formatNumber(count as number)}</StatValue>
+                        </RoleCard>
+                      ))}
+                    </RoleList>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{
+                padding: '60px',
+                textAlign: 'center',
+                background: '#ffffff',
+                borderRadius: '24px',
+                border: '1px dashed #e2e8f0',
+                marginTop: '40px'
+              }}>
+                <IconWrapper $iconType="lock" $size={48} $active={true} style={{ margin: '0 auto 20px' }}>
+                  <Lock size={48} />
+                </IconWrapper>
+                <h3 style={{ fontWeight: '800', marginBottom: '12px', fontSize: '20px', color: TEXT_COLOR_DARK }}>Administrator Access Only</h3>
+                <p style={{ color: TEXT_COLOR_MUTED, maxWidth: '400px', margin: '0 auto', fontSize: '15px', lineHeight: '1.6' }}>
+                  Detailed system metrics and infrastructure controls are reserved for administrators.
+                  Please use the connection shortcuts below for your personal settings.
+                </p>
+              </div>
+            )}
+
+            <SectionHeader>Control Center Shortcuts</SectionHeader>
+            <QuickActionsGrid>
+              {quickLinks.map((link) => (
+                <QuickActionCard key={link.href} href={link.href}>
+                  <QuickActionIconWrapper $iconType={link.iconType} $size={20} $active={true}>
+                    {link.iconType === 'globe' && <Globe size={20} />}
+                    {link.iconType === 'bell' && <Bell size={20} />}
+                    {link.iconType === 'lock' && <Lock size={20} />}
+                    {link.iconType === 'database' && <Database size={20} />}
+                    {link.iconType === 'list' && <List size={20} />}
+                    {link.iconType === 'users' && <Users size={20} />}
+                  </QuickActionIconWrapper>
+                  <QuickActionContent>
+                    <h4>{link.title}</h4>
+                    <p>{link.description}</p>
+                  </QuickActionContent>
+                </QuickActionCard>
+              ))}
+            </QuickActionsGrid>
+          </>
+        )}
+      </div>
     </ComponentGate>
   );
 };
