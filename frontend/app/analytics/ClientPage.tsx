@@ -6,7 +6,7 @@ import {
   BarChart3, TrendingUp, TrendingDown,
   Activity, Calendar, RefreshCw,
   AlertCircle, ArrowUpRight, ArrowDownRight,
-  Package, ShoppingCart
+  Package, ShoppingCart, Check
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -871,6 +871,7 @@ const AnalyticsPage: React.FC = () => {
               size="sm"
               onClick={() => setPeriod('week')}
             >
+              {period === 'week' && <Check size={14} className="mr-1" />}
               Week
             </Button>
             <Button
@@ -878,6 +879,7 @@ const AnalyticsPage: React.FC = () => {
               size="sm"
               onClick={() => setPeriod('month')}
             >
+              {period === 'month' && <Check size={14} className="mr-1" />}
               Month
             </Button>
             <Button
@@ -885,6 +887,7 @@ const AnalyticsPage: React.FC = () => {
               size="sm"
               onClick={() => setPeriod('quarter')}
             >
+              {period === 'quarter' && <Check size={14} className="mr-1" />}
               Quarter
             </Button>
             <Button
@@ -892,6 +895,7 @@ const AnalyticsPage: React.FC = () => {
               size="sm"
               onClick={() => setPeriod('year')}
             >
+              {period === 'year' && <Check size={14} className="mr-1" />}
               Year
             </Button>
             <Button
@@ -899,6 +903,7 @@ const AnalyticsPage: React.FC = () => {
               size="sm"
               onClick={() => setPeriod('custom')}
             >
+              {period === 'custom' && <Check size={14} className="mr-1 text-green-500 fill-green-500" />}
               Custom
             </Button>
             {period === 'custom' && (
