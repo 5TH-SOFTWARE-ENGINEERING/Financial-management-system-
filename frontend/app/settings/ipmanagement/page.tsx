@@ -1,7 +1,8 @@
-"use client";
 
+'use client'
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import styled, { keyframes, css } from 'styled-components';
 import {
     ShieldAlert,
     Search,
@@ -10,9 +11,12 @@ import {
     Edit,
     MoreHorizontal,
     CheckCircle2,
-    XCircle,
+    X,
     Loader2,
+    Network,
     RefreshCw,
+    XCircle,
+    Filter,
     Info
 } from 'lucide-react';
 
@@ -30,14 +34,6 @@ import {
     TableRow
 } from '@/components/ui/table';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -45,11 +41,329 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { theme } from '@/components/common/theme';
+
+// Animations
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const pulse = keyframes`
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+`;
+
+// Styled Components
+const PageWrapper = styled.div`
+    padding: ${theme.spacing.xl};
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: ${fadeIn} 0.5s ease-out;
+`;
+
+const HeaderSection = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: ${theme.spacing.md};
+    margin-bottom: ${theme.spacing.xl};
+    
+    @media (min-width: 768px) {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+`;
+
+const TitleGroup = styled.div`
+    h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: ${theme.colors.text};
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: ${theme.spacing.sm};
+        
+        svg {
+            color: ${theme.colors.primary};
+        }
+    }
+    
+    p {
+        color: ${theme.colors.textSecondary};
+        font-size: 1.1rem;
+        margin-top: ${theme.spacing.xs};
+    }
+`;
+
+const ActionButtons = styled.div`
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.sm};
+`;
+
+const GlassCard = styled.div`
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 170, 0, 0.1);
+    border-radius: ${theme.borderRadius.lg};
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+`;
+
+const SearchContainer = styled(GlassCard)`
+    padding: ${theme.spacing.md};
+    margin-bottom: ${theme.spacing.lg};
+    display: flex;
+    align-items: center;
+    gap: ${theme.spacing.md};
+    
+    .search-wrapper {
+        position: relative;
+        flex: 1;
+        
+        svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: ${theme.colors.textSecondary};
+            width: 18px;
+            height: 18px;
+        }
+        
+        input {
+            padding-left: 40px;
+            height: 48px;
+            border-radius: ${theme.borderRadius.md};
+            border: 1px solid transparent;
+            background: rgba(0, 0, 0, 0.03);
+            transition: all ${theme.transitions.default};
+            
+            &:focus {
+                background: white;
+                border-color: ${theme.colors.primary};
+                box-shadow: 0 0 0 2px rgba(0, 170, 0, 0.1);
+            }
+        }
+    }
+    
+    .stats {
+        font-size: 0.9rem;
+        color: ${theme.colors.textSecondary};
+        font-weight: 500;
+        white-space: nowrap;
+    }
+`;
+
+const StyledTableContainer = styled(GlassCard)`
+    overflow: hidden;
+    
+    table {
+        width: 100%;
+    }
+    
+    th {
+        background: rgba(0, 170, 0, 0.02);
+        color: ${theme.colors.textSecondary};
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding: ${theme.spacing.lg};
+        border-bottom: 2px solid rgba(0, 170, 0, 0.05);
+    }
+    
+    td {
+        padding: ${theme.spacing.lg};
+        border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+        vertical-align: middle;
+    }
+    
+    tr:last-child td {
+        border-bottom: none;
+    }
+    
+    tr:hover td {
+        background: rgba(0, 170, 0, 0.01);
+    }
+`;
+
+const IPBadge = styled.span<{ $status: 'allowed' | 'blocked' }>`
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+    
+    ${props => props.$status === 'allowed' ? css`
+        background: rgba(0, 170, 0, 0.1);
+        color: #008800;
+        border: 1px solid rgba(0, 170, 0, 0.2);
+    ` : css`
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    `}
+    
+    svg {
+        width: 14px;
+        height: 14px;
+    }
+`;
+
+const InfoBox = styled.div`
+    background: linear-gradient(135deg, rgba(0, 170, 0, 0.05), rgba(0, 170, 0, 0.1));
+    border: 1px solid rgba(0, 170, 0, 0.2);
+    border-radius: ${theme.borderRadius.lg};
+    padding: ${theme.spacing.lg};
+    display: flex;
+    gap: ${theme.spacing.md};
+    margin-top: ${theme.spacing.xl};
+    
+    .icon {
+        color: ${theme.colors.primary};
+        flex-shrink: 0;
+    }
+    
+    .content {
+        h4 {
+            margin: 0;
+            color: ${theme.colors.primary};
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        p {
+            margin: 4px 0 0;
+            color: ${theme.colors.textSecondary};
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+    }
+`;
+
+const LoadingState = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: ${theme.spacing.xxl};
+    color: ${theme.colors.textSecondary};
+    
+    svg {
+        width: 48px;
+        height: 48px;
+        margin-bottom: ${theme.spacing.md};
+        color: ${theme.colors.primary};
+    }
+`;
+
+const EmptyState = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: ${theme.spacing.xxl};
+    text-align: center;
+    
+    svg {
+        width: 64px;
+        height: 64px;
+        color: rgba(0, 0, 0, 0.1);
+        margin-bottom: ${theme.spacing.lg};
+    }
+    
+    
+    h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: ${theme.colors.text};
+        margin: 0;
+    }
+    
+    p {
+        color: ${theme.colors.textSecondary};
+        max-width: 400px;
+        margin: ${theme.spacing.sm} 0 0;
+    }
+`;
+
+const ModalOverlay = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: ${props => props.$isOpen ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+  animation: ${fadeIn} 0.2s ease-out;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: ${theme.borderRadius.md};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.lg};
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: ${theme.spacing.lg};
+  padding-bottom: ${theme.spacing.md};
+  border-bottom: 1px solid ${theme.colors.border};
+`;
+
+const ModalTitle = styled.h3`
+  font-size: ${theme.typography.fontSizes.lg};
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${theme.colors.text};
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+`;
+
+const ModalCloseButton = styled.button`
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${theme.colors.textSecondary};
+    padding: ${theme.spacing.xs};
+    border-radius: ${theme.borderRadius.sm};
+    transition: all ${theme.transitions.default};
+    
+    &:hover {
+      background: ${theme.colors.backgroundSecondary};
+      color: ${theme.colors.text};
+    }
+`;
+
+const ModalFooter = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    gap: ${theme.spacing.md};
+    margin-top: ${theme.spacing.lg};
+    padding-top: ${theme.spacing.md};
+    border-top: 1px solid ${theme.colors.border};
+`;
 
 interface IPRestriction {
     id: number;
@@ -85,7 +399,8 @@ export default function IPManagementPage() {
 
     // Redirect if not admin
     useEffect(() => {
-        if (!authLoading && user && user.userType !== UserType.ADMIN) {
+        const checkAdmin = user?.userType === UserType.ADMIN || user?.role?.toLowerCase() === 'admin';
+        if (!authLoading && user && !checkAdmin) {
             toast.error('Access denied. Admin privileges required.');
             router.push('/dashboard');
         }
@@ -200,144 +515,222 @@ export default function IPManagementPage() {
         }
     };
 
-    if (authLoading || (user && user.role !== 'admin')) {
+    const isAdmin = user?.userType === UserType.ADMIN || user?.role?.toLowerCase() === 'admin';
+
+    if (authLoading || (user && !isAdmin)) {
         return (
-            <div className="flex h-[60vh] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex h-[80vh] items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-primary opacity-50" />
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">IP Management</h1>
-                    <p className="text-muted-foreground">
-                        Control access to the system by whitelisting or blacklisting IP addresses.
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
+        <PageWrapper>
+            <HeaderSection>
+                <TitleGroup>
+                    <h1>
+                        <Network />
+                        IP Management
+                    </h1>
+                    <p>Advanced security controls for system access via IP filtering</p>
+                </TitleGroup>
+                <ActionButtons>
                     <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         onClick={() => fetchRestrictions(true)}
                         disabled={isDataRefreshing}
                         className={isDataRefreshing ? 'animate-spin' : ''}
                     >
-                        <RefreshCw className="h-4 w-4" />
+                        <RefreshCw className="h-5 w-5" />
                     </Button>
-                    <Button onClick={() => {
-                        setIpForm({ ip_address: '', description: '', status: 'allowed' });
-                        setIsAddDialogOpen(true);
-                    }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add IP Restriction
-                    </Button>
-                </div>
-            </div>
 
-            <div className="flex items-center gap-4 bg-card p-4 rounded-xl border shadow-sm">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Button
+                        size="lg"
+                        style={{ background: theme.colors.primary, fontWeight: 700 }}
+                        onClick={() => {
+                            setIpForm({ ip_address: '', description: '', status: 'allowed' });
+                            setIsAddDialogOpen(true);
+                        }}
+                    >
+                        <Plus className="mr-2 h-5 w-5" />
+                        New Restriction
+                    </Button>
+                    {/* Add Modal */}
+                    <ModalOverlay $isOpen={isAddDialogOpen} onClick={() => setIsAddDialogOpen(false)}>
+                        <ModalContent onClick={e => e.stopPropagation()}>
+                            <ModalHeader>
+                                <ModalTitle style={{ color: theme.colors.primary }}>Add New IP Address</ModalTitle>
+                                <ModalCloseButton onClick={() => setIsAddDialogOpen(false)}>
+                                    <X className="h-5 w-5" />
+                                </ModalCloseButton>
+                            </ModalHeader>
+                            <div className="grid gap-6">
+                                <p style={{ color: theme.colors.textSecondary, fontSize: '0.9rem', marginTop: '-10px' }}>
+                                    Define a new access rule for a specific network address.
+                                </p>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="ip">IP Address</Label>
+                                    <Input
+                                        id="ip"
+                                        placeholder="0.0.0.0"
+                                        style={{ fontFamily: 'monospace' }}
+                                        value={ipForm.ip_address}
+                                        onChange={(e) => setIpForm({ ...ipForm, ip_address: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label>Access Policy</Label>
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            type="button"
+                                            variant={ipForm.status === 'allowed' ? 'default' : 'outline'}
+                                            className="flex-1 font-bold"
+                                            style={ipForm.status === 'allowed' ? { background: theme.colors.primary } : {}}
+                                            onClick={() => setIpForm({ ...ipForm, status: 'allowed' })}
+                                        >
+                                            Explicit Allow
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={ipForm.status === 'blocked' ? 'destructive' : 'outline'}
+                                            className="flex-1 font-bold"
+                                            onClick={() => setIpForm({ ...ipForm, status: 'blocked' })}
+                                        >
+                                            Explicit Block
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="description">Rule Description</Label>
+                                    <Textarea
+                                        id="description"
+                                        placeholder="Why is this restriction needed?"
+                                        value={ipForm.description}
+                                        onChange={(e) => setIpForm({ ...ipForm, description: e.target.value })}
+                                        rows={3}
+                                    />
+                                </div>
+                            </div>
+                            <ModalFooter>
+                                <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)}>Discard</Button>
+                                <Button
+                                    style={{ background: theme.colors.primary, fontWeight: 700 }}
+                                    onClick={handleCreateIP}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Apply Rule
+                                </Button>
+                            </ModalFooter>
+                        </ModalContent>
+                    </ModalOverlay>
+                </ActionButtons>
+            </HeaderSection>
+
+            <SearchContainer>
+                <div className="search-wrapper">
+                    <Search />
                     <Input
-                        placeholder="Search by IP address or description..."
+                        placeholder="Search IP address or purpose..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
                     />
                 </div>
-                <div className="text-sm text-muted-foreground">
-                    Showing {filteredRestrictions.length} of {ipRestrictions.length} records
+                <div className="stats">
+                    <Filter className="h-4 w-4 inline mr-2 text-primary" />
+                    {filteredRestrictions.length} / {ipRestrictions.length} Entries
                 </div>
-            </div>
+            </SearchContainer>
 
-            <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <StyledTableContainer>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>IP Address</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Created At</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>System Entry Point</TableHead>
+                            <TableHead>Purpose / Description</TableHead>
+                            <TableHead>Access Status</TableHead>
+                            <TableHead>Date Added</TableHead>
+                            <TableHead className="text-right">Manage</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-32 text-center">
-                                    <div className="flex items-center justify-center gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        <span>Loading IP restrictions...</span>
-                                    </div>
+                                <TableCell colSpan={5}>
+                                    <LoadingState>
+                                        <Loader2 className="animate-spin" />
+                                        <span>Syncing with gateway...</span>
+                                    </LoadingState>
                                 </TableCell>
                             </TableRow>
                         ) : filteredRestrictions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-32 text-center">
-                                    <div className="flex flex-col items-center gap-1">
-                                        <ShieldAlert className="h-8 w-8 text-muted-foreground mb-2" />
-                                        <p className="font-medium">No IP restrictions found</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {searchQuery ? 'Try adjusting your search query' : 'Add your first IP restriction to secure the system'}
+                                <TableCell colSpan={5}>
+                                    <EmptyState>
+                                        <ShieldAlert />
+                                        <h3>No restrictions active</h3>
+                                        <p>
+                                            {searchQuery ? "We couldn't find any restrictions matching your search." : "Your system is currently open to default access rules. Add a restriction to enhance security."}
                                         </p>
-                                    </div>
+                                    </EmptyState>
                                 </TableCell>
                             </TableRow>
                         ) : (
                             filteredRestrictions.map((item) => (
-                                <TableRow key={item.id} className="group transition-colors hover:bg-muted/50">
-                                    <TableCell className="font-mono font-medium">
-                                        {item.ip_address}
+                                <TableRow key={item.id}>
+                                    <TableCell>
+                                        <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '1.05rem', color: theme.colors.primary }}>
+                                            {item.ip_address}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
-                                        <span className="text-muted-foreground truncate max-w-[300px] block">
-                                            {item.description || 'No description'}
-                                        </span>
+                                        <div style={{ color: theme.colors.textSecondary, fontStyle: item.description ? 'normal' : 'italic' }}>
+                                            {item.description || 'No purpose defined'}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge
-                                            variant={item.status === 'allowed' ? 'success' : 'destructive'}
-                                            className="capitalize"
-                                        >
-                                            {item.status === 'allowed' ? (
-                                                <CheckCircle2 className="mr-1 h-3 w-3" />
-                                            ) : (
-                                                <XCircle className="mr-1 h-3 w-3" />
-                                            )}
+                                        <IPBadge $status={item.status}>
+                                            {item.status === 'allowed' ? <CheckCircle2 /> : <XCircle />}
                                             {item.status}
-                                        </Badge>
+                                        </IPBadge>
                                     </TableCell>
-                                    <TableCell className="text-muted-foreground text-sm">
-                                        {new Date(item.created_at).toLocaleDateString()}
+                                    <TableCell>
+                                        <div style={{ fontSize: '0.85rem', color: theme.colors.textSecondary }}>
+                                            {new Date(item.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
+                                        <div className="flex justify-end items-center gap-3">
                                             <Switch
                                                 checked={item.status === 'allowed'}
                                                 onCheckedChange={() => toggleStatus(item)}
-                                                title={item.status === 'allowed' ? 'Block IP' : 'Allow IP'}
+                                                style={{ scale: '0.8' }}
                                             />
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    <Button variant="ghost" size="icon">
+                                                        <MoreHorizontal className="h-5 w-5" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuSeparator />
+                                                <DropdownMenuContent align="end" style={{ borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.border}` }}>
+                                                    <DropdownMenuLabel>Gateway Controls</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator style={{ background: theme.colors.border }} />
                                                     <DropdownMenuItem onClick={() => openEditDialog(item)}>
                                                         <Edit className="mr-2 h-4 w-4" />
-                                                        Edit details
+                                                        Modify Entry
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        className="text-destructive focus:text-destructive"
+                                                        className="text-destructive"
                                                         onClick={() => openDeleteDialog(item)}
                                                     >
                                                         <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete entry
+                                                        Remove Rule
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -348,114 +741,70 @@ export default function IPManagementPage() {
                         )}
                     </TableBody>
                 </Table>
-            </div>
+            </StyledTableContainer>
 
-            {/* Add Dialog */}
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Add IP Restriction</DialogTitle>
-                        <DialogDescription>
-                            Whitelist or blacklist a specific IP address to control system access.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="ip">IP Address</Label>
-                            <Input
-                                id="ip"
-                                placeholder="e.g. 192.168.1.1"
-                                value={ipForm.ip_address}
-                                onChange={(e) => setIpForm({ ...ipForm, ip_address: e.target.value })}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="status">Default Status</Label>
-                            <div className="flex items-center gap-4">
-                                <Button
-                                    type="button"
-                                    variant={ipForm.status === 'allowed' ? 'default' : 'outline'}
-                                    size="sm"
-                                    className="flex-1"
-                                    onClick={() => setIpForm({ ...ipForm, status: 'allowed' })}
-                                >
-                                    Allowed
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant={ipForm.status === 'blocked' ? 'destructive' : 'outline'}
-                                    size="sm"
-                                    className="flex-1"
-                                    onClick={() => setIpForm({ ...ipForm, status: 'blocked' })}
-                                >
-                                    Blocked
-                                </Button>
-                            </div>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="description">Description (Optional)</Label>
-                            <Textarea
-                                id="description"
-                                placeholder="Reason for restriction or owner of the IP..."
-                                value={ipForm.description}
-                                onChange={(e) => setIpForm({ ...ipForm, description: e.target.value })}
-                                rows={3}
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleCreateIP} disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Save Restriction
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <InfoBox>
+                <Info className="icon" />
+                <div className="content">
+                    <h4>Security Best Practice</h4>
+                    <p>
+                        IP restrictions operate at the network layer before application logic.
+                        Always ensure your administrative IP is whitelisted to maintain access.
+                        Changes are applied immediately to all incoming traffic.
+                    </p>
+                </div>
+            </InfoBox>
 
-            {/* Edit Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Edit IP Restriction</DialogTitle>
-                        <DialogDescription>
-                            Update the status or description for {selectedIP?.ip_address}.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
+            {/* Dialogs with enhanced styling */}
+
+
+
+            {/* Edit Modal */}
+            <ModalOverlay $isOpen={isEditDialogOpen} onClick={() => setIsEditDialogOpen(false)}>
+                <ModalContent onClick={e => e.stopPropagation()}>
+                    <ModalHeader>
+                        <ModalTitle style={{ color: theme.colors.primary }}>Modify Rule</ModalTitle>
+                        <ModalCloseButton onClick={() => setIsEditDialogOpen(false)}>
+                            <X className="h-5 w-5" />
+                        </ModalCloseButton>
+                    </ModalHeader>
+                    <div className="grid gap-6">
+                        <p style={{ color: theme.colors.textSecondary, fontSize: '0.9rem', marginTop: '-10px' }}>
+                            Updating configuration for <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{selectedIP?.ip_address}</span>
+                        </p>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-ip">IP Address</Label>
                             <Input
                                 id="edit-ip"
+                                style={{ fontFamily: 'monospace' }}
                                 value={ipForm.ip_address}
                                 onChange={(e) => setIpForm({ ...ipForm, ip_address: e.target.value })}
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="edit-status">Status</Label>
-                            <div className="flex items-center gap-4">
+                            <Label>Access Policy</Label>
+                            <div className="flex items-center gap-3">
                                 <Button
                                     type="button"
                                     variant={ipForm.status === 'allowed' ? 'default' : 'outline'}
-                                    size="sm"
-                                    className="flex-1"
+                                    className="flex-1 font-bold"
+                                    style={ipForm.status === 'allowed' ? { background: theme.colors.primary } : {}}
                                     onClick={() => setIpForm({ ...ipForm, status: 'allowed' })}
                                 >
-                                    Allowed
+                                    Explicit Allow
                                 </Button>
                                 <Button
                                     type="button"
                                     variant={ipForm.status === 'blocked' ? 'destructive' : 'outline'}
-                                    size="sm"
-                                    className="flex-1"
+                                    className="flex-1 font-bold"
                                     onClick={() => setIpForm({ ...ipForm, status: 'blocked' })}
                                 >
-                                    Blocked
+                                    Explicit Block
                                 </Button>
                             </div>
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="edit-description">Description</Label>
+                            <Label htmlFor="edit-description">Rule Description</Label>
                             <Textarea
                                 id="edit-description"
                                 value={ipForm.description}
@@ -464,46 +813,44 @@ export default function IPManagementPage() {
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleUpdateIP} disabled={isSubmitting}>
+                    <ModalFooter>
+                        <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            style={{ background: theme.colors.primary, fontWeight: 700 }}
+                            onClick={handleUpdateIP}
+                            disabled={isSubmitting}
+                        >
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Update Changes
+                            Update Configuration
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </ModalFooter>
+                </ModalContent>
+            </ModalOverlay>
 
-            {/* Delete Dialog */}
-            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className="sm:max-w-[400px]">
-                    <DialogHeader>
-                        <DialogTitle>Confirm Deletion</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to remove the restriction for <span className="font-mono font-bold text-foreground">{selectedIP?.ip_address}</span>?
-                            This action cannot be undone and will allow/block access based on default system rules.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="mt-4">
-                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+            {/* Delete Modal */}
+            <ModalOverlay $isOpen={isDeleteDialogOpen} onClick={() => setIsDeleteDialogOpen(false)}>
+                <ModalContent style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
+                    <ModalHeader>
+                        <ModalTitle className="text-destructive">Remove Rule?</ModalTitle>
+                        <ModalCloseButton onClick={() => setIsDeleteDialogOpen(false)}>
+                            <X className="h-5 w-5" />
+                        </ModalCloseButton>
+                    </ModalHeader>
+                    <div className="grid gap-6">
+                        <p style={{ color: theme.colors.textSecondary, fontSize: '0.9rem' }}>
+                            You are about to remove the access rule for <span className="font-mono font-bold text-foreground">{selectedIP?.ip_address}</span>.
+                            This will revert traffic from this address to default system rules.
+                        </p>
+                    </div>
+                    <ModalFooter>
+                        <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)}>No, Keep it</Button>
                         <Button variant="destructive" onClick={handleDeleteIP} disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Delete Restriction
+                            Yes, Remove Rule
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex gap-3">
-                <Info className="h-5 w-5 text-primary shrink-0" />
-                <div className="text-sm">
-                    <p className="font-semibold text-primary">Security Tip</p>
-                    <p className="text-muted-foreground">
-                        IP restrictions are applied at the network layer. Ensure you have at least one allowed IP (your current one)
-                        to avoid being locked out of the administration panel.
-                    </p>
-                </div>
-            </div>
-        </div>
+                    </ModalFooter>
+                </ModalContent>
+            </ModalOverlay>
+        </PageWrapper>
     );
 }
