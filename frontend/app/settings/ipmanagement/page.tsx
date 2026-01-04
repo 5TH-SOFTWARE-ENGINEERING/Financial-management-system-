@@ -37,16 +37,16 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { theme } from '@/components/common/theme';
 
+const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
 // Animations
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -62,16 +62,19 @@ const pulse = keyframes`
 // Styled Components
 const PageWrapper = styled.div`
     padding: ${theme.spacing.xl};
-    max-width: 1200px;
+    max-width: 100%;
     margin: 0 auto;
+    min-height: 100vh;
+    background-color: #f0f2f5;
     animation: ${fadeIn} 0.5s ease-out;
 `;
 
 const HeaderSection = styled.div`
+    max-width: 1200px;
+    margin: 0 auto ${theme.spacing.lg};
     display: flex;
     flex-direction: column;
     gap: ${theme.spacing.md};
-    margin-bottom: ${theme.spacing.xl};
     
     @media (min-width: 768px) {
         flex-direction: row;
@@ -82,23 +85,27 @@ const HeaderSection = styled.div`
 
 const TitleGroup = styled.div`
     h1 {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: ${theme.colors.text};
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1c1e21;
         margin: 0;
         display: flex;
         align-items: center;
         gap: ${theme.spacing.sm};
+        letter-spacing: -0.01em;
         
         svg {
             color: ${theme.colors.primary};
+            width: 28px;
+            height: 28px;
         }
     }
     
     p {
-        color: ${theme.colors.textSecondary};
-        font-size: 1.1rem;
-        margin-top: ${theme.spacing.xs};
+        color: #65676b;
+        font-size: 0.95rem;
+        margin-top: 4px;
+        line-height: 1.4;
     }
 `;
 
@@ -108,81 +115,93 @@ const ActionButtons = styled.div`
     gap: ${theme.spacing.sm};
 `;
 
-const GlassCard = styled.div`
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(0, 170, 0, 0.1);
-    border-radius: ${theme.borderRadius.lg};
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+const Card = styled.div`
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05);
+    margin: 0 auto;
+    max-width: 1200px; 
 `;
 
-const SearchContainer = styled(GlassCard)`
+const SearchContainer = styled.div`
     padding: ${theme.spacing.md};
-    margin-bottom: ${theme.spacing.lg};
+    border-bottom: 1px solid #dfe3e8;
     display: flex;
     align-items: center;
     gap: ${theme.spacing.md};
+    background: #fff;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
     
     .search-wrapper {
         position: relative;
         flex: 1;
+        max-width: 400px;
         
         svg {
             position: absolute;
             left: 12px;
             top: 50%;
             transform: translateY(-50%);
-            color: ${theme.colors.textSecondary};
-            width: 18px;
-            height: 18px;
+            color: #65676b;
+            width: 16px;
+            height: 16px;
         }
         
         input {
-            padding-left: 40px;
-            height: 48px;
-            border-radius: ${theme.borderRadius.md};
-            border: 1px solid transparent;
-            background: rgba(0, 0, 0, 0.03);
-            transition: all ${theme.transitions.default};
+            padding-left: 36px;
+            height: 36px;
+            font-size: 0.95rem;
+            border-radius: 20px;
+            border: 1px solid #ccd0d5; // Facebook gray border
+            background: #f0f2f5;
+            transition: all 0.2s ease;
+            width: 100%;
             
             &:focus {
                 background: white;
                 border-color: ${theme.colors.primary};
                 box-shadow: 0 0 0 2px rgba(0, 170, 0, 0.1);
+                outline: none;
             }
         }
     }
     
     .stats {
+        margin-left: auto;
         font-size: 0.9rem;
-        color: ${theme.colors.textSecondary};
+        color: #65676b;
         font-weight: 500;
-        white-space: nowrap;
     }
 `;
 
-const StyledTableContainer = styled(GlassCard)`
+const StyledTableContainer = styled.div`
     overflow: hidden;
     
     table {
         width: 100%;
+        border-collapse: collapse;
     }
     
     th {
-        background: rgba(0, 170, 0, 0.02);
-        color: ${theme.colors.textSecondary};
+        background: #f0f2f5; // Header bg
+        color: #65676b;
         font-weight: 600;
+        font-size: 0.8rem;
         text-transform: uppercase;
-        font-size: 0.75rem;
         letter-spacing: 0.05em;
-        padding: ${theme.spacing.lg};
-        border-bottom: 2px solid rgba(0, 170, 0, 0.05);
+        padding: 12px 16px;
+        border-bottom: 1px solid #dfe3e8;
+        border-top: 1px solid #dfe3e8;
+        text-align: left;
     }
     
     td {
-        padding: ${theme.spacing.lg};
-        border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+        padding: 16px;
+        border-bottom: 1px solid #dfe3e8;
         vertical-align: middle;
+        color: #1c1e21;
+        font-size: 0.95rem;
     }
     
     tr:last-child td {
@@ -190,60 +209,55 @@ const StyledTableContainer = styled(GlassCard)`
     }
     
     tr:hover td {
-        background: rgba(0, 170, 0, 0.01);
+        background: #f2f2f2;
     }
 `;
 
 const IPBadge = styled.span<{ $status: 'allowed' | 'blocked' }>`
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 20px;
+    padding: 4px 10px;
+    border-radius: 4px; // Square tag style
     font-weight: 600;
     font-size: 0.8rem;
-    text-transform: capitalize;
+    line-height: 1;
     
     ${props => props.$status === 'allowed' ? css`
-        background: rgba(0, 170, 0, 0.1);
-        color: #008800;
-        border: 1px solid rgba(0, 170, 0, 0.2);
+        background: #e7f3ff;
+        color: #1877f2; // FB Blue-ish
     ` : css`
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.2);
+        background: #fde8e8;
+        color: #c00;
     `}
-    
-    svg {
-        width: 14px;
-        height: 14px;
-    }
 `;
 
-const InfoBox = styled.div`
-    background: linear-gradient(135deg, rgba(0, 170, 0, 0.05), rgba(0, 170, 0, 0.1));
-    border: 1px solid rgba(0, 170, 0, 0.2);
-    border-radius: ${theme.borderRadius.lg};
+const InfoBox = styled(Card)` // Reusing Card style
     padding: ${theme.spacing.lg};
     display: flex;
     gap: ${theme.spacing.md};
-    margin-top: ${theme.spacing.xl};
+    margin-top: ${theme.spacing.lg};
+    border-left: 4px solid ${theme.colors.primary};
+    background: #fff;
+    border-radius: 4px;
     
     .icon {
         color: ${theme.colors.primary};
+        width: 20px;
+        height: 20px;
         flex-shrink: 0;
+        margin-top: 2px;
     }
     
     .content {
         h4 {
-            margin: 0;
-            color: ${theme.colors.primary};
-            font-weight: 700;
-            font-size: 1rem;
+            margin: 0 0 4px 0;
+            color: #1c1e21;
+            font-weight: 600;
+            font-size: 0.95rem;
         }
         p {
-            margin: 4px 0 0;
-            color: ${theme.colors.textSecondary};
+            margin: 0;
+            color: #65676b;
             font-size: 0.9rem;
             line-height: 1.5;
         }
@@ -255,14 +269,18 @@ const LoadingState = styled.div`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: ${theme.spacing.xxl};
-    color: ${theme.colors.textSecondary};
+    padding: 60px 0;
+    color: #65676b;
     
     svg {
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
         margin-bottom: ${theme.spacing.md};
-        color: ${theme.colors.primary};
+        color: #1877f2;
+    }
+
+    span {
+        font-size: 1rem;
     }
 `;
 
@@ -271,70 +289,70 @@ const EmptyState = styled.div`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: ${theme.spacing.xxl};
+    padding: 60px 0;
     text-align: center;
     
     svg {
-        width: 64px;
-        height: 64px;
-        color: rgba(0, 0, 0, 0.1);
-        margin-bottom: ${theme.spacing.lg};
+        width: 60px;
+        height: 60px;
+        color: #bcc0c4;
+        margin-bottom: ${theme.spacing.md};
     }
     
-    
     h3 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: ${theme.colors.text};
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1c1e21;
         margin: 0;
     }
     
     p {
-        color: ${theme.colors.textSecondary};
+        color: #65676b;
         max-width: 400px;
-        margin: ${theme.spacing.sm} 0 0;
+        margin: 8px 0 0;
+        line-height: 1.5;
+        font-size: 0.9rem;
     }
 `;
 
 const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.8); // Light overlay like Meta
   display: ${props => props.$isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  backdrop-filter: blur(4px);
   animation: ${fadeIn} 0.2s ease-out;
 `;
 
 const ModalContent = styled.div`
   background: white;
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.lg};
+  border-radius: 8px;
+  box-shadow: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1); // Meta shadow
+  padding: 0;
   max-width: 500px;
-  width: 90%;
+  width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
+  border: 1px solid #ddd;
 `;
 
 const ModalHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: ${theme.spacing.lg};
-  padding-bottom: ${theme.spacing.md};
-  border-bottom: 1px solid ${theme.colors.border};
+  padding: 16px 20px;
+  border-bottom: 1px solid #dfe3e8;
+  background: white;
 `;
 
 const ModalTitle = styled.h3`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
-  color: ${theme.colors.text};
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1c1e21;
   margin: 0;
   display: flex;
   align-items: center;
@@ -342,27 +360,38 @@ const ModalTitle = styled.h3`
 `;
 
 const ModalCloseButton = styled.button`
-    background: none;
+    background: #e4e6eb; // Light gray circle
     border: none;
     cursor: pointer;
-    color: ${theme.colors.textSecondary};
-    padding: ${theme.spacing.xs};
-    border-radius: ${theme.borderRadius.sm};
-    transition: all ${theme.transitions.default};
+    color: #606770;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     
     &:hover {
-      background: ${theme.colors.backgroundSecondary};
-      color: ${theme.colors.text};
+      background: #d8dadf;
     }
 `;
 
 const ModalFooter = styled.div`
     display: flex;
     justify-content: flex-end;
-    gap: ${theme.spacing.md};
-    margin-top: ${theme.spacing.lg};
-    padding-top: ${theme.spacing.md};
-    border-top: 1px solid ${theme.colors.border};
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #dfe3e8;
+    background: white;
+`;
+
+const ModalBody = styled.div`
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #f0f2f5; // Slight contrast for form body
 `;
 
 interface IPRestriction {
@@ -547,35 +576,40 @@ export default function IPManagementPage() {
                     </Button>
 
                     <Button
-                        size="lg"
-                        style={{ background: theme.colors.primary, fontWeight: 700 }}
+                        size="default" // Standard size
+                        style={{ background: PRIMARY_COLOR, color: 'white', fontWeight: 600, borderRadius: '6px' }}
                         onClick={() => {
                             setIpForm({ ip_address: '', description: '', status: 'allowed' });
                             setIsAddDialogOpen(true);
                         }}
                     >
                         <Plus className="mr-2 h-5 w-5" />
-                        New Restriction
+                        Create Rule
                     </Button>
                     {/* Add Modal */}
                     <ModalOverlay $isOpen={isAddDialogOpen} onClick={() => setIsAddDialogOpen(false)}>
                         <ModalContent onClick={e => e.stopPropagation()}>
                             <ModalHeader>
-                                <ModalTitle style={{ color: theme.colors.primary }}>Add New IP Address</ModalTitle>
+                                <ModalTitle>
+                                    <div style={{ background: `${PRIMARY_COLOR}15`, padding: '8px', borderRadius: '8px', display: 'flex' }}>
+                                        <ShieldAlert size={20} color={PRIMARY_COLOR} />
+                                    </div>
+                                    Add New IP Address
+                                </ModalTitle>
                                 <ModalCloseButton onClick={() => setIsAddDialogOpen(false)}>
-                                    <X className="h-5 w-5" />
+                                    <X size={20} />
                                 </ModalCloseButton>
                             </ModalHeader>
-                            <div className="grid gap-6">
-                                <p style={{ color: theme.colors.textSecondary, fontSize: '0.9rem', marginTop: '-10px' }}>
-                                    Define a new access rule for a specific network address.
+                            <ModalBody>
+                                <p style={{ color: TEXT_COLOR_MUTED, fontSize: '0.95rem', margin: 0 }}>
+                                    Define a new access rule for a specific network address. This will immediately affect incoming traffic.
                                 </p>
                                 <div className="grid gap-2">
                                     <Label htmlFor="ip">IP Address</Label>
                                     <Input
                                         id="ip"
                                         placeholder="0.0.0.0"
-                                        style={{ fontFamily: 'monospace' }}
+                                        style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '0.05em' }}
                                         value={ipForm.ip_address}
                                         onChange={(e) => setIpForm({ ...ipForm, ip_address: e.target.value })}
                                     />
@@ -586,18 +620,25 @@ export default function IPManagementPage() {
                                         <Button
                                             type="button"
                                             variant={ipForm.status === 'allowed' ? 'default' : 'outline'}
-                                            className="flex-1 font-bold"
-                                            style={ipForm.status === 'allowed' ? { background: theme.colors.primary } : {}}
+                                            className="flex-1"
+                                            style={ipForm.status === 'allowed' ? {
+                                                background: PRIMARY_COLOR,
+                                                fontSize: '1rem',
+                                                padding: '24px'
+                                            } : { padding: '24px' }}
                                             onClick={() => setIpForm({ ...ipForm, status: 'allowed' })}
                                         >
+                                            <CheckCircle2 className="mr-2 h-5 w-5" />
                                             Explicit Allow
                                         </Button>
                                         <Button
                                             type="button"
                                             variant={ipForm.status === 'blocked' ? 'destructive' : 'outline'}
-                                            className="flex-1 font-bold"
+                                            className="flex-1"
+                                            style={{ padding: '24px', fontSize: '1rem' }}
                                             onClick={() => setIpForm({ ...ipForm, status: 'blocked' })}
                                         >
+                                            <XCircle className="mr-2 h-5 w-5" />
                                             Explicit Block
                                         </Button>
                                     </div>
@@ -610,18 +651,19 @@ export default function IPManagementPage() {
                                         value={ipForm.description}
                                         onChange={(e) => setIpForm({ ...ipForm, description: e.target.value })}
                                         rows={3}
+                                        className="resize-none"
                                     />
                                 </div>
-                            </div>
+                            </ModalBody>
                             <ModalFooter>
                                 <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)}>Discard</Button>
                                 <Button
-                                    style={{ background: theme.colors.primary, fontWeight: 700 }}
+                                    style={{ background: PRIMARY_COLOR, color: 'white', fontWeight: 600, borderRadius: '6px' }}
                                     onClick={handleCreateIP}
                                     disabled={isSubmitting}
                                 >
                                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Apply Rule
+                                    Confirm
                                 </Button>
                             </ModalFooter>
                         </ModalContent>
@@ -629,119 +671,126 @@ export default function IPManagementPage() {
                 </ActionButtons>
             </HeaderSection>
 
-            <SearchContainer>
-                <div className="search-wrapper">
-                    <Search />
-                    <Input
-                        placeholder="Search IP address or purpose..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
-                <div className="stats">
-                    <Filter className="h-4 w-4 inline mr-2 text-primary" />
-                    {filteredRestrictions.length} / {ipRestrictions.length} Entries
-                </div>
-            </SearchContainer>
+            <Card>
+                <SearchContainer>
+                    <div className="search-wrapper">
+                        <Search />
+                        <Input
+                            placeholder="Search by IP or description..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="stats">
+                        {filteredRestrictions.length} active rules
+                    </div>
+                </SearchContainer>
 
-            <StyledTableContainer>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>System Entry Point</TableHead>
-                            <TableHead>Purpose / Description</TableHead>
-                            <TableHead>Access Status</TableHead>
-                            <TableHead>Date Added</TableHead>
-                            <TableHead className="text-right">Manage</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
+                <StyledTableContainer>
+                    <Table>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={5}>
-                                    <LoadingState>
-                                        <Loader2 className="animate-spin" />
-                                        <span>Syncing with gateway...</span>
-                                    </LoadingState>
-                                </TableCell>
+                                <TableHead>IP Address</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Created</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ) : filteredRestrictions.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5}>
-                                    <EmptyState>
-                                        <ShieldAlert />
-                                        <h3>No restrictions active</h3>
-                                        <p>
-                                            {searchQuery ? "We couldn't find any restrictions matching your search." : "Your system is currently open to default access rules. Add a restriction to enhance security."}
-                                        </p>
-                                    </EmptyState>
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            filteredRestrictions.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell>
-                                        <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '1.05rem', color: theme.colors.primary }}>
-                                            {item.ip_address}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div style={{ color: theme.colors.textSecondary, fontStyle: item.description ? 'normal' : 'italic' }}>
-                                            {item.description || 'No purpose defined'}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <IPBadge $status={item.status}>
-                                            {item.status === 'allowed' ? <CheckCircle2 /> : <XCircle />}
-                                            {item.status}
-                                        </IPBadge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div style={{ fontSize: '0.85rem', color: theme.colors.textSecondary }}>
-                                            {new Date(item.created_at).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            })}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end items-center gap-3">
-                                            <Switch
-                                                checked={item.status === 'allowed'}
-                                                onCheckedChange={() => toggleStatus(item)}
-                                                style={{ scale: '0.8' }}
-                                            />
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreHorizontal className="h-5 w-5" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" style={{ borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.border}` }}>
-                                                    <DropdownMenuLabel>Gateway Controls</DropdownMenuLabel>
-                                                    <DropdownMenuSeparator style={{ background: theme.colors.border }} />
-                                                    <DropdownMenuItem onClick={() => openEditDialog(item)}>
-                                                        <Edit className="mr-2 h-4 w-4" />
-                                                        Modify Entry
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="text-destructive"
-                                                        onClick={() => openDeleteDialog(item)}
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Remove Rule
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={5}>
+                                        <LoadingState>
+                                            <Loader2 className="animate-spin" />
+                                            <span>Loading data...</span>
+                                        </LoadingState>
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </StyledTableContainer>
+                            ) : filteredRestrictions.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={5}>
+                                        <EmptyState>
+                                            <ShieldAlert />
+                                            <h3>No restrictions found</h3>
+                                            <p>
+                                                {searchQuery ? "Try adjusting your search terms." : "Your IP access list is currently empty."}
+                                            </p>
+                                            {!searchQuery && (
+                                                <Button
+                                                    className="mt-4"
+                                                    style={{ background: PRIMARY_COLOR, color: 'white', fontWeight: 600 }}
+                                                    onClick={() => setIsAddDialogOpen(true)}
+                                                >
+                                                    <Plus className="mr-2 h-4 w-4" />
+                                                    Add First IP
+                                                </Button>
+                                            )}
+                                        </EmptyState>
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                filteredRestrictions.map((item) => (
+                                    <TableRow key={item.id}>
+                                        <TableCell>
+                                            <div style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.95rem', color: TEXT_COLOR_DARK }}>
+                                                {item.ip_address}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div style={{ color: TEXT_COLOR_MUTED }}>
+                                                {item.description || '-'}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <IPBadge $status={item.status}>
+                                                {item.status}
+                                            </IPBadge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div style={{ fontSize: '0.9rem', color: TEXT_COLOR_MUTED }}>
+                                                {new Date(item.created_at).toLocaleDateString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'short',
+                                                    day: 'numeric'
+                                                })}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end items-center gap-2">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-100 rounded">
+                                                            <MoreHorizontal className="h-4 w-4 text-gray-500" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" style={{ width: '180px' }}>
+                                                        <DropdownMenuItem onClick={() => openEditDialog(item)}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => toggleStatus(item)}>
+                                                            {item.status === 'allowed' ? <XCircle className="mr-2 h-4 w-4" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                                                            {item.status === 'allowed' ? 'Block IP' : 'Allow IP'}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-red-600 focus:text-red-600"
+                                                            onClick={() => openDeleteDialog(item)}
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </StyledTableContainer>
+            </Card>
 
             <InfoBox>
                 <Info className="icon" />
@@ -755,22 +804,18 @@ export default function IPManagementPage() {
                 </div>
             </InfoBox>
 
-            {/* Dialogs with enhanced styling */}
-
-
-
             {/* Edit Modal */}
             <ModalOverlay $isOpen={isEditDialogOpen} onClick={() => setIsEditDialogOpen(false)}>
                 <ModalContent onClick={e => e.stopPropagation()}>
                     <ModalHeader>
-                        <ModalTitle style={{ color: theme.colors.primary }}>Modify Rule</ModalTitle>
+                        <ModalTitle>Modify Rule</ModalTitle>
                         <ModalCloseButton onClick={() => setIsEditDialogOpen(false)}>
-                            <X className="h-5 w-5" />
+                            <X size={20} />
                         </ModalCloseButton>
                     </ModalHeader>
-                    <div className="grid gap-6">
-                        <p style={{ color: theme.colors.textSecondary, fontSize: '0.9rem', marginTop: '-10px' }}>
-                            Updating configuration for <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{selectedIP?.ip_address}</span>
+                    <ModalBody>
+                        <p style={{ color: TEXT_COLOR_MUTED, fontSize: '0.95rem', margin: 0 }}>
+                            Updating configuration for <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEXT_COLOR_DARK }}>{selectedIP?.ip_address}</span>
                         </p>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-ip">IP Address</Label>
@@ -787,18 +832,25 @@ export default function IPManagementPage() {
                                 <Button
                                     type="button"
                                     variant={ipForm.status === 'allowed' ? 'default' : 'outline'}
-                                    className="flex-1 font-bold"
-                                    style={ipForm.status === 'allowed' ? { background: theme.colors.primary } : {}}
+                                    className="flex-1"
+                                    style={ipForm.status === 'allowed' ? {
+                                        background: PRIMARY_COLOR,
+                                        fontSize: '1rem',
+                                        padding: '24px'
+                                    } : { padding: '24px' }}
                                     onClick={() => setIpForm({ ...ipForm, status: 'allowed' })}
                                 >
+                                    <CheckCircle2 className="mr-2 h-5 w-5" />
                                     Explicit Allow
                                 </Button>
                                 <Button
                                     type="button"
                                     variant={ipForm.status === 'blocked' ? 'destructive' : 'outline'}
-                                    className="flex-1 font-bold"
+                                    className="flex-1"
+                                    style={{ padding: '24px', fontSize: '1rem' }}
                                     onClick={() => setIpForm({ ...ipForm, status: 'blocked' })}
                                 >
+                                    <XCircle className="mr-2 h-5 w-5" />
                                     Explicit Block
                                 </Button>
                             </div>
@@ -810,18 +862,19 @@ export default function IPManagementPage() {
                                 value={ipForm.description}
                                 onChange={(e) => setIpForm({ ...ipForm, description: e.target.value })}
                                 rows={3}
+                                className="resize-none"
                             />
                         </div>
-                    </div>
+                    </ModalBody>
                     <ModalFooter>
                         <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
                         <Button
-                            style={{ background: theme.colors.primary, fontWeight: 700 }}
+                            style={{ background: PRIMARY_COLOR, color: 'white', fontWeight: 600, borderRadius: '6px' }}
                             onClick={handleUpdateIP}
                             disabled={isSubmitting}
                         >
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Update Configuration
+                            Save Changes
                         </Button>
                     </ModalFooter>
                 </ModalContent>
@@ -830,20 +883,24 @@ export default function IPManagementPage() {
             {/* Delete Modal */}
             <ModalOverlay $isOpen={isDeleteDialogOpen} onClick={() => setIsDeleteDialogOpen(false)}>
                 <ModalContent style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
-                    <ModalHeader>
-                        <ModalTitle className="text-destructive">Remove Rule?</ModalTitle>
+                    <ModalHeader className="bg-red-50 border-red-100">
+                        <ModalTitle className="text-red-700">
+                            <ShieldAlert className="mr-2" size={20} />
+                            Remove Rule?
+                        </ModalTitle>
                         <ModalCloseButton onClick={() => setIsDeleteDialogOpen(false)}>
-                            <X className="h-5 w-5" />
+                            <X size={20} />
                         </ModalCloseButton>
                     </ModalHeader>
-                    <div className="grid gap-6">
-                        <p style={{ color: theme.colors.textSecondary, fontSize: '0.9rem' }}>
-                            You are about to remove the access rule for <span className="font-mono font-bold text-foreground">{selectedIP?.ip_address}</span>.
+                    <ModalBody>
+                        <p style={{ color: theme.colors.textSecondary, fontSize: '1rem', lineHeight: 1.6 }}>
+                            You are about to remove the access rule for <span className="font-mono font-bold text-foreground bg-slate-100 px-2 py-1 rounded">{selectedIP?.ip_address}</span>.
+                            <br /><br />
                             This will revert traffic from this address to default system rules.
                         </p>
-                    </div>
-                    <ModalFooter>
-                        <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)}>No, Keep it</Button>
+                    </ModalBody>
+                    <ModalFooter className="bg-red-50 border-red-100">
+                        <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)} className="hover:bg-red-100 hover:text-red-700">No, Keep it</Button>
                         <Button variant="destructive" onClick={handleDeleteIP} disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Yes, Remove Rule
