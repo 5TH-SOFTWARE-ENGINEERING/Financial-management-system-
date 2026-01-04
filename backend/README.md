@@ -759,3 +759,6 @@ Create flexible archive files
 → restore selectively with pg_restore (can reorder objects, restore in parallel, exclude items)
 Support for modern compression (especially improved in PostgreSQL 16)
 → gzip (default), lz4, zstd via -Z option (e.g. -Z zstd:9)
+
+source venv/Scripts/activate
+uvicorn app.main:app --reload
