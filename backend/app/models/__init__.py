@@ -15,6 +15,7 @@ from .inventory import InventoryItem
 from .sale import Sale, SaleStatus, JournalEntry
 from .inventory_audit import InventoryAuditLog, InventoryChangeType
 from .department import Department
+from .ip_restriction import IPRestriction, IPStatus
 
 __all__ = [
     "User", "UserRole", "Role",
@@ -28,5 +29,5 @@ __all__ = [
     "InventoryItem",
     "Sale", "SaleStatus", "JournalEntry",
     "InventoryAuditLog", "InventoryChangeType",
-    "Department"
+    "Department", "IPRestriction", "IPStatus"
 ]

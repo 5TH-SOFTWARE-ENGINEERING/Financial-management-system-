@@ -13,6 +13,7 @@ from ...core.config import settings
 from ...core.security import verify_password, create_access_token, get_password_hash
 from ...models.user import User, UserRole
 from ...crud import login_history as login_history_crud
+from ...crud.ip_restriction import ip_restriction as ip_restriction_crud
 from ...utils.user_agent import get_device_info, get_location_from_ip
 from ...utils.audit import AuditLogger, AuditAction
 
@@ -279,6 +280,13 @@ def login(
             pass  # Don't fail login if history logging fails
         raise HTTPException(status_code=400, detail="Inactive user")
     
+    # Check global IP restrictions
+    if not ip_restriction_crud.is_ip_allowed(db, ip_address):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied. Your IP address ({ip_address}) is globally blocked."
+        )
+
     # Check IP restriction if enabled
     if user.ip_restriction_enabled:
         if not is_ip_allowed(ip_address, user.allowed_ips or ""):
@@ -389,6 +397,13 @@ def login_json(
             pass
         raise HTTPException(status_code=400, detail="Inactive user")
     
+    # Check global IP restrictions
+    if not ip_restriction_crud.is_ip_allowed(db, ip_address):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied. Your IP address ({ip_address}) is globally blocked."
+        )
+
     # Check IP restriction if enabled
     if user.ip_restriction_enabled:
         if not is_ip_allowed(ip_address, user.allowed_ips or ""):

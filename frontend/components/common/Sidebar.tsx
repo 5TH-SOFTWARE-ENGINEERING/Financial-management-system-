@@ -8,7 +8,7 @@ import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Wallet, Shield, UserPlus, List, Calculator,
     DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3, Package, ShoppingCart, BookOpen,
-    Key, ChevronLeft, ChevronRight, Brain, Activity, Bell, Database, History
+    Key, ChevronLeft, ChevronRight, Brain, Activity, Bell, Database, History, LockKeyhole, Network,
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -191,6 +191,8 @@ const getIconColor = (iconType: string, active: boolean): string => {
             'activity': '#f43f5e',        // Rose
             'bell': '#f59e0b',            // Amber
             'database': '#3b82f6',        // Blue
+            'lockKeyhole': '#8b5cf6',     // Purple
+            'network': '#3b82f6',         // Blue
         };
         return activeColors[iconType] || theme.colors.primary;
     } else {
@@ -223,6 +225,8 @@ const getIconColor = (iconType: string, active: boolean): string => {
             'activity': '#fb7185',        // Light Rose
             'bell': '#fbbf24',            // Light Amber
             'database': '#60a5fa',        // Light Blue
+            'lockKeyhole': '#a78bfa',     // Light Purple
+            'network': '#60a5fa',         // Light Blue
         };
         return inactiveColors[iconType] || theme.colors.textSecondary;
     }
@@ -1111,6 +1115,12 @@ const Sidebar: React.FC = () => {
                                                     </NavIcon>
                                                     {!collapsed && 'Audit Logs'}
                                                 </NavItem>
+                                                <NavItem href="/settings/ipmanagement" $active={pathname === '/settings/ipmanagement'} $collapsed={collapsed}>
+                                                    <NavIcon $active={pathname === '/settings/ipmanagement'} $collapsed={collapsed} $size={16} $iconType="network">
+                                                        <Network />
+                                                    </NavIcon>
+                                                    {!collapsed && 'IP Management'}
+                                                </NavItem>
 
                                                 <NavItem href="/settings/backup" $active={pathname === '/settings/backup'} $collapsed={collapsed}>
                                                     <NavIcon $active={pathname === '/settings/backup'} $collapsed={collapsed} $size={16} $iconType="database">
@@ -1128,8 +1138,8 @@ const Sidebar: React.FC = () => {
                                             </>
                                         )}
                                         <NavItem href="/settings/passwordmanagement" $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed}>
-                                            <NavIcon $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed} $size={16} $iconType="key">
-                                                <Key />
+                                            <NavIcon $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed} $size={16} $iconType="lockKeyhole">
+                                                <LockKeyhole />
                                             </NavIcon>
                                             {!collapsed && 'Password Management'}
                                         </NavItem>

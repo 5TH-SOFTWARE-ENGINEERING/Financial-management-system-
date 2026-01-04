@@ -17,7 +17,7 @@ from .api.v1 import (
     auth, users, revenue, expenses, dashboard,
     reports, approvals, notifications, admin,
     projects, departments, analytics, budgeting,
-    inventory, sales, contact
+    inventory, sales, contact, ip_management
 )
 
 from .utils.audit import AuditLogger, AuditAction
@@ -540,6 +540,7 @@ app.include_router(analytics.router, prefix=f"{api_prefix}/analytics", tags=["An
 app.include_router(budgeting.router, prefix=f"{api_prefix}/budgeting", tags=["Budgeting & Forecasting"])
 app.include_router(inventory.router, prefix=f"{api_prefix}/inventory", tags=["Inventory"])
 app.include_router(sales.router, prefix=f"{api_prefix}/sales", tags=["Sales"])
+app.include_router(ip_management.router, prefix=f"{api_prefix}/ip-management", tags=["IP Management"])
 app.include_router(contact.router, prefix="/api/v1/contact", tags=["Contact"])
 
 

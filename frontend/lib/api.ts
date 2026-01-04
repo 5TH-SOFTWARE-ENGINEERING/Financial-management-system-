@@ -1715,6 +1715,24 @@ class ApiClient {
     return this.post(contactPath, payload);
   }
 
+  // Admin IP Management endpoints
+  async getAdminIPRestrictions(params?: { skip?: number; limit?: number }): Promise<ApiResponse<any[]>> {
+    const response = await this.get<any[]>('/ip-management', { params });
+    return { ...response, data: Array.isArray(response.data) ? response.data : [] };
+  }
+
+  async createAdminIPRestriction(ipData: { ip_address: string; description?: string; status?: string }): Promise<ApiResponse<any>> {
+    return this.post('/ip-management', ipData);
+  }
+
+  async updateAdminIPRestriction(ipId: number, ipData: { ip_address?: string; description?: string; status?: string }): Promise<ApiResponse<any>> {
+    return this.put(`/ip-management/${ipId}`, ipData);
+  }
+
+  async deleteAdminIPRestriction(ipId: number): Promise<ApiResponse<any>> {
+    return this.delete(`/ip-management/${ipId}`);
+  }
+
   // Generic request method
   async request<T = unknown>(config: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.request<T>(config);
