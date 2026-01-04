@@ -740,3 +740,22 @@ You should now be able to log in. Once inside, you can go to the IP Management p
 
 Please try logging in again!
 
+
+
+
+pg_dump (PostgreSQL 16.11) is a standard PostgreSQL utility program whose main purpose is to export (dump) a single PostgreSQL database into a file. This file can later be used to recreate (restore) the database — either on the same server, a different server, or even for migration/upgrade purposes.
+It creates consistent logical backups even while the database is actively used (no blocking of readers/writers in normal cases).
+Main Functions of pg_dump
+
+Backup a whole database
+→ schema (structure) + data + most objects (tables, views, functions, indexes, triggers, constraints, sequences, large objects, etc.)
+Selective backups
+→ only specific schemas (-n), tables (-t), or exclude some (-N, -T)
+Schema-only (-s) or data-only (-a) dumps
+Create portable SQL scripts
+→ plain text SQL file → restore with psql
+Create flexible archive files
+→ custom (-Fc), directory (-Fd), or tar (-Ft) format
+→ restore selectively with pg_restore (can reorder objects, restore in parallel, exclude items)
+Support for modern compression (especially improved in PostgreSQL 16)
+→ gzip (default), lz4, zstd via -Z option (e.g. -Z zstd:9)

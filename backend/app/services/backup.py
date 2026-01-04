@@ -1,9 +1,12 @@
 import os
 import json
 import zipfile
+import shutil
+import subprocess
+import platform
 import boto3 # type: ignore[import-untyped]
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
 from sqlalchemy import create_engine, text # type: ignore[import-untyped]
 
@@ -11,6 +14,44 @@ from ..core.config import settings
 from ..core.database import get_db
 
 logger = logging.getLogger(__name__)
+
+
+def _find_pg_tool(tool_name: str) -> str:
+    """
+    Find PostgreSQL tool (pg_dump, psql) on the system.
+    Checks common installation paths on Windows if not found in PATH.
+    """
+    # First, try the tool directly (in case it's in PATH)
+    try:
+        result = subprocess.run(
+            [tool_name, '--version'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            return tool_name
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    
+    # On Windows, check common PostgreSQL installation paths
+    if platform.system() == 'Windows':
+        # Check common PostgreSQL versions (16 down to 12)
+        for version in range(16, 11, -1):
+            paths = [
+                rf'C:\Program Files\PostgreSQL\{version}\bin\{tool_name}.exe',
+                rf'C:\Program Files (x86)\PostgreSQL\{version}\bin\{tool_name}.exe',
+            ]
+            for path in paths:
+                if os.path.exists(path):
+                    logger.info(f"Found {tool_name} at: {path}")
+                    return path
+    
+    # On Linux/Mac, the tool should be in PATH if PostgreSQL is installed
+    raise FileNotFoundError(
+        f"{tool_name} not found. Please ensure PostgreSQL client tools are installed "
+        f"and accessible. On Windows, install PostgreSQL or add the bin directory to PATH."
+    )
 
 
 class BackupService:
@@ -73,8 +114,8 @@ class BackupService:
         db_url = settings.DATABASE_URL
         
         if "postgresql" in db_url:
-            # PostgreSQL backup
-            import subprocess
+            # PostgreSQL backup - find pg_dump tool
+            pg_dump_path = _find_pg_tool("pg_dump")
             
             # Parse connection details
             import urllib.parse
@@ -93,7 +134,7 @@ class BackupService:
             env["PGPASSWORD"] = password
             
             cmd = [
-                "pg_dump",
+                pg_dump_path,
                 f"-h{host}",
                 f"-p{port}",
                 f"-U{username}",
@@ -105,11 +146,13 @@ class BackupService:
                 "-f", backup_file
             ]
             
+            logger.info(f"Running pg_dump: {' '.join(cmd[:5])}...")
             result = subprocess.run(cmd, env=env, capture_output=True, text=True)
             
             if result.returncode != 0:
                 raise Exception(f"Database backup failed: {result.stderr}")
             
+            logger.info(f"Database backup created: {backup_file}")
             return backup_file
             
         elif "sqlite" in db_url:
@@ -275,8 +318,8 @@ class BackupService:
         db_url = settings.DATABASE_URL
         
         if "postgresql" in db_url and backup_file.endswith(".sql"):
-            # PostgreSQL restore
-            import subprocess
+            # PostgreSQL restore - find psql tool
+            psql_path = _find_pg_tool("psql")
             
             # Parse connection details
             import urllib.parse
@@ -292,7 +335,7 @@ class BackupService:
             env["PGPASSWORD"] = password
             
             cmd = [
-                "psql",
+                psql_path,
                 f"-h{host}",
                 f"-p{port}",
                 f"-U{username}",
@@ -301,17 +344,19 @@ class BackupService:
                 "-f", backup_file
             ]
             
+            logger.info(f"Running psql restore: {' '.join(cmd[:5])}...")
             result = subprocess.run(cmd, env=env, capture_output=True, text=True)
             
             if result.returncode != 0:
                 raise Exception(f"Database restore failed: {result.stderr}")
+            
+            logger.info(f"Database restored from: {backup_file}")
         
         elif "sqlite" in db_url and backup_file.endswith(".db"):
             # SQLite restore
-            import shutil
-            
             db_file = db_url.replace("sqlite:///", "")
             shutil.copy2(backup_file, db_file)
+            logger.info(f"SQLite database restored from: {backup_file}")
         
         else:
             raise Exception("Unsupported database backup format")
