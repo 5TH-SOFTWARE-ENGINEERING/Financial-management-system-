@@ -120,9 +120,11 @@
     @apply border-border;
     outline-offset: 2px;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   /* Fixed: Use hsl() for ring opacity instead of theme() arbitrary value */
   * {
     outline: 2px solid hsl(var(--ring) / 0.5);

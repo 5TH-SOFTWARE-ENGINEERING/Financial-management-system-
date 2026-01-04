@@ -4,7 +4,7 @@
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { theme } from '@/components/common/theme';
 import StyledComponentsRegistry from '@/lib/registry';
-import { AuthProvider } from '@/lib/rbac/auth-context'; 
+import { AuthProvider } from '@/lib/rbac/auth-context';
 import { Toaster } from '@/components/ui/sonner';
 
 // Use system fonts instead of Google Fonts to avoid download warnings
@@ -44,7 +44,7 @@ export default function RootLayout({
         <GlobalStyle />
         <StyledComponentsRegistry>
           <ThemeProvider theme={theme}>
-            <AuthProvider> 
+            <AuthProvider>
               <LayoutContainer>
                 <MainContent>
                   <ContentWrapper>{children}</ContentWrapper>

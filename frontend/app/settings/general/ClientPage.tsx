@@ -26,7 +26,7 @@ const CardShadowHover = `
 
 const Container = styled.div`
   max-width: 1000px;
-  margin: 0 auto;
+  margin: 20px auto;
   padding: ${theme.spacing.md};
 `;
 
@@ -342,13 +342,13 @@ const saveSettings = (settings: GeneralSettings, userId?: number | string): void
 
 const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
   if (typeof window === 'undefined') return;
-  
+
   const html = document.documentElement;
   const body = document.body;
-  
+
   // Determine the actual theme to apply
   let actualTheme: 'light' | 'dark' = 'light';
-  
+
   if (theme === 'dark') {
     actualTheme = 'dark';
   } else if (theme === 'light') {
@@ -358,11 +358,11 @@ const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     actualTheme = prefersDark ? 'dark' : 'light';
   }
-  
+
   // Remove existing theme classes
   html.classList.remove('dark', 'light');
   html.removeAttribute('data-theme');
-  
+
   // Apply theme classes and attributes - only add 'dark' class, not 'light'
   if (actualTheme === 'dark') {
     html.classList.add('dark');
@@ -371,7 +371,7 @@ const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
   }
   html.setAttribute('data-theme', actualTheme);
   html.style.colorScheme = actualTheme;
-  
+
   // Apply CSS custom properties for dark mode support
   if (actualTheme === 'dark') {
     // Dark mode colors
@@ -381,7 +381,7 @@ const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
     html.style.setProperty('--muted-foreground', '#94a3b8');
     html.style.setProperty('--border', '#334155');
     html.style.setProperty('--card', '#1e293b');
-    
+
     // Apply dark mode to body and html
     if (body) {
       body.style.backgroundColor = '#0f172a';
@@ -398,7 +398,7 @@ const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
     html.style.setProperty('--muted-foreground', '#6b7280');
     html.style.setProperty('--border', '#e5e7eb');
     html.style.setProperty('--card', '#ffffff');
-    
+
     // Apply light mode to body and html
     if (body) {
       body.style.backgroundColor = '#ffffff';
@@ -408,7 +408,7 @@ const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
     html.style.backgroundColor = '#ffffff';
     html.style.color = '#111827';
   }
-  
+
   // Inject or update global dark mode styles
   let styleElement = document.getElementById('theme-dark-mode-styles');
   if (!styleElement) {
@@ -416,7 +416,7 @@ const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
     styleElement.id = 'theme-dark-mode-styles';
     document.head.appendChild(styleElement);
   }
-  
+
   if (actualTheme === 'dark') {
     styleElement.textContent = `
       html.dark,
@@ -464,7 +464,7 @@ const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
       }
     `;
   }
-  
+
   // Store in localStorage for persistence across page reloads
   try {
     localStorage.setItem('app-theme', theme);
@@ -472,7 +472,7 @@ const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
   } catch (error) {
     console.error('Failed to save theme to localStorage:', error);
   }
-  
+
   // Force re-render by dispatching a resize event (helps with styled-components)
   window.dispatchEvent(new Event('themechange'));
 };
@@ -497,7 +497,7 @@ export default function GeneralSettingsPage() {
     if (user?.id) {
       const loadedSettings = loadSettings(user.id);
       setSettings(loadedSettings);
-      
+
       // Apply theme immediately on load
       setTimeout(() => {
         applyTheme(loadedSettings.theme);
@@ -505,15 +505,15 @@ export default function GeneralSettingsPage() {
       }, 0);
     }
   }, [user?.id]);
-  
+
   // Apply theme on initial mount - prioritize stored theme
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     // Check if theme is stored globally first (for immediate application)
     const globalTheme = localStorage.getItem('app-theme');
     const themeToApply = (globalTheme as 'light' | 'dark' | 'system') || settings.theme;
-    
+
     // Apply theme immediately on mount - use requestAnimationFrame for smooth transition
     requestAnimationFrame(() => {
       applyTheme(themeToApply);
@@ -557,20 +557,20 @@ export default function GeneralSettingsPage() {
   const handleThemeChange = (theme: 'light' | 'dark' | 'system') => {
     // Apply theme immediately - this must happen synchronously for instant feedback
     applyTheme(theme);
-    
+
     // Update state immediately
     const newSettings = { ...settings, theme };
     setSettings(newSettings);
-    
+
     // Auto-save theme change immediately (don't wait for Save button)
     try {
       saveSettings(newSettings, user?.id);
-      
+
       // Dispatch event for other components
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('settingsUpdated', { detail: newSettings }));
       }
-      
+
       // Show feedback
       const themeNames = {
         light: 'Light',
@@ -587,20 +587,20 @@ export default function GeneralSettingsPage() {
   const handleSave = async () => {
     setLoading(true);
     setSuccess(null);
-    
+
     try {
       // Save to localStorage
       saveSettings(settings, user?.id);
-      
+
       // Apply all settings immediately
       applyTheme(settings.theme);
       applyCompactView(settings.compactView);
-      
+
       // Store settings in a global location for access by other components
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('settingsUpdated', { detail: settings }));
       }
-      
+
       setSuccess('Settings saved successfully!');
       toast.success('Settings saved successfully!');
       setTimeout(() => setSuccess(null), 3000);
@@ -712,7 +712,7 @@ export default function GeneralSettingsPage() {
             <FormGroup>
               <Label>Theme</Label>
               <ThemeOptions>
-                <ThemeOption 
+                <ThemeOption
                   $isSelected={settings.theme === 'light'}
                   onClick={() => handleThemeChange('light')}
                   role="button"
@@ -729,7 +729,7 @@ export default function GeneralSettingsPage() {
                   </ThemeIcon>
                   <ThemeLabel>Light</ThemeLabel>
                 </ThemeOption>
-                <ThemeOption 
+                <ThemeOption
                   $isSelected={settings.theme === 'dark'}
                   onClick={() => handleThemeChange('dark')}
                   role="button"
@@ -746,7 +746,7 @@ export default function GeneralSettingsPage() {
                   </ThemeIcon>
                   <ThemeLabel>Dark</ThemeLabel>
                 </ThemeOption>
-                <ThemeOption 
+                <ThemeOption
                   $isSelected={settings.theme === 'system'}
                   onClick={() => handleThemeChange('system')}
                   role="button"
@@ -765,7 +765,7 @@ export default function GeneralSettingsPage() {
                 </ThemeOption>
               </ThemeOptions>
               <HelperText>
-                Choose your preferred color theme. Changes apply immediately. 
+                Choose your preferred color theme. Changes apply immediately.
                 System will match your operating system preference.
               </HelperText>
             </FormGroup>
@@ -820,9 +820,9 @@ export default function GeneralSettingsPage() {
         </Card>
 
         <ActionButtons>
-          <Button 
-            variant="default" 
-            onClick={handleSave} 
+          <Button
+            variant="default"
+            onClick={handleSave}
             disabled={loading}
             style={{ minWidth: '150px' }}
           >
