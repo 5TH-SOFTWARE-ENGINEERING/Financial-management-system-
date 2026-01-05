@@ -530,7 +530,7 @@ export default function ResetPassword() {
       const errObj = typeof err === 'object' && err !== null ? (err as Record<string, unknown>) : {};
       const errorResponse = errObj.response as {
         status?: number;
-        data?: { detail?: unknown; error?: unknown };
+        data?: { detail?: unknown; error?: unknown; message?: unknown };
         headers?: Record<string, string>;
       } | undefined;
       const errorStatus = errorResponse?.status;
@@ -542,7 +542,7 @@ export default function ResetPassword() {
         errorHeaders['X-Requires-2FA'] === 'true'
       );
 
-      const errorDetail = (errorResponse?.data?.detail as string) || '';
+      const errorDetail = (errorResponse?.data?.detail as string) || (errorResponse?.data?.message as string) || '';
       const errorDetailLower = String(errorDetail).toLowerCase();
 
       const is2FARequired = errorStatus === 403 && (

@@ -391,7 +391,7 @@ if settings.ALLOWED_ORIGINS:
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
             allow_headers=["*"],
-            expose_headers=["*"],
+            expose_headers=["X-Requires-2FA", "*"],
             max_age=3600,
         )
     else:
@@ -403,7 +403,7 @@ if settings.ALLOWED_ORIGINS:
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
             allow_headers=["*"],
-            expose_headers=["*"],
+            expose_headers=["X-Requires-2FA", "*"],
             max_age=3600,
         )
 else:
@@ -415,7 +415,7 @@ else:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
         allow_headers=["*"],
-        expose_headers=["*"],
+        expose_headers=["X-Requires-2FA", "*"],
         max_age=3600,
     )
 
@@ -503,7 +503,8 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "message": exc.detail,
             "status_code": exc.status_code,
             "timestamp": datetime.utcnow().isoformat()
-        }
+        },
+        headers=getattr(exc, "headers", None)
     )
 
 @app.exception_handler(Exception)
