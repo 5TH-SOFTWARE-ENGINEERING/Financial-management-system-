@@ -928,130 +928,132 @@ export default function SecuritySettingsPage() {
           </Message>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <CardIcon $iconType="key" $size={18} $active={true}>
-                <Key size={18} />
-              </CardIcon>
-              Change Password
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormGroup>
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <PasswordInputContainer>
-                <Input
-                  id="currentPassword"
-                  name="currentPassword"
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  value={passwordForm.currentPassword}
-                  onChange={handlePasswordChange}
-                />
-                <TogglePasswordButton
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                >
-                  <ToggleIcon $iconType={showCurrentPassword ? "eye-off" : "eye"} $size={16} $active={true}>
-                    {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </ToggleIcon>
-                </TogglePasswordButton>
-              </PasswordInputContainer>
-              {passwordErrors.currentPassword && (
-                <ErrorText>{passwordErrors.currentPassword}</ErrorText>
-              )}
-            </FormGroup>
-
-            <FormGroup>
-              <Label htmlFor="newPassword">New Password</Label>
-              <PasswordInputContainer>
-                <Input
-                  id="newPassword"
-                  name="newPassword"
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={passwordForm.newPassword}
-                  onChange={handlePasswordChange}
-                />
-                <TogglePasswordButton
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                >
-                  <ToggleIcon $iconType={showNewPassword ? "eye-off" : "eye"} $size={16} $active={true}>
-                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </ToggleIcon>
-                </TogglePasswordButton>
-              </PasswordInputContainer>
-              {passwordErrors.newPassword && (
-                <ErrorText>{passwordErrors.newPassword}</ErrorText>
-              )}
-
-              {passwordForm.newPassword && (
-                <PasswordStrengthMeter>
-                  <PasswordStrengthLabel strength={passwordStrength}>
-                    <span>{getPasswordStrengthLabel()}</span>
-                    <span>Password Strength</span>
-                  </PasswordStrengthLabel>
-                  <PasswordStrengthBar>
-                    <PasswordStrengthIndicator strength={passwordStrength} />
-                  </PasswordStrengthBar>
-                </PasswordStrengthMeter>
-              )}
-
-              <HelperText>
-                Password must be at least 8 characters and include uppercase, lowercase, numbers, and special characters.
-              </HelperText>
-            </FormGroup>
-
-            <FormGroup>
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <PasswordInputContainer>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={passwordForm.confirmPassword}
-                  onChange={handlePasswordChange}
-                />
-                <TogglePasswordButton
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <ToggleIcon $iconType={showConfirmPassword ? "eye-off" : "eye"} $size={16} $active={true}>
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </ToggleIcon>
-                </TogglePasswordButton>
-              </PasswordInputContainer>
-              {passwordErrors.confirmPassword && (
-                <ErrorText>{passwordErrors.confirmPassword}</ErrorText>
-              )}
-            </FormGroup>
-
-            <ActionButtons>
-              <Button
-                variant="default"
-                onClick={handleSavePassword}
-                disabled={loading || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              >
-                {loading ? (
-                  <>
-                    <ButtonIcon $iconType="save" $size={16} $active={true}>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block"></div>
-                    </ButtonIcon>
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <ButtonIcon $iconType="save" $size={16} $active={true}>
-                      <Save size={16} />
-                    </ButtonIcon>
-                    Update Password
-                  </>
+        {user?.role !== 'finance_manager' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <CardIcon $iconType="key" $size={18} $active={true}>
+                  <Key size={18} />
+                </CardIcon>
+                Change Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormGroup>
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <PasswordInputContainer>
+                  <Input
+                    id="currentPassword"
+                    name="currentPassword"
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={passwordForm.currentPassword}
+                    onChange={handlePasswordChange}
+                  />
+                  <TogglePasswordButton
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  >
+                    <ToggleIcon $iconType={showCurrentPassword ? "eye-off" : "eye"} $size={16} $active={true}>
+                      {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </ToggleIcon>
+                  </TogglePasswordButton>
+                </PasswordInputContainer>
+                {passwordErrors.currentPassword && (
+                  <ErrorText>{passwordErrors.currentPassword}</ErrorText>
                 )}
-              </Button>
-            </ActionButtons>
-          </CardContent>
-        </Card>
+              </FormGroup>
+
+              <FormGroup>
+                <Label htmlFor="newPassword">New Password</Label>
+                <PasswordInputContainer>
+                  <Input
+                    id="newPassword"
+                    name="newPassword"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={passwordForm.newPassword}
+                    onChange={handlePasswordChange}
+                  />
+                  <TogglePasswordButton
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    <ToggleIcon $iconType={showNewPassword ? "eye-off" : "eye"} $size={16} $active={true}>
+                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </ToggleIcon>
+                  </TogglePasswordButton>
+                </PasswordInputContainer>
+                {passwordErrors.newPassword && (
+                  <ErrorText>{passwordErrors.newPassword}</ErrorText>
+                )}
+
+                {passwordForm.newPassword && (
+                  <PasswordStrengthMeter>
+                    <PasswordStrengthLabel strength={passwordStrength}>
+                      <span>{getPasswordStrengthLabel()}</span>
+                      <span>Password Strength</span>
+                    </PasswordStrengthLabel>
+                    <PasswordStrengthBar>
+                      <PasswordStrengthIndicator strength={passwordStrength} />
+                    </PasswordStrengthBar>
+                  </PasswordStrengthMeter>
+                )}
+
+                <HelperText>
+                  Password must be at least 8 characters and include uppercase, lowercase, numbers, and special characters.
+                </HelperText>
+              </FormGroup>
+
+              <FormGroup>
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <PasswordInputContainer>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={passwordForm.confirmPassword}
+                    onChange={handlePasswordChange}
+                  />
+                  <TogglePasswordButton
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <ToggleIcon $iconType={showConfirmPassword ? "eye-off" : "eye"} $size={16} $active={true}>
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </ToggleIcon>
+                  </TogglePasswordButton>
+                </PasswordInputContainer>
+                {passwordErrors.confirmPassword && (
+                  <ErrorText>{passwordErrors.confirmPassword}</ErrorText>
+                )}
+              </FormGroup>
+
+              <ActionButtons>
+                <Button
+                  variant="default"
+                  onClick={handleSavePassword}
+                  disabled={loading || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  {loading ? (
+                    <>
+                      <ButtonIcon $iconType="save" $size={16} $active={true}>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block"></div>
+                      </ButtonIcon>
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <ButtonIcon $iconType="save" $size={16} $active={true}>
+                        <Save size={16} />
+                      </ButtonIcon>
+                      Update Password
+                    </>
+                  )}
+                </Button>
+              </ActionButtons>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -1180,122 +1182,126 @@ export default function SecuritySettingsPage() {
               </Switch>
             </SwitchContainer>
 
-            <Divider />
+            {user?.role !== 'finance_manager' && (
+              <>
+                <Divider />
 
-            <FormGroup>
-              <SwitchContainer>
-                <div>
-                  <Label htmlFor="ipRestriction">IP Address Restriction</Label>
-                  <HelperText>Restrict login attempts to known IP addresses</HelperText>
-                  {loadingIPRestriction ? (
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>Loading...</div>
-                  ) : (
-                    <StatusBadge $enabled={ipRestrictionEnabled} style={{ marginTop: '0.5rem' }}>
-                      {ipRestrictionEnabled ? (
-                        <>
-                          <StatusIcon $iconType="check-circle" $size={12} $active={true}>
-                            <CheckCircle size={12} />
-                          </StatusIcon>
-                          Enabled ({allowedIPs.length} IP{allowedIPs.length !== 1 ? 's' : ''})
-                        </>
+                <FormGroup>
+                  <SwitchContainer>
+                    <div>
+                      <Label htmlFor="ipRestriction">IP Address Restriction</Label>
+                      <HelperText>Restrict login attempts to known IP addresses</HelperText>
+                      {loadingIPRestriction ? (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>Loading...</div>
                       ) : (
-                        <>
-                          <StatusIcon $iconType="alert-circle" $size={12} $active={true}>
-                            <AlertCircle size={12} />
-                          </StatusIcon>
-                          Disabled
-                        </>
+                        <StatusBadge $enabled={ipRestrictionEnabled} style={{ marginTop: '0.5rem' }}>
+                          {ipRestrictionEnabled ? (
+                            <>
+                              <StatusIcon $iconType="check-circle" $size={12} $active={true}>
+                                <CheckCircle size={12} />
+                              </StatusIcon>
+                              Enabled ({allowedIPs.length} IP{allowedIPs.length !== 1 ? 's' : ''})
+                            </>
+                          ) : (
+                            <>
+                              <StatusIcon $iconType="alert-circle" $size={12} $active={true}>
+                                <AlertCircle size={12} />
+                              </StatusIcon>
+                              Disabled
+                            </>
+                          )}
+                        </StatusBadge>
                       )}
-                    </StatusBadge>
-                  )}
-                </div>
-                <Switch>
-                  <SwitchInput
-                    type="checkbox"
-                    id="ipRestriction"
-                    name="ipRestriction"
-                    checked={ipRestrictionEnabled}
-                    onChange={(e) => handleIPRestrictionToggle(e.target.checked)}
-                    disabled={loading || loadingIPRestriction}
-                  />
-                  <SwitchSlider />
-                </Switch>
-              </SwitchContainer>
-
-              {ipRestrictionEnabled && (
-                <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.375rem', border: '1px solid #e5e7eb' }}>
-                  <Label>Allowed IP Addresses</Label>
-                  <HelperText style={{ marginBottom: '0.75rem' }}>
-                    Only these IP addresses will be allowed to log in. You can use CIDR notation (e.g., 192.168.1.0/24).
-                  </HelperText>
-
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                    <Input
-                      type="text"
-                      placeholder="e.g., 192.168.1.100 or 192.168.1.0/24"
-                      value={newIPAddress}
-                      onChange={(e) => {
-                        setNewIPAddress(e.target.value);
-                        setIpError(null);
-                      }}
-                      disabled={loading}
-                      style={{ flex: 1 }}
-                    />
-                    <Button
-                      variant="default"
-                      onClick={handleAddIP}
-                      disabled={loading || !newIPAddress.trim()}
-                    >
-                      Add IP
-                    </Button>
-                  </div>
-
-                  {ipError && (
-                    <ErrorText style={{ marginBottom: '0.75rem' }}>{ipError}</ErrorText>
-                  )}
-
-                  {allowedIPs.length === 0 ? (
-                    <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
-                      No IP addresses added yet. Add at least one IP address to enable IP restriction.
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {allowedIPs.map((ip, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '0.75rem',
-                            backgroundColor: 'white',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '0.25rem'
+                    <Switch>
+                      <SwitchInput
+                        type="checkbox"
+                        id="ipRestriction"
+                        name="ipRestriction"
+                        checked={ipRestrictionEnabled}
+                        onChange={(e) => handleIPRestrictionToggle(e.target.checked)}
+                        disabled={loading || loadingIPRestriction}
+                      />
+                      <SwitchSlider />
+                    </Switch>
+                  </SwitchContainer>
+
+                  {ipRestrictionEnabled && (
+                    <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.375rem', border: '1px solid #e5e7eb' }}>
+                      <Label>Allowed IP Addresses</Label>
+                      <HelperText style={{ marginBottom: '0.75rem' }}>
+                        Only these IP addresses will be allowed to log in. You can use CIDR notation (e.g., 192.168.1.0/24).
+                      </HelperText>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <Input
+                          type="text"
+                          placeholder="e.g., 192.168.1.100 or 192.168.1.0/24"
+                          value={newIPAddress}
+                          onChange={(e) => {
+                            setNewIPAddress(e.target.value);
+                            setIpError(null);
                           }}
+                          disabled={loading}
+                          style={{ flex: 1 }}
+                        />
+                        <Button
+                          variant="default"
+                          onClick={handleAddIP}
+                          disabled={loading || !newIPAddress.trim()}
                         >
-                          <span style={{ fontFamily: 'monospace', fontSize: '0.875rem', color: '#111827' }}>
-                            {ip}
-                          </span>
-                          <Button
-                            variant="default"
-                            onClick={() => handleRemoveIP(ip)}
-                            disabled={loading}
-                            style={{
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              padding: '0.25rem 0.5rem',
-                              fontSize: '0.75rem'
-                            }}
-                          >
-                            Remove
-                          </Button>
+                          Add IP
+                        </Button>
+                      </div>
+
+                      {ipError && (
+                        <ErrorText style={{ marginBottom: '0.75rem' }}>{ipError}</ErrorText>
+                      )}
+
+                      {allowedIPs.length === 0 ? (
+                        <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
+                          No IP addresses added yet. Add at least one IP address to enable IP restriction.
                         </div>
-                      ))}
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {allowedIPs.map((ip, index) => (
+                            <div
+                              key={index}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '0.75rem',
+                                backgroundColor: 'white',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '0.25rem'
+                              }}
+                            >
+                              <span style={{ fontFamily: 'monospace', fontSize: '0.875rem', color: '#111827' }}>
+                                {ip}
+                              </span>
+                              <Button
+                                variant="default"
+                                onClick={() => handleRemoveIP(ip)}
+                                disabled={loading}
+                                style={{
+                                  backgroundColor: '#ef4444',
+                                  color: 'white',
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.75rem'
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
-            </FormGroup>
+                </FormGroup>
+              </>
+            )}
 
             <ActionButtons>
               <Button

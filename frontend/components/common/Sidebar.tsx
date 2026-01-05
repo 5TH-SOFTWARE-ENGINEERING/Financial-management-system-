@@ -1128,13 +1128,6 @@ const Sidebar: React.FC = () => {
                                                     </NavIcon>
                                                     {!collapsed && 'Backup Center'}
                                                 </NavItem>
-
-                                                <NavItem href="/settings/security" $active={pathname === '/settings/security'} $collapsed={collapsed}>
-                                                    <NavIcon $active={pathname === '/settings/security'} $collapsed={collapsed} $size={16} $iconType="shield">
-                                                        <Shield />
-                                                    </NavIcon>
-                                                    {!collapsed && 'Security Control'}
-                                                </NavItem>
                                             </>
                                         )}
                                         <NavItem href="/settings/passwordmanagement" $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed}>
@@ -1148,6 +1141,12 @@ const Sidebar: React.FC = () => {
                                                 <History />
                                             </NavIcon>
                                             {!collapsed && 'History'}
+                                        </NavItem>
+                                        <NavItem href="/settings/security" $active={pathname === '/settings/security'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/settings/security'} $collapsed={collapsed} $size={16} $iconType="shield">
+                                                <Shield />
+                                            </NavIcon>
+                                            {!collapsed && 'Security Control'}
                                         </NavItem>
                                     </SubMenu>
                                 )}
