@@ -100,10 +100,10 @@ const extractErrorMessage = (error: unknown): string => {
 };
 
 export type UserInput = Omit<Partial<StoreUser>, 'id' | 'managerId'> &
-  {
-    id?: string | number;
-    managerId?: string | number;
-  } & Record<string, unknown>;
+{
+  id?: string | number;
+  managerId?: string | number;
+} & Record<string, unknown>;
 
 const toApiPayload = (userData: UserInput): Partial<ApiUser> => {
   const apiBasics = mapToApiUser(userData);
@@ -122,13 +122,13 @@ interface UserState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  
+
   // Subordinates
   subordinates: StoreUser[];
   allUsers: StoreUser[];
-  
+
   // Actions
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, totpCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: UserInput) => Promise<void>;
   getCurrentUser: () => Promise<void>;
@@ -138,7 +138,7 @@ interface UserState {
   updateUser: (userId: string, userData: UserInput) => Promise<void>;
   deleteUser: (userId: string, password: string) => Promise<void>;
   clearError: () => void;
-  
+
   // Permission checks
   canManageUsers: () => boolean;
   canViewAllData: () => boolean;
@@ -180,10 +180,10 @@ export const useUserStore = create<UserState>()(
             localStorage.removeItem('refresh_token');
           }
           const detail = extractErrorMessage(error);
-          set({ 
+          set({
             user: null,
-            error: detail || 'Login failed', 
-            isAuthenticated: false 
+            error: detail || 'Login failed',
+            isAuthenticated: false
           });
           throw error;
         } finally {
@@ -248,7 +248,7 @@ export const useUserStore = create<UserState>()(
       fetchSubordinates: async () => {
         const { user } = get();
         if (!user) return;
-        
+
         set({ isLoading: true });
         try {
           const response = await apiClient.getSubordinates(parseInt(user.id, 10));
@@ -356,9 +356,9 @@ export const useUserStore = create<UserState>()(
       getAccessibleRoutes: () => {
         const { user } = get();
         if (!user) return ['/auth/login', '/auth/register'];
-        
+
         const baseRoutes = ['/dashboard', '/revenue', '/expenses', '/reports', '/notifications'];
-        
+
         switch (user.role) {
           case 'admin':
             return [...baseRoutes, '/users', '/admin', '/approvals'];

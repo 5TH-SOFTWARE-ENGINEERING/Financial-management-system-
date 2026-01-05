@@ -216,6 +216,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Requires-2FA"],  # <--- CRITICAL: Allow frontend to see this header
 )
 
 # Custom OpenAPI Schema with Bearer Token Authorization

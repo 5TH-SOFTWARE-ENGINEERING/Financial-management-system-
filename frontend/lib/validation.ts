@@ -31,6 +31,7 @@ export const LoginSchema = z.object({
       { message: "Enter a valid username or email" }
     ),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  totp_code: z.string().length(6, "2FA code must be 6 digits").optional(),
 });
 export type LoginInput = z.infer<typeof LoginSchema>;
 
@@ -104,6 +105,7 @@ export const ResetPasswordOTPSchema = z.object({
 export const ResetPasswordNewSchema = z.object({
   newPassword: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
+  totp_code: z.string().length(6, "Code must be 6 digits").optional(), // Added for 2FA verification
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],

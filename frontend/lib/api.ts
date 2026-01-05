@@ -325,8 +325,8 @@ class ApiClient {
     return this.post('/auth/request-otp', { email });
   }
 
-  async resetPassword(email: string, code: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
-    return this.post('/auth/reset-password', { email, code, newPassword });
+  async resetPassword(email: string, code: string, newPassword: string, totp_code?: string): Promise<ApiResponse<{ message: string }>> {
+    return this.post('/auth/reset-password', { email, code, newPassword, totp_code });
   }
 
   // User endpoints

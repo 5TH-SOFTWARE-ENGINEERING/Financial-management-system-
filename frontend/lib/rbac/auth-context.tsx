@@ -16,7 +16,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (identifier: string, password: string) => Promise<boolean>;
+  login: (identifier: string, password: string, totpCode?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   hasPermission: (resource: Resource, action: Action) => boolean;
   hasUserPermission: (userId: string, resource: Resource, action: Action) => boolean;
@@ -84,9 +84,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [mappedUser, isLoading, getCurrentUser]);
 
-  const login = async (identifier: string, password: string): Promise<boolean> => {
+  const login = async (identifier: string, password: string, totpCode?: string): Promise<boolean> => {
     try {
-      await storeLogin(identifier, password);
+      await storeLogin(identifier, password, totpCode);
       // Verify that user is actually authenticated before returning true
       const currentState = useUserStore.getState();
       if (!currentState.isAuthenticated || !currentState.user) {

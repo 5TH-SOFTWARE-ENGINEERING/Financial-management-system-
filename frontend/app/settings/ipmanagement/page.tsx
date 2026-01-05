@@ -63,7 +63,7 @@ const pulse = keyframes`
 const PageWrapper = styled.div`
     padding: ${theme.spacing.xl};
     max-width: 100%;
-    margin: 0 auto;
+    margin: 20px auto;
     min-height: 100vh;
     background-color: #f0f2f5;
     animation: ${fadeIn} 0.5s ease-out;

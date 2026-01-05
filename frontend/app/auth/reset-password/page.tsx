@@ -10,8 +10,8 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '@/lib/rbac';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast, Toaster } from 'sonner';
-import { 
-  ResetPasswordRequestSchema, 
+import {
+  ResetPasswordRequestSchema,
   ResetPasswordOTPSchema,
   ResetPasswordNewSchema,
 } from '@/lib/validation';
@@ -342,6 +342,7 @@ export default function ResetPassword() {
   const [otpCode, setOtpCode] = useState<string>('');
   const [canResendOTP, setCanResendOTP] = useState(true);
   const [resendTimer, setResendTimer] = useState(0);
+  const [requires2FA, setRequires2FA] = useState(false); // Added for 2FA flow
 
   // Separate forms for each step
   const requestForm = useForm<{ email: string }>({
@@ -352,7 +353,7 @@ export default function ResetPassword() {
     resolver: zodResolver(ResetPasswordOTPSchema),
   });
 
-  const passwordForm = useForm<{ newPassword: string; confirmPassword: string }>({
+  const passwordForm = useForm<{ newPassword: string; confirmPassword: string; totp_code?: string }>({
     resolver: zodResolver(ResetPasswordNewSchema),
   });
 
@@ -363,14 +364,15 @@ export default function ResetPassword() {
   }, [isAuthenticated, router]);
 
   const handleRequestOTP = async (data: { email: string }) => {
+    // ... existing ...
     setIsLoading(true);
     setError(null);
     setIsSuccess(false);
-    
+
     try {
       // Request OTP for password reset
       const response = await apiClient.requestOTP(data.email);
-      
+
       // Check if we got a valid response
       if (response && (response.data || response.message)) {
         setEmail(data.email);
@@ -378,7 +380,7 @@ export default function ResetPassword() {
         setStep('otp');
         setCanResendOTP(false);
         setResendTimer(60); // 60 seconds cooldown
-        
+
         // Start countdown timer
         const timer = setInterval(() => {
           setResendTimer((prev) => {
@@ -390,7 +392,7 @@ export default function ResetPassword() {
             return prev - 1;
           });
         }, 1000);
-        
+
         const message = response.data?.message || response.message || 'OTP sent to your email!';
         toast.success(message);
         requestForm.reset();
@@ -418,15 +420,15 @@ export default function ResetPassword() {
 
   const handleResendOTP = async () => {
     if (!email || !canResendOTP) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       await apiClient.requestOTP(email);
       setCanResendOTP(false);
       setResendTimer(60); // Reset timer
-      
+
       // Start countdown timer
       const timer = setInterval(() => {
         setResendTimer((prev) => {
@@ -438,7 +440,7 @@ export default function ResetPassword() {
           return prev - 1;
         });
       }, 1000);
-      
+
       toast.success('OTP resent to your email!');
     } catch (err: unknown) {
       const errorMessage =
@@ -459,7 +461,7 @@ export default function ResetPassword() {
     setIsLoading(true);
     setError(null);
     setIsSuccess(false);
-    
+
     try {
       // Store the OTP code - verification will happen in the reset-password step
       // This allows the user to proceed to enter their new password
@@ -483,7 +485,7 @@ export default function ResetPassword() {
     }
   };
 
-  const handleResetPassword = async (data: { newPassword: string; confirmPassword: string }) => {
+  const handleResetPassword = async (data: { newPassword: string; confirmPassword: string; totp_code?: string }) => {
     if (!otpCode || otpCode.length !== 6) {
       setError('Please enter a valid 6-digit OTP code');
       toast.error('Please enter a valid 6-digit OTP code');
@@ -500,26 +502,65 @@ export default function ResetPassword() {
 
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Reset password with email, OTP, and new password
       // The backend will verify the OTP during this step
-      const response = await apiClient.resetPassword(email, otpCode, data.newPassword);
-      
+
+      // If 2FA is required, include the code
+      const totp = requires2FA ? data.totp_code : undefined;
+
+      const response = await apiClient.resetPassword(email, otpCode, data.newPassword, totp);
+
       // Handle different response structures
       const successMessage = response?.data?.message || response?.message || 'Password reset successful! You can now login.';
       toast.success(successMessage);
-      
+
       // Clear state
       setEmail('');
       setOtpCode('');
+      setRequires2FA(false);
       passwordForm.reset();
-      
+
       // Redirect to login after a short delay
       setTimeout(() => {
         router.push('/auth/login');
       }, 2000);
     } catch (err: unknown) {
+      const errObj = typeof err === 'object' && err !== null ? (err as Record<string, unknown>) : {};
+      const errorResponse = errObj.response as {
+        status?: number;
+        data?: { detail?: unknown; error?: unknown };
+        headers?: Record<string, string>;
+      } | undefined;
+      const errorStatus = errorResponse?.status;
+      const errorHeaders = errorResponse?.headers;
+
+      // Check for 2FA requirement (403 Forbidden with specific header or message)
+      const has2FAHeader = errorHeaders && (
+        errorHeaders['x-requires-2fa'] === 'true' ||
+        errorHeaders['X-Requires-2FA'] === 'true'
+      );
+
+      const errorDetail = (errorResponse?.data?.detail as string) || '';
+      const errorDetailLower = String(errorDetail).toLowerCase();
+
+      const is2FARequired = errorStatus === 403 && (
+        has2FAHeader ||
+        errorDetailLower.includes('two-factor') ||
+        errorDetailLower.includes('2fa') ||
+        errorDetailLower.includes('authentication required')
+      );
+
+      if (is2FARequired) {
+        setRequires2FA(true);
+        const msg = 'Two-factor authentication required. Please enter your 6-digit code from your authenticator app.';
+        setError(msg);
+        toast.info(msg);
+        setIsLoading(false);
+        return;
+      }
+
       const errorMessage =
         (typeof err === 'object' &&
           err !== null &&
@@ -533,11 +574,11 @@ export default function ResetPassword() {
         'Failed to reset password. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
-      
+
       // If OTP is invalid or expired, go back to OTP step
-      if (errorMessage.toLowerCase().includes('otp') || 
-          errorMessage.toLowerCase().includes('invalid') ||
-          errorMessage.toLowerCase().includes('expired')) {
+      if (errorMessage.toLowerCase().includes('otp') ||
+        errorMessage.toLowerCase().includes('invalid') ||
+        errorMessage.toLowerCase().includes('expired')) {
         setOtpCode('');
         setStep('otp');
       }
@@ -551,6 +592,7 @@ export default function ResetPassword() {
       setStep(step === 'otp' ? 'request' : 'otp');
       setError(null);
       setIsSuccess(false);
+      setRequires2FA(false); // Reset 2FA state on back
     } else {
       router.push('/auth/login');
     }
@@ -566,9 +608,9 @@ export default function ResetPassword() {
           </LinkIcon>
           Back to Login
         </BackLink>
-        
+
         <Title>Reset Password</Title>
-        
+
         {step === 'request' && (
           <>
             <Subtitle>Enter your email to receive an OTP code.</Subtitle>
@@ -600,7 +642,7 @@ export default function ResetPassword() {
             )}
           </>
         )}
-        
+
         {step === 'otp' && (
           <>
             <Subtitle>Enter the OTP sent to {email}</Subtitle>
@@ -651,7 +693,7 @@ export default function ResetPassword() {
             )}
           </>
         )}
-        
+
         {step === 'new-password' && (
           <>
             <Subtitle>Enter your new password.</Subtitle>
@@ -681,6 +723,27 @@ export default function ResetPassword() {
                   <ErrorMessage>{passwordForm.formState.errors.confirmPassword.message}</ErrorMessage>
                 )}
               </FormGroup>
+
+              {/* Added 2FA Field */}
+              {requires2FA && (
+                <FormGroup>
+                  <Label>2FA Authenticator Code</Label>
+                  <Input
+                    {...passwordForm.register('totp_code')}
+                    type="text"
+                    placeholder="Enter 6-digit code from authenticator app"
+                    disabled={isLoading}
+                    maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoFocus
+                  />
+                  {passwordForm.formState.errors.totp_code && (
+                    <ErrorMessage>{passwordForm.formState.errors.totp_code.message}</ErrorMessage>
+                  )}
+                </FormGroup>
+              )}
+
               <ResetButton type="submit" disabled={isLoading}>
                 {isLoading ? 'Updating...' : 'Reset Password'}
               </ResetButton>

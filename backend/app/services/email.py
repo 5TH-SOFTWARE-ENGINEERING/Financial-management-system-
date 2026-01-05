@@ -88,7 +88,7 @@ class EmailService:
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
-            msg['From'] = from_email or settings.SMTP_USER
+            msg['From'] = from_email or settings.SMTP_FROM_EMAIL or settings.SMTP_USER
             msg['To'] = to_email
             
             # Add plain text part
