@@ -70,15 +70,15 @@ This guide will help you deploy both the backend and frontend services on Render
 
 4. **Environment Variables**:
    ```
-   DATABASE_URL=<Internal Database URL from Step 1>
-   SECRET_KEY=<Generate a strong secret key>
+   DATABASE_URL=postgresql://finance_user:Qe0vY0AyWaXon2Jo9atPK2uYgSx16o9q@dpg-d4u4cmpr0fns73d7mfig-a/finance_db_m1k0
+   SECRET_KEY=youruyrytrsuperuit6876ecretchangei675re54inpro8tuduction
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
-   ALLOWED_ORIGINS=https://finance-frontend.onrender.com
-   ALLOWED_HOSTS=finance-backend.onrender.com
+   ALLOWED_ORIGINS=https://project1-e00p.onrender.com
+   ALLOWED_HOSTS=https://finance-backend-l2g4.onrender.com
    DEBUG=false
    LOG_LEVEL=INFO
-   REDIS_URL=<Internal Redis URL from Step 2>
+   REDIS_URL=redis://finance-redis:6379
    ```
 
 5. **Health Check Path**: `/health`

@@ -206,6 +206,7 @@ app = FastAPI(
 allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://project1-e00p.onrender.com",
 ]
 # Allow all in debug to simplify local dev
 if settings.DEBUG:
