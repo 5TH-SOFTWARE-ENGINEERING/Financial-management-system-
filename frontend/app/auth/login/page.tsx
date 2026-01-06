@@ -13,50 +13,69 @@ import { LoginSchema, type LoginInput } from '@/lib/validation';
 import useUserStore from '@/store/userStore';
 
 const theme = {
-  colors: { primary: '#ff7e5f' },
+  colors: {
+    primary: '#4f46e5', // Indigo 600
+    primaryHover: '#4338ca', // Indigo 700
+    accent: '#10b981', // Emerald 500
+    background: '#0f172a', // Slate 900
+    surface: '#1e293b', // Slate 800
+    text: '#f8fafc',
+    textSecondary: '#94a3b8',
+    border: 'rgba(148, 163, 184, 0.1)',
+  },
   spacing: {
     xs: '4px',
     sm: '8px',
-    md: '12px',
-    lg: '20px',
-    xl: '28px',
+    md: '16px',
+    lg: '24px',
+    xl: '32px',
+    xxl: '48px',
   },
   borderRadius: {
-    md: '8px',
-    lg: '12px',
+    md: '10px',
+    lg: '16px',
+    xl: '24px',
   },
   typography: {
-    fontFamily: '"Inter", sans-serif',
+    fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
     fontSizes: {
       sm: '14px',
       md: '16px',
-      xl: '26px',
+      lg: '20px',
+      xl: '28px',
+      xxl: '36px',
     },
     fontWeights: {
+      normal: 400,
       medium: 500,
       semibold: 600,
+      bold: 700,
     },
   },
   shadows: {
-    lg: '0 4px 20px rgba(0,0,0,0.3)',
+    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    glow: '0 0 20px rgba(79, 70, 229, 0.3)',
   },
   transitions: {
-    default: '0.3s ease-in-out',
+    default: '0.2s cubic-bezier(0.4, 0, 0.2, 1)',
   },
 };
 
 // Icon color function
 const getIconColor = (iconType: string, active: boolean = true): string => {
   const activeColors: Record<string, string> = {
-    eye: '#3b82f6',      // Blue for show password
-    eyeOff: '#8b5cf6',   // Purple for hide password
-    default: '#ff7e5f',  // Primary color
+    eye: '#6366f1',      // Indigo 500
+    eyeOff: '#6366f1',
+    default: '#4f46e5',  // Indigo 600
   };
 
   const inactiveColors: Record<string, string> = {
-    eye: '#6b7280',
-    eyeOff: '#6b7280',
-    default: '#9ca3af',
+    eye: '#64748b',
+    eyeOff: '#64748b',
+    default: '#64748b',
   };
 
   if (active) {
@@ -99,72 +118,19 @@ const LoginContainer = styled.div`
   font-family: ${theme.typography.fontFamily};
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #239f94 0%, #2c7a8c 50%, #1e5f6f 100%);
+  background-color: ${theme.colors.background};
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
 
   &::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: conic-gradient(
-      from 0deg,
-      #239f94 0deg,
-      #2c7a8c 60deg,
-      #1e5f6f 120deg,
-      #239f94 180deg,
-      #2c7a8c 240deg,
-      #1e5f6f 300deg,
-      #239f94 360deg
-    );
-    animation: spiralRotate 20s linear infinite;
-    opacity: 0.8;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 200%;
-    height: 200%;
-    background: conic-gradient(
-      from 180deg,
-      #1e5f6f 0deg,
-      #239f94 60deg,
-      #2c7a8c 120deg,
-      #1e5f6f 180deg,
-      #239f94 240deg,
-      #2c7a8c 300deg,
-      #1e5f6f 360deg
-    );
-    animation: spiralRotateReverse 25s linear infinite;
-    opacity: 0.6;
-  }
-
-  @keyframes spiralRotate {
-    0% {
-      transform: rotate(0deg) scale(1);
-    }
-    50% {
-      transform: rotate(180deg) scale(1.2);
-    }
-    100% {
-      transform: rotate(360deg) scale(1);
-    }
-  }
-
-  @keyframes spiralRotateReverse {
-    0% {
-      transform: rotate(360deg) scale(1.1);
-    }
-    50% {
-      transform: rotate(180deg) scale(0.9);
-    }
-    100% {
-      transform: rotate(0deg) scale(1.1);
-    }
+    width: 100%;
+    height: 100%;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.02;
+    pointer-events: none;
   }
 
   > * {
@@ -172,94 +138,86 @@ const LoginContainer = styled.div`
     z-index: 1;
   }
 `;
+
 const LoginCard = styled.div`
-  background: rgb(84, 81, 81);
+  background: rgba(30, 41, 59, 0.7);
   padding: ${theme.spacing.xl};
   border-radius: ${theme.borderRadius.lg};
-  box-shadow: ${theme.shadows.lg};
+  box-shadow: ${theme.shadows.xl};
   width: 100%;
-  max-width: 450px;
-  max-height: 80vh;
-  overflow-y: auto;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  max-width: 440px;
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.lg};
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
   transition: all ${theme.transitions.default};
 
   &:hover {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border-color: rgba(79, 70, 229, 0.3);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
 `;
 const Title = styled.h1`
   text-align: center;
   font-size: ${theme.typography.fontSizes.xl};
-  font-weight: ${theme.typography.fontWeights.semibold};
-  background: linear-gradient(90deg, #ff7e5f, #feb47b);
-  -webkit-background-clip: text;
-  color: transparent;
-  text-shadow: 
-    0 0 5px rgba(255, 126, 95, 0.8),
-    0 0 10px rgba(255, 126, 95, 0.6),
-    0 0 15px rgba(255, 126, 95, 0.4);
-  animation: pulse 2s infinite alternate;
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${theme.colors.text};
+  margin-bottom: ${theme.spacing.xs};
+  letter-spacing: -0.02em;
+  transition: color ${theme.transitions.default};
+  cursor: pointer;
 
-  @keyframes pulse {
-    0% {
-      text-shadow: 
-        0 0 5px rgba(255, 126, 95, 0.8),
-        0 0 10px rgba(255, 126, 95, 0.6);
-    }
-    100% {
-      text-shadow: 
-        0 0 10px rgba(255, 126, 95, 1),
-        0 0 20px rgba(255, 126, 95, 0.8);
-    }
+  &:hover {
+    color: ${theme.colors.primary};
   }
 `;
+
 const Subtitle = styled.h2`
   text-align: center;
-  color: #ffffff;
+  color: ${theme.colors.textSecondary};
   font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.normal};
+  margin-bottom: ${theme.spacing.md};
 `;
+
 const FormGroup = styled.div`
   margin-bottom: ${theme.spacing.lg};
   position: relative;
 `;
+
 const Label = styled.label`
   display: block;
   margin-bottom: ${theme.spacing.sm};
-  color: #ffffff;
+  color: ${theme.colors.text};
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
 `;
+
 const Input = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md} ${theme.spacing.sm};
-  border: 1px solid #4a4a4a;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
-  background-color: #333333;
-  color: #ffffff;
+  background-color: rgba(15, 23, 42, 0.4);
+  color: ${theme.colors.text};
   transition: all ${theme.transitions.default};
 
   &:focus {
     outline: none;
     border-color: ${theme.colors.primary};
-    box-shadow: 0 0 0 3px rgba(255, 126, 95, 0.1);
+    background-color: rgba(15, 23, 42, 0.6);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
   }
 
   &::placeholder {
-    color: #b3b3b3;
+    color: #475569;
   }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
@@ -314,38 +272,38 @@ const Checkbox = styled.input`
   }
 `;
 const CheckboxLabel = styled.label`
-  color: #ffffff;
+  color: ${theme.colors.textSecondary};
   font-size: ${theme.typography.fontSizes.sm};
   cursor: pointer;
   user-select: none;
   
   &:hover {
-    color: ${theme.colors.primary};
+    color: ${theme.colors.text};
   }
 `;
+
 const SignInButton = styled.button`
   width: 100%;
   padding: ${theme.spacing.md};
-  background: linear-gradient(135deg, ${theme.colors.primary} 0%, #feb47b 100%);
-  color: rgb(255, 255, 255);
+  background: ${theme.colors.primary};
+  color: white;
   border: none;
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.md};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-weight: ${theme.typography.fontWeights.semibold};
   cursor: pointer;
   transition: all ${theme.transitions.default};
-  box-shadow: 0 2px 8px rgba(255, 126, 95, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: ${theme.spacing.sm};
   position: relative;
-  min-height: 44px;
+  min-height: 48px;
 
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #feb47b 0%, ${theme.colors.primary} 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 126, 95, 0.4);
+    background: ${theme.colors.primaryHover};
+    transform: translateY(-1px);
+    box-shadow: ${theme.shadows.glow};
   }
 
   &:active:not(:disabled) {
@@ -353,9 +311,9 @@ const SignInButton = styled.button`
   }
 
   &:disabled {
-    background: #4a4a4a;
+    background: ${theme.colors.surface};
+    color: ${theme.colors.textSecondary};
     cursor: not-allowed;
-    box-shadow: none;
     opacity: 0.6;
   }
 `;
@@ -380,18 +338,21 @@ const LoadingOverlay = styled.div<{ $isLoading: boolean }>`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.6);
   display: ${props => props.$isLoading ? 'flex' : 'none'};
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   border-radius: ${theme.borderRadius.lg};
   z-index: 10;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
+  transition: all ${theme.transitions.default};
 `;
 
 const LoadingText = styled.div`
-  color: #ffffff;
+  color: ${theme.colors.text};
   font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.medium};
   margin-top: ${theme.spacing.md};
   display: flex;
   align-items: center;
@@ -399,30 +360,30 @@ const LoadingText = styled.div`
 `;
 const ForgotPassword = styled.a`
   text-align: right;
-  color: rgb(155, 186, 32);
+  color: ${theme.colors.primary};
   font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
   cursor: pointer;
   text-decoration: none;
   transition: all ${theme.transitions.default};
   
   &:hover {
-    color: ${theme.colors.primary};
+    color: ${theme.colors.primaryHover};
     text-decoration: underline;
   }
-  
-  &:active {
-    transform: scale(0.98);
-  }
 `;
+
 const ErrorMessage = styled.div`
-  color: #ff4d4f;
+  color: #f87171;
   font-size: ${theme.typography.fontSizes.sm};
   margin-top: ${theme.spacing.xs};
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  background: rgba(255, 77, 79, 0.1);
+  padding: ${theme.spacing.sm};
+  background: rgba(239, 68, 68, 0.1);
   border-radius: ${theme.borderRadius.md};
-  border-left: 3px solid #ff4d4f;
-  text-align: left;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
 `;
 const NotFoundContainer = styled.div`
   display: flex;
@@ -439,37 +400,33 @@ const NotFoundContainer = styled.div`
 `;
 
 const NotFoundCard = styled.div`
-  background: rgb(84, 81, 81);
+  background: ${theme.colors.surface};
   padding: ${theme.spacing.xl};
   border-radius: ${theme.borderRadius.lg};
-  box-shadow: ${theme.shadows.lg};
-  max-width: 600px;
+  box-shadow: ${theme.shadows.xl};
+  max-width: 500px;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  border: 1px solid ${theme.colors.border};
+  backdrop-filter: blur(16px);
 `;
 
 const NotFoundTitle = styled.h1`
-  font-size: 72px;
-  font-weight: ${theme.typography.fontWeights.semibold};
-  background: linear-gradient(90deg, #ff7e5f, #feb47b);
-  -webkit-background-clip: text;
-  color: transparent;
-  margin-bottom: ${theme.spacing.md};
-  text-shadow: 
-    0 0 10px rgba(255, 126, 95, 0.8),
-    0 0 20px rgba(255, 126, 95, 0.6);
+  font-size: 80px;
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${theme.colors.primary};
+  margin-bottom: ${theme.spacing.sm};
+  letter-spacing: -0.05em;
 `;
 
 const NotFoundSubtitle = styled.h2`
-  color: #ffffff;
+  color: ${theme.colors.text};
   font-size: ${theme.typography.fontSizes.xl};
-  font-weight: ${theme.typography.fontWeights.medium};
-  margin-bottom: ${theme.spacing.lg};
+  font-weight: ${theme.typography.fontWeights.semibold};
+  margin-bottom: ${theme.spacing.md};
 `;
 
 const NotFoundMessage = styled.p`
-  color: #b3b3b3;
+  color: ${theme.colors.textSecondary};
   font-size: ${theme.typography.fontSizes.md};
   margin-bottom: ${theme.spacing.xl};
   line-height: 1.6;
@@ -477,24 +434,19 @@ const NotFoundMessage = styled.p`
 
 const BackButton = styled.button`
   padding: ${theme.spacing.md} ${theme.spacing.xl};
-  background: linear-gradient(135deg, ${theme.colors.primary} 0%, #feb47b 100%);
-  color: rgb(255, 255, 255);
+  background: ${theme.colors.primary};
+  color: white;
   border: none;
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.md};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-weight: ${theme.typography.fontWeights.semibold};
   cursor: pointer;
   transition: all ${theme.transitions.default};
-  box-shadow: 0 2px 8px rgba(255, 126, 95, 0.3);
 
   &:hover {
-    background: linear-gradient(135deg, #feb47b 0%, ${theme.colors.primary} 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 126, 95, 0.4);
-  }
-
-  &:active {
-    transform: translateY(0);
+    background: ${theme.colors.primaryHover};
+    transform: translateY(-1px);
+    box-shadow: ${theme.shadows.glow};
   }
 `;
 
@@ -736,10 +688,9 @@ export default function Login() {
 
   return (
     <LoginContainer>
-      <Toaster position="top-right" />
       <LoginCard>
         <Link href="/" style={{ textDecoration: 'none' }}>
-          <Title className="cursor-pointer hover:text-blue-600 transition-colors duration-300">
+          <Title>
             Login to Your Account
           </Title>
         </Link>

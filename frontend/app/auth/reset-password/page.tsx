@@ -9,7 +9,7 @@ import { ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/lib/rbac';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import {
   ResetPasswordRequestSchema,
   ResetPasswordOTPSchema,
@@ -18,58 +18,77 @@ import {
 import apiClient from '@/lib/api';
 
 const theme = {
-  colors: { primary: '#ff7e5f' },
+  colors: {
+    primary: '#4f46e5', // Indigo 600
+    primaryHover: '#4338ca', // Indigo 700
+    accent: '#10b981', // Emerald 500
+    background: '#0f172a', // Slate 900
+    surface: '#1e293b', // Slate 800
+    text: '#f8fafc',
+    textSecondary: '#94a3b8',
+    border: 'rgba(148, 163, 184, 0.1)',
+  },
   spacing: {
     xs: '4px',
     sm: '8px',
-    md: '12px',
-    lg: '20px',
-    xl: '28px',
+    md: '16px',
+    lg: '24px',
+    xl: '32px',
+    xxl: '48px',
   },
   borderRadius: {
-    md: '8px',
-    lg: '12px',
+    md: '10px',
+    lg: '16px',
+    xl: '24px',
   },
   typography: {
-    fontFamily: '"Inter", sans-serif',
+    fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
     fontSizes: {
       sm: '14px',
       md: '16px',
-      xl: '26px',
+      lg: '20px',
+      xl: '28px',
+      xxl: '36px',
     },
     fontWeights: {
+      normal: 400,
       medium: 500,
       semibold: 600,
+      bold: 700,
     },
   },
   shadows: {
-    lg: '0 4px 20px rgba(0,0,0,0.3)',
+    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    glow: '0 0 20px rgba(79, 70, 229, 0.3)',
   },
   transitions: {
-    default: '0.3s ease-in-out',
+    default: '0.2s cubic-bezier(0.4, 0, 0.2, 1)',
   },
 };
 
 // Icon color function
 const getIconColor = (iconType: string, active: boolean = true): string => {
   const activeColors: Record<string, string> = {
-    arrowLeft: '#3b82f6',      // Blue for back navigation
-    mail: '#10b981',           // Green for email
-    lock: '#8b5cf6',          // Purple for password/lock
-    checkCircle: '#22c55e',    // Green for success
-    eye: '#3b82f6',            // Blue for show password
-    eyeOff: '#8b5cf6',         // Purple for hide password
-    default: '#ff7e5f',        // Primary color
+    arrowLeft: '#6366f1',      // Indigo 500
+    mail: '#10b981',           // Emerald 500
+    lock: '#6366f1',
+    checkCircle: '#10b981',
+    eye: '#6366f1',
+    eyeOff: '#6366f1',
+    default: '#4f46e5',        // Indigo 600
   };
 
   const inactiveColors: Record<string, string> = {
-    arrowLeft: '#6b7280',
-    mail: '#6b7280',
-    lock: '#6b7280',
-    checkCircle: '#6b7280',
-    eye: '#6b7280',
-    eyeOff: '#6b7280',
-    default: '#9ca3af',
+    arrowLeft: '#64748b',
+    mail: '#64748b',
+    lock: '#64748b',
+    checkCircle: '#64748b',
+    eye: '#64748b',
+    eyeOff: '#64748b',
+    default: '#64748b',
   };
 
   if (active) {
@@ -84,7 +103,7 @@ const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: 
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active !== false) : '#ffffff'};
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active !== false) : '#94a3b8'};
   opacity: ${props => props.$active !== false ? 1 : 0.7};
   transition: all ${theme.transitions.default};
   
@@ -149,67 +168,67 @@ const ResetContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: rgb(44, 122, 140);
   font-family: ${theme.typography.fontFamily};
+  position: relative;
+  overflow: hidden;
+  background-color: ${theme.colors.background};
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.02;
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 `;
 
 const ResetCard = styled.div`
-  background: rgb(68, 65, 65);
+  background: rgba(30, 41, 59, 0.7);
   padding: ${theme.spacing.xl};
   border-radius: ${theme.borderRadius.lg};
-  box-shadow: ${theme.shadows.lg};
+  box-shadow: ${theme.shadows.xl};
   width: 100%;
-  max-width: 450px;
-  max-height: 80vh;
-  overflow-y: auto;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  max-width: 440px;
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.lg};
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
   transition: all ${theme.transitions.default};
 
   &:hover {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border-color: rgba(79, 70, 229, 0.3);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
 `;
 
 const Title = styled.h1`
   text-align: center;
   font-size: ${theme.typography.fontSizes.xl};
-  font-weight: ${theme.typography.fontWeights.semibold};
-  background: linear-gradient(90deg, #ff7e5f, #feb47b);
-  -webkit-background-clip: text;
-  color: transparent;
-  text-shadow: 
-    0 0 5px rgba(255, 126, 95, 0.8),
-    0 0 10px rgba(255, 126, 95, 0.6),
-    0 0 15px rgba(255, 126, 95, 0.4);
-  animation: pulse 2s infinite alternate;
-
-  @keyframes pulse {
-    0% {
-      text-shadow: 
-        0 0 5px rgba(255, 126, 95, 0.8),
-        0 0 10px rgba(255, 126, 95, 0.6);
-    }
-    100% {
-      text-shadow: 
-        0 0 10px rgba(255, 126, 95, 1),
-        0 0 20px rgba(255, 126, 95, 0.8);
-    }
-  }
+  font-weight: ${theme.typography.fontWeights.bold};
+  color: ${theme.colors.text};
+  margin-bottom: ${theme.spacing.xs};
+  letter-spacing: -0.02em;
 `;
 
 const Subtitle = styled.p`
   text-align: center;
-  color: #ffffff;
+  color: ${theme.colors.textSecondary};
   font-size: ${theme.typography.fontSizes.md};
+  font-weight: ${theme.typography.fontWeights.normal};
   margin-bottom: ${theme.spacing.md};
+  line-height: 1.5;
 `;
 
 const FormGroup = styled.div`
@@ -220,33 +239,34 @@ const FormGroup = styled.div`
 const Label = styled.label`
   display: block;
   margin-bottom: ${theme.spacing.sm};
-  color: #ffffff;
+  color: ${theme.colors.text};
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md} ${theme.spacing.sm};
-  border: 1px solid #4a4a4a;
+  padding: ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
-  background-color: #333333;
-  color: #ffffff;
+  background-color: rgba(15, 23, 42, 0.4);
+  color: ${theme.colors.text};
   transition: all ${theme.transitions.default};
 
   &:focus {
     outline: none;
     border-color: ${theme.colors.primary};
-    box-shadow: 0 0 0 3px rgba(255, 126, 95, 0.1);
+    background-color: rgba(15, 23, 42, 0.6);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
   }
 
   &::placeholder {
-    color: #b3b3b3;
+    color: #475569;
   }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
@@ -254,20 +274,25 @@ const Input = styled.input`
 const ResetButton = styled.button`
   width: 100%;
   padding: ${theme.spacing.md};
-  background: linear-gradient(135deg, ${theme.colors.primary} 0%, #feb47b 100%);
-  color: #ffffff;
+  background: ${theme.colors.primary};
+  color: white;
   border: none;
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.md};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-weight: ${theme.typography.fontWeights.semibold};
   cursor: pointer;
   transition: all ${theme.transitions.default};
-  box-shadow: 0 2px 8px rgba(255, 126, 95, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.spacing.sm};
+  position: relative;
+  min-height: 48px;
 
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #feb47b 0%, ${theme.colors.primary} 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 126, 95, 0.4);
+    background: ${theme.colors.primaryHover};
+    transform: translateY(-1px);
+    box-shadow: ${theme.shadows.glow};
   }
 
   &:active:not(:disabled) {
@@ -275,60 +300,58 @@ const ResetButton = styled.button`
   }
 
   &:disabled {
-    background: #4a4a4a;
+    background: ${theme.colors.surface};
+    color: ${theme.colors.textSecondary};
     cursor: not-allowed;
-    box-shadow: none;
     opacity: 0.6;
   }
 `;
 
 const BackLink = styled(Link)`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: ${theme.spacing.sm};
-  color: #ffffff;
+  color: ${theme.colors.textSecondary};
   font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
   text-decoration: none;
   margin-bottom: ${theme.spacing.md};
   transition: all ${theme.transitions.default};
-  padding: ${theme.spacing.xs};
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
   border-radius: ${theme.borderRadius.md};
 
   &:hover {
-    color: ${theme.colors.primary};
-    background: rgba(255, 126, 95, 0.1);
-    transform: translateX(-4px);
-  }
-
-  &:active {
+    color: ${theme.colors.text};
+    background: rgba(148, 163, 184, 0.1);
     transform: translateX(-2px);
   }
 `;
 
 const SuccessMessage = styled.div`
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.5);
-  border-left: 3px solid #22c55e;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
   border-radius: ${theme.borderRadius.md};
   padding: ${theme.spacing.md};
-  color: #22c55e;
+  color: ${theme.colors.accent};
   text-align: left;
   font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${theme.typography.fontWeights.medium};
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
 `;
 
 const ErrorMessage = styled.div`
-  color: #ff4d4f;
+  color: #f87171;
   font-size: ${theme.typography.fontSizes.sm};
   margin-top: ${theme.spacing.xs};
-  text-align: left;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  border-left: 3px solid #ff4d4f;
+  padding: ${theme.spacing.md};
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
 `;
 
 const ResendContainer = styled.div`
@@ -348,13 +371,15 @@ const ResendButton = styled.button`
   color: ${theme.colors.primary};
   cursor: pointer;
   font-size: ${theme.typography.fontSizes.sm};
-  text-decoration: underline;
+  font-weight: ${theme.typography.fontWeights.semibold};
+  text-decoration: none;
   transition: all ${theme.transitions.default};
-  padding: ${theme.spacing.xs};
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.md};
 
   &:hover:not(:disabled) {
-    color: #feb47b;
-    transform: scale(1.05);
+    color: ${theme.colors.primaryHover};
+    background: rgba(79, 70, 229, 0.1);
   }
 
   &:disabled {
@@ -364,9 +389,10 @@ const ResendButton = styled.button`
 `;
 
 const TimerText = styled.p`
-  color: #b3b3b3;
+  color: ${theme.colors.textSecondary};
   font-size: ${theme.typography.fontSizes.sm};
   margin: 0;
+  font-weight: ${theme.typography.fontWeights.medium};
 `;
 
 export default function ResetPassword() {
@@ -380,7 +406,7 @@ export default function ResetPassword() {
   const [otpCode, setOtpCode] = useState<string>('');
   const [canResendOTP, setCanResendOTP] = useState(true);
   const [resendTimer, setResendTimer] = useState(0);
-  const [requires2FA, setRequires2FA] = useState(false); 
+  const [requires2FA, setRequires2FA] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -639,9 +665,8 @@ export default function ResetPassword() {
 
   return (
     <ResetContainer>
-      <Toaster position="top-right" />
       <ResetCard>
-        <BackLink href="#" onClick={goBack}>
+        <BackLink href="/auth/login" onClick={goBack}>
           <LinkIcon $iconType="arrowLeft" $active={true} $size={16}>
             <ArrowLeft />
           </LinkIcon>
