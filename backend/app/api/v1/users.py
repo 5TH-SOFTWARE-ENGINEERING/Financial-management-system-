@@ -384,6 +384,33 @@ async def upload_profile_image(
     return current_user
 
 
+@router.delete("/me/profile-image", response_model=UserOut)
+async def delete_profile_image(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Remove profile image for current user"""
+    import os
+    
+    if not current_user.profile_image_url:
+        raise HTTPException(status_code=400, detail="No profile image to remove")
+
+    # Delete the physical file
+    file_path = current_user.profile_image_url.lstrip("/")
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            logger.error(f"Failed to delete profile image file {file_path}: {str(e)}")
+
+    # Clear field in database
+    current_user.profile_image_url = None
+    db.commit()
+    db.refresh(current_user)
+
+    return current_user
+
+
 # ------------------------------------------------------------------
 # POST /me/change-password
 # ------------------------------------------------------------------

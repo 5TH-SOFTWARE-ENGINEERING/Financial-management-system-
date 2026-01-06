@@ -552,6 +552,28 @@ export default function ProfilePage() {
     }
   };
 
+  const handleRemoveImage = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiClient.removeProfileImage();
+
+      if (response.data) {
+        const updatedUser = mapApiUserToExtended(response.data as ApiUser);
+        setUserData(updatedUser);
+        await fetchCurrentUser(); // Update global store
+        setSuccess('Profile picture removed successfully');
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to remove image';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getInitials = (name: string | null | undefined): string => {
     if (!name || name.trim() === '') {
       return '?';
@@ -620,6 +642,15 @@ export default function ProfilePage() {
               {isEditing && (
                 <UploadButton onClick={handleImageClick}>
                   <Camera size={16} />
+                </UploadButton>
+              )}
+              {isEditing && userData.profileImageUrl && (
+                <UploadButton
+                  onClick={handleRemoveImage}
+                  style={{ right: 'auto', left: theme.spacing.md, backgroundColor: '#fee2e2', color: '#dc2626' }}
+                  title="Remove Photo"
+                >
+                  <X size={16} />
                 </UploadButton>
               )}
               <input

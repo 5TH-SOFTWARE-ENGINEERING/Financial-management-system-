@@ -359,6 +359,11 @@ class ApiClient {
     return normalized;
   }
 
+  async removeProfileImage(): Promise<ApiResponse<User>> {
+    const response = await this.client.delete<User>('/users/me/profile-image');
+    return this.normalizeResponse<User>(response.data);
+  }
+
   async adminResetPassword(usernameOrEmail: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
     return this.post('/users/admin-reset-password', { username_or_email: usernameOrEmail, new_password: newPassword });
   }
