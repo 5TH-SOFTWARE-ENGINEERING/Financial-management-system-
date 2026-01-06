@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/lib/rbac';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -57,6 +57,8 @@ const getIconColor = (iconType: string, active: boolean = true): string => {
     mail: '#10b981',           // Green for email
     lock: '#8b5cf6',          // Purple for password/lock
     checkCircle: '#22c55e',    // Green for success
+    eye: '#3b82f6',            // Blue for show password
+    eyeOff: '#8b5cf6',         // Purple for hide password
     default: '#ff7e5f',        // Primary color
   };
 
@@ -65,6 +67,8 @@ const getIconColor = (iconType: string, active: boolean = true): string => {
     mail: '#6b7280',
     lock: '#6b7280',
     checkCircle: '#6b7280',
+    eye: '#6b7280',
+    eyeOff: '#6b7280',
     default: '#9ca3af',
   };
 
@@ -99,6 +103,40 @@ const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: 
 
 const LinkIcon = styled(IconWrapper)`
   margin-right: ${theme.spacing.xs};
+`;
+
+const PasswordIcon = styled(IconWrapper)`
+  cursor: pointer;
+`;
+
+const PasswordContainer = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
+const EyeIconButton = styled.button`
+  position: absolute;
+  top: 50%;
+  right: ${theme.spacing.sm};
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: ${theme.spacing.xs};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: ${theme.borderRadius.md};
+  transition: all ${theme.transitions.default};
+
+  &:hover {
+    background: rgba(255, 126, 95, 0.1);
+  }
+
+  &:focus {
+    outline: none;
+    background: rgba(255, 126, 95, 0.15);
+  }
 `;
 
 const SuccessIcon = styled(IconWrapper)`
@@ -342,7 +380,9 @@ export default function ResetPassword() {
   const [otpCode, setOtpCode] = useState<string>('');
   const [canResendOTP, setCanResendOTP] = useState(true);
   const [resendTimer, setResendTimer] = useState(0);
-  const [requires2FA, setRequires2FA] = useState(false); // Added for 2FA flow
+  const [requires2FA, setRequires2FA] = useState(false); 
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Separate forms for each step
   const requestForm = useForm<{ email: string }>({
@@ -364,7 +404,6 @@ export default function ResetPassword() {
   }, [isAuthenticated, router]);
 
   const handleRequestOTP = async (data: { email: string }) => {
-    // ... existing ...
     setIsLoading(true);
     setError(null);
     setIsSuccess(false);
@@ -701,24 +740,48 @@ export default function ResetPassword() {
             <form onSubmit={passwordForm.handleSubmit(handleResetPassword)}>
               <FormGroup>
                 <Label>New Password</Label>
-                <Input
-                  {...passwordForm.register('newPassword')}
-                  type="password"
-                  placeholder="Enter new password (min 8 characters)"
-                  disabled={isLoading}
-                />
+                <PasswordContainer>
+                  <Input
+                    {...passwordForm.register('newPassword')}
+                    type={showNewPassword ? 'text' : 'password'}
+                    placeholder="Enter new password (min 8 characters)"
+                    disabled={isLoading}
+                  />
+                  <EyeIconButton
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    disabled={isLoading}
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <PasswordIcon $iconType={showNewPassword ? 'eyeOff' : 'eye'} $active={true} $size={20}>
+                      {showNewPassword ? <EyeOff /> : <Eye />}
+                    </PasswordIcon>
+                  </EyeIconButton>
+                </PasswordContainer>
                 {passwordForm.formState.errors.newPassword && (
                   <ErrorMessage>{passwordForm.formState.errors.newPassword.message}</ErrorMessage>
                 )}
               </FormGroup>
               <FormGroup>
                 <Label>Confirm New Password</Label>
-                <Input
-                  {...passwordForm.register('confirmPassword')}
-                  type="password"
-                  placeholder="Confirm new password"
-                  disabled={isLoading}
-                />
+                <PasswordContainer>
+                  <Input
+                    {...passwordForm.register('confirmPassword')}
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Confirm new password"
+                    disabled={isLoading}
+                  />
+                  <EyeIconButton
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={isLoading}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <PasswordIcon $iconType={showConfirmPassword ? 'eyeOff' : 'eye'} $active={true} $size={20}>
+                      {showConfirmPassword ? <EyeOff /> : <Eye />}
+                    </PasswordIcon>
+                  </EyeIconButton>
+                </PasswordContainer>
                 {passwordForm.formState.errors.confirmPassword && (
                   <ErrorMessage>{passwordForm.formState.errors.confirmPassword.message}</ErrorMessage>
                 )}
