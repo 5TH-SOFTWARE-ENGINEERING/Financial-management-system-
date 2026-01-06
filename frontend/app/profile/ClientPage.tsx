@@ -627,7 +627,7 @@ export default function ProfilePage() {
               <Avatar
                 $bgColor={userData.profileImageUrl ? 'transparent' : getUserColor(userData.userType)}
                 onClick={handleImageClick}
-                style={{ cursor: isEditing ? 'pointer' : 'default', overflow: 'hidden' }}
+                style={{ cursor: isEditing || !userData.profileImageUrl ? 'pointer' : 'default', overflow: 'hidden' }}
               >
                 {userData.profileImageUrl ? (
                   <img
@@ -739,7 +739,7 @@ export default function ProfilePage() {
                       type="email"
                       value={userData.email}
                       onChange={handleInputChange}
-                      disabled={!isEditing}
+                      disabled={!isEditing || userData.userType === UserType.ACCOUNTANT || userData.userType === UserType.EMPLOYEE}
                     />
                   </FormGroup>
 
@@ -813,7 +813,7 @@ export default function ProfilePage() {
                       name="department"
                       value={userData.department || ''}
                       onChange={handleInputChange}
-                      disabled={!isEditing}
+                      disabled={!isEditing || userData.userType === UserType.ACCOUNTANT || userData.userType === UserType.EMPLOYEE}
                       placeholder={isEditing ? "Enter department" : ""}
                     />
                   </FormGroup>
