@@ -111,7 +111,13 @@ class MLForecastingService:
     
     @staticmethod
     def _get_model_path(metric: str, model_type: str, user_id: Optional[int] = None) -> Path:
-        """Get path for saved model"""
+        """Get path for saved model and ensure directory exists"""
+        if not MODELS_DIR.exists():
+            try:
+                MODELS_DIR.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Failed to create model directory {MODELS_DIR}: {e}")
+            
         if user_id:
             return MODELS_DIR / f"{metric}_{model_type}_user_{user_id}.pkl"
         return MODELS_DIR / f"{metric}_{model_type}.pkl"
@@ -148,8 +154,8 @@ class MLForecastingService:
                     if model_path_str:
                         model_path = Path(model_path_str)
                         if not model_path.exists():
-                            # Try relative to MODELS_DIR
-                            model_path = MODELS_DIR / Path(model_path_str).name
+                            # Try relative to MODEL_DIR
+                            model_path = MODEL_DIR / Path(model_path_str).name
                     else:
                         # Try standard paths
                         model_path = MLForecastingService._get_model_path(model_metric, model_type)
@@ -165,9 +171,9 @@ class MLForecastingService:
                     logger.warning(f"Failed to read store file {store_file}: {e}")
                     continue
         
-        # Also check MODELS_DIR directly for models not in store
-        if MODELS_DIR.exists():
-            for model_file in MODELS_DIR.glob("*"):
+        # Also check MODEL_DIR directly for models not in store
+        if MODEL_DIR.exists():
+            for model_file in MODEL_DIR.glob("*"):
                 if model_file.is_file() and not model_file.name.endswith('.metadata.json') and not model_file.name.endswith('.scaler.pkl'):
                     # Parse filename - handle both standard and custom naming
                     name = model_file.stem
@@ -1301,6 +1307,7 @@ class MLForecastingService:
                 "model_path": str(model_path) if model_path else None,
                 "trained_at": datetime.now(timezone.utc).isoformat()
             }
+            return result
         except Exception as e:
             logger.error(f"LSTM inventory training failed: {str(e)}")
             raise
@@ -2139,7 +2146,13 @@ class MLForecastingService:
     
     @staticmethod
     def _get_custom_model_path(metric_name: str, model_type: str, user_id: Optional[int] = None) -> Path:
-        """Get path for custom model"""
+        """Get path for custom model and ensure directory exists"""
+        if not MODELS_DIR.exists():
+            try:
+                MODELS_DIR.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Failed to create model directory {MODELS_DIR}: {e}")
+                
         safe_name = metric_name.lower().replace(" ", "_").replace("/", "_")
         if user_id:
             return MODELS_DIR / f"custom_{safe_name}_{model_type}_user_{user_id}.pkl"

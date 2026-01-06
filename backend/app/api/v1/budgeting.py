@@ -731,6 +731,12 @@ def train_all_models(
             "message": "Model training completed",
             "results": results
         }
+    except ValueError as e:
+        logger.error(f"Model training failed (validation error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except ImportError as e:
+        logger.error(f"Model training failed (dependency error): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Model training failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
@@ -760,6 +766,9 @@ def train_expenses_arima(
             db, start_date_dt, end_date_dt, current_user.id, current_user.role, order_tuple
         )
         return result
+    except (ValueError, ImportError) as e:
+        logger.error(f"ARIMA training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"ARIMA training failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
@@ -827,6 +836,9 @@ def train_expenses_linear_regression(
             db, start_date_dt, end_date_dt, current_user.id, current_user.role
         )
         return result
+    except (ValueError, ImportError) as e:
+        logger.error(f"Linear Regression training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Linear Regression training failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
@@ -894,6 +906,9 @@ def train_revenue_xgboost(
             db, start_date_dt, end_date_dt, current_user.id, current_user.role
         )
         return result
+    except (ValueError, ImportError) as e:
+        logger.error(f"XGBoost revenue training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"XGBoost revenue training failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
@@ -924,6 +939,9 @@ def train_revenue_lstm(
             epochs=epochs, batch_size=batch_size
         )
         return result
+    except (ValueError, ImportError) as e:
+        logger.error(f"LSTM revenue training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"LSTM revenue training failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
@@ -956,6 +974,9 @@ def train_inventory_sarima(
             order_tuple, seasonal_order_tuple
         )
         return result
+    except (ValueError, ImportError) as e:
+        logger.error(f"SARIMA training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"SARIMA training failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
@@ -983,6 +1004,9 @@ def train_inventory_xgboost(
             db, start_date_dt, end_date_dt, current_user.id, current_user.role
         )
         return result
+    except (ValueError, ImportError) as e:
+        logger.error(f"XGBoost inventory training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"XGBoost inventory training failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
@@ -1013,6 +1037,9 @@ def train_inventory_lstm(
             epochs=epochs, batch_size=batch_size
         )
         return result
+    except (ValueError, ImportError) as e:
+        logger.error(f"LSTM inventory training failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"LSTM inventory training failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
