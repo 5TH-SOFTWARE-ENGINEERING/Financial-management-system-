@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 from fastapi.middleware.trustedhost import TrustedHostMiddleware  # type: ignore
 from fastapi.responses import JSONResponse  # type: ignore
 from fastapi.security import HTTPBearer  # type: ignore
+from sqlalchemy import inspect, text # type: ignore
 from fastapi.staticfiles import StaticFiles # type: ignore
 from contextlib import asynccontextmanager
 import logging
@@ -142,6 +143,24 @@ def create_default_admin():
     finally:
         db.close()
 
+def ensure_database_schema_sync(engine):
+    """
+    Ensure the database schema is in sync with the models.
+    This is a self-healing mechanism for environments like Render where 
+    migrations might not have been applied yet but code expects new columns.
+    """
+    inspector = inspect(engine)
+    try:
+        columns = [c['name'] for c in inspector.get_columns('users')]
+        if 'profile_image_url' not in columns:
+            logger.info("Self-healing: Adding profile_image_url column to users table")
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN profile_image_url VARCHAR"))
+                conn.commit()
+            logger.info("Self-healing: Successfully added profile_image_url column")
+    except Exception as e:
+        logger.error(f"Failed to perform self-healing migration: {e}")
+
 # Lifespan (startup + shutdown)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -163,7 +182,10 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"Failed to create directory {directory}: {e}")
 
-    # 3. **Create default admin** (replaces @app.on_event)
+    # 3. **Self-healing migration**
+    ensure_database_schema_sync(engine)
+
+    # 4. **Create default admin** (replaces @app.on_event)
     create_default_admin()
 
     # 4. Start ML model training scheduler (optional)
