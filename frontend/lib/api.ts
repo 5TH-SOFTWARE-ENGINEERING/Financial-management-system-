@@ -37,11 +37,12 @@ interface User {
   username?: string;
   full_name: string;
   role: string;
-  department?: string;
-  phone?: string | null;
-  is_active: boolean;
   created_at?: string;
   manager_id?: number;
+  profile_image_url?: string;
+  phone?: string | null;
+  department?: string;
+  is_active?: boolean;
 }
 
 type LoginResponse = AuthTokens & { user: User };
@@ -340,6 +341,22 @@ class ApiClient {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
     return this.post('/users/me/change-password', { current_password: currentPassword, new_password: newPassword });
+  }
+
+  async uploadProfileImage(file: File): Promise<ApiResponse<User>> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await this.client.post<User>('/users/me/profile-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    const normalized = this.normalizeResponse<User>(response.data);
+
+    // Update the local user object if needed (optional)
+    return normalized;
   }
 
   async adminResetPassword(usernameOrEmail: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {

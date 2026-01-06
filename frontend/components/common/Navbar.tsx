@@ -2205,8 +2205,16 @@ export default function Navbar() {
           <span>{language}</span>
         </LanguageSelector>
         <UserProfileContainer ref={dropdownRef} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-          <UserAvatar>
-            {initials}
+          <UserAvatar style={{ overflow: 'hidden' }}>
+            {currentUser?.profileImageUrl ? (
+              <img
+                src={currentUser.profileImageUrl.startsWith('http') ? currentUser.profileImageUrl : `http://localhost:8000${currentUser.profileImageUrl}`}
+                alt="Profile"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              initials
+            )}
             <ActivityIndicator $isActive={isOnline} />
           </UserAvatar>
           <UserInfo>

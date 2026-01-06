@@ -1,6 +1,6 @@
 # app/api/v1/users.py
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status # type: ignore[import-untyped]
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile # type: ignore[import-untyped]
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from pydantic import BaseModel # type: ignore[import-untyped]
 import logging
@@ -321,6 +321,67 @@ def update_user_me(
         raise HTTPException(status_code=403, detail="Cannot change your own active status")
 
     return user_crud.update(db, db_obj=current_user, obj_in=user_update)
+
+
+@router.post("/me/profile-image", response_model=UserOut)
+async def upload_profile_image(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Upload and set profile image for current user"""
+    import os
+    import uuid
+    from ...core.config import settings
+
+    # 1. Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed: {', '.join(allowed_types)}"
+        )
+
+    # 2. Setup upload directory
+    upload_dir = os.path.join("uploads", "profile_images")
+    if not os.path.exists(upload_dir):
+        os.makedirs(upload_dir, exist_ok=True)
+
+    # 3. Generate unique filename
+    file_ext = os.path.splitext(file.filename)[1] if file.filename else ".png"
+    unique_filename = f"{current_user.id}_{uuid.uuid4().hex}{file_ext}"
+    file_path = os.path.join(upload_dir, unique_filename)
+
+    # 4. Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            # Limit file size to 5MB
+            if len(content) > 5 * 1024 * 1024:
+                raise HTTPException(status_code=400, detail="File too large. Maximum size 5MB.")
+            buffer.write(content)
+    except Exception as e:
+        logger.error(f"Failed to save profile image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to save image")
+
+    # 5. Update user in database
+    # Construct public URL (this depends on main.py mounting /uploads)
+    url = f"/uploads/profile_images/{unique_filename}"
+    
+    # Optional: Delete old image if it exists
+    if current_user.profile_image_url:
+        old_path = current_user.profile_image_url.lstrip("/")
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except Exception as e:
+                logger.warning(f"Failed to delete old profile image {old_path}: {str(e)}")
+
+    current_user.profile_image_url = url
+    db.commit()
+    db.refresh(current_user)
+
+    return current_user
 
 
 # ------------------------------------------------------------------

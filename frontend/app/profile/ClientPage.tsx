@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/rbac/auth-context';
 import { UserType } from '@/lib/rbac/models';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { Camera, Mail, User as UserIcon, Users, Building, Phone, Briefcase, Calendar, Save, Edit, X, CheckCircle, AlertCircle } from 'lucide-react';
-import {Button} from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import { theme } from '@/components/common/theme';
@@ -35,6 +35,7 @@ interface ApiUser {
   is_active?: boolean;
   created_at?: string;
   manager_id?: number;
+  profile_image_url?: string;
 }
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
@@ -328,6 +329,7 @@ interface ExtendedUser {
   role: string;
   isActive: boolean;
   createdAt?: string;
+  profileImageUrl?: string;
 }
 
 // Get a color based on user type
@@ -348,7 +350,7 @@ const formatUserType = (userType: UserType | string | null | undefined): string 
   if (!userType || typeof userType !== 'string') {
     return 'Unknown Role'; // Return a safe default string
   }
-  
+
   return userType
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -369,7 +371,7 @@ const mapRoleToUserType = (role: string | undefined | null): UserType => {
 const mapApiUserToExtended = (apiUser: ApiUser): ExtendedUser => {
   const backendRole = apiUser.role || '';
   const userType = mapRoleToUserType(backendRole);
-  
+
   return {
     id: apiUser.id?.toString() || '',
     name: apiUser.full_name || apiUser.username || '',
@@ -385,6 +387,7 @@ const mapApiUserToExtended = (apiUser: ApiUser): ExtendedUser => {
     role: backendRole,
     isActive: apiUser.is_active !== undefined ? apiUser.is_active : true,
     createdAt: apiUser.created_at ? new Date(apiUser.created_at).toISOString() : undefined,
+    profileImageUrl: apiUser.profile_image_url || undefined,
   };
 };
 
@@ -397,6 +400,7 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -412,9 +416,9 @@ export default function ProfilePage() {
         const response = await apiClient.getCurrentUser();
         const extendedUser = mapApiUserToExtended(response.data as ApiUser);
         setUserData(extendedUser);
-    } catch (err: unknown) {
-      const error = err as ErrorWithDetails;
-      const errorMessage = error.response?.data?.detail || (error.response?.data as { error?: string })?.error || 'Failed to load profile data';
+      } catch (err: unknown) {
+        const error = err as ErrorWithDetails;
+        const errorMessage = error.response?.data?.detail || (error.response?.data as { error?: string })?.error || 'Failed to load profile data';
         setError(errorMessage);
       } finally {
         setInitialLoading(false);
@@ -448,7 +452,7 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Prepare update payload - only include fields that are in the backend schema
       const updatePayload: {
         full_name?: string | null;
@@ -471,17 +475,17 @@ export default function ProfilePage() {
 
       // Call API to update profile
       const response = await apiClient.updateCurrentUser(cleanedPayload);
-      
+
       // Update local state with response
       const updatedUser = mapApiUserToExtended(response.data as ApiUser);
       setUserData(updatedUser);
-      
+
       // Refresh user store
       await fetchCurrentUser();
-      
+
       setSuccess('Profile updated successfully');
       setIsEditing(false);
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccess(null);
@@ -509,12 +513,49 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
-  // FIX: Added a check for the 'name' argument to ensure it is a valid string
+  // Image upload handling
+
+  const handleImageClick = () => {
+    if (isEditing) {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File is too large. Maximum size is 5MB.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiClient.uploadProfileImage(file);
+
+      if (response.data) {
+        const updatedUser = mapApiUserToExtended(response.data as ApiUser);
+        setUserData(updatedUser);
+        await fetchCurrentUser(); // Update global store
+        setSuccess('Profile picture updated successfully');
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (err: unknown) {
+      const error = err as ErrorWithDetails;
+      const errorMessage = error.response?.data?.detail || 'Failed to upload image';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getInitials = (name: string | null | undefined): string => {
     if (!name || name.trim() === '') {
-      return '?'; // Return a default value if the name is missing or empty
+      return '?';
     }
-    // Now it is safe to call split()
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
@@ -527,14 +568,14 @@ export default function ProfilePage() {
             <span>{error}</span>
           </Message>
         )}
-        
+
         {success && (
           <Message type="success">
             <CheckCircle size={16} />
             <span>{success}</span>
           </Message>
         )}
-        
+
         <Header>
           <Title>Profile</Title>
           <ComponentGate componentId={ComponentId.PROFILE_EDIT}>
@@ -557,62 +598,81 @@ export default function ProfilePage() {
             )}
           </ComponentGate>
         </Header>
-        
+
         <ProfileGrid>
           <ProfileSidebar>
             <ProfileImage>
-              <Avatar $bgColor={getUserColor(userData.userType)}>
-                {getInitials(userData.name)}
+              <Avatar
+                $bgColor={userData.profileImageUrl ? 'transparent' : getUserColor(userData.userType)}
+                onClick={handleImageClick}
+                style={{ cursor: isEditing ? 'pointer' : 'default', overflow: 'hidden' }}
+              >
+                {userData.profileImageUrl ? (
+                  <img
+                    src={userData.profileImageUrl.startsWith('http') ? userData.profileImageUrl : `http://localhost:8000${userData.profileImageUrl}`}
+                    alt="Profile"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  getInitials(userData.name)
+                )}
               </Avatar>
               {isEditing && (
-                <UploadButton>
+                <UploadButton onClick={handleImageClick}>
                   <Camera size={16} />
                 </UploadButton>
               )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                style={{ display: 'none' }}
+              />
             </ProfileImage>
-            
+
             <ProfileInfo>
               <ProfileName>{userData.name}</ProfileName>
               <ProfileRole>{formatUserType(userData.userType)}</ProfileRole>
-              
+
               <ProfileDetail>
                 <UserIcon size={16} />
                 <span>{userData.username}</span>
               </ProfileDetail>
-              
+
               <ProfileDetail>
                 <Mail size={16} />
                 <span>{userData.email}</span>
               </ProfileDetail>
-              
+
               {userData.phoneNumber && (
                 <ProfileDetail>
                   <Phone size={16} />
                   <span>{userData.phoneNumber}</span>
                 </ProfileDetail>
               )}
-              
+
               {userData.address && (
                 <ProfileDetail>
                   <Building size={16} />
                   <span>{userData.address}</span>
                 </ProfileDetail>
               )}
-              
+
               {userData.department && (
                 <ProfileDetail>
                   <Users size={16} />
                   <span>{userData.department}</span>
                 </ProfileDetail>
               )}
-              
+
               {userData.position && (
                 <ProfileDetail>
                   <Briefcase size={16} />
                   <span>{userData.position}</span>
                 </ProfileDetail>
               )}
-              
+
               {userData.joinDate && (
                 <ProfileDetail>
                   <Calendar size={16} />
@@ -621,7 +681,7 @@ export default function ProfilePage() {
               )}
             </ProfileInfo>
           </ProfileSidebar>
-          
+
           <div>
             <Card>
               <CardHeader>
@@ -639,7 +699,7 @@ export default function ProfilePage() {
                       disabled={!isEditing}
                     />
                   </FormGroup>
-                  
+
                   <FormGroup>
                     <Label htmlFor="email">Email Address</Label>
                     <StyledInput
@@ -651,7 +711,7 @@ export default function ProfilePage() {
                       disabled={!isEditing}
                     />
                   </FormGroup>
-                  
+
                   <FormGroup>
                     <Label htmlFor="phoneNumber">Phone Number</Label>
                     <StyledInput
@@ -664,7 +724,7 @@ export default function ProfilePage() {
                       placeholder={isEditing ? "Enter phone number" : ""}
                     />
                   </FormGroup>
-                  
+
                   <FormGroup>
                     <Label htmlFor="address">Address</Label>
                     <StyledInput
@@ -679,7 +739,7 @@ export default function ProfilePage() {
                 </FormGrid>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Account Information</CardTitle>
@@ -695,7 +755,7 @@ export default function ProfilePage() {
                       disabled={true} // Username cannot be changed
                     />
                   </FormGroup>
-                  
+
                   <FormGroup>
                     <Label htmlFor="userType">Role</Label>
                     <StyledInput
@@ -708,7 +768,7 @@ export default function ProfilePage() {
                 </FormGrid>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Professional Information</CardTitle>
@@ -726,7 +786,7 @@ export default function ProfilePage() {
                       placeholder={isEditing ? "Enter department" : ""}
                     />
                   </FormGroup>
-                  
+
                   {userData.joinDate && (
                     <FormGroup>
                       <Label htmlFor="joinDate">Join Date</Label>
@@ -743,7 +803,7 @@ export default function ProfilePage() {
                 </FormGrid>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Bio</CardTitle>

@@ -13,6 +13,7 @@ export interface StoreUser {
   createdAt?: string;
   managerId?: string;
   phone?: string | null;
+  profileImageUrl?: string;
 }
 
 // Map API User to StoreUser
@@ -39,10 +40,11 @@ const mapToStoreUser = (apiUser: ApiUser): StoreUser => ({
   email: apiUser.email,
   role: normalizeInboundRole(apiUser.role),
   department: apiUser.department,
-  isActive: apiUser.is_active,
+  isActive: apiUser.is_active || false,
   createdAt: apiUser.created_at,
   managerId: apiUser.manager_id !== undefined && apiUser.manager_id !== null ? apiUser.manager_id.toString() : undefined,
   phone: apiUser.phone,
+  profileImageUrl: apiUser.profile_image_url,
 });
 
 // Map back if needed (for API calls)

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 from fastapi.middleware.trustedhost import TrustedHostMiddleware  # type: ignore
 from fastapi.responses import JSONResponse  # type: ignore
 from fastapi.security import HTTPBearer  # type: ignore
+from fastapi.staticfiles import StaticFiles # type: ignore
 from contextlib import asynccontextmanager
 import logging
 import logging.config
@@ -520,6 +521,9 @@ async def general_exception_handler(request: Request, exc: Exception):
             "timestamp": datetime.utcnow().isoformat()
         }
     )
+
+# Serve static files (uploads)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Include API routers
 api_v1_prefix = "/api/v1"

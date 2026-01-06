@@ -17,6 +17,7 @@ class UserBase(BaseModel):
     role: UserRole = UserRole.EMPLOYEE
     department: Optional[str] = None
     is_active: bool = True
+    profile_image_url: Optional[str] = None
 
 
 class RoleBase(BaseModel):
@@ -77,6 +78,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     manager_id: Optional[int] = None
     permissions: Optional[list[dict]] = None  # Custom permissions
+    profile_image_url: Optional[str] = None
 
 
 class RoleCreate(RoleBase):

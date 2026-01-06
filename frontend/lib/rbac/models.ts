@@ -24,6 +24,7 @@ export interface User {
   role: string;
   is_active: boolean;
   manager_id?: string | number | null;
+  profileImageUrl?: string;
   created_at: Date;
   updated_at: Date;
   last_login?: Date | null;

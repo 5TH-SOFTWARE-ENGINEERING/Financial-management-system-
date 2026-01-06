@@ -36,6 +36,7 @@ class User(Base):
     allowed_ips = Column(String, nullable=True)  # JSON array of allowed IP addresses
     permissions = Column(JSON, nullable=True)  # Custom permissions: [{"resource": "REVENUES", "actions": {"READ": true, "CREATE": true}}]
     notification_preferences = Column(JSON, nullable=True)  # Notification preferences: {"notificationPreferences": {...}, "doNotDisturb": bool, "quietHours": {...}}
+    profile_image_url = Column(String, nullable=True)  # URL to the user's profile picture
 
     manager = relationship("User", remote_side=[id], back_populates="subordinates")
     subordinates = relationship("User", back_populates="manager")
