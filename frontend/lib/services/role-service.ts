@@ -12,18 +12,18 @@ interface RoleServiceInterface {
   getRolesByUserType(userType: UserType): Promise<Role[]>;
   createRole(role: Omit<Role, "id">): Promise<Role>;
   updateRole(id: string, roleUpdate: Partial<Role>): Promise<Role | null>;
-  deleteRole(id: string): Promise<boolean>;
+  deleteRole(id: string, password: string): Promise<boolean>;
 }
 
 // Helper to convert backend permission string to frontend Permission object
 const parsePermission = (permString: string): Permission => {
   const [resource, action] = permString.split(':');
-  
+
   // Try to find matching default permission to get nice name/description
   const found = DEFAULT_PERMISSIONS.find(
     p => p.resource === resource && p.action === action
   );
-  
+
   if (found) return found;
 
   // Fallback for custom permissions
@@ -49,7 +49,7 @@ export class RoleService implements RoleServiceInterface {
     try {
       const response = await apiClient.getRoles();
       const apiRoles: ApiRole[] = response.data || [];
-      
+
       return apiRoles.map(apiRole => ({
         id: String(apiRole.id),
         name: apiRole.name,
@@ -60,7 +60,7 @@ export class RoleService implements RoleServiceInterface {
       console.error("Failed to fetch roles:", error);
       // Fallback to empty array or throw, depending on preference.
       // Retaining empty array for now to avoid breaking UI completely.
-      return []; 
+      return [];
     }
   }
 
@@ -87,7 +87,7 @@ export class RoleService implements RoleServiceInterface {
 
     const response = await apiClient.createRole(payload);
     const apiRole = response.data;
-    
+
     return {
       id: String(apiRole.id),
       name: apiRole.name,
@@ -121,9 +121,9 @@ export class RoleService implements RoleServiceInterface {
   /**
    * Delete a role
    */
-  async deleteRole(id: string): Promise<boolean> {
+  async deleteRole(id: string, password: string): Promise<boolean> {
     try {
-      await apiClient.deleteRole(Number(id));
+      await apiClient.deleteRole(Number(id), password);
       return true;
     } catch (error) {
       console.error("Failed to delete role:", error);
@@ -184,7 +184,7 @@ export class RoleService implements RoleServiceInterface {
    */
   async getRolesByUserType(userType: UserType): Promise<Role[]> {
     const roles = await this.getAllRoles();
-    
+
     // Logic to determine which roles are "relevant" for a UserType
     // This is a bit arbitrary without a strict hierarchy in the role model itself,
     // but preserving the original logic:
