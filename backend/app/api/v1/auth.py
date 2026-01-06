@@ -571,6 +571,14 @@ def request_password_reset_otp(
             "message": "If an account with that email exists, an OTP has been sent."
         }
     
+    # SECURITY: Only allow admin, finance admin, or super admin to reset password
+    allowed_roles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FINANCE_ADMIN]
+    if user.role not in allowed_roles:
+        logger.info(f"Password reset requested for non-privileged user {email} (role: {user.role}). Request ignored.")
+        return {
+            "message": "If an account with that email exists, an OTP has been sent."
+        }
+    
     # Generate 6-digit OTP
     otp_code = ''.join(random.choices(string.digits, k=6))
     
