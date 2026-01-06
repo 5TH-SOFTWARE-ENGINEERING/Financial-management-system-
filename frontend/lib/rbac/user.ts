@@ -1,5 +1,6 @@
 // lib/rabc/user.ts
 import { UserType, AdminType } from './models';
+import { Role, Permission } from './models';
 
 export interface BaseUser {
     id: string;
