@@ -508,17 +508,8 @@ export default function Login() {
   const [userNotFound, setUserNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasExplicitLogin, setHasExplicitLogin] = useState(false);
-  
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedRememberMe = localStorage.getItem('rememberMe');
-      const savedIdentifier = localStorage.getItem('savedIdentifier');
-      
-      if (savedRememberMe === 'true' && savedIdentifier) {
-        setRememberMe(true);
-      }
-    }
-  }, []);
+
+
 
   useEffect(() => {
     setHydrated(true);
@@ -535,20 +526,33 @@ export default function Login() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(LoginSchema),
   });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedRememberMe = localStorage.getItem('rememberMe');
+      const savedIdentifier = localStorage.getItem('savedIdentifier');
+
+      if (savedRememberMe === 'true' && savedIdentifier) {
+        setRememberMe(true);
+        setValue('identifier', savedIdentifier);
+      }
+    }
+  }, [setValue]);
 
   const onSubmit = async (data: LoginInput) => {
     setIsLoading(true);
     setUserNotFound(false);
     setErrorMessage(null);
     setHasExplicitLogin(true); // Mark that user explicitly attempted login
-    
+
     try {
       const loginSuccess = await login(data.identifier, data.password);
-      
+
       if (loginSuccess === true) {
         setHasExplicitLogin(true); // Ensure flag is set on successful login
         if (rememberMe && typeof window !== 'undefined') {
@@ -589,7 +593,7 @@ export default function Login() {
       setUserNotFound(true);
       setIsLoading(false);
       return;
-      
+
     } catch (error: unknown) {
       const errObj = typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : {};
       const errorResponse = errObj.response as { status?: number; data?: { detail?: unknown; error?: unknown } } | undefined;
@@ -599,36 +603,36 @@ export default function Login() {
       const errorCode = errObj.code as string | undefined;
       const errorMessage = String((errObj.message as string | undefined) || '').toLowerCase();
       const errorDetailLower = String(errorDetail).toLowerCase();
-      const isNetworkError = !errorResponse || 
-                            errorCode === 'ECONNREFUSED' ||
-                            errorCode === 'ERR_NETWORK' ||
-                            errorCode === 'ECONNABORTED' ||
-                            errorCode === 'ETIMEDOUT' ||
-                            errorMessage.includes('network error') ||
-                            errorMessage.includes('failed to fetch') ||
-                            errorMessage.includes('timeout');
-      
+      const isNetworkError = !errorResponse ||
+        errorCode === 'ECONNREFUSED' ||
+        errorCode === 'ERR_NETWORK' ||
+        errorCode === 'ECONNABORTED' ||
+        errorCode === 'ETIMEDOUT' ||
+        errorMessage.includes('network error') ||
+        errorMessage.includes('failed to fetch') ||
+        errorMessage.includes('timeout');
+
       const statusCode = typeof errorStatus === 'number' ? errorStatus : null;
       const isServerError = statusCode !== null && statusCode >= 500 && statusCode < 600;
-      
-      const isAuthError = statusCode === 401 || 
-                         statusCode === 403 || 
-                         statusCode === 404 ||
-                         errorDetailLower.includes('incorrect username') ||
-                         errorDetailLower.includes('incorrect password') ||
-                         errorDetailLower.includes('invalid credentials') ||
-                         errorDetailLower.includes('authentication failed') ||
-                         errorDetailLower.includes('unauthorized') ||
-                         errorDetailLower.includes('forbidden') ||
-                         errorDetailLower.includes('user not found');
-      
+
+      const isAuthError = statusCode === 401 ||
+        statusCode === 403 ||
+        statusCode === 404 ||
+        errorDetailLower.includes('incorrect username') ||
+        errorDetailLower.includes('incorrect password') ||
+        errorDetailLower.includes('invalid credentials') ||
+        errorDetailLower.includes('authentication failed') ||
+        errorDetailLower.includes('unauthorized') ||
+        errorDetailLower.includes('forbidden') ||
+        errorDetailLower.includes('user not found');
+
       const isRateLimitError = errorStatus === 429;
-      
+
       const isAccountError = errorStatus === 400 && (
-                             errorDetailLower.includes('inactive') ||
-                             errorDetailLower.includes('locked') ||
-                             errorDetailLower.includes('disabled')
-                           );
+        errorDetailLower.includes('inactive') ||
+        errorDetailLower.includes('locked') ||
+        errorDetailLower.includes('disabled')
+      );
       if (isNetworkError) {
         const msg = 'Unable to connect to the server. Please try again later.';
         setErrorMessage(msg);
@@ -644,7 +648,7 @@ export default function Login() {
         setIsLoading(false);
         return;
       }
-      
+
       if (isRateLimitError) {
         const msg = 'Too many login attempts. Please wait a few minutes before trying again.';
         setErrorMessage(msg);
@@ -652,7 +656,7 @@ export default function Login() {
         setIsLoading(false);
         return;
       }
-      
+
       if (isAccountError) {
         const msg = errorDetailLower.includes('inactive')
           ? 'Your account is inactive. Please contact your administrator.'
@@ -662,7 +666,7 @@ export default function Login() {
         setIsLoading(false);
         return;
       }
-      
+
       if (isAuthError || errorStatus === 401 || errorStatus === 403 || errorStatus === 404) {
         toast.error('Incorrect username or password', {
           duration: 4000,
@@ -676,7 +680,7 @@ export default function Login() {
       });
       setUserNotFound(true);
       setIsLoading(false);
-      
+
     } finally {
       setIsLoading(false);
     }
@@ -695,7 +699,7 @@ export default function Login() {
             <br />
             Please check your email/username and password, or contact your administrator if you need assistance.
           </NotFoundMessage>
-          <BackButton 
+          <BackButton
             type="button"
             onClick={(e) => {
               e.preventDefault();
@@ -719,12 +723,12 @@ export default function Login() {
     return (
       <LoginContainer>
         <LoginCard>
-        <LoadingText>
-          <SpinningLoader>
-            <Loader2 size={24} />
-          </SpinningLoader>
-          Checking authentication...
-        </LoadingText>
+          <LoadingText>
+            <SpinningLoader>
+              <Loader2 size={24} />
+            </SpinningLoader>
+            Checking authentication...
+          </LoadingText>
         </LoginCard>
       </LoginContainer>
     );
@@ -785,8 +789,8 @@ export default function Login() {
                 aria-invalid={!!errors.password}
                 aria-describedby={errors.password ? 'password-error' : undefined}
               />
-              <EyeIconButton 
-                type="button" 
+              <EyeIconButton
+                type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -814,7 +818,7 @@ export default function Login() {
               />
               <CheckboxLabel htmlFor="remember">Remember me</CheckboxLabel>
             </CheckboxWrapper>
-            <ForgotPassword 
+            <ForgotPassword
               href="/auth/reset-password"
               onClick={(e) => {
                 e.preventDefault();
@@ -827,8 +831,8 @@ export default function Login() {
             </ForgotPassword>
           </CheckboxContainer>
 
-          <SignInButton 
-            type="submit" 
+          <SignInButton
+            type="submit"
             disabled={isLoading || authLoading}
             aria-busy={isLoading}
           >
