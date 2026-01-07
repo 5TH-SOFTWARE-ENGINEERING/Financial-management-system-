@@ -154,8 +154,8 @@ class MLForecastingService:
                     if model_path_str:
                         model_path = Path(model_path_str)
                         if not model_path.exists():
-                            # Try relative to MODEL_DIR
-                            model_path = MODEL_DIR / Path(model_path_str).name
+                            # Try relative to MODELS_DIR
+                            model_path = MODELS_DIR / Path(model_path_str).name
                     else:
                         # Try standard paths
                         model_path = MLForecastingService._get_model_path(model_metric, model_type)
@@ -171,9 +171,9 @@ class MLForecastingService:
                     logger.warning(f"Failed to read store file {store_file}: {e}")
                     continue
         
-        # Also check MODEL_DIR directly for models not in store
-        if MODEL_DIR.exists():
-            for model_file in MODEL_DIR.glob("*"):
+        # Also check MODELS_DIR directly for models not in store
+        if MODELS_DIR.exists():
+            for model_file in MODELS_DIR.glob("*"):
                 if model_file.is_file() and not model_file.name.endswith('.metadata.json') and not model_file.name.endswith('.scaler.pkl'):
                     # Parse filename - handle both standard and custom naming
                     name = model_file.stem
