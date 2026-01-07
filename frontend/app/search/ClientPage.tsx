@@ -9,7 +9,6 @@ import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
 import { useAuth } from '@/lib/rbac/auth-context';
 import Layout from '@/components/layout';
-import { theme } from '@/components/common/theme';
 import { Input } from '@/components/ui/input';
 
 // Type definitions
@@ -20,20 +19,20 @@ interface SearchResult {
   subtitle?: string;
 }
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
+const BACKGROUND_CARD = (props: any) => props.theme.colors.background || '#ffffff';
+const BACKGROUND_SECONDARY = (props: any) => props.theme.colors.backgroundSecondary || '#f5f6fa';
 
-const CardShadow = `
-  0 2px 4px -1px rgba(0, 0, 0, 0.06),
-  0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
-`;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
-`;
+const CardShadow = (props: any) => props.theme.mode === 'dark'
+  ? '0 4px 16px rgba(0, 0, 0, 0.4)'
+  : `0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03), inset 0 0 0 1px rgba(0, 0, 0, 0.02)`;
+
+const CardShadowHover = (props: any) => props.theme.mode === 'dark'
+  ? '0 12px 28px rgba(0, 0, 0, 0.5)'
+  : `0 8px 12px -2px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04), inset 0 0 0 1px rgba(0, 0, 0, 0.03)`;
 
 const PageContainer = styled.div`
   display: flex;
@@ -47,31 +46,31 @@ const ContentContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
   background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
   color: #ffffff;
-  padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
   
   h1 {
     font-size: clamp(24px, 3vw, 36px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     color: #ffffff;
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.md};
+    gap: ${props => props.theme.spacing.md};
   }
   
   p {
-    font-size: ${theme.typography.fontSizes.md};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     opacity: 0.9;
     margin: 0;
     color: rgba(255, 255, 255, 0.95);
@@ -89,18 +88,18 @@ const LoadingContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 40vh;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
   }
 `;
 
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${theme.colors.border};
+  border: 3px solid ${BORDER_COLOR};
   border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -111,31 +110,31 @@ const Spinner = styled.div`
 `;
 
 const EmptyState = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
   box-shadow: ${CardShadow};
-  padding: ${theme.spacing.xxl};
+  padding: ${props => props.theme.spacing.xxl};
   text-align: center;
   
   svg {
     width: 48px;
     height: 48px;
-    margin: 0 auto ${theme.spacing.md};
+    margin: 0 auto ${props => props.theme.spacing.md};
     color: ${TEXT_COLOR_MUTED};
     opacity: 0.5;
   }
   
   h3 {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.lg};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
-    margin: 0 0 ${theme.spacing.sm};
+    margin: 0 0 ${props => props.theme.spacing.sm};
   }
   
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
     margin: 0;
   }
 `;
@@ -143,30 +142,30 @@ const EmptyState = styled.div`
 const ResultsContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const ResultCard = styled(Link)`
   display: block;
   text-decoration: none;
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
   box-shadow: ${CardShadow};
-  padding: ${theme.spacing.md};
-  transition: all ${theme.transitions.default};
+  padding: ${props => props.theme.spacing.md};
+  transition: all ${props => props.theme.transitions.default};
   
   &:hover {
     box-shadow: ${CardShadowHover};
     transform: translateY(-2px);
-    background-color: ${theme.colors.backgroundSecondary};
+    background-color: ${BACKGROUND_SECONDARY};
   }
 `;
 
 const ResultCardContent = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const IconWrapper = styled.div<{ $type: string }>`
@@ -192,15 +191,15 @@ const IconWrapper = styled.div<{ $type: string }>`
     width: 24px;
     height: 24px;
     color: ${props => {
-      switch (props.$type) {
-        case 'revenue':
-          return '#15803d';
-        case 'expense':
-          return '#dc2626';
-        default:
-          return PRIMARY_COLOR;
-      }
-    }};
+    switch (props.$type) {
+      case 'revenue':
+        return '#15803d';
+      case 'expense':
+        return '#dc2626';
+      default:
+        return PRIMARY_COLOR;
+    }
+  }};
   }
 `;
 
@@ -208,42 +207,42 @@ const ResultInfo = styled.div`
   flex: 1;
   
   h3 {
-    font-size: ${theme.typography.fontSizes.md};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
-    margin: 0 0 ${theme.spacing.xs};
+    margin: 0 0 ${props => props.theme.spacing.xs};
   }
   
   p {
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     color: ${TEXT_COLOR_MUTED};
     margin: 0;
   }
 `;
 
 const TypeBadge = styled.span`
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   border-radius: 9999px;
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.12)'};
+  color: ${props => props.theme.mode === 'dark' ? '#60a5fa' : '#1d4ed8'};
   text-transform: capitalize;
   flex-shrink: 0;
 `;
 
 const UnauthenticatedContainer = styled.div`
-  padding: ${theme.spacing.xl};
+  padding: ${props => props.theme.spacing.xl};
   text-align: center;
   
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
   }
 `;
 
 const SearchInputWrapper = styled.div`
-  margin-bottom: ${theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
 const SearchInputContainer = styled.div`
@@ -253,7 +252,7 @@ const SearchInputContainer = styled.div`
   
   svg {
     position: absolute;
-    left: ${theme.spacing.md};
+    left: ${props => props.theme.spacing.md};
     color: ${TEXT_COLOR_MUTED};
     width: 20px;
     height: 20px;
@@ -264,13 +263,13 @@ const SearchInputContainer = styled.div`
 
 const SearchInput = styled(Input)`
   width: 100%;
-  padding: ${theme.spacing.md} ${theme.spacing.md} ${theme.spacing.md} 48px;
-  font-size: ${theme.typography.fontSizes.md};
-  border: 2px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.md} ${props => props.theme.spacing.md} 48px;
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  border: 2px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${props => props.theme.colors.background};
   color: ${TEXT_COLOR_DARK};
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   
   &:focus {
     outline: none;
@@ -327,21 +326,21 @@ export default function SearchPage() {
         try {
           const subordinatesRes = await apiClient.getSubordinates(userId);
           const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
-          
+
           // Filter subordinates to ONLY include accountants and employees
           const validSubordinateIds = subordinates
             .map((sub: Subordinate) => {
               const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : sub.id;
               const subRole = (sub.role || '').toLowerCase();
-              
-              if (typeof subId === 'number' && 
-                  (subRole === 'accountant' || subRole === 'employee')) {
+
+              if (typeof subId === 'number' &&
+                (subRole === 'accountant' || subRole === 'employee')) {
                 return subId;
               }
               return null;
             })
             .filter((id): id is number => id !== null);
-          
+
           setAccessibleUserIds([userId, ...validSubordinateIds]);
           setIsAccessibleUserIdsReady(true);
         } catch (err) {
@@ -352,15 +351,15 @@ export default function SearchPage() {
       } else if (isAccountant && user?.id) {
         // Accountant: See their own + employees' data (from their Finance Admin's team)
         const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-        const managerId = storeUser?.managerId 
+        const managerId = storeUser?.managerId
           ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
           : null;
-        
+
         if (managerId) {
           try {
             const subordinatesRes = await apiClient.getSubordinates(managerId);
             const subordinates: Subordinate[] = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data : [];
-            
+
             const employeeIds = subordinates
               .map((sub) => {
                 const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
@@ -371,7 +370,7 @@ export default function SearchPage() {
                 return undefined;
               })
               .filter((id): id is number => id !== undefined);
-            
+
             setAccessibleUserIds([accountantId, ...employeeIds]);
             setIsAccessibleUserIdsReady(true);
           } catch (err) {
@@ -386,10 +385,10 @@ export default function SearchPage() {
       } else if (isEmployee && user?.id) {
         // Employee: See their own + Finance Admin's data (their manager)
         const employeeId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
-        const managerId = storeUser?.managerId 
+        const managerId = storeUser?.managerId
           ? (typeof storeUser.managerId === 'string' ? parseInt(storeUser.managerId, 10) : storeUser.managerId)
           : null;
-        
+
         if (managerId) {
           setAccessibleUserIds([employeeId, managerId]);
         } else {
@@ -454,7 +453,7 @@ export default function SearchPage() {
 
       const allResults: SearchResult[] = [];
       const lowerQuery = searchQuery.toLowerCase();
-      
+
       // Get current user info for filtering
       const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
       const userRole = user?.role?.toLowerCase() || '';
@@ -672,22 +671,22 @@ export default function SearchPage() {
                   <ResultCard
                     key={`${result.type}-${data.id}-${index}`}
                     href={getResultLink(result.type, Number(data.id))}
-                >
-                  <ResultCardContent>
-                    <IconWrapper $type={result.type}>
-                      {getResultIcon(result.type)}
-                    </IconWrapper>
-                    <ResultInfo>
-                      <h3>{result.title}</h3>
-                      {result.subtitle && (
-                        <p>{result.subtitle}</p>
-                      )}
-                    </ResultInfo>
-                    <TypeBadge>
-                      {result.type}
-                    </TypeBadge>
-                  </ResultCardContent>
-                </ResultCard>
+                  >
+                    <ResultCardContent>
+                      <IconWrapper $type={result.type}>
+                        {getResultIcon(result.type)}
+                      </IconWrapper>
+                      <ResultInfo>
+                        <h3>{result.title}</h3>
+                        {result.subtitle && (
+                          <p>{result.subtitle}</p>
+                        )}
+                      </ResultInfo>
+                      <TypeBadge>
+                        {result.type}
+                      </TypeBadge>
+                    </ResultCardContent>
+                  </ResultCard>
                 );
               })}
             </ResultsContainer>
