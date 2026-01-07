@@ -16,11 +16,12 @@ import {
   ResetPasswordNewSchema,
 } from '@/lib/validation';
 import apiClient from '@/lib/api';
+import { theme as globalTheme } from '@/components/common/theme';
 
 const theme = {
   colors: {
-    primary: '#4f46e5', // Indigo 600
-    primaryHover: '#4338ca', // Indigo 700
+    primary: globalTheme.colors.primary || '#00AA00', // Green 600
+    primaryHover: '#008800', // Green 700
     accent: '#10b981', // Emerald 500
     background: '#0f172a', // Slate 900
     surface: '#1e293b', // Slate 800
@@ -62,7 +63,7 @@ const theme = {
     md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
     lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    glow: '0 0 20px rgba(79, 70, 229, 0.3)',
+    glow: '0 0 20px rgba(0, 170, 0, 0.3)', // Green glow
   },
   transitions: {
     default: '0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -72,13 +73,13 @@ const theme = {
 // Icon color function
 const getIconColor = (iconType: string, active: boolean = true): string => {
   const activeColors: Record<string, string> = {
-    arrowLeft: '#6366f1',      // Indigo 500
+    arrowLeft: '#10b981',      // Emerald 500
     mail: '#10b981',           // Emerald 500
-    lock: '#6366f1',
+    lock: '#10b981',
     checkCircle: '#10b981',
-    eye: '#6366f1',
-    eyeOff: '#6366f1',
-    default: '#4f46e5',        // Indigo 600
+    eye: '#10b981',
+    eyeOff: '#10b981',
+    default: '#00AA00',        // Green 600
   };
 
   const inactiveColors: Record<string, string> = {
@@ -149,12 +150,12 @@ const EyeIconButton = styled.button`
   transition: all ${theme.transitions.default};
 
   &:hover {
-    background: rgba(255, 126, 95, 0.1);
+    background: rgba(16, 185, 129, 0.1);
   }
 
   &:focus {
     outline: none;
-    background: rgba(255, 126, 95, 0.15);
+    background: rgba(16, 185, 129, 0.15);
   }
 `;
 
@@ -173,7 +174,7 @@ const ResetContainer = styled.div`
   overflow: hidden;
   background-color: ${theme.colors.background};
   background-image: 
-    radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, rgba(0, 170, 0, 0.15) 0px, transparent 50%),
     radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
 
   &::before {
@@ -208,7 +209,7 @@ const ResetCard = styled.div`
   transition: all ${theme.transitions.default};
 
   &:hover {
-    border-color: rgba(79, 70, 229, 0.3);
+    border-color: rgba(0, 170, 0, 0.3);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
 `;
@@ -258,7 +259,7 @@ const Input = styled.input`
     outline: none;
     border-color: ${theme.colors.primary};
     background-color: rgba(15, 23, 42, 0.6);
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 0 0 4px rgba(0, 170, 0, 0.1);
   }
 
   &::placeholder {
@@ -274,7 +275,7 @@ const Input = styled.input`
 const ResetButton = styled.button`
   width: 100%;
   padding: ${theme.spacing.md};
-  background: ${theme.colors.primary};
+  background: linear-gradient(135deg, ${theme.colors.primary} 0%, #10b981 100%);
   color: white;
   border: none;
   border-radius: ${theme.borderRadius.md};
@@ -288,11 +289,12 @@ const ResetButton = styled.button`
   gap: ${theme.spacing.sm};
   position: relative;
   min-height: 48px;
+  box-shadow: 0 4px 15px rgba(0, 170, 0, 0.3);
 
   &:hover:not(:disabled) {
-    background: ${theme.colors.primaryHover};
+    background: linear-gradient(135deg, #008800 0%, #059669 100%);
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.glow};
+    box-shadow: 0 8px 25px rgba(0, 170, 0, 0.4);
   }
 
   &:active:not(:disabled) {
@@ -304,6 +306,7 @@ const ResetButton = styled.button`
     color: ${theme.colors.textSecondary};
     cursor: not-allowed;
     opacity: 0.6;
+    box-shadow: none;
   }
 `;
 
@@ -379,7 +382,7 @@ const ResendButton = styled.button`
 
   &:hover:not(:disabled) {
     color: ${theme.colors.primaryHover};
-    background: rgba(79, 70, 229, 0.1);
+    background: rgba(0, 170, 0, 0.1);
   }
 
   &:disabled {

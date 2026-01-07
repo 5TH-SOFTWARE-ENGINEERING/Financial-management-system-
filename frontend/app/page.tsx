@@ -2,26 +2,74 @@
 'use client';
 
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
+import { theme as globalTheme } from '@/components/common/theme';
 
 // === THEME ===
+// Overriding local theme to match Global Brand (Green)
 const theme = {
   colors: {
-    primary: '#3b82f6',
-    bg: '#0b0c10',
+    primary: globalTheme.colors.primary || '#00AA00', // Brand Green
+    primaryDark: '#008800',
+    primaryLight: '#4ade80', // bright green for accents
+    secondary: '#10b981', // emerald
+    bg: '#0b0c10', // Keep dark bg for contrast
     card: '#1f2937',
     text: '#f9fafb',
+    // Gradients
+    gradientPrimary: 'linear-gradient(135deg, #00AA00, #10b981)',
+    gradientText: 'linear-gradient(135deg, #4ade80, #22c55e)',
   },
   shadows: {
-    lg: '0 10px 30px rgba(0,0,0,0.3)',
+    lg: '0 10px 30px rgba(0, 170, 0, 0.2)', // Green tinted shadow
+    glow: '0 0 20px rgba(0, 170, 0, 0.4)',
   },
   radius: '16px',
 };
+
+// === ANIMATIONS ===
+const spiralRotatePrimary = keyframes`
+  0% { transform: rotate(0deg) scale(1) translate(0, 0); }
+  25% { transform: rotate(90deg) scale(1.1) translate(5%, 5%); }
+  50% { transform: rotate(180deg) scale(1.2) translate(0, 0); }
+  75% { transform: rotate(270deg) scale(1.1) translate(-5%, -5%); }
+  100% { transform: rotate(360deg) scale(1) translate(0, 0); }
+`;
+
+const spiralRotateSecondary = keyframes`
+  0% { transform: rotate(360deg) scale(1.1) translate(0, 0); }
+  25% { transform: rotate(270deg) scale(1) translate(-5%, 5%); }
+  50% { transform: rotate(180deg) scale(0.9) translate(0, 0); }
+  75% { transform: rotate(90deg) scale(1) translate(5%, -5%); }
+  100% { transform: rotate(0deg) scale(1.1) translate(0, 0); }
+`;
+
+const particleFloat = keyframes`
+  0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
+  25% { transform: translate(50px, -50px) rotate(90deg); opacity: 1; }
+  50% { transform: translate(-30px, -100px) rotate(180deg); opacity: 0.6; }
+  75% { transform: translate(-50px, 30px) rotate(270deg); opacity: 0.9; }
+`;
+
+const cardSpiral = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const teamSpiral = keyframes`
+  0% { transform: rotate(0deg) scale(1); }
+  100% { transform: rotate(360deg) scale(1.1); }
+`;
+
+const teamSpiralReverse = keyframes`
+  0% { transform: rotate(360deg) scale(1.1); }
+  100% { transform: rotate(0deg) scale(1); }
+`;
 
 // === STYLED COMPONENTS ===
 const Wrapper = styled.div`
@@ -40,8 +88,9 @@ const GradientBackground = styled.div`
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background: radial-gradient(circle at 30% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-              radial-gradient(circle at 70% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+  /* Updated to Green/Emerald gradients */
+  background: radial-gradient(circle at 30% 50%, rgba(0, 170, 0, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
               linear-gradient(135deg, rgb(9, 10, 10) 0%, rgb(12, 11, 11) 100%);
   
   &::before {
@@ -51,19 +100,20 @@ const GradientBackground = styled.div`
     left: -100%;
     width: 300%;
     height: 300%;
+    /* Updated conic gradient to Green spectrum */
     background: conic-gradient(
       from 0deg,
       transparent 0deg,
-      rgba(59, 130, 246, 0.3) 45deg,
+      rgba(0, 170, 0, 0.2) 45deg,
       transparent 90deg,
-      rgba(139, 92, 246, 0.3) 135deg,
+      rgba(16, 185, 129, 0.2) 135deg,
       transparent 180deg,
-      rgba(59, 130, 246, 0.3) 225deg,
+      rgba(0, 170, 0, 0.2) 225deg,
       transparent 270deg,
-      rgba(139, 92, 246, 0.3) 315deg,
+      rgba(16, 185, 129, 0.2) 315deg,
       transparent 360deg
     );
-    animation: spiralRotatePrimary 30s linear infinite;
+    animation: ${spiralRotatePrimary} 30s linear infinite;
     opacity: 0.6;
   }
 
@@ -77,51 +127,15 @@ const GradientBackground = styled.div`
     background: conic-gradient(
       from 180deg,
       transparent 0deg,
-      rgba(139, 92, 246, 0.25) 60deg,
+      rgba(16, 185, 129, 0.2) 60deg,
       transparent 120deg,
-      rgba(59, 130, 246, 0.25) 180deg,
+      rgba(0, 170, 0, 0.2) 180deg,
       transparent 240deg,
-      rgba(139, 92, 246, 0.25) 300deg,
+      rgba(16, 185, 129, 0.2) 300deg,
       transparent 360deg
     );
-    animation: spiralRotateSecondary 35s linear infinite reverse;
+    animation: ${spiralRotateSecondary} 35s linear infinite reverse;
     opacity: 0.5;
-  }
-
-  @keyframes spiralRotatePrimary {
-    0% {
-      transform: rotate(0deg) scale(1) translate(0, 0);
-    }
-    25% {
-      transform: rotate(90deg) scale(1.1) translate(5%, 5%);
-    }
-    50% {
-      transform: rotate(180deg) scale(1.2) translate(0, 0);
-    }
-    75% {
-      transform: rotate(270deg) scale(1.1) translate(-5%, -5%);
-    }
-    100% {
-      transform: rotate(360deg) scale(1) translate(0, 0);
-    }
-  }
-
-  @keyframes spiralRotateSecondary {
-    0% {
-      transform: rotate(360deg) scale(1.1) translate(0, 0);
-    }
-    25% {
-      transform: rotate(270deg) scale(1) translate(-5%, 5%);
-    }
-    50% {
-      transform: rotate(180deg) scale(0.9) translate(0, 0);
-    }
-    75% {
-      transform: rotate(90deg) scale(1) translate(5%, -5%);
-    }
-    100% {
-      transform: rotate(0deg) scale(1.1) translate(0, 0);
-    }
   }
 `;
 
@@ -138,41 +152,22 @@ const HeroSection = styled.section`
   padding: 3rem 1rem;
   z-index: 1;
   
-  /* Additional spiral particles effect */
+  /* Additional spiral particles effect - Updated to Green */
   &::before {
     content: '';
     position: absolute;
     width: 2px;
     height: 2px;
-    background: rgba(59, 130, 246, 0.8);
+    background: rgba(0, 170, 0, 0.8);
     border-radius: 50%;
     box-shadow: 
-      100px 200px 0 0 rgba(139, 92, 246, 0.6),
-      -150px 300px 0 0 rgba(59, 130, 246, 0.5),
-      200px -100px 0 0 rgba(139, 92, 246, 0.7),
-      -200px -200px 0 0 rgba(59, 130, 246, 0.4),
-      300px 100px 0 0 rgba(139, 92, 246, 0.5);
-    animation: particleFloat 20s ease-in-out infinite;
+      100px 200px 0 0 rgba(16, 185, 129, 0.6),
+      -150px 300px 0 0 rgba(0, 170, 0, 0.5),
+      200px -100px 0 0 rgba(16, 185, 129, 0.7),
+      -200px -200px 0 0 rgba(0, 170, 0, 0.4),
+      300px 100px 0 0 rgba(16, 185, 129, 0.5);
+    animation: ${particleFloat} 20s ease-in-out infinite;
     z-index: 0;
-  }
-
-  @keyframes particleFloat {
-    0%, 100% {
-      transform: translate(0, 0) rotate(0deg);
-      opacity: 0.8;
-    }
-    25% {
-      transform: translate(50px, -50px) rotate(90deg);
-      opacity: 1;
-    }
-    50% {
-      transform: translate(-30px, -100px) rotate(180deg);
-      opacity: 0.6;
-    }
-    75% {
-      transform: translate(-50px, 30px) rotate(270deg);
-      opacity: 0.9;
-    }
   }
 `;
 
@@ -191,7 +186,7 @@ const Title = styled.h1`
 
 const Subtitle = styled.p`
   font-size: 1.2rem;
-  color:rgb(99, 135, 189);
+  color: #a7f3d0; /* Soft Green tint for subtitle */
   max-width: 700px;
   margin: 0 auto 2rem auto;
   line-height: 1.6;
@@ -213,12 +208,12 @@ const FeatureSection = styled.section`
     height: 100%;
     background: radial-gradient(
       ellipse at top left,
-      rgba(59, 130, 246, 0.1) 0%,
+      rgba(0, 170, 0, 0.1) 0%,
       transparent 50%
     ),
     radial-gradient(
       ellipse at bottom right,
-      rgba(139, 92, 246, 0.1) 0%,
+      rgba(16, 185, 129, 0.1) 0%,
       transparent 50%
     );
     pointer-events: none;
@@ -264,7 +259,7 @@ const Card = styled.div`
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(0, 170, 0, 0.1);
 
   &::before {
     content: '';
@@ -276,33 +271,28 @@ const Card = styled.div`
     background: conic-gradient(
       from 0deg,
       transparent 0deg,
-      rgba(59, 130, 246, 0.1) 90deg,
+      rgba(0, 170, 0, 0.1) 90deg,
       transparent 180deg,
-      rgba(139, 92, 246, 0.1) 270deg,
+      rgba(16, 185, 129, 0.1) 270deg,
       transparent 360deg
     );
-    animation: cardSpiral 8s linear infinite;
+    animation: ${cardSpiral} 8s linear infinite;
     opacity: 0;
     transition: opacity 0.3s ease;
   }
 
   &:hover {
     transform: translateY(-8px);
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(59, 130, 246, 0.3);
-    box-shadow: 0 15px 40px rgba(59, 130, 246, 0.2);
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(0, 170, 0, 0.3);
+    box-shadow: ${theme.shadows.glow};
     
     &::before {
       opacity: 1;
     }
-  }
-
-  @keyframes cardSpiral {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
+    
+    h3 {
+       color: ${theme.colors.primaryLight};
     }
   }
 `;
@@ -310,7 +300,8 @@ const Card = styled.div`
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -324,8 +315,9 @@ const ModalCard = styled.div`
   color: white;
   width: 90%;
   max-width: 600px;
-  box-shadow: ${theme.shadows.lg};
+  box-shadow: ${theme.shadows.glow};
   position: relative;
+  border: 1px solid rgba(0, 170, 0, 0.2);
 `;
 
 const CloseButton = styled.button`
@@ -337,6 +329,7 @@ const CloseButton = styled.button`
   font-size: 1.5rem;
   color: #ccc;
   cursor: pointer;
+  transition: color 0.2s;
 
   &:hover {
     color: ${theme.colors.primary};
@@ -359,14 +352,15 @@ const TeamSection = styled.section`
     right: -50%;
     width: 200%;
     height: 200%;
+    /* Updated to Green */
     background: conic-gradient(
       from 45deg,
       transparent 0deg,
-      rgba(59, 130, 246, 0.08) 120deg,
+      rgba(0, 170, 0, 0.08) 120deg,
       transparent 240deg,
-      rgba(139, 92, 246, 0.08) 360deg
+      rgba(16, 185, 129, 0.08) 360deg
     );
-    animation: teamSpiral 25s linear infinite;
+    animation: ${teamSpiral} 25s linear infinite;
     z-index: 0;
   }
 
@@ -380,30 +374,12 @@ const TeamSection = styled.section`
     background: conic-gradient(
       from 225deg,
       transparent 0deg,
-      rgba(139, 92, 246, 0.06) 120deg,
+      rgba(16, 185, 129, 0.06) 120deg,
       transparent 240deg,
-      rgba(59, 130, 246, 0.06) 360deg
+      rgba(0, 170, 0, 0.06) 360deg
     );
-    animation: teamSpiralReverse 30s linear infinite reverse;
+    animation: ${teamSpiralReverse} 30s linear infinite reverse;
     z-index: 0;
-  }
-
-  @keyframes teamSpiral {
-    0% {
-      transform: rotate(0deg) scale(1);
-    }
-    100% {
-      transform: rotate(360deg) scale(1.1);
-    }
-  }
-
-  @keyframes teamSpiralReverse {
-    0% {
-      transform: rotate(360deg) scale(1.1);
-    }
-    100% {
-      transform: rotate(0deg) scale(1);
-    }
   }
   
   > * {
@@ -482,34 +458,33 @@ export default function Home() {
             Enterprise Financial Management Platform
           </Title>
           <Subtitle>
-            Transform your financial operations with intelligent automation, real-time analytics, and enterprise-grade security. 
+            Transform your financial operations with intelligent automation, real-time analytics, and enterprise-grade security.
             Manage revenue, control expenses, optimize budgets, and ensure compliance—all in one powerful platform designed for modern finance teams.
           </Subtitle>
           <div>
             <Link href="/auth/login">
-              <Button 
-                size="lg" 
-                className="cursor-pointer transition-all duration-300 text-zinc-700 dark:text-zinc-300 
-                hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 
-                hover:scale-105 hover:shadow-[0_0_10px_rgba(99,102,241,0.3)]"
+              <Button
+                size="lg"
+                className="cursor-pointer transition-all duration-300 text-zinc-100 dark:text-zinc-100 
+                hover:scale-105 hover:shadow-[0_0_20px_rgba(0,170,0,0.5)]"
                 style={{
                   fontSize: '1.1rem',
                   padding: '1rem 2.5rem',
                   fontWeight: 600,
-                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  background: theme.colors.gradientPrimary,
                   border: 'none',
                   color: 'white',
-                  boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                  boxShadow: '0 4px 15px rgba(0, 170, 0, 0.4)'
                 }}
               >
                 Start Now
               </Button>
             </Link>
             <p
-              style={{ 
-                marginTop: '1rem', 
-                fontSize: '0.9rem', 
-                color: '#9ca3af' 
+              style={{
+                marginTop: '1rem',
+                fontSize: '0.9rem',
+                color: '#6ee7b7' // lighter green-grey
               }}
             >
               Unlock all features instantly. No payment details required
@@ -522,7 +497,15 @@ export default function Home() {
         <div
           style={{ textAlign: 'center', marginBottom: '1rem' }}
         >
-          <h2 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '0.5rem', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          <h2 style={{
+            fontSize: '2.5rem',
+            fontWeight: 700,
+            marginBottom: '0.5rem',
+            background: theme.colors.gradientText,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
             Powerful Features for Modern Finance Teams
           </h2>
           <p style={{ fontSize: '1.1rem', color: '#9ca3af', maxWidth: '700px', margin: '0 auto' }}>
@@ -539,7 +522,7 @@ export default function Home() {
                 onClick={() => setOpenModal(feature.id)}
                 style={{ minHeight: '280px', display: 'flex', flexDirection: 'column' }}
               >
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '0.75rem', lineHeight: '1.3' }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '0.75rem', lineHeight: '1.3', transition: 'color 0.3s' }}>
                   {feature.title}
                 </h3>
                 <p style={{ color: '#d1d5db', fontSize: '0.95rem', lineHeight: '1.6', flex: 1 }}>{feature.description}</p>
@@ -551,26 +534,26 @@ export default function Home() {
           {filteredFeatures
             .filter(f => !['inventory', 'reporting', 'approval'].includes(f.id))
             .map((feature) => (
-            <Card
-              key={feature.id}
-              onClick={() => setOpenModal(feature.id)}
-            >
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-                {feature.title}
-              </h3>
-              <p style={{ color: '#d1d5db' }}>{feature.description}</p>
-            </Card>
-          ))}
+              <Card
+                key={feature.id}
+                onClick={() => setOpenModal(feature.id)}
+              >
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem', transition: 'color 0.3s' }}>
+                  {feature.title}
+                </h3>
+                <p style={{ color: '#d1d5db' }}>{feature.description}</p>
+              </Card>
+            ))}
         </RegularFeaturesGrid>
       </FeatureSection>
 
       <TeamSection>
-        <h2 
-          style={{ 
-            fontSize: '2.5rem', 
-            fontWeight: 700, 
+        <h2
+          style={{
+            fontSize: '2.5rem',
+            fontWeight: 700,
             marginBottom: '0.5rem',
-            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+            background: theme.colors.gradientText,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text'
@@ -579,9 +562,9 @@ export default function Home() {
           Trusted by Finance Professionals Worldwide
         </h2>
         <p
-          style={{ 
-            fontSize: '1.1rem', 
-            color: '#9ca3af', 
+          style={{
+            fontSize: '1.1rem',
+            color: '#9ca3af',
             marginBottom: '2rem',
             maxWidth: '600px',
             margin: '0 auto 2rem auto'
@@ -597,15 +580,15 @@ export default function Home() {
           style={{ objectFit: 'cover', marginBottom: '1rem' }}
         />
         <p
-          style={{ 
-            fontSize: '1rem', 
+          style={{
+            fontSize: '1rem',
             color: '#d1d5db',
             maxWidth: '700px',
             margin: '0 auto',
             lineHeight: '1.6'
           }}
         >
-          Our platform powers financial operations for businesses of all sizes—from startups to Fortune 500 companies. 
+          Our platform powers financial operations for businesses of all sizes—from startups to Fortune 500 companies.
           We combine deep financial expertise with cutting-edge technology to deliver solutions that drive real business value.
         </p>
       </TeamSection>
@@ -616,10 +599,10 @@ export default function Home() {
         <ModalOverlay onClick={() => setOpenModal(null)}>
           <ModalCard onClick={(e) => e.stopPropagation()}>
             <CloseButton onClick={() => setOpenModal(null)}>×</CloseButton>
-            <h2 style={{ 
-              fontSize: '2rem', 
+            <h2 style={{
+              fontSize: '2rem',
               marginBottom: '1rem',
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              background: theme.colors.gradientText,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -627,8 +610,8 @@ export default function Home() {
             }}>
               {modals[openModal as keyof typeof modals].title}
             </h2>
-            <p style={{ 
-              marginBottom: '1.5rem', 
+            <p style={{
+              marginBottom: '1.5rem',
               fontSize: '1.1rem',
               lineHeight: '1.7',
               color: '#d1d5db'
@@ -636,30 +619,30 @@ export default function Home() {
               {modals[openModal as keyof typeof modals].description}
             </p>
             <div style={{ marginBottom: '1.5rem' }}>
-              <h3 style={{ 
-                fontSize: '1.2rem', 
-                fontWeight: 600, 
+              <h3 style={{
+                fontSize: '1.2rem',
+                fontWeight: 600,
                 marginBottom: '1rem',
                 color: 'white'
               }}>
                 Key Capabilities:
               </h3>
-              <ul style={{ 
-                listStyle: 'none', 
+              <ul style={{
+                listStyle: 'none',
                 padding: 0,
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '0.75rem'
               }}>
                 {modals[openModal as keyof typeof modals].features.map((f) => (
-                  <li key={f} style={{ 
-                    display: 'flex', 
+                  <li key={f} style={{
+                    display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
                     padding: '0.5rem',
-                    background: 'rgba(59, 130, 246, 0.1)',
+                    background: 'rgba(0, 170, 0, 0.1)',
                     borderRadius: '8px',
-                    border: '1px solid rgba(59, 130, 246, 0.2)'
+                    border: '1px solid rgba(0, 170, 0, 0.2)'
                   }}>
                     <span style={{ color: '#10b981', fontSize: '1.2rem' }}>✓</span>
                     <span style={{ color: '#e5e7eb' }}>{f}</span>
@@ -668,7 +651,7 @@ export default function Home() {
               </ul>
             </div>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <Button 
+              <Button
                 onClick={() => setOpenModal(null)}
                 style={{
                   background: 'transparent',
@@ -679,9 +662,9 @@ export default function Home() {
                 Close
               </Button>
               <Link href="/auth/login">
-                <Button 
+                <Button
                   style={{
-                    background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                    background: theme.colors.gradientPrimary,
                     border: 'none',
                     color: 'white'
                   }}
@@ -696,3 +679,4 @@ export default function Home() {
     </Wrapper>
   );
 }
+
