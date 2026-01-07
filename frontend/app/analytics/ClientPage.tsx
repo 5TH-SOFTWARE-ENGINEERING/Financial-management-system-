@@ -8,6 +8,10 @@ import {
   AlertCircle, ArrowUpRight, ArrowDownRight,
   Package, ShoppingCart, Check
 } from 'lucide-react';
+import {
+  AreaChart, Area, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { theme } from '@/components/common/theme';
@@ -658,165 +662,89 @@ const AnalyticsPage: React.FC = () => {
   const renderLineChart = (labels: string[], revenueData: number[], expenseData: number[]) => {
     if (!revenueData || revenueData.length === 0) return null;
 
-    // Filter data for month period - show every 5th day
-    let filteredLabels = labels;
-    let filteredRevenue = revenueData;
-    let filteredExpenses = expenseData;
-
-    if (period === 'month' && labels.length > 6) {
-      // Show every 5th day (day 0, 5, 10, 15, 20, 25, 30...)
-      const step = 5;
-      filteredLabels = labels.filter((_, index) => index % step === 0 || index === labels.length - 1);
-      filteredRevenue = revenueData.filter((_, index) => index % step === 0 || index === revenueData.length - 1);
-      filteredExpenses = expenseData.filter((_, index) => index % step === 0 || index === expenseData.length - 1);
-    }
-
-    const allValues = [...(filteredRevenue || []), ...(filteredExpenses || [])];
-    const maxValue = Math.max(...allValues, 1) * 1.1; // Add 10% padding
-
-    const padding = { top: 20, right: 20, bottom: 60, left: 60 };
-    const chartWidth = 800; // Approximate width
-    const chartHeight = 350;
-    const plotWidth = chartWidth - padding.left - padding.right;
-    const plotHeight = chartHeight - padding.top - padding.bottom;
+    // Transform data for Recharts
+    const chartData = labels.map((label, index) => ({
+      name: label,
+      revenue: revenueData[index] || 0,
+      expenses: expenseData[index] || 0
+    }));
 
     const revenueColor = '#22c55e';
     const expenseColor = '#ef4444';
 
-    // Generate path data for revenue line
-    const revenuePath = filteredRevenue.map((value, index) => {
-      const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
-      const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ');
-
-    // Generate path data for expense line
-    const expensePath = filteredExpenses.map((value, index) => {
-      const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
-      const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ');
-
-    // Generate grid lines
-    const gridLines = [];
-    for (let i = 0; i <= 5; i++) {
-      const y = padding.top + (i / 5) * plotHeight;
-      gridLines.push(
-        <GridLine
-          key={`grid-${i}`}
-          x1={padding.left}
-          y1={y}
-          x2={padding.left + plotWidth}
-          y2={y}
-        />
-      );
-    }
-
     return (
-      <>
-        <ChartLegend>
-          <LegendItem>
-            <div className="legend-color" style={{ background: revenueColor }} />
-            <span className="legend-label">Revenue</span>
-          </LegendItem>
-          <LegendItem>
-            <div className="legend-color" style={{ background: expenseColor }} />
-            <span className="legend-label">Expenses</span>
-          </LegendItem>
-        </ChartLegend>
-        <LineChartContainer>
-          <LineChartSVG viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
-            {/* Grid lines */}
-            {gridLines}
-
-            {/* Revenue line */}
-            <LinePath
-              d={revenuePath}
+      <LineChartContainer>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={chartData}
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={revenueColor} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={revenueColor} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={expenseColor} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={expenseColor} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.colors.border} opacity={0.5} />
+            <XAxis
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: TEXT_COLOR_MUTED, fontSize: 12 }}
+              dy={10}
+              interval={period === 'month' ? 4 : 'preserveStartEnd'}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: TEXT_COLOR_MUTED, fontSize: 12 }}
+              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#fff',
+                fontSize: '12px'
+              }}
+              itemStyle={{ color: '#fff' }}
+              formatter={(value: number) => [formatCurrency(value), '']}
+            />
+            <Legend
+              verticalAlign="top"
+              align="center"
+              height={36}
+              iconType="circle"
+              wrapperStyle={{ fontSize: '14px', fontWeight: 500 }}
+            />
+            <Area
+              type="monotone"
+              dataKey="revenue"
+              name="Revenue"
               stroke={revenueColor}
+              strokeWidth={3}
+              fillOpacity={1}
+              fill="url(#colorRevenue)"
+              animationDuration={1500}
             />
-
-            {/* Expense line */}
-            <LinePath
-              d={expensePath}
+            <Area
+              type="monotone"
+              dataKey="expenses"
+              name="Expenses"
               stroke={expenseColor}
+              strokeWidth={3}
+              fillOpacity={1}
+              fill="url(#colorExpenses)"
+              animationDuration={1500}
             />
-
-            {/* Revenue data points */}
-            {filteredRevenue.map((value, index) => {
-              const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
-              const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
-              return (
-                <LinePoint
-                  key={`revenue-${index}`}
-                  cx={x}
-                  cy={y}
-                  r={4}
-                  stroke={revenueColor}
-                  fill={revenueColor}
-                  onMouseEnter={(e) => handlePointHover(e, value, filteredLabels[index], 'Revenue')}
-                  onMouseLeave={handlePointLeave}
-                />
-              );
-            })}
-
-            {/* Expense data points */}
-            {filteredExpenses.map((value, index) => {
-              const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
-              const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
-              return (
-                <LinePoint
-                  key={`expense-${index}`}
-                  cx={x}
-                  cy={y}
-                  r={4}
-                  stroke={expenseColor}
-                  fill={expenseColor}
-                  onMouseEnter={(e) => handlePointHover(e, value, filteredLabels[index], 'Expenses')}
-                  onMouseLeave={handlePointLeave}
-                />
-              );
-            })}
-
-            {/* X-axis labels */}
-            {filteredLabels.map((label, index) => {
-              const x = padding.left + (index / (filteredLabels.length - 1 || 1)) * plotWidth;
-              return (
-                <AxisLabel
-                  key={`label-${index}`}
-                  x={x}
-                  y={chartHeight - padding.bottom + 20}
-                >
-                  {label}
-                </AxisLabel>
-              );
-            })}
-
-            {/* Y-axis labels */}
-            {[0, 1, 2, 3, 4, 5].map((i) => {
-              const value = (maxValue / 5) * (5 - i);
-              const y = padding.top + (i / 5) * plotHeight;
-              return (
-                <AxisLabel
-                  key={`y-label-${i}`}
-                  x={padding.left - 10}
-                  y={y + 4}
-                  textAnchor="end"
-                >
-                  ${(value / 1000).toFixed(0)}k
-                </AxisLabel>
-              );
-            })}
-          </LineChartSVG>
-          {tooltip.visible && (
-            <ChartTooltip
-              className={tooltip.visible ? 'visible' : ''}
-              style={{ left: tooltip.x, top: tooltip.y }}
-            >
-              {tooltip.text}
-            </ChartTooltip>
-          )}
-        </LineChartContainer>
-      </>
+          </AreaChart>
+        </ResponsiveContainer>
+      </LineChartContainer>
     );
   };
 
