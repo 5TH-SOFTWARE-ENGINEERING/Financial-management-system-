@@ -22,14 +22,14 @@ import { toast } from 'sonner';
 // ──────────────────────────────────────────
 const LayoutWrapper = styled.div`
   display: flex;
-  background: #f5f6fa;
+  background: ${props => props.theme.colors.background};
   min-height: 100vh;
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
+  background: ${props => props.theme.colors.card};
+  border-right: 1px solid ${props => props.theme.colors.border};
   position: fixed;
   left: 0;
   top: 0;
@@ -59,13 +59,13 @@ const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   font-size: 14px;
   margin-bottom: 16px;
   transition: 0.2s;
 
   &:hover {
-    color: var(--foreground);
+    color: ${props => props.theme.colors.text};
   }
 `;
 
@@ -76,18 +76,19 @@ const Title = styled.h1`
   display: flex;
   align-items: center;
   gap: 12px;
+  color: ${props => props.theme.colors.textDark};
 `;
 
 const Subtitle = styled.p`
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   margin-bottom: 24px;
 `;
 
 const FormCard = styled.form`
-  background: #fff;
+  background: ${props => props.theme.colors.card};
   padding: 28px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
@@ -111,7 +112,7 @@ const FormRow = styled.div`
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
+  color: ${props => props.theme.colors.error};
   font-size: 14px;
   margin-top: 4px;
 `;
@@ -119,7 +120,7 @@ const FieldError = styled.p`
 const StyledInput = styled.input`
   width: 70%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -129,21 +130,21 @@ const StyledInput = styled.input`
   outline: none;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
     background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.textSecondary};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.textSecondary};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
+    background-color: ${props => props.theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -183,7 +184,7 @@ const TogglePasswordButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: ${props => props.theme.colors.textSecondary};
   padding: 4px;
   display: flex;
   align-items: center;
@@ -192,13 +193,13 @@ const TogglePasswordButton = styled.button`
   transition: all 0.2s ease-in-out;
 
   &:hover {
-    color: #4b5563;
-    background: ${theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.text};
+    background: ${props => props.theme.colors.backgroundSecondary};
   }
 
   &:focus {
     outline: none;
-    background: ${theme.colors.backgroundSecondary};
+    background: ${props => props.theme.colors.backgroundSecondary};
   }
 
   &:disabled {
@@ -215,9 +216,18 @@ const MessageBox = styled.div<{ type: 'error' | 'success' }>`
   gap: 10px;
   align-items: center;
 
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  background: ${props => props.type === 'error'
+    ? (props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2')
+    : (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#d1fae5')
+  };
+  border: 1px solid ${props => props.type === 'error'
+    ? (props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : '#fecaca')
+    : (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : '#a7f3d0')
+  };
+  color: ${props => props.type === 'error'
+    ? (props.theme.mode === 'dark' ? '#fca5a5' : '#991b1b')
+    : (props.theme.mode === 'dark' ? '#86efac' : '#065f46')
+  };
 `;
 
 const ButtonRow = styled.div`
@@ -251,10 +261,10 @@ export default function CreateEmployeePage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const { register, handleSubmit, formState: { errors }, reset } = useForm<RegisterFormValues>({
     resolver: zodResolver(RegisterFormSchema),
-    defaultValues: { 
+    defaultValues: {
       role: 'EMPLOYEE' as const,
       full_name: '',
       email: '',
@@ -271,7 +281,7 @@ export default function CreateEmployeePage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       // Map form data to API format
       const userData = {
@@ -284,10 +294,10 @@ export default function CreateEmployeePage() {
         department: data.department?.trim() || undefined,
         manager_id: data.managerId ? parseInt(data.managerId, 10) : undefined,
       };
-      
+
       // Check user role to determine which endpoint to use
       const userRole = user?.role?.toLowerCase();
-      
+
       // Finance managers (manager) should use /subordinates endpoint
       // Admins can use either endpoint, but /users is more appropriate for admins
       if (userRole === 'manager' || userRole === 'finance_manager') {
@@ -296,13 +306,13 @@ export default function CreateEmployeePage() {
         // Admin or super_admin uses the regular createUser endpoint
         await apiClient.createUser(userData);
       }
-      
+
       await fetchAllUsers(); // Refresh user list
-      
+
       setSuccess('Employee created successfully!');
       reset();
       toast.success('Employee created successfully!');
-      
+
       // Redirect after 2 seconds
       setTimeout(() => {
         router.push('/employees/list');
@@ -385,11 +395,11 @@ export default function CreateEmployeePage() {
               <FormGroup>
                 <Label htmlFor="password">Password </Label>
                 <PasswordInputContainer>
-                  <PasswordInput 
-                    id="password" 
-                    type={showPassword ? 'text' : 'password'} 
-                    {...register('password')} 
-                    disabled={loading} 
+                  <PasswordInput
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    {...register('password')}
+                    disabled={loading}
                   />
                   <TogglePasswordButton
                     type="button"
@@ -406,11 +416,11 @@ export default function CreateEmployeePage() {
               <FormGroup>
                 <Label htmlFor="confirmPassword">Confirm Password </Label>
                 <PasswordInputContainer>
-                  <PasswordInput 
-                    id="confirmPassword" 
-                    type={showConfirmPassword ? 'text' : 'password'} 
-                    {...register('confirmPassword')} 
-                    disabled={loading} 
+                  <PasswordInput
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    {...register('confirmPassword')}
+                    disabled={loading}
                   />
                   <TogglePasswordButton
                     type="button"
@@ -438,9 +448,9 @@ export default function CreateEmployeePage() {
             </FormRow>
 
             <ButtonRow>
-              <Button 
-                type="button" 
-                variant="secondary" 
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={() => router.push('/employees/list')}
                 disabled={loading}
               >
