@@ -322,13 +322,13 @@ const ModalText = styled.p`
 
 const Message = styled.div<{ type: 'error' | 'success' | 'warning' }>`
   background-color: ${props =>
-    props.type === 'error' ? '#fee2e2' :
-      props.type === 'warning' ? '#fef3c7' :
-        '#dcfce7'};
+    props.type === 'error' ? (props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.2)' : '#fee2e2') :
+      props.type === 'warning' ? (props.theme.mode === 'dark' ? 'rgba(217, 119, 6, 0.2)' : '#fef3c7') :
+        (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#dcfce7')};
   color: ${props =>
-    props.type === 'error' ? '#b91c1c' :
-      props.type === 'warning' ? '#92400e' :
-        '#166534'};
+    props.type === 'error' ? (props.theme.mode === 'dark' ? '#fca5a5' : '#b91c1c') :
+      props.type === 'warning' ? (props.theme.mode === 'dark' ? '#fcd34d' : '#92400e') :
+        (props.theme.mode === 'dark' ? '#86efac' : '#166534')};
   padding: 0.75rem;
   border-radius: 0.25rem;
   margin-bottom: 1.25rem;
@@ -336,6 +336,10 @@ const Message = styled.div<{ type: 'error' | 'success' | 'warning' }>`
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
+  border: 1px solid ${props =>
+    props.type === 'error' ? (props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.5)' : 'transparent') :
+      props.type === 'warning' ? (props.theme.mode === 'dark' ? 'rgba(217, 119, 6, 0.5)' : 'transparent') :
+        (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : 'transparent')};
 `;
 
 const ModalOverlay = styled.div`
@@ -415,12 +419,13 @@ const PasswordInput = styled.input`
 `;
 
 const PasswordError = styled.div`
-  color: #dc2626;
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
   font-size: 0.75rem;
   margin-top: 0.25rem;
   padding: 0.5rem;
-  background-color: #fee2e2;
+  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.2)' : '#fee2e2'};
   border-radius: 0.25rem;
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.5)' : 'transparent'};
 `;
 
 interface Backup {

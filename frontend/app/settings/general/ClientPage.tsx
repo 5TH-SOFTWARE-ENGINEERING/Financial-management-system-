@@ -17,16 +17,6 @@ const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 const BORDER_COLOR = (props: any) => props.theme.colors.border;
 const BACKGROUND_COLOR = (props: any) => props.theme.colors.background;
 
-const CardShadow = `
-  0 2px 4px -1px rgba(0, 0, 0, 0.06),
-  0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
-`;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
-`;
 
 const Container = styled.div`
   max-width: 1000px;
@@ -53,15 +43,15 @@ const Title = styled.h1`
 `;
 
 const Card = styled.div`
-  background-color: ${props => props.theme.colors.background};
+  background-color: ${props => props.theme.colors.card};
   border-radius: ${props => props.theme.borderRadius.md};
   border: 1px solid ${props => props.theme.colors.border};
-  box-shadow: ${CardShadow};
+  box-shadow: ${props => props.theme.shadows.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
   transition: all ${props => props.theme.transitions.default};
 
   &:hover {
-    box-shadow: ${CardShadowHover};
+    box-shadow: ${props => props.theme.shadows.md};
   }
 `;
 
@@ -225,7 +215,7 @@ const ThemeOption = styled.div<{ $isSelected: boolean }>`
   &:hover {
     border-color: ${PRIMARY_COLOR};
     transform: translateY(-2px);
-    box-shadow: ${CardShadow};
+    box-shadow: ${props => props.theme.shadows.md};
     background-color: ${props => props.$isSelected ? 'rgba(0, 170, 0, 0.15)' : 'rgba(0, 170, 0, 0.05)'};
   }
   
@@ -281,15 +271,15 @@ const ThemeLabel = styled.span`
 `;
 
 const SuccessBanner = styled.div`
-  background: #d1fae5;
-  border: 1px solid #a7f3d0;
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#d1fae5'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : '#a7f3d0'};
   border-radius: ${theme.borderRadius.md};
   padding: ${theme.spacing.md};
   margin-bottom: ${theme.spacing.lg};
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
-  color: #065f46;
+  color: ${props => props.theme.mode === 'dark' ? '#86efac' : '#065f46'};
   font-size: ${theme.typography.fontSizes.md};
   
   svg {

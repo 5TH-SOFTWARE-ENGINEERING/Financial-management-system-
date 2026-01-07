@@ -34,26 +34,21 @@ import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 
 // Styled components
-const PRIMARY_COLOR = '#1877F2'; // Facebook Blue
-const SECONDARY_BLUE = '#E7F3FF';
-const TEXT_COLOR_DARK = '#1C1E21';
-const TEXT_COLOR_MUTED = '#65676B';
-const BACKGROUND_GRAY = '#F0F2F5'; // Facebook Background
 
 const Container = styled.div`
   min-height: 100vh;
-  background: ${BACKGROUND_GRAY};
+  background: ${props => props.theme.colors.backgroundSecondary};
   padding: ${theme.spacing.lg};
-  font-family: Segoe UI, Helvetica, Arial, sans-serif;
+  font-family: ${props => props.theme.typography.fontFamily};
 `;
 
 const HeaderContainer = styled.div`
   background: ${props => props.theme.colors.background};
-  color: ${TEXT_COLOR_DARK};
+  color: ${props => props.theme.colors.text};
   padding: ${theme.spacing.xl};
   margin: -${theme.spacing.lg} -${theme.spacing.lg} ${theme.spacing.xl};
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid #dddfe2;
+  box-shadow: ${props => props.theme.shadows.sm};
+  border-bottom: 1px solid ${props => props.theme.colors.border};
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.xs};
@@ -67,30 +62,30 @@ const Title = styled.h1`
   align-items: center;
   gap: ${theme.spacing.sm};
   letter-spacing: normal;
-  color: ${TEXT_COLOR_DARK};
+  color: ${props => props.theme.colors.text};
 `;
 
 const Subtitle = styled.h3`
   font-size: 18px;
   font-weight: 700;
   margin-bottom: ${theme.spacing.md};
-  color: ${TEXT_COLOR_DARK};
+  color: ${props => props.theme.colors.text};
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
 `;
 
 const Card = styled.div`
-  background: ${props => props.theme.colors.background};
+  background: ${props => props.theme.colors.card};
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: ${props => props.theme.shadows.sm};
   padding: ${theme.spacing.lg};
   margin-bottom: ${theme.spacing.lg};
-  border: 1px solid #dddfe2;
+  border: 1px solid ${props => props.theme.colors.border};
   transition: transform 0.1s ease;
 
   &:hover {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+    box-shadow: ${props => props.theme.shadows.md};
   }
 `;
 
@@ -98,21 +93,22 @@ const SearchInput = styled.input`
   width: 85%;
   max-width: 400px;
   padding: 10px 16px;
-  border: 1px solid #dddfe2;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 999px; // Facebook style pill search
   font-size: 15px;
   transition: background-color 0.2s ease;
-  background: #f0f2f5;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  color: ${props => props.theme.colors.text};
 
   &:focus {
     outline: none;
     background: ${props => props.theme.colors.background};
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}33;
   }
 
   &::placeholder {
-    color: ${TEXT_COLOR_MUTED};
+    color: ${props => props.theme.colors.textSecondary};
   }
 `;
 
@@ -125,7 +121,7 @@ const ButtonGroup = styled.div`
   width: 100%;
   flex-wrap: wrap;
   padding-top: ${theme.spacing.lg};
-  border-top: 1px solid #dddfe2;
+  border-top: 1px solid ${props => props.theme.colors.border};
 `;
 
 const ConfirmOverlay = styled.div`
@@ -147,13 +143,13 @@ const ConfirmOverlay = styled.div`
 `;
 
 const ConfirmDialog = styled.div`
-  background: ${props => props.theme.colors.background};
+  background: ${props => props.theme.colors.card};
   border-radius: ${theme.borderRadius.md};
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: ${props => props.theme.shadows.md};
   padding: ${theme.spacing.xl} * 1.5;
   max-width: 800px;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid ${props => props.theme.colors.border};
   transform-origin: center;
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
@@ -167,7 +163,7 @@ const ConfirmTitle = styled.h3`
   margin: 0 0 ${theme.spacing.lg};
   font-size: ${theme.typography.fontSizes.xxl};
   font-weight: 800;
-  color: ${TEXT_COLOR_DARK};
+  color: ${props => props.theme.colors.text};
   letter-spacing: -0.01em;
 `;
 
@@ -193,10 +189,10 @@ const PermissionChip = styled.span`
   gap: ${theme.spacing.xs};
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
   border-radius: ${theme.borderRadius.sm};
-  background: ${PRIMARY_COLOR}10;
-  color: ${TEXT_COLOR_DARK};
+  background: ${props => props.theme.colors.primary}15;
+  color: ${props => props.theme.colors.text};
   font-size: ${theme.typography.fontSizes.xs};
-  border: 1px solid ${PRIMARY_COLOR}30;
+  border: 1px solid ${props => props.theme.colors.primary}40;
 `;
 
 const SelectionHeader = styled.div`
@@ -223,11 +219,11 @@ const FilterContainer = styled.div`
 
 const Select = styled.select`
   padding: 8px 32px 8px 12px;
-  border: 1px solid #dddfe2;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 6px;
   font-size: 15px;
-  background-color: #f0f2f5;
-  color: ${TEXT_COLOR_DARK};
+  background-color: ${props => props.theme.colors.backgroundSecondary};
+  color: ${props => props.theme.colors.text};
   cursor: pointer;
   transition: all 0.2s ease;
   appearance: none;
@@ -236,14 +232,19 @@ const Select = styled.select`
   background-position: right 10px center;
   background-size: 14px;
 
+  /* Adjust SVG color for dark mode via filter if needed, 
+     or better, replace with a dynamic component. 
+     For now, we just ensure the background contrasts well. */
+
   &:hover {
-    background-color: #e4e6eb;
+    background-color: ${props => props.theme.colors.background};
+    border-color: ${props => props.theme.colors.textSecondary};
   }
 
   &:focus {
     outline: none;
-    border-color: ${PRIMARY_COLOR};
-    background-color: #ffffff;
+    border-color: ${props => props.theme.colors.primary};
+    background-color: ${props => props.theme.colors.background};
   }
 `;
 
@@ -253,10 +254,10 @@ const FilterLabel = styled.label`
   gap: ${theme.spacing.sm};
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
-  color: ${TEXT_COLOR_DARK};
+  color: ${props => props.theme.colors.text};
   
   svg {
-    color: ${PRIMARY_COLOR};
+    color: ${props => props.theme.colors.primary};
   }
 `;
 
@@ -264,9 +265,9 @@ const TemplateContainer = styled.div`
   margin-top: ${theme.spacing.lg};
   margin-bottom: ${theme.spacing.xl};
   padding: ${theme.spacing.md};
-  background: #f0f2f5;
+  background: ${props => props.theme.colors.backgroundSecondary};
   border-radius: 8px;
-  border: 1px solid #dddfe2;
+  border: 1px solid ${props => props.theme.colors.border};
 `;
 
 const TemplateControls = styled.div`
@@ -279,48 +280,50 @@ const TemplateControls = styled.div`
 
 const TemplateName = styled.input`
   padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
   min-width: 250px;
-  background: ${theme.colors.background};
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text};
   transition: all 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.colors.primary}15;
   }
 `;
 
 const TemplateSelect = styled.select`
   padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
   min-width: 250px;
-  background: ${theme.colors.background};
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text};
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.colors.primary}15;
   }
 `;
 
 const SuccessMessage = styled.div`
-  color: #059669;
+  color: ${props => props.theme.mode === 'dark' ? '#86efac' : '#059669'};
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
   font-size: ${theme.typography.fontSizes.sm};
   margin-top: ${theme.spacing.md};
   padding: ${theme.spacing.sm} ${theme.spacing.md};
-  background: #d1fae5;
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#d1fae5'};
   border-radius: ${theme.borderRadius.sm};
-  border: 1px solid #6ee7b7;
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : '#6ee7b7'};
   animation: fadeIn 0.3s ease;
 
   @keyframes fadeIn {
@@ -330,15 +333,15 @@ const SuccessMessage = styled.div`
 `;
 
 const ErrorMessage = styled.div`
-  color: #dc2626;
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
   font-size: ${theme.typography.fontSizes.sm};
   padding: ${theme.spacing.md};
-  background: #fee2e2;
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.2)' : '#fee2e2'};
   border-radius: ${theme.borderRadius.md};
-  border: 1px solid #fecaca;
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.5)' : '#fecaca'};
   margin-bottom: ${theme.spacing.lg};
   animation: shake 0.4s ease;
 
@@ -361,8 +364,8 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 32px;
   height: 32px;
-  border: 3px solid #f0f2f5;
-  border-top-color: ${PRIMARY_COLOR};
+  border: 3px solid ${props => props.theme.colors.backgroundSecondary};
+  border-top-color: ${props => props.theme.colors.primary};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   
@@ -374,7 +377,7 @@ const Spinner = styled.div`
 const SkeletonRow = styled.div`
   height: 48px;
   width: 100%;
-  background: #f0f2f5;
+  background: ${props => props.theme.colors.backgroundSecondary};
   margin-bottom: 2px;
   position: relative;
   overflow: hidden;
@@ -387,7 +390,7 @@ const SkeletonRow = styled.div`
     bottom: 0;
     left: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0, ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.4)'} 50%, transparent 100%);
     animation: shimmer 1.5s infinite;
   }
 
@@ -404,8 +407,15 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   border-radius: 4px;
   font-size: 13px;
   font-weight: 600;
-  background: ${props => props.$active ? '#e7f3ff' : '#ffe9e9'};
-  color: ${props => props.$active ? PRIMARY_COLOR : '#fa383e'};
+  background: ${props => props.$active
+    ? (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#e7f3ff')
+    : (props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.2)' : '#ffe9e9')};
+  color: ${props => props.$active
+    ? (props.theme.mode === 'dark' ? '#86efac' : props.theme.colors.primary)
+    : (props.theme.mode === 'dark' ? '#fca5a5' : '#fa383e')};
+  border: 1px solid ${props => props.$active
+    ? (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : 'transparent')
+    : (props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.5)' : 'transparent')};
 `;
 
 const UserTypeBadge = styled.span`
@@ -414,9 +424,9 @@ const UserTypeBadge = styled.span`
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
-  background: #f0f2f5;
-  color: #65676B;
-  border: 1px solid #dddfe2;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  color: ${props => props.theme.colors.textSecondary};
+  border: 1px solid ${props => props.theme.colors.border};
   text-transform: capitalize;
 `;
 
@@ -434,30 +444,31 @@ const TableWrapper = styled.div`
   th {
     background: ${props => props.theme.colors.background};
     font-weight: 600;
-    color: #65676B;
+    color: ${props => props.theme.colors.textSecondary};
     text-transform: none;
     font-size: 14px;
     letter-spacing: normal;
     padding: 12px 16px;
-    border-bottom: 1px solid #dddfe2;
+    border-bottom: 1px solid ${props => props.theme.colors.border};
     text-align: left;
   }
 
   td {
     padding: 12px 16px;
-    border-bottom: 1px solid #f0f2f5;
+    border-bottom: 1px solid ${props => props.theme.colors.backgroundSecondary};
     vertical-align: middle;
+    color: ${props => props.theme.colors.text};
   }
 
   tr:hover td {
-    background-color: #f0f2f5;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
   }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: ${theme.spacing.xl} * 3 ${theme.spacing.xl};
-  color: ${TEXT_COLOR_MUTED};
+  color: ${props => props.theme.colors.textSecondary};
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1173,12 +1184,12 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
           style={{
             borderRadius: '999px',
             fontWeight: 600,
-            borderColor: '#dddfe2',
-            color: TEXT_COLOR_DARK,
+            borderColor: theme.colors.border,
+            color: theme.colors.text,
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            backgroundColor: '#ffffff'
+            backgroundColor: theme.colors.card
           }}
         >
           <Download size={16} />
@@ -1215,7 +1226,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                     <TableCell style={{ fontWeight: 600 }}>
                       {user.userName}
                     </TableCell>
-                    <TableCell style={{ color: TEXT_COLOR_MUTED }}>{user.email}</TableCell>
+                    <TableCell style={{ color: theme.colors.textSecondary }}>{user.email}</TableCell>
                     <TableCell>
                       <UserTypeBadge>
                         {user.userType.replace(/_/g, ' ')}
@@ -1234,8 +1245,8 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                         style={{
                           borderRadius: '6px',
                           fontWeight: 600,
-                          backgroundColor: selectedUser === user.userId ? PRIMARY_COLOR : '#E4E6EB',
-                          color: selectedUser === user.userId ? '#FFFFFF' : TEXT_COLOR_DARK,
+                          backgroundColor: selectedUser === user.userId ? theme.colors.primary : theme.colors.backgroundSecondary,
+                          color: selectedUser === user.userId ? '#FFFFFF' : theme.colors.text,
                           border: 'none'
                         }}
                       >
@@ -1347,7 +1358,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                   </TableHead>
                   <TableHead style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                      <Check size={16} color={PRIMARY_COLOR} />
+                      <Check size={16} color={theme.colors.primary} />
                       Select All
                     </div>
                   </TableHead>
@@ -1365,10 +1376,10 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
 
                   return (
                     <TableRow key={resource} style={{
-                      backgroundColor: allSelected ? `${PRIMARY_COLOR}05` : 'transparent',
+                      backgroundColor: allSelected ? `${theme.colors.primary}05` : 'transparent',
                       transition: 'background-color 0.2s ease'
                     }}>
-                      <TableCell style={{ fontWeight: 600, color: TEXT_COLOR_DARK, fontSize: '14px' }}>
+                      <TableCell style={{ fontWeight: 600, color: theme.colors.text, fontSize: '14px' }}>
                         {resource.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
                       </TableCell>
                       <TableCell style={{ textAlign: 'center' }}>
@@ -1452,14 +1463,14 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
                   setError(null);
                   setSuccess(null);
                 }}
-                style={{ backgroundColor: '#E4E6EB', color: TEXT_COLOR_DARK, fontWeight: 600 }}
+                style={{ backgroundColor: theme.colors.backgroundSecondary, color: theme.colors.text, fontWeight: 600 }}
               >
                 Cancel
               </Button>
               <Button
                 variant="outline"
                 onClick={handleResetToDefaults}
-                style={{ borderColor: '#dddfe2', color: TEXT_COLOR_DARK, fontWeight: 600 }}
+                style={{ borderColor: theme.colors.border, color: theme.colors.text, fontWeight: 600 }}
               >
                 Reset to Defaults
               </Button>
@@ -1467,7 +1478,7 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             <Button
               onClick={handleSaveClick}
               disabled={loading || !selectedUser}
-              style={{ backgroundColor: PRIMARY_COLOR, fontWeight: 600 }}
+              style={{ fontWeight: 600 }}
             >
               {loading ? (
                 <>
@@ -1488,25 +1499,25 @@ const PermissionManager: React.FC<PermissionManagerProps> = ({
             <ConfirmTitle>Review permissions before saving</ConfirmTitle>
             <ConfirmBody>
               <div>
-                <strong style={{ color: TEXT_COLOR_MUTED, fontSize: '14px', marginRight: '8px' }}>User:</strong>
-                <span style={{ fontWeight: 600 }}>{confirmUser.userName}</span>
-                <span style={{ color: TEXT_COLOR_MUTED, fontSize: '14px', marginLeft: '4px' }}>({confirmUser.email})</span>
+                <strong style={{ color: theme.colors.textSecondary, fontSize: '14px', marginRight: '8px' }}>User:</strong>
+                <span style={{ fontWeight: 600, color: theme.colors.text }}>{confirmUser.userName}</span>
+                <span style={{ color: theme.colors.textSecondary, fontSize: '14px', marginLeft: '4px' }}>({confirmUser.email})</span>
               </div>
               <div style={{ marginTop: '8px' }}>
-                <strong style={{ color: TEXT_COLOR_MUTED, fontSize: '14px', marginRight: '8px' }}>User Type:</strong>
+                <strong style={{ color: theme.colors.textSecondary, fontSize: '14px', marginRight: '8px' }}>User Type:</strong>
                 <UserTypeBadge>{confirmUser.userType.replace(/_/g, ' ')}</UserTypeBadge>
               </div>
               <div style={{ marginTop: '16px' }}>
-                <strong style={{ color: TEXT_COLOR_DARK, fontSize: '16px' }}>Permissions Summary</strong>
+                <strong style={{ color: theme.colors.text, fontSize: '16px' }}>Permissions Summary</strong>
                 <div style={{
                   marginTop: '12px',
                   display: 'flex',
                   flexWrap: 'wrap',
                   gap: '10px',
-                  background: '#f8fafc',
+                  background: theme.colors.backgroundSecondary,
                   padding: '20px',
                   borderRadius: '12px',
-                  border: '1px solid #e2e8f0'
+                  border: `1px solid ${theme.colors.border}`
                 }}>
                   {confirmUser.permissions.map((perm) => {
                     const enabledActions = Object.entries(perm.actions || {})

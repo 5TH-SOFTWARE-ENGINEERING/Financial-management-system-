@@ -109,6 +109,8 @@ const Input = styled.input`
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
+  background-color: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text};
   transition: all 0.2s;
   
   &:focus {
@@ -123,7 +125,8 @@ const Select = styled.select`
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.sm};
-  background-color: white;
+  background-color: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text};
   transition: all 0.2s;
   
   &:focus {
@@ -167,7 +170,7 @@ const Tr = styled.tr`
   transition: background-color 0.15s ease;
   
   &:hover {
-    background-color: ${theme.colors.backgroundSecondary}50;
+    background-color: ${props => props.theme.colors.muted};
   }
 
   &:last-child td {
@@ -185,18 +188,19 @@ const Badge = styled.span<{ $variant?: 'success' | 'warning' | 'danger' | 'info'
   letter-spacing: 0.025em;
   
   ${props => {
+    const isDark = props.theme.mode === 'dark';
     switch (props.$variant) {
       case 'success':
-        return `background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;`;
+        return `background-color: ${isDark ? 'rgba(22, 163, 74, 0.2)' : '#dcfce7'}; color: ${isDark ? '#86efac' : '#166534'}; border: 1px solid ${isDark ? 'rgba(22, 163, 74, 0.5)' : '#bbf7d0'};`;
       case 'warning':
-        return `background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;`;
+        return `background-color: ${isDark ? 'rgba(234, 179, 8, 0.2)' : '#fef3c7'}; color: ${isDark ? '#fde047' : '#92400e'}; border: 1px solid ${isDark ? 'rgba(234, 179, 8, 0.5)' : '#fde68a'};`;
       case 'danger':
-        return `background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca;`;
+        return `background-color: ${isDark ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2'}; color: ${isDark ? '#fca5a5' : '#991b1b'}; border: 1px solid ${isDark ? 'rgba(239, 68, 68, 0.5)' : '#fecaca'};`;
       case 'neutral':
-        return `background-color: ${theme.colors.backgroundSecondary}; color: #374151; border: 1px solid #e5e7eb;`;
+        return `background-color: ${props.theme.colors.backgroundSecondary}; color: ${props.theme.colors.text}; border: 1px solid ${props.theme.colors.border};`;
       case 'info':
       default:
-        return `background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;`;
+        return `background-color: ${isDark ? 'rgba(59, 130, 246, 0.2)' : '#dbeafe'}; color: ${isDark ? '#93c5fd' : '#1e40af'}; border: 1px solid ${isDark ? 'rgba(59, 130, 246, 0.5)' : '#bfdbfe'};`;
     }
   }}
 `;
@@ -245,10 +249,10 @@ const LoadingState = styled.div`
 
 const ErrorState = styled.div`
   padding: ${theme.spacing.lg};
-  background-color: #fee2e2;
-  border: 1px solid #fecaca;
+  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : '#fecaca'};
   border-radius: ${theme.borderRadius.md};
-  color: #991b1b;
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#991b1b'};
   display: flex;
   align-items: center;
   gap: ${theme.spacing.md};
@@ -556,7 +560,7 @@ export default function LogsPage() {
             </FormGroup>
 
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-              <Button variant="ghost" onClick={handleClearFilters} style={{ width: '50%', justifyContent: 'flex-end', alignItems: 'flex-end', marginRight: '1rem',position: 'relative', right: '0' }}>
+              <Button variant="ghost" onClick={handleClearFilters} style={{ width: '50%', justifyContent: 'flex-end', alignItems: 'flex-end', marginRight: '1rem', position: 'relative', right: '0' }}>
                 Clear Filters
               </Button>
             </div>

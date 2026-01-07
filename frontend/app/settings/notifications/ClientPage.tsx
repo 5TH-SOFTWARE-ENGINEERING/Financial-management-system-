@@ -79,6 +79,8 @@ const Container = styled.div`
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem;
+  min-height: 100vh;
+  background-color: ${props => props.theme.colors.background};
 `;
 
 const Header = styled.div`
@@ -87,7 +89,7 @@ const Header = styled.div`
   align-items: center;
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
 `;
 
 const Title = styled.h1`
@@ -97,10 +99,11 @@ const Title = styled.h1`
 `;
 
 const Card = styled.div`
-  background-color: white;
-  border-radius: 0.375rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  box-shadow: ${props => props.theme.shadows.sm};
   margin-bottom: 1.25rem;
+  border: 1px solid ${props => props.theme.colors.border};
 `;
 
 const CardHeader = styled.div`
@@ -108,7 +111,7 @@ const CardHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid ${props => props.theme.colors.backgroundSecondary};
 `;
 
 const CardTitle = styled.h3`
@@ -135,7 +138,7 @@ const NotificationGroup = styled.div`
 const NotificationTitle = styled.h4`
   font-size: 0.875rem;
   font-weight: 600;
-  color: #4b5563;
+  color: ${props => props.theme.colors.text};
   margin-bottom: 0.75rem;
   display: flex;
   align-items: center;
@@ -157,9 +160,10 @@ const ChannelOption = styled.div`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 0.375rem;
   cursor: pointer;
+  color: ${props => props.theme.colors.text};
   
   &:hover {
     background-color: ${props => props.theme.colors.backgroundSecondary};
@@ -178,13 +182,13 @@ const Label = styled.label`
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #4b5563;
+  color: ${props => props.theme.colors.text};
   cursor: pointer;
 `;
 
 const HelperText = styled.p`
   font-size: 0.75rem;
-  color: #6b7280;
+  color: ${props => props.theme.colors.textSecondary};
   margin-top: 0.25rem;
 `;
 
@@ -223,7 +227,7 @@ const SwitchSlider = styled.span`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #e5e7eb;
+  background-color: ${props => props.theme.colors.border};
   transition: 0.4s;
   border-radius: 24px;
   
@@ -249,7 +253,7 @@ const SwitchContainer = styled.div`
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid ${props => props.theme.colors.border};
   margin: 1.5rem 0;
 `;
 
@@ -495,12 +499,13 @@ export default function NotificationsSettingsPage() {
 
         {success && (
           <div style={{
-            backgroundColor: '#dcfce7',
+            backgroundColor: 'rgba(22, 163, 74, 0.2)',
             color: '#166534',
             padding: '0.75rem',
             borderRadius: '0.25rem',
             marginBottom: '1.25rem',
-            fontSize: '0.875rem'
+            fontSize: '0.875rem',
+            border: '1px solid rgba(22, 163, 74, 0.5)'
           }}>
             {success}
           </div>
@@ -564,8 +569,11 @@ export default function NotificationsSettingsPage() {
                       onChange={handleQuietHoursChange}
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '0.25rem'
+                        border: '1px solid currentColor',
+                        borderColor: 'var(--border)',
+                        borderRadius: '0.25rem',
+                        backgroundColor: 'var(--background)',
+                        color: 'var(--text)'
                       }}
                     />
                   </div>
@@ -579,8 +587,11 @@ export default function NotificationsSettingsPage() {
                       onChange={handleQuietHoursChange}
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '0.25rem'
+                        border: '1px solid currentColor',
+                        borderColor: 'var(--border)',
+                        borderRadius: '0.25rem',
+                        backgroundColor: 'var(--background)',
+                        color: 'var(--text)'
                       }}
                     />
                   </div>
