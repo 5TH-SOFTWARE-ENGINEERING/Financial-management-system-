@@ -16,7 +16,7 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 250px; // Width of the sidebar
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: ${theme.colors.backgroundSecondary};
 `;
 
 const ContentWrapper = styled.div`
@@ -30,7 +30,7 @@ const LoadingContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: ${theme.colors.backgroundSecondary};
 `;
 
 const LoadingSpinner = styled.div`

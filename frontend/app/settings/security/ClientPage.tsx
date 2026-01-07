@@ -8,6 +8,7 @@ import { Save, Shield, Key, AlertTriangle, Eye, EyeOff, CheckCircle, AlertCircle
 import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
+import { theme } from '@/components/common/theme';
 
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
@@ -113,19 +114,19 @@ const Header = styled.div`
   align-items: center;
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
 `;
 
 const Title = styled.h1`
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
 `;
 
 const Card = styled.div`
-  background-color: white;
+  background-color: ${props => props.theme.colors.card};
   border-radius: 0.375rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: ${props => props.theme.shadows.sm};
   margin-bottom: 1.25rem;
 `;
 
@@ -134,13 +135,13 @@ const CardHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
 `;
 
 const CardTitle = styled.h3`
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -159,12 +160,12 @@ const Label = styled.label`
   font-size: 0.875rem;
   font-weight: 500;
   margin-bottom: 0.375rem;
-  color: #4b5563;
+  color: ${props => props.theme.colors.textSecondary};
 `;
 
 const HelperText = styled.p`
   font-size: 0.75rem;
-  color: #6b7280;
+  color: ${props => props.theme.colors.mutedForeground};
   margin-top: 0.25rem;
 `;
 
@@ -177,15 +178,17 @@ const ErrorText = styled.p`
 const Input = styled.input`
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 0.25rem;
   font-size: 0.875rem;
+  background-color: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text};
   transition: border-color 0.15s ease;
   
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 1px ${props => props.theme.colors.primary};
   }
 `;
 
@@ -201,10 +204,10 @@ const TogglePasswordButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: ${props => props.theme.colors.mutedForeground};
   
   &:hover {
-    color: #4b5563;
+    color: ${props => props.theme.colors.textSecondary};
   }
 `;
 
@@ -236,7 +239,7 @@ const SwitchSlider = styled.span`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #e5e7eb;
+  background-color: ${props => props.theme.colors.border};
   transition: 0.4s;
   border-radius: 24px;
   
@@ -247,7 +250,7 @@ const SwitchSlider = styled.span`
     width: 18px;
     left: 3px;
     bottom: 3px;
-    background-color: white;
+    background-color: ${props => props.theme.colors.card};
     transition: 0.4s;
     border-radius: 50%;
   }
@@ -262,7 +265,7 @@ const SwitchContainer = styled.div`
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid ${props => props.theme.colors.border};
   margin: 1.5rem 0;
 `;
 
@@ -279,7 +282,7 @@ const PasswordStrengthMeter = styled.div`
 
 const PasswordStrengthBar = styled.div`
   height: 4px;
-  background-color: #e5e7eb;
+  background-color: ${props => props.theme.colors.border};
   border-radius: 2px;
   margin-top: 0.25rem;
   overflow: hidden;
@@ -314,21 +317,21 @@ const PasswordStrengthLabel = styled.div<{ strength: number }>`
   }
   
   span:last-child {
-    color: #6b7280;
+    color: ${props => props.theme.colors.mutedForeground};
   }
 `;
 
 const VerificationHistoryContainer = styled.div`
   max-height: 250px;
   overflow-y: auto;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 0.375rem;
   margin-top: 0.5rem;
 `;
 
 const VerificationHistoryItem = styled.div`
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
   font-size: 0.875rem;
   
   &:last-child {
@@ -336,7 +339,7 @@ const VerificationHistoryItem = styled.div`
   }
   
   &:nth-child(even) {
-    background-color: #f9fafb;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
   }
 `;
 
@@ -348,11 +351,11 @@ const VerificationHistoryDetails = styled.div`
 
 const VerificationHistoryDevice = styled.div`
   font-weight: 500;
-  color: #4b5563;
+  color: ${props => props.theme.colors.textSecondary};
 `;
 
 const VerificationHistoryMeta = styled.div`
-  color: #6b7280;
+  color: ${props => props.theme.colors.mutedForeground};
   font-size: 0.75rem;
   margin-top: 0.25rem;
 `;
@@ -392,14 +395,14 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background-color: white;
+  background-color: ${props => props.theme.colors.card};
   border-radius: 0.5rem;
   padding: 1.5rem;
   max-width: 500px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: ${props => props.theme.shadows.md};
 `;
 
 const ModalHeader = styled.div`
@@ -412,21 +415,21 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: ${props => props.theme.colors.mutedForeground};
   padding: 0.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
   
   &:hover {
-    color: #111827;
+    color: ${props => props.theme.colors.textDark};
   }
 `;
 
@@ -441,10 +444,10 @@ const QRCodeContainer = styled.div`
 const QRCodeImage = styled.img`
   width: 250px;
   height: 250px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 0.375rem;
   padding: 0.5rem;
-  background-color: white;
+  background-color: ${props => props.theme.colors.card};
 `;
 
 const CodeInput = styled(Input)`

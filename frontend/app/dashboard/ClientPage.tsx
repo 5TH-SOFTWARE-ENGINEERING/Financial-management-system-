@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/rbac/auth-context';
 import {
@@ -14,11 +14,13 @@ import apiClient from '@/lib/api';
 import useUserStore from '@/store/userStore';
 import { theme } from '@/components/common/theme';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const PRIMARY_LIGHT = '#e8f5e9';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = (props: any) => props.theme.colors.text;
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const PRIMARY_LIGHT = (props: any) => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : '#e8f5e9';
+const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark'
+  ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)`
+  : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -115,23 +117,44 @@ const DashboardGrid = styled.div`
 
 type IconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
 
-const getIconColor = (IconComponent: IconComponent) => {
+const getIconColor = (IconComponent: IconComponent, theme: any) => {
+  const isDark = theme.mode === 'dark';
   switch (IconComponent) {
     case Users:
     case TrendingUp:
-      return { bg: 'rgba(34, 197, 94, 0.12)', color: '#15803d', border: '#10b981' }; // Green
+      return {
+        bg: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.12)',
+        color: isDark ? '#4ade80' : '#15803d',
+        border: '#10b981'
+      };
     case DollarSign:
     case Wallet:
-      return { bg: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: '#f59e0b' }; // Amber
+      return {
+        bg: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.12)',
+        color: isDark ? '#fbbf24' : '#b45309',
+        border: '#f59e0b'
+      };
     case FileText:
     case ClipboardList:
-      return { bg: 'rgba(59, 130, 246, 0.12)', color: '#1d4ed8', border: '#3b82f6' }; // Blue
+      return {
+        bg: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.12)',
+        color: isDark ? '#60a5fa' : '#1d4ed8',
+        border: '#3b82f6'
+      };
     case Activity:
     case CreditCard:
     case Shield:
-      return { bg: 'rgba(79, 70, 229, 0.12)', color: '#4338ca', border: '#6366f1' }; // Indigo
+      return {
+        bg: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(79, 70, 229, 0.12)',
+        color: isDark ? '#818cf8' : '#4338ca',
+        border: '#6366f1'
+      };
     default:
-      return { bg: 'rgba(34, 197, 94, 0.12)', color: '#15803d', border: '#10b981' };
+      return {
+        bg: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.12)',
+        color: isDark ? '#4ade80' : '#15803d',
+        border: '#10b981'
+      };
   }
 };
 
@@ -155,7 +178,7 @@ const StatsCard = styled.div<{ $IconComponent: IconComponent; $clickable?: boole
     left: 0;
     width: 4px;
     height: 100%;
-    background: ${props => getIconColor(props.$IconComponent).border};
+    background: ${props => getIconColor(props.$IconComponent, props.theme).border};
     border-top-left-radius: ${theme.borderRadius.md};
     border-bottom-left-radius: ${theme.borderRadius.md};
     transition: width ${theme.transitions.default};
@@ -164,7 +187,7 @@ const StatsCard = styled.div<{ $IconComponent: IconComponent; $clickable?: boole
   &:hover {
     transform: translateY(-4px);
     box-shadow: ${CardShadowHover};
-    border-color: ${props => getIconColor(props.$IconComponent).border};
+    border-color: ${props => getIconColor(props.$IconComponent, props.theme).border};
     
     ${props => props.$clickable && `
       &:before {
@@ -186,7 +209,7 @@ const CardIcon = styled.div<{ $IconComponent: IconComponent }>`
   width: 64px;
   height: 64px;
   border-radius: ${theme.borderRadius.md};
-  background: ${props => getIconColor(props.$IconComponent).bg};
+  background: ${props => getIconColor(props.$IconComponent, props.theme).bg};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -200,7 +223,7 @@ const CardIcon = styled.div<{ $IconComponent: IconComponent }>`
   svg {
     width: 24px;
     height: 24px;
-    color: ${props => getIconColor(props.$IconComponent).color};
+    color: ${props => getIconColor(props.$IconComponent, props.theme).color};
     stroke-width: 2.5;
   }
 `;
@@ -261,7 +284,12 @@ const GrowthIndicator = styled.div<{ $positive: boolean }>`
   gap: ${theme.spacing.xs};
   font-size: ${theme.typography.fontSizes.xs};
   font-weight: ${theme.typography.fontWeights.medium};
-  color: ${props => props.$positive ? '#059669' : '#ef4444'};
+  color: ${props => {
+    const isDark = props.theme.mode === 'dark';
+    return props.$positive
+      ? (isDark ? '#4ade80' : '#059669')
+      : (isDark ? '#f87171' : '#ef4444');
+  }};
   margin-top: ${theme.spacing.xs};
 `;
 
@@ -383,7 +411,12 @@ const Table = styled.table`
 // Ensure text-color utility is applied for amounts
 const AmountCell = styled.td<{ $isPositive: boolean }>`
   font-weight: 600;
-  color: ${props => props.$isPositive ? '#059669' : '#ef4444'}; /* Emerald-600 or Red-500 */
+  color: ${props => {
+    const isDark = props.theme.mode === 'dark';
+    return props.$isPositive
+      ? (isDark ? '#4ade80' : '#059669')
+      : (isDark ? '#f87171' : '#ef4444');
+  }};
 `;
 
 const Badge = styled.span<{ $type: 'success' | 'warning' | 'danger' | 'info' }>`
@@ -392,21 +425,23 @@ const Badge = styled.span<{ $type: 'success' | 'warning' | 'danger' | 'info' }>`
   font-size: 12px;
   font-weight: 700;
   background-color: ${props => {
+    const isDark = props.theme.mode === 'dark';
     switch (props.$type) {
-      case 'success': return 'rgba(16, 185, 129, 0.12)';
-      case 'warning': return 'rgba(251, 191, 36, 0.16)';
-      case 'danger': return 'rgba(239, 68, 68, 0.18)';
-      case 'info': return 'rgba(99, 102, 241, 0.15)';
-      default: return 'rgba(16, 185, 129, 0.12)';
+      case 'success': return isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)';
+      case 'warning': return isDark ? 'rgba(251, 191, 36, 0.25)' : 'rgba(251, 191, 36, 0.16)';
+      case 'danger': return isDark ? 'rgba(239, 68, 68, 0.25)' : 'rgba(239, 68, 68, 0.18)';
+      case 'info': return isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.15)';
+      default: return isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)';
     }
   }};
   color: ${props => {
+    const isDark = props.theme.mode === 'dark';
     switch (props.$type) {
-      case 'success': return '#065f46'; // Emerald-800
-      case 'warning': return '#b45309'; // Amber-800
-      case 'danger': return '#991b1b'; // Red-800
-      case 'info': return '#3730a3';
-      default: return '#065f46';
+      case 'success': return isDark ? '#6ee7b7' : '#065f46';
+      case 'warning': return isDark ? '#fcd34d' : '#b45309';
+      case 'danger': return isDark ? '#fca5a5' : '#991b1b';
+      case 'info': return isDark ? '#a5b4fc' : '#3730a3';
+      default: return isDark ? '#6ee7b7' : '#065f46';
     }
   }};
 `;
@@ -602,6 +637,7 @@ type ActivityApiEntry = {
 const AdminDashboard: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
+  const currentTheme = useTheme();
   const storeUser = useUserStore((state) => state.user);
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
@@ -1452,7 +1488,7 @@ const AdminDashboard: React.FC = () => {
               <span style={{
                 fontSize: theme.typography.fontSizes.sm,
                 fontWeight: 'normal',
-                color: TEXT_COLOR_MUTED,
+                color: currentTheme.colors.textSecondary,
                 marginLeft: theme.spacing.sm
               }}>
                 (Your activities only)
@@ -1462,7 +1498,7 @@ const AdminDashboard: React.FC = () => {
               <span style={{
                 fontSize: theme.typography.fontSizes.sm,
                 fontWeight: 'normal',
-                color: TEXT_COLOR_MUTED,
+                color: currentTheme.colors.textSecondary,
                 marginLeft: theme.spacing.sm
               }}>
                 (Your team&apos;s activities)
@@ -1520,7 +1556,7 @@ const AdminDashboard: React.FC = () => {
                           <span style={{
                             marginLeft: theme.spacing.xs,
                             fontSize: theme.typography.fontSizes.xs,
-                            color: TEXT_COLOR_MUTED
+                            color: currentTheme.colors.textSecondary
                           }}>
                             (Pending Approval)
                           </span>

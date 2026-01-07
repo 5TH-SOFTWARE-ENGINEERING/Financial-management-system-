@@ -318,7 +318,7 @@ const Badge = styled.span<{ $variant: 'admin' | 'finance_manager' | 'finance_adm
       case 'inactive':
         return 'background-color: #fee2e2; color: #991b1b;';
       default:
-        return 'background-color: #f3f4f6; color: #374151;';
+        return 'background-color: ${theme.colors.backgroundSecondary}; color: #374151;';
     }
   }}
 `;
@@ -524,7 +524,7 @@ const Label = styled.label`
   display: block;
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   margin-bottom: ${theme.spacing.xs};
 `;
 

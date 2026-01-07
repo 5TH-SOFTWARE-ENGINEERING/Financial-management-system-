@@ -67,7 +67,7 @@ const Subtitle = styled.p`
 `;
 
 const Card = styled.div`
-  background: white;
+  background: ${props => props.theme.colors.background};
   border-radius: ${theme.borderRadius.lg};
   box-shadow: ${theme.shadows.sm};
   border: 1px solid ${theme.colors.border};
@@ -193,7 +193,7 @@ const Badge = styled.span<{ $variant?: 'success' | 'warning' | 'danger' | 'info'
       case 'danger':
         return `background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca;`;
       case 'neutral':
-        return `background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb;`;
+        return `background-color: ${theme.colors.backgroundSecondary}; color: #374151; border: 1px solid #e5e7eb;`;
       case 'info':
       default:
         return `background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;`;

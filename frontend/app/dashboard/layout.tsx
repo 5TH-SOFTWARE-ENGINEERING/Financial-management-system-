@@ -12,7 +12,7 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 16%;
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: ${props => props.theme.colors.backgroundSecondary};
 
 `;
 

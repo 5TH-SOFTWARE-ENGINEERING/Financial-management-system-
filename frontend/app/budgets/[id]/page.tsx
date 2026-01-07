@@ -13,10 +13,10 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const PRIMARY_LIGHT = '#e8f5e9';
+const PRIMARY_LIGHT = (props: any) => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : '#e8f5e9';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -314,8 +314,8 @@ const PasswordInput = styled.input`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -324,7 +324,7 @@ const PasswordInput = styled.input`
   &:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -336,7 +336,7 @@ const PasswordInput = styled.input`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;

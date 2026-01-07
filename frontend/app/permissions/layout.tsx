@@ -14,7 +14,7 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 250px; // Width of the sidebar
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: ${props => props.theme.colors.backgroundSecondary};
 `;
 
 const ContentWrapper = styled.div`

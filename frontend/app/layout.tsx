@@ -16,6 +16,8 @@ const GlobalStyle = createGlobalStyle`
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: var(--background, #ffffff);
+    color: var(--text, #333333);
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
   }
 `;

@@ -31,7 +31,7 @@ export const revalidate = 0;
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -100,7 +100,7 @@ const ComparisonCard = styled.div`
 `;
 
 const ScenarioSelector = styled.div`
-  background: #f9fafb;
+  background: ${theme.colors.backgroundSecondary};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   padding: ${theme.spacing.lg};
@@ -138,7 +138,7 @@ const ComparisonTable = styled.table`
   th {
     text-align: left;
     padding: ${theme.spacing.md};
-    background: #f9fafb;
+    background: ${theme.colors.backgroundSecondary};
     font-weight: ${theme.typography.fontWeights.medium};
     font-size: ${theme.typography.fontSizes.sm};
     color: ${TEXT_COLOR_DARK};
@@ -153,7 +153,7 @@ const ComparisonTable = styled.table`
   }
   
   tr:hover {
-    background: #f9fafb;
+    background: ${theme.colors.backgroundSecondary};
   }
   
   .base-budget {

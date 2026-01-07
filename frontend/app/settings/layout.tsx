@@ -87,7 +87,7 @@ const MobileNavToggle = styled.button`
   gap: 8px;
   width: 100%;
   padding: 12px 16px;
-  background: white;
+  background: ${props => props.theme.colors.background};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.md};
   margin-bottom: ${theme.spacing.md};

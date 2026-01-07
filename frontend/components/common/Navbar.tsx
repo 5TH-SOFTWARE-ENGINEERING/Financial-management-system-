@@ -646,15 +646,15 @@ const NotificationPanel = styled.div<{ $isOpen: boolean }>`
   right: 0;
   width: 750px;
   max-height: 800px;
-  background: rgba(255, 255, 255, 0.85);
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.85)'};
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid ${theme.colors.border};
   border-radius: 20px;
   box-shadow: 
     0 20px 40px rgba(0, 0, 0, 0.12),
     0 1px 3px rgba(0, 0, 0, 0.04),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    inset 0 0 0 1px ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.5)'};
   z-index: 1000;
   opacity: ${props => (props.$isOpen ? 1 : 0)};
   visibility: ${props => (props.$isOpen ? 'visible' : 'hidden')};
@@ -680,12 +680,12 @@ const NotificationPanelHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.4);
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.4)' : 'rgba(255, 255, 255, 0.4)'};
   
   h3 {
     font-size: 18px;
     font-weight: 700;
-    color: #0f172a;
+    color: ${theme.colors.text};
     margin: 0;
     letter-spacing: -0.02em;
   }
@@ -739,15 +739,15 @@ const NotificationListItem = styled.div<{ $isRead: boolean; $type?: string }>`
   border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: ${props => props.$isRead ? 'rgba(255, 255, 255, 0.5)' : '#ffffff'};
-  border: 1px solid ${props => props.$isRead ? 'rgba(0, 0, 0, 0.03)' : 'rgba(0, 0, 0, 0.06)'};
+  background: ${props => props.$isRead ? 'transparent' : (props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : '#ffffff')};
+  border: 1px solid ${props => props.$isRead ? 'transparent' : theme.colors.border};
   display: flex;
   gap: 16px;
   position: relative;
   box-shadow: ${props => props.$isRead ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.04)'};
   
   &:hover {
-    background: #ffffff;
+    background: ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#ffffff'};
     transform: scale(1.01);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
     border-color: ${PRIMARY_ACCENT}40;
@@ -811,14 +811,14 @@ const NotificationContent = styled.div`
 const NotificationTitle = styled.h4<{ $isRead: boolean }>`
   font-size: 14px;
   font-weight: ${props => props.$isRead ? 500 : 700};
-  color: #1e293b;
+  color: ${theme.colors.text};
   margin: 0;
   line-height: 1.4;
 `;
 
 const NotificationMessage = styled.p`
   font-size: 13px;
-  color: #64748b;
+  color: ${theme.colors.textSecondary};
   margin: 0;
   line-height: 1.5;
 `;
@@ -832,7 +832,8 @@ const NotificationMeta = styled.div`
   .time {
     font-size: 11px;
     font-weight: 600;
-    color: #94a3b8;
+    color: ${theme.colors.textSecondary};
+    opacity: 0.8;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -920,7 +921,7 @@ const NotificationListText = styled.div<{ $isRead?: boolean }>`
   
   p {
     font-size: 14px;
-    color: ${props => props.$isRead ? '#64748b' : '#1e293b'};
+    color: ${props => props.$isRead ? theme.colors.textSecondary : theme.colors.text};
     margin: 0;
     line-height: 1.5;
     font-weight: ${props => props.$isRead ? 500 : 600};
@@ -937,22 +938,24 @@ const NotificationListText = styled.div<{ $isRead?: boolean }>`
   
   .notification-time {
     font-size: 12px;
-    color: #94a3b8;
+    color: ${theme.colors.textSecondary};
+    opacity: 0.8;
     font-weight: 500;
     white-space: nowrap;
   }
   
   span {
     font-size: 12px;
-    color: #94a3b8;
+    color: ${theme.colors.textSecondary};
+    opacity: 0.8;
     font-weight: 500;
   }
 `;
 
 const NotificationPanelFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  background: rgba(255, 255, 255, 0.4);
+  border-top: 1px solid ${theme.colors.border};
+  background: ${theme.colors.backgroundSecondary};
   display: flex;
   gap: 12px;
 `;
@@ -989,24 +992,24 @@ const EmptyNotifications = styled.div`
     width: 64px;
     height: 64px;
     border-radius: 20px;
-    background: #f1f5f9;
+    background: ${theme.colors.backgroundSecondary};
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #94a3b8;
+    color: ${theme.colors.textSecondary};
     margin-bottom: 8px;
   }
 
   p {
     font-size: 15px;
     font-weight: 600;
-    color: #475569;
+    color: ${theme.colors.text};
     margin: 0;
   }
 
   span {
     font-size: 13px;
-    color: #94a3b8;
+    color: ${theme.colors.textSecondary};
   }
 `;
 

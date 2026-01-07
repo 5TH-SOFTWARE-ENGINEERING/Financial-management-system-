@@ -17,7 +17,7 @@ import { ComponentId } from '@/lib/rbac/component-access';
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -154,7 +154,7 @@ const PeriodTable = styled.table`
   th {
     text-align: left;
     padding: ${theme.spacing.md};
-    background: #f9fafb;
+    background: ${theme.colors.backgroundSecondary};
     font-weight: ${theme.typography.fontWeights.medium};
     font-size: ${theme.typography.fontSizes.sm};
     color: ${TEXT_COLOR_DARK};
@@ -169,7 +169,7 @@ const PeriodTable = styled.table`
   }
   
   tr:hover {
-    background: #f9fafb;
+    background: ${theme.colors.backgroundSecondary};
   }
 `;
 

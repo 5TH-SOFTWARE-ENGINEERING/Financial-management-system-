@@ -30,9 +30,9 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark || '#000';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
 
 // Type definitions for error handling
 type ErrorWithDetails = {
@@ -174,17 +174,19 @@ const SummaryGrid = styled.div`
 `;
 
 const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'profit' | 'cash' }>`
-  background: ${(p) => {
-    if (p.$type === 'revenue') return '#f0fdf4';
-    if (p.$type === 'expense') return '#fef2f2';
-    if (p.$type === 'profit') return '#eff6ff';
-    return theme.colors.backgroundSecondary;
+  background: ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$type === 'revenue') return isDark ? 'rgba(16, 185, 129, 0.15)' : '#f0fdf4';
+    if (p.$type === 'expense') return isDark ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2';
+    if (p.$type === 'profit') return isDark ? 'rgba(59, 130, 246, 0.15)' : '#eff6ff';
+    return p.theme.colors.backgroundSecondary;
   }};
-  border: 1px solid ${(p) => {
-    if (p.$type === 'revenue') return '#bbf7d0';
-    if (p.$type === 'expense') return '#fecaca';
-    if (p.$type === 'profit') return '#bfdbfe';
-    return theme.colors.border;
+  border: 1px solid ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$type === 'revenue') return isDark ? 'rgba(16, 185, 129, 0.3)' : '#bbf7d0';
+    if (p.$type === 'expense') return isDark ? 'rgba(239, 68, 68, 0.3)' : '#fecaca';
+    if (p.$type === 'profit') return isDark ? 'rgba(59, 130, 246, 0.3)' : '#bfdbfe';
+    return p.theme.colors.border;
   }};
   padding: ${theme.spacing.lg};
   border-radius: ${theme.borderRadius.md};
@@ -209,7 +211,13 @@ const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'profit' | 'cas
   .value {
     font-size: clamp(20px, 4vw, 28px);
     font-weight: ${theme.typography.fontWeights.bold};
-    color: ${(p) => p.$type === 'expense' ? '#dc2626' : TEXT_COLOR_DARK};
+    color: ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$type === 'expense') return isDark ? '#fca5a5' : '#dc2626';
+    if (p.$type === 'revenue') return isDark ? '#6ee7b7' : TEXT_COLOR_DARK(p);
+    if (p.$type === 'profit') return isDark ? '#93c5fd' : TEXT_COLOR_DARK(p);
+    return TEXT_COLOR_DARK(p);
+  }};
     margin-bottom: ${theme.spacing.xs};
   }
   
@@ -421,19 +429,22 @@ const TwoColumnGrid = styled.div`
 `;
 
 const InsightCard = styled.div<{ $priority?: 'high' | 'medium' | 'low' }>`
-  background: ${(p) => {
-    if (p.$priority === 'high') return '#fef2f2';
-    if (p.$priority === 'medium') return '#fffbeb';
-    return '#f0fdf4';
+  background: ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$priority === 'high') return isDark ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2';
+    if (p.$priority === 'medium') return isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb';
+    return isDark ? 'rgba(16, 185, 129, 0.15)' : '#f0fdf4';
   }};
-  border: 1px solid ${(p) => {
-    if (p.$priority === 'high') return '#fecaca';
-    if (p.$priority === 'medium') return '#fde68a';
-    return '#bbf7d0';
+  border: 1px solid ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$priority === 'high') return isDark ? 'rgba(239, 68, 68, 0.3)' : '#fecaca';
+    if (p.$priority === 'medium') return isDark ? 'rgba(245, 158, 11, 0.3)' : '#fde68a';
+    return isDark ? 'rgba(16, 185, 129, 0.3)' : '#bbf7d0';
   }};
-  border-left: 4px solid ${(p) => {
-    if (p.$priority === 'high') return '#dc2626';
-    if (p.$priority === 'medium') return '#d97706';
+  border-left: 4px solid ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$priority === 'high') return isDark ? '#f87171' : '#dc2626';
+    if (p.$priority === 'medium') return isDark ? '#fbbf24' : '#d97706';
     return PRIMARY_COLOR;
   }};
   border-radius: ${theme.borderRadius.md};
@@ -476,15 +487,17 @@ const InsightCard = styled.div<{ $priority?: 'high' | 'medium' | 'low' }>`
 `;
 
 const AlertCard = styled.div<{ $severity?: 'high' | 'medium' | 'low' }>`
-  background: ${(p) => {
-    if (p.$severity === 'high') return '#fef2f2';
-    if (p.$severity === 'medium') return '#fffbeb';
-    return '#eff6ff';
+  background: ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$severity === 'high') return isDark ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2';
+    if (p.$severity === 'medium') return isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb';
+    return isDark ? 'rgba(59, 130, 246, 0.15)' : '#eff6ff';
   }};
-  border: 1px solid ${(p) => {
-    if (p.$severity === 'high') return '#fecaca';
-    if (p.$severity === 'medium') return '#fde68a';
-    return '#bfdbfe';
+  border: 1px solid ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$severity === 'high') return isDark ? 'rgba(239, 68, 68, 0.3)' : '#fecaca';
+    if (p.$severity === 'medium') return isDark ? 'rgba(245, 158, 11, 0.3)' : '#fde68a';
+    return isDark ? 'rgba(59, 130, 246, 0.3)' : '#bfdbfe';
   }};
   border-radius: ${theme.borderRadius.md};
   padding: ${theme.spacing.md};
@@ -495,10 +508,10 @@ const AlertCard = styled.div<{ $severity?: 'high' | 'medium' | 'low' }>`
   
   .alert-icon {
     color: ${(p) => {
-      if (p.$severity === 'high') return '#dc2626';
-      if (p.$severity === 'medium') return '#d97706';
-      return '#2563eb';
-    }};
+    if (p.$severity === 'high') return '#dc2626';
+    if (p.$severity === 'medium') return '#d97706';
+    return '#2563eb';
+  }};
     flex-shrink: 0;
     margin-top: 2px;
   }
@@ -518,15 +531,17 @@ const TrendBadge = styled.span<{ $direction?: 'increasing' | 'decreasing' | 'sta
   border-radius: ${theme.borderRadius.sm};
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
-  background: ${(p) => {
-    if (p.$direction === 'increasing') return '#d1fae5';
-    if (p.$direction === 'decreasing') return '#fee2e2';
-    return '#f3f4f6';
+  background: ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$direction === 'increasing') return isDark ? 'rgba(16, 185, 129, 0.2)' : '#d1fae5';
+    if (p.$direction === 'decreasing') return isDark ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2';
+    return isDark ? 'rgba(148, 163, 184, 0.2)' : '#f3f4f6';
   }};
-  color: ${(p) => {
-    if (p.$direction === 'increasing') return '#065f46';
-    if (p.$direction === 'decreasing') return '#991b1b';
-    return TEXT_COLOR_MUTED;
+  color: ${p => {
+    const isDark = p.theme.mode === 'dark';
+    if (p.$direction === 'increasing') return isDark ? '#6ee7b7' : '#065f46';
+    if (p.$direction === 'decreasing') return isDark ? '#fca5a5' : '#991b1b';
+    return TEXT_COLOR_MUTED(p);
   }};
 `;
 
@@ -688,7 +703,7 @@ export default function ReportPage() {
   const storeUser = useUserStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [startDate, setStartDate] = useState<string>(() => {
     const date = new Date();
     date.setFullYear(date.getFullYear() - 1);
@@ -700,7 +715,7 @@ export default function ReportPage() {
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
   });
-  
+
   const [financialSummary, setFinancialSummary] = useState<FinancialSummary | null>(null);
   const [incomeStatement, setIncomeStatement] = useState<IncomeStatement | null>(null);
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
@@ -728,7 +743,7 @@ export default function ReportPage() {
 
     setLoading(true);
     setError(null);
-    
+
     try {
       const userRole = user?.role?.toLowerCase();
       const isFinanceAdmin = userRole === 'finance_manager' || userRole === 'finance_admin';
@@ -742,7 +757,7 @@ export default function ReportPage() {
       // Employee: See only their own
       let accessibleUserIds: number[] | null = null;
       const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-      
+
       if (isAdmin) {
         // Admin can see all - no filtering needed
         accessibleUserIds = null;
@@ -753,13 +768,13 @@ export default function ReportPage() {
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
           const subordinatesRes = await apiClient.getSubordinates(userId);
           const subordinates = subordinatesRes?.data || [];
-          
+
           // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
           const validSubordinateIds = subordinates
             .map((sub: { id?: number | string; role?: string }) => {
               const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
               const subRole = (sub.role || '').toLowerCase();
-              
+
               // Only include accountants and employees, exclude Finance Admins and Managers
               if (!Number.isNaN(subId) && (subRole === 'accountant' || subRole === 'employee')) {
                 return subId;
@@ -767,10 +782,10 @@ export default function ReportPage() {
               return undefined;
             })
             .filter((id): id is number => id !== undefined);
-          
+
           // Include the finance admin themselves + their valid subordinates only
           accessibleUserIds = [userId, ...validSubordinateIds];
-          
+
           if (process.env.NODE_ENV === 'development') {
             console.log('Finance Admin - Accessible User IDs for Reports:', {
               userId: userId,
@@ -788,7 +803,7 @@ export default function ReportPage() {
         // Accountant: Get their Finance Admin's (manager's) subordinates
         const accountantId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
         let managerId: number | null = null;
-        
+
         // Try to get managerId from storeUser first
         const managerIdStr = storeUser?.managerId;
         if (managerIdStr) {
@@ -799,29 +814,29 @@ export default function ReportPage() {
             const currentUserRes = await apiClient.getCurrentUser();
             const currentUserData = currentUserRes?.data;
             if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
-              managerId = typeof currentUserData.manager_id === 'string' 
-                ? parseInt(currentUserData.manager_id, 10) 
+              managerId = typeof currentUserData.manager_id === 'string'
+                ? parseInt(currentUserData.manager_id, 10)
                 : Number(currentUserData.manager_id);
             }
           } catch (err) {
             console.warn('Failed to fetch current user profile for manager_id:', err);
           }
         }
-        
+
         if (managerId) {
           try {
             const financeAdminId = managerId;
-            
+
             // Get all subordinates of the Finance Admin
             const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
             const subordinates = subordinatesRes?.data || [];
-            
+
             // Filter subordinates to ONLY include accountants and employees (exclude other Finance Admins/Managers)
             const validSubordinateIds = subordinates
               .map((sub: { id?: number | string; role?: string }) => {
                 const subId = typeof sub.id === 'string' ? parseInt(sub.id, 10) : Number(sub.id);
                 const subRole = (sub.role || '').toLowerCase();
-                
+
                 // Only include accountants and employees, exclude Finance Admins and Managers
                 if (!Number.isNaN(subId) && (subRole === 'accountant' || subRole === 'employee')) {
                   return subId;
@@ -829,10 +844,10 @@ export default function ReportPage() {
                 return undefined;
               })
               .filter((id): id is number => id !== undefined);
-            
+
             // Include the Finance Admin themselves and their valid subordinates only
             accessibleUserIds = [financeAdminId, ...validSubordinateIds];
-            
+
             if (process.env.NODE_ENV === 'development') {
               console.log('Accountant - Accessible User IDs for Reports (from Finance Admin):', {
                 accountantId: accountantId,
@@ -859,7 +874,7 @@ export default function ReportPage() {
       }
 
       const dateParams = useDateFilter ? { startDate, endDate } : { startDate: undefined, endDate: undefined };
-      
+
       // Fetch sales data for the period (for detailed breakdowns)
       let salesData: unknown[] = [];
       try {
@@ -869,10 +884,10 @@ export default function ReportPage() {
           start_date: dateParams.startDate ? new Date(dateParams.startDate + 'T00:00:00').toISOString() : undefined,
           end_date: dateParams.endDate ? new Date(dateParams.endDate + 'T23:59:59').toISOString() : undefined,
         });
-        const salesArray = Array.isArray(salesResponse?.data) 
-          ? salesResponse.data 
-          : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data 
-            ? (salesResponse.data as { data?: unknown[] }).data || [] 
+        const salesArray = Array.isArray(salesResponse?.data)
+          ? salesResponse.data
+          : (salesResponse?.data && typeof salesResponse.data === 'object' && 'data' in salesResponse.data
+            ? (salesResponse.data as { data?: unknown[] }).data || []
             : []);
         salesData = salesArray || [];
 
@@ -896,29 +911,29 @@ export default function ReportPage() {
         console.warn('Failed to fetch detailed sales data for reports:', err);
         // Continue without sales data - we'll use sales summary API instead
       }
-      
+
       // Check if user can view inventory summary (Finance Admin, Admin, Manager)
-      const canViewInventory = user?.role === 'finance_manager' || 
-                               user?.role === 'finance_admin' || 
-                               user?.role === 'admin' || 
-                               user?.role === 'super_admin' ||
-                               user?.role === 'manager';
-      
+      const canViewInventory = user?.role === 'finance_manager' ||
+        user?.role === 'finance_admin' ||
+        user?.role === 'admin' ||
+        user?.role === 'super_admin' ||
+        user?.role === 'manager';
+
       // Check if user can view sales summary (Accountant, Finance Admin, Admin, Manager)
       const canViewSalesSummary = user?.role === 'accountant' ||
-                                  user?.role === 'finance_manager' || 
-                                  user?.role === 'finance_admin' || 
-                                  user?.role === 'admin' || 
-                                  user?.role === 'super_admin' ||
-                                  user?.role === 'manager';
-      
+        user?.role === 'finance_manager' ||
+        user?.role === 'finance_admin' ||
+        user?.role === 'admin' ||
+        user?.role === 'super_admin' ||
+        user?.role === 'manager';
+
       // Check if user can view forecasts (Admin, Finance Admin, Manager)
-      const canViewForecasts = user?.role === 'finance_manager' || 
-                               user?.role === 'finance_admin' || 
-                               user?.role === 'admin' || 
-                               user?.role === 'super_admin' ||
-                               user?.role === 'manager';
-      
+      const canViewForecasts = user?.role === 'finance_manager' ||
+        user?.role === 'finance_admin' ||
+        user?.role === 'admin' ||
+        user?.role === 'super_admin' ||
+        user?.role === 'manager';
+
       // Note: Backend APIs (getFinancialSummary, getIncomeStatement, getCashFlow) should already filter
       // data by user role. The frontend trusts these responses. Sales data is filtered above.
       const [summaryResult, incomeResult, cashFlowResult, inventoryResult, salesSummaryResult, forecastsResult] = await Promise.allSettled([
@@ -953,14 +968,14 @@ export default function ReportPage() {
           throw err;
         }) : Promise.resolve({ data: [] }),
       ]);
-      
+
       // Filter to only include POSTED sales for revenue/profit calculations
       // This ensures revenue and net profit are only calculated from approved sales
       const postedSalesData = salesData.filter((s: unknown) => {
         const sale = s as { status?: string };
         return sale.status === 'posted' || sale.status === 'POSTED' || sale.status?.toLowerCase() === 'posted';
       });
-      
+
       // Calculate sales totals from individual sales - ONLY from POSTED (approved) sales
       // This is a fallback if sales summary API is not available
       const totalSalesFromData = postedSalesData.reduce((sum: number, s: unknown) => {
@@ -982,10 +997,10 @@ export default function ReportPage() {
           const baseExpenses = safeNumber(summaryData.financials?.total_expenses);
           const calculatedRevenue = baseRevenue + totalSalesFromData;
           const calculatedProfit = calculatedRevenue - baseExpenses;
-          const calculatedProfitMargin = calculatedRevenue > 0 
+          const calculatedProfitMargin = calculatedRevenue > 0
             ? (calculatedProfit / calculatedRevenue) * 100
             : 0;
-          
+
           const enhancedSummary = {
             ...summaryData,
             financials: {
@@ -1003,7 +1018,7 @@ export default function ReportPage() {
               total: (summaryData.transaction_counts?.total || 0) + postedSalesData.length,
             },
           };
-          
+
           if (process.env.NODE_ENV === 'development') {
             console.log('Financial Summary loaded (initial):', {
               base_revenue: baseRevenue,
@@ -1036,7 +1051,7 @@ export default function ReportPage() {
           const calculatedProfitMargin = calculatedRevenue > 0
             ? (calculatedProfit / calculatedRevenue) * 100
             : 0;
-          
+
           setFinancialSummary({
             period: { start_date: startDate, end_date: endDate },
             financials: {
@@ -1061,7 +1076,7 @@ export default function ReportPage() {
           setFinancialSummary(null);
         }
       }
-      
+
       if (incomeResult.status === 'fulfilled') {
         const incomeData = incomeResult.value.data || incomeResult.value;
         if (incomeData && (incomeData.revenue || incomeData.expenses)) {
@@ -1073,7 +1088,7 @@ export default function ReportPage() {
           const calculatedProfitMargin = calculatedRevenue > 0
             ? (calculatedProfit / calculatedRevenue) * 100
             : 0;
-          
+
           const enhancedIncome = {
             ...incomeData,
             sales: {
@@ -1098,7 +1113,7 @@ export default function ReportPage() {
         console.error('Failed to load income statement:', incomeResult.reason);
         setIncomeStatement(null);
       }
-      
+
       if (cashFlowResult.status === 'fulfilled') {
         const cashFlowData = cashFlowResult.value.data || cashFlowResult.value;
         if (cashFlowData && (cashFlowData.summary || cashFlowData.daily_cash_flow)) {
@@ -1128,7 +1143,7 @@ export default function ReportPage() {
 
           const baseInflow = safeNumber(cashFlowData.summary?.total_inflow);
           const baseNetFlow = safeNumber(cashFlowData.summary?.net_cash_flow);
-          
+
           // Use sales revenue from summary result if available, otherwise use calculated totalSalesFromData
           // Check salesSummaryResult to get the sales revenue value
           let salesRevenueForCashFlow = totalSalesFromData;
@@ -1138,7 +1153,7 @@ export default function ReportPage() {
               salesRevenueForCashFlow = safeNumber((salesSummaryData as SalesSummary).total_revenue);
             }
           }
-          
+
           const enhancedCashFlow = {
             ...cashFlowData,
             summary: {
@@ -1159,12 +1174,12 @@ export default function ReportPage() {
         console.error('Failed to load cash flow:', cashFlowResult.reason);
         setCashFlow(null);
       }
-      
+
       // Handle inventory summary
       if (inventoryResult.status === 'fulfilled') {
         const inventoryData = inventoryResult.value.data || inventoryResult.value;
-        if (inventoryData && typeof inventoryData === 'object' && 
-            ('total_items' in inventoryData || 'total_selling_value' in inventoryData)) {
+        if (inventoryData && typeof inventoryData === 'object' &&
+          ('total_items' in inventoryData || 'total_selling_value' in inventoryData)) {
           setInventorySummary(inventoryData as InventorySummary);
         } else {
           setInventorySummary(null);
@@ -1176,16 +1191,16 @@ export default function ReportPage() {
         }
         setInventorySummary(null);
       }
-      
+
       // Handle sales summary and integrate with financial data
       // Sales summary API provides more accurate aggregated data from the backend
       if (salesSummaryResult.status === 'fulfilled') {
         const salesData = salesSummaryResult.value.data || salesSummaryResult.value;
-        if (salesData && typeof salesData === 'object' && 
-            ('total_sales' in salesData || 'total_revenue' in salesData)) {
+        if (salesData && typeof salesData === 'object' &&
+          ('total_sales' in salesData || 'total_revenue' in salesData)) {
           const salesSummaryData = salesData as SalesSummary;
           setSalesSummary(salesSummaryData);
-          
+
           // Always use sales summary revenue when available (more accurate than calculating from individual sales)
           // This ensures we use the backend's aggregated data which only includes POSTED sales
           // Update financial summary with accurate sales data from summary API
@@ -1197,14 +1212,14 @@ export default function ReportPage() {
               const baseRevenue = safeNumber(summaryData.financials?.total_revenue);
               const baseExpenses = safeNumber(summaryData.financials?.total_expenses);
               const salesRevenue = safeNumber(salesSummaryData.total_revenue);
-              
+
               // Total revenue = base revenue (from revenue entries) + sales revenue (from posted sales)
               const calculatedRevenue = baseRevenue + salesRevenue;
               const calculatedProfit = calculatedRevenue - baseExpenses;
-              const calculatedProfitMargin = calculatedRevenue > 0 
+              const calculatedProfitMargin = calculatedRevenue > 0
                 ? (calculatedProfit / calculatedRevenue) * 100
                 : 0;
-              
+
               const enhancedSummary = {
                 ...summaryData,
                 financials: {
@@ -1222,7 +1237,7 @@ export default function ReportPage() {
                   total: (summaryData.transaction_counts?.total || 0) + (salesSummaryData.posted_sales || postedSalesData.length),
                 },
               };
-              
+
               if (process.env.NODE_ENV === 'development') {
                 console.log('Financial Summary updated with Sales Summary:', {
                   base_revenue: baseRevenue,
@@ -1234,7 +1249,7 @@ export default function ReportPage() {
                   profit_margin: enhancedSummary.financials?.profit_margin,
                 });
               }
-              
+
               setFinancialSummary(enhancedSummary);
             }
           }
@@ -1248,7 +1263,7 @@ export default function ReportPage() {
         }
         setSalesSummary(null);
       }
-      
+
       // Process forecasts result
       if (forecastsResult.status === 'fulfilled') {
         const forecastsData = forecastsResult.value?.data || forecastsResult.value || [];
@@ -1280,7 +1295,7 @@ export default function ReportPage() {
         }
         setForecasts([]);
       }
-      
+
       if (summaryResult.status === 'rejected' && incomeResult.status === 'rejected' && cashFlowResult.status === 'rejected') {
         const firstError = summaryResult.reason || incomeResult.reason || cashFlowResult.reason;
         let errorMsg = 'Failed to load reports';
@@ -1304,14 +1319,14 @@ export default function ReportPage() {
         setIncomeStatement(null);
         setCashFlow(null);
       }
-      
+
     } catch (err: unknown) {
       const error = err as ErrorWithDetails;
       let errorMessage = 'Failed to load reports';
 
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
-        
+
         if (Array.isArray(detail)) {
           errorMessage = detail.map((e: unknown) => {
             if (typeof e === 'string') return e;
@@ -1333,7 +1348,7 @@ export default function ReportPage() {
       } else if ((err as ErrorWithDetails).message) {
         errorMessage = (err as ErrorWithDetails).message!;
       }
-      
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -1389,7 +1404,7 @@ export default function ReportPage() {
     try {
       const response = await apiClient.generateForecastWithAdvice(metric, modelType as any, 12);
       const responseData = (response as any)?.data || response;
-      
+
       if (responseData?.status === 'success') {
         // Update ML insights state
         setMlInsights((prev: any) => ({
@@ -1412,9 +1427,9 @@ export default function ReportPage() {
 
   // Load ML insights for all metrics
   const loadMLInsights = async () => {
-    if (!user || (user?.role !== 'admin' && user?.role !== 'super_admin' && 
-                  user?.role !== 'finance_admin' && user?.role !== 'finance_manager' && 
-                  user?.role !== 'manager')) {
+    if (!user || (user?.role !== 'admin' && user?.role !== 'super_admin' &&
+      user?.role !== 'finance_admin' && user?.role !== 'finance_manager' &&
+      user?.role !== 'manager')) {
       return;
     }
 
@@ -1423,7 +1438,7 @@ export default function ReportPage() {
       // Try to generate forecasts with advice for all metrics using best available models
       const metrics = ['expense', 'revenue', 'inventory'] as const;
       const insights: Record<string, any> = {};
-      
+
       // Try common models for each metric
       const modelMap = {
         expense: ['arima', 'linear_regression'],
@@ -1437,7 +1452,7 @@ export default function ReportPage() {
           try {
             const response = await apiClient.generateForecastWithAdvice(metric, modelType as any, 12);
             const responseData = (response as any)?.data || response;
-            
+
             if (responseData?.status === 'success') {
               insights[metric] = {
                 ...responseData,
@@ -1452,7 +1467,7 @@ export default function ReportPage() {
           }
         }
       }
-      
+
       setMlInsights(insights);
     } catch (error) {
       console.error('Failed to load ML insights:', error);
@@ -1503,7 +1518,7 @@ export default function ReportPage() {
             />
           </DateInputGroup>
           <ButtonRow>
-            <Button 
+            <Button
               onClick={() => {
                 const oneYearAgo = new Date();
                 oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
@@ -1519,7 +1534,7 @@ export default function ReportPage() {
             >
               Show All Data (1 Year)
             </Button>
-            <Button 
+            <Button
               onClick={(e) => {
                 e.preventDefault();
                 loadReports(false);
@@ -1662,7 +1677,7 @@ export default function ReportPage() {
                                 ))
                             ) : (
                               <tr>
-                                <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+                                <td colSpan={2} style={{ textAlign: 'center', color: theme.colors.textSecondary }}>
                                   No revenue data
                                 </td>
                               </tr>
@@ -1693,7 +1708,7 @@ export default function ReportPage() {
                                 ))
                             ) : (
                               <tr>
-                                <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+                                <td colSpan={2} style={{ textAlign: 'center', color: theme.colors.textSecondary }}>
                                   No sales data
                                 </td>
                               </tr>
@@ -1725,7 +1740,7 @@ export default function ReportPage() {
                               ))
                           ) : (
                             <tr>
-                              <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+                              <td colSpan={2} style={{ textAlign: 'center', color: theme.colors.textSecondary }}>
                                 No expense data
                               </td>
                             </tr>
@@ -1825,7 +1840,7 @@ export default function ReportPage() {
                               ))
                           ) : (
                             <tr>
-                              <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+                              <td colSpan={2} style={{ textAlign: 'center', color: theme.colors.textSecondary }}>
                                 No revenue data for this period
                               </td>
                             </tr>
@@ -1879,7 +1894,7 @@ export default function ReportPage() {
                               ))
                           ) : (
                             <tr>
-                              <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+                              <td colSpan={2} style={{ textAlign: 'center', color: theme.colors.textSecondary }}>
                                 No expense data for this period
                               </td>
                             </tr>
@@ -1977,7 +1992,7 @@ export default function ReportPage() {
                               ))
                           ) : (
                             <tr>
-                              <td colSpan={4} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+                              <td colSpan={4} style={{ textAlign: 'center', color: theme.colors.textSecondary }}>
                                 No cash flow data for this period
                               </td>
                             </tr>
@@ -2066,7 +2081,7 @@ export default function ReportPage() {
                           </div>
                         </SummaryCard>
                       </SummaryGrid>
-                      
+
                       <div style={{ marginTop: theme.spacing.xl }}>
                         <SectionTitle>Sales Status Breakdown</SectionTitle>
                         <CategoryTable>
@@ -2082,7 +2097,7 @@ export default function ReportPage() {
                               <td>Posted (Approved)</td>
                               <td style={{ textAlign: 'right' }}>{salesSummary.posted_sales || 0}</td>
                               <td style={{ textAlign: 'right' }}>
-                                {salesSummary.total_sales > 0 
+                                {salesSummary.total_sales > 0
                                   ? ((salesSummary.posted_sales || 0) / salesSummary.total_sales * 100).toFixed(1)
                                   : 0}%
                               </td>
@@ -2091,7 +2106,7 @@ export default function ReportPage() {
                               <td>Pending (Awaiting Approval)</td>
                               <td style={{ textAlign: 'right' }}>{salesSummary.pending_sales || 0}</td>
                               <td style={{ textAlign: 'right' }}>
-                                {salesSummary.total_sales > 0 
+                                {salesSummary.total_sales > 0
                                   ? ((salesSummary.pending_sales || 0) / salesSummary.total_sales * 100).toFixed(1)
                                   : 0}%
                               </td>
@@ -2196,7 +2211,7 @@ export default function ReportPage() {
                           </SummaryCard>
                         )}
                       </SummaryGrid>
-                      
+
                       <div style={{ marginTop: theme.spacing.xl }}>
                         <SectionTitle>Inventory Valuation Analysis</SectionTitle>
                         <CategoryTable>
@@ -2227,7 +2242,7 @@ export default function ReportPage() {
                             </tr>
                             <tr style={{ fontWeight: theme.typography.fontWeights.bold, borderTop: `2px solid ${theme.colors.border}` }}>
                               <td>Potential Profit</td>
-                              <td style={{ textAlign: 'right', color: PRIMARY_COLOR }}>
+                              <td style={{ textAlign: 'right', color: theme.colors.primary }}>
                                 {formatCurrency(inventorySummary.potential_profit || 0)}
                               </td>
                             </tr>
@@ -2294,21 +2309,21 @@ export default function ReportPage() {
                     <>
                       {Object.entries(mlInsights).map(([metric, insight]: [string, any]) => {
                         if (!insight || !insight.forecast) return null;
-                        
+
                         const trend = insight.trend_analysis;
                         const advice = insight.advice || [];
                         const alerts = insight.alerts || [];
-                        
+
                         return (
                           <div key={metric} style={{ marginBottom: theme.spacing.xl }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
                               <SectionTitle>
                                 {capitalize(metric)} Forecast & Insights
                                 {insight.model_type && typeof insight.model_type === 'string' && (
-                                  <span style={{ 
-                                    fontSize: theme.typography.fontSizes.sm, 
+                                  <span style={{
+                                    fontSize: theme.typography.fontSizes.sm,
                                     fontWeight: 400,
-                                    color: TEXT_COLOR_MUTED,
+                                    color: theme.colors.textSecondary,
                                     marginLeft: theme.spacing.sm
                                   }}>
                                     (Model: {insight.model_type.toUpperCase()})
@@ -2319,28 +2334,28 @@ export default function ReportPage() {
 
                             {/* Trend Analysis */}
                             {trend && (
-                              <div style={{ 
-                                background: theme.colors.backgroundSecondary, 
-                                padding: theme.spacing.lg, 
+                              <div style={{
+                                background: theme.colors.backgroundSecondary,
+                                padding: theme.spacing.lg,
                                 borderRadius: theme.borderRadius.md,
                                 marginBottom: theme.spacing.md
                               }}>
-                                <div style={{ 
-                                  fontSize: theme.typography.fontSizes.sm, 
+                                <div style={{
+                                  fontSize: theme.typography.fontSizes.sm,
                                   fontWeight: theme.typography.fontWeights.medium,
-                                  color: TEXT_COLOR_MUTED,
+                                  color: theme.colors.textSecondary,
                                   marginBottom: theme.spacing.sm
                                 }}>
                                   Trend Analysis
                                 </div>
                                 <div style={{ display: 'flex', gap: theme.spacing.md, flexWrap: 'wrap' }}>
                                   <TrendBadge $direction={(trend?.direction || 'stable') as any}>
-                                    {trend?.direction === 'increasing' ? <ArrowUpRight size={14} /> : 
-                                     trend?.direction === 'decreasing' ? <ArrowDownRight size={14} /> : 
-                                     <TrendingUp size={14} />}
+                                    {trend?.direction === 'increasing' ? <ArrowUpRight size={14} /> :
+                                      trend?.direction === 'decreasing' ? <ArrowDownRight size={14} /> :
+                                        <TrendingUp size={14} />}
                                     {capitalize(trend?.direction || 'stable')} {trend?.percentage !== undefined && trend.percentage !== null && `(${Math.abs(trend.percentage).toFixed(1)}%)`}
                                   </TrendBadge>
-                                  <span style={{ color: TEXT_COLOR_MUTED, fontSize: theme.typography.fontSizes.sm }}>
+                                  <span style={{ color: theme.colors.textSecondary, fontSize: theme.typography.fontSizes.sm }}>
                                     {trend?.average !== undefined && `Avg: ${formatCurrency(trend.average)}`}
                                     {trend?.average !== undefined && (trend?.max !== undefined || trend?.min !== undefined) && ' | '}
                                     {trend?.max !== undefined && `Max: ${formatCurrency(trend.max)}`}
@@ -2360,9 +2375,9 @@ export default function ReportPage() {
                                 padding: theme.spacing.md,
                                 marginBottom: theme.spacing.md
                               }}>
-                                <div style={{ 
-                                  display: 'flex', 
-                                  gap: theme.spacing.sm, 
+                                <div style={{
+                                  display: 'flex',
+                                  gap: theme.spacing.sm,
                                   alignItems: 'flex-start',
                                   color: '#1e40af',
                                   fontSize: theme.typography.fontSizes.sm,
@@ -2402,8 +2417,8 @@ export default function ReportPage() {
                                   if (!rec || typeof rec !== 'object') return null;
                                   const priority = rec.priority === 'high' ? 'high' : rec.priority === 'medium' ? 'medium' : 'low';
                                   return (
-                                    <InsightCard 
-                                      key={index} 
+                                    <InsightCard
+                                      key={index}
                                       $priority={priority}
                                     >
                                       <div className="insight-header">
@@ -2416,7 +2431,7 @@ export default function ReportPage() {
                                       <div className="insight-message">{rec.message || 'No message available'}</div>
                                       {rec.actions && Array.isArray(rec.actions) && rec.actions.length > 0 && (
                                         <div className="insight-actions">
-                                          <strong style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                                          <strong style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>
                                             Recommended Actions:
                                           </strong>
                                           <ul>
@@ -2461,7 +2476,7 @@ export default function ReportPage() {
                                     })}
                                     {Array.isArray(insight.forecast) && insight.forecast.length > 6 && (
                                       <tr>
-                                        <td colSpan={2} style={{ textAlign: 'center', color: TEXT_COLOR_MUTED, fontStyle: 'italic' }}>
+                                        <td colSpan={2} style={{ textAlign: 'center', color: theme.colors.textSecondary, fontStyle: 'italic' }}>
                                           ... and {insight.forecast.length - 6} more periods
                                         </td>
                                       </tr>
@@ -2575,12 +2590,12 @@ export default function ReportPage() {
                             AI Models
                           </div>
                           <div className="value">
-                            {forecasts.filter(f => 
-                              f.method === 'arima' || 
-                              f.method === 'prophet' || 
-                              f.method === 'xgboost' || 
-                              f.method === 'lstm' || 
-                              f.method === 'linear_regression' || 
+                            {forecasts.filter(f =>
+                              f.method === 'arima' ||
+                              f.method === 'prophet' ||
+                              f.method === 'xgboost' ||
+                              f.method === 'lstm' ||
+                              f.method === 'linear_regression' ||
                               f.method === 'sarima'
                             ).length}
                           </div>
@@ -2608,19 +2623,19 @@ export default function ReportPage() {
                             {forecasts.map((forecast) => {
                               const forecastData = forecast.forecast_data || [];
                               const totalForecasted = forecastData.reduce((sum, point) => sum + (point.forecasted_value || 0), 0);
-                              const isAIModel = forecast.method === 'arima' || 
-                                               forecast.method === 'prophet' || 
-                                               forecast.method === 'xgboost' || 
-                                               forecast.method === 'lstm' || 
-                                               forecast.method === 'linear_regression' || 
-                                               forecast.method === 'sarima';
-                              
+                              const isAIModel = forecast.method === 'arima' ||
+                                forecast.method === 'prophet' ||
+                                forecast.method === 'xgboost' ||
+                                forecast.method === 'lstm' ||
+                                forecast.method === 'linear_regression' ||
+                                forecast.method === 'sarima';
+
                               return (
                                 <tr key={forecast.id}>
                                   <td>
                                     <strong>{forecast.name}</strong>
                                     {forecast.description && (
-                                      <div style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginTop: theme.spacing.xs }}>
+                                      <div style={{ fontSize: theme.typography.fontSizes.xs, color: theme.colors.textSecondary, marginTop: theme.spacing.xs }}>
                                         {forecast.description}
                                       </div>
                                     )}
@@ -2666,12 +2681,12 @@ export default function ReportPage() {
                             {['revenue', 'expense', 'profit', 'inventory'].map((type) => {
                               const typeForecasts = forecasts.filter(f => f.forecast_type === type);
                               if (typeForecasts.length === 0) return null;
-                              
+
                               const totalValue = typeForecasts.reduce((sum, f) => {
                                 const data = f.forecast_data || [];
                                 return sum + data.reduce((s, p) => s + (p.forecasted_value || 0), 0);
                               }, 0);
-                              
+
                               return (
                                 <tr key={type}>
                                   <td style={{ textTransform: 'capitalize', fontWeight: theme.typography.fontWeights.medium }}>

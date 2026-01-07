@@ -214,7 +214,7 @@ const StatGrid = styled.div`
 const StatCard = styled.div`
   border-radius: 20px;
   padding: 24px;
-  background: #ffffff;
+  background: ${props => props.theme.colors.background};
   border: 1px solid #e2e8f0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -279,7 +279,7 @@ const ServiceRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: #ffffff;
+  background: ${props => props.theme.colors.background};
   border: 1px solid #f1f5f9;
   border-radius: 16px;
   transition: all 0.2s;
@@ -330,7 +330,7 @@ const QuickActionCard = styled(Link)`
   &:hover {
     transform: translateY(-4px) scale(1.02);
     box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.1);
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
     border-color: ${PRIMARY_COLOR}40;
   }
 `;
@@ -361,7 +361,7 @@ const RoleList = styled.div`
 `;
 
 const RoleCard = styled.div`
-  background: #ffffff;
+  background: ${props => props.theme.colors.background};
   border: 1px solid #f1f5f9;
   border-radius: 16px;
   padding: 20px;

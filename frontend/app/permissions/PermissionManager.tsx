@@ -48,7 +48,7 @@ const Container = styled.div`
 `;
 
 const HeaderContainer = styled.div`
-  background: #ffffff;
+  background: ${props => props.theme.colors.background};
   color: ${TEXT_COLOR_DARK};
   padding: ${theme.spacing.xl};
   margin: -${theme.spacing.lg} -${theme.spacing.lg} ${theme.spacing.xl};
@@ -81,7 +81,7 @@ const Subtitle = styled.h3`
 `;
 
 const Card = styled.div`
-  background: #ffffff;
+  background: ${props => props.theme.colors.background};
   border-radius: 8px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   padding: ${theme.spacing.lg};
@@ -106,7 +106,7 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
     border-color: ${PRIMARY_COLOR};
     box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
   }
@@ -147,7 +147,7 @@ const ConfirmOverlay = styled.div`
 `;
 
 const ConfirmDialog = styled.div`
-  background: white;
+  background: ${props => props.theme.colors.background};
   border-radius: ${theme.borderRadius.md};
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   padding: ${theme.spacing.xl} * 1.5;
@@ -432,7 +432,7 @@ const TableWrapper = styled.div`
   }
 
   th {
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
     font-weight: 600;
     color: #65676B;
     text-transform: none;

@@ -322,7 +322,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-    background: white;
+    background: ${props => props.theme.colors.background};
     border-radius: 16px;
     width: 100%;
     max-width: 700px;
@@ -498,7 +498,7 @@ const PageActions = styled.div`
         height: 38px;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
-        background: white;
+        background: ${props => props.theme.colors.background};
         color: ${TEXT_PRIMARY};
         cursor: pointer;
         transition: all 0.2s ease;

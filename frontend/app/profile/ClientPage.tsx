@@ -224,8 +224,8 @@ const StyledInput = styled.input`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -234,7 +234,7 @@ const StyledInput = styled.input`
   &:focus {
     border-color: ${PRIMARY_COLOR};
     box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -246,7 +246,7 @@ const StyledInput = styled.input`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -263,8 +263,8 @@ const StyledTextArea = styled.textarea`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -274,7 +274,7 @@ const StyledTextArea = styled.textarea`
   &:focus {
     border-color: ${PRIMARY_COLOR};
     box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -286,7 +286,7 @@ const StyledTextArea = styled.textarea`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;

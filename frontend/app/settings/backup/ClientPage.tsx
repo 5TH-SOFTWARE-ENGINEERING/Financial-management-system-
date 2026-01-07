@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
-import { 
+import {
   Database, Download, Trash2, RefreshCw, HardDrive, Clock, FileText, AlertTriangle,
-  CheckCircle,Loader,X} from 'lucide-react';
+  CheckCircle, Loader, X
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
@@ -25,39 +26,39 @@ type ErrorWithDetails = {
 
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
-    if (active) {
-        // Active state colors (brighter)
-        const activeColors: Record<string, string> = {
-            'database': '#3b82f6',           // Blue
-            'download': '#22c55e',           // Green
-            'trash2': '#ef4444',             // Red
-            'refresh-cw': '#06b6d4',         // Cyan
-            'hard-drive': '#8b5cf6',         // Purple
-            'clock': '#f59e0b',              // Amber
-            'file-text': '#6366f1',           // Indigo
-            'alert-triangle': '#f59e0b',     // Amber
-            'check-circle': '#22c55e',        // Green
-            'loader': '#3b82f6',             // Blue
-            'x': '#6b7280',                  // Gray
-        };
-        return activeColors[iconType] || '#6b7280';
-    } else {
-        // Inactive state colors (muted but colorful)
-        const inactiveColors: Record<string, string> = {
-            'database': '#60a5fa',           // Light Blue
-            'download': '#4ade80',           // Light Green
-            'trash2': '#f87171',             // Light Red
-            'refresh-cw': '#22d3ee',         // Light Cyan
-            'hard-drive': '#a78bfa',         // Light Purple
-            'clock': '#fbbf24',              // Light Amber
-            'file-text': '#818cf8',           // Light Indigo
-            'alert-triangle': '#fbbf24',      // Light Amber
-            'check-circle': '#4ade80',        // Light Green
-            'loader': '#60a5fa',             // Light Blue
-            'x': '#9ca3af',                  // Light Gray
-        };
-        return inactiveColors[iconType] || '#9ca3af';
-    }
+  if (active) {
+    // Active state colors (brighter)
+    const activeColors: Record<string, string> = {
+      'database': '#3b82f6',           // Blue
+      'download': '#22c55e',           // Green
+      'trash2': '#ef4444',             // Red
+      'refresh-cw': '#06b6d4',         // Cyan
+      'hard-drive': '#8b5cf6',         // Purple
+      'clock': '#f59e0b',              // Amber
+      'file-text': '#6366f1',           // Indigo
+      'alert-triangle': '#f59e0b',     // Amber
+      'check-circle': '#22c55e',        // Green
+      'loader': '#3b82f6',             // Blue
+      'x': '#6b7280',                  // Gray
+    };
+    return activeColors[iconType] || '#6b7280';
+  } else {
+    // Inactive state colors (muted but colorful)
+    const inactiveColors: Record<string, string> = {
+      'database': '#60a5fa',           // Light Blue
+      'download': '#4ade80',           // Light Green
+      'trash2': '#f87171',             // Light Red
+      'refresh-cw': '#22d3ee',         // Light Cyan
+      'hard-drive': '#a78bfa',         // Light Purple
+      'clock': '#fbbf24',              // Light Amber
+      'file-text': '#818cf8',           // Light Indigo
+      'alert-triangle': '#fbbf24',      // Light Amber
+      'check-circle': '#4ade80',        // Light Green
+      'loader': '#60a5fa',             // Light Blue
+      'x': '#9ca3af',                  // Light Gray
+    };
+    return inactiveColors[iconType] || '#9ca3af';
+  }
 };
 
 // Icon styled components
@@ -118,22 +119,22 @@ const Header = styled.div`
   align-items: center;
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
 `;
 
 const Title = styled.h1`
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   display: flex;
   align-items: center;
   gap: 0.5rem;
 `;
 
 const Card = styled.div`
-  background-color: white;
+  background-color: ${props => props.theme.colors.card};
   border-radius: 0.375rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: ${props => props.theme.shadows.sm};
   margin-bottom: 1.25rem;
 `;
 
@@ -142,13 +143,13 @@ const CardHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
 `;
 
 const CardTitle = styled.h3`
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -167,12 +168,12 @@ const Label = styled.label`
   font-size: 0.875rem;
   font-weight: 500;
   margin-bottom: 0.375rem;
-  color: #4b5563;
+  color: ${props => props.theme.colors.textSecondary};
 `;
 
 const HelperText = styled.p`
   font-size: 0.75rem;
-  color: #6b7280;
+  color: ${props => props.theme.colors.mutedForeground};
   margin-top: 0.25rem;
 `;
 
@@ -211,7 +212,7 @@ const SwitchSlider = styled.span`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #e5e7eb;
+  background-color: ${props => props.theme.colors.border};
   transition: 0.4s;
   border-radius: 24px;
   
@@ -222,7 +223,7 @@ const SwitchSlider = styled.span`
     width: 18px;
     left: 3px;
     bottom: 3px;
-    background-color: white;
+    background-color: ${props => props.theme.colors.card};
     transition: 0.4s;
     border-radius: 50%;
   }
@@ -246,13 +247,13 @@ const BackupItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 0.375rem;
-  background-color: #f9fafb;
+  background-color: ${props => props.theme.colors.backgroundSecondary};
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #f3f4f6;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
   }
 `;
 
@@ -265,7 +266,7 @@ const BackupInfo = styled.div`
 
 const BackupName = styled.div`
   font-weight: 600;
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   font-size: 0.875rem;
   display: flex;
   align-items: center;
@@ -276,7 +277,7 @@ const BackupDetails = styled.div`
   display: flex;
   gap: 1rem;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: ${props => props.theme.colors.mutedForeground};
   flex-wrap: wrap;
 `;
 
@@ -294,18 +295,40 @@ const BackupActions = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 3rem 1rem;
-  color: #6b7280;
+  color: ${props => props.theme.colors.mutedForeground};
+  
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: ${props => props.theme.colors.textDark};
+    margin-bottom: 0.5rem;
+  }
+  
+  p {
+    color: ${props => props.theme.colors.mutedForeground};
+    margin-bottom: 1rem;
+  }
+  
+  .secondary-text {
+    color: ${props => props.theme.colors.textSecondary};
+    font-size: 0.875rem;
+  }
+`;
+
+const ModalText = styled.p`
+  margin-bottom: 1rem;
+  color: ${props => props.theme.colors.textSecondary};
 `;
 
 const Message = styled.div<{ type: 'error' | 'success' | 'warning' }>`
-  background-color: ${props => 
-    props.type === 'error' ? '#fee2e2' : 
-    props.type === 'warning' ? '#fef3c7' : 
-    '#dcfce7'};
-  color: ${props => 
-    props.type === 'error' ? '#b91c1c' : 
-    props.type === 'warning' ? '#92400e' : 
-    '#166534'};
+  background-color: ${props =>
+    props.type === 'error' ? '#fee2e2' :
+      props.type === 'warning' ? '#fef3c7' :
+        '#dcfce7'};
+  color: ${props =>
+    props.type === 'error' ? '#b91c1c' :
+      props.type === 'warning' ? '#92400e' :
+        '#166534'};
   padding: 0.75rem;
   border-radius: 0.25rem;
   margin-bottom: 1.25rem;
@@ -329,12 +352,12 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background-color: white;
+  background-color: ${props => props.theme.colors.card};
   border-radius: 0.5rem;
   padding: 1.5rem;
   max-width: 500px;
   width: 90%;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: ${props => props.theme.shadows.md};
 `;
 
 const ModalHeader = styled.div`
@@ -347,7 +370,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -357,25 +380,27 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: ${props => props.theme.colors.mutedForeground};
   padding: 0.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
   
   &:hover {
-    color: #111827;
+    color: ${props => props.theme.colors.textDark};
   }
 `;
 
 const PasswordInput = styled.input`
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 0.375rem;
   font-size: 0.875rem;
   margin-top: 0.5rem;
   transition: border-color 0.2s;
+  background-color: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text};
   
   &:focus {
     outline: none;
@@ -384,7 +409,7 @@ const PasswordInput = styled.input`
   }
   
   &:disabled {
-    background-color: #f3f4f6;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
     cursor: not-allowed;
   }
 `;
@@ -461,12 +486,12 @@ export default function BackupSettingsPage() {
 
   useEffect(() => {
     if (!user) return;
-    
+
     // Check role upfront for better UX (optimistic permission check)
     if (hasRequiredRole) {
       setHasPermission(true);
     }
-    
+
     // Try to load backups - will get 403 if user doesn't have permission
     loadBackups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -514,7 +539,7 @@ export default function BackupSettingsPage() {
       const message = response.data?.message || 'Backup started in background.';
       setSuccess(message);
       toast.success(message);
-      
+
       // Refresh backup list after a delay
       setTimeout(() => {
         loadBackups();
@@ -557,7 +582,7 @@ export default function BackupSettingsPage() {
       setSuccess(message);
       toast.success(message);
       setSelectedBackup(null);
-      
+
       // Refresh backup list
       setTimeout(() => {
         loadBackups();
@@ -608,7 +633,7 @@ export default function BackupSettingsPage() {
       setSelectedBackup(null);
       setDeletePassword('');
       setShowDeleteModal(false);
-      
+
       // Refresh backup list
       loadBackups();
     } catch (err: unknown) {
@@ -681,13 +706,13 @@ export default function BackupSettingsPage() {
                     <AlertTriangle size={48} />
                   </IconWrapper>
                 </div>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#111827', marginBottom: '0.5rem' }}>
+                <h3>
                   Access Denied
                 </h3>
-                <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+                <p>
                   Backup management requires ADMIN, FINANCE_ADMIN, or SUPER_ADMIN role.
                 </p>
-                <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                <p className="secondary-text">
                   Please contact your administrator if you need access to this feature.
                 </p>
               </EmptyState>
@@ -926,9 +951,9 @@ export default function BackupSettingsPage() {
                     This action will restore the backup and may overwrite current data. This cannot be undone.
                   </span>
                 </Message>
-                <p style={{ marginBottom: '1rem', color: '#4b5563' }}>
+                <ModalText>
                   Are you sure you want to restore the backup <strong>{selectedBackup.name}</strong>?
-                </p>
+                </ModalText>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                   <Button
                     variant="secondary"
@@ -994,9 +1019,9 @@ export default function BackupSettingsPage() {
                     This action will permanently delete the backup. This cannot be undone.
                   </span>
                 </Message>
-                <p style={{ marginBottom: '1rem', color: '#4b5563' }}>
+                <ModalText>
                   Are you sure you want to delete the backup <strong>{selectedBackup.name}</strong>?
-                </p>
+                </ModalText>
                 <div style={{ marginBottom: '1rem' }}>
                   <Label htmlFor="deletePassword">Enter your password to confirm</Label>
                   <PasswordInput

@@ -5,6 +5,7 @@ import React from 'react';
 import styled from 'styled-components';
 import  Navbar  from '@/components/common/Navbar';
 import  Sidebar  from '@/components/common/Sidebar';
+import { theme } from '@/components/common/theme';
 
 const LayoutContainer = styled.div`
   display: flex;
@@ -15,7 +16,7 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 16%; // Width of the sidebar
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: ${theme.colors.backgroundSecondary};
 `;
 
 const ContentWrapper = styled.div`

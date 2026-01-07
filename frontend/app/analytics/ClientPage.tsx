@@ -18,10 +18,12 @@ import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const PRIMARY_LIGHT = '#e8f5e9';
+const PRIMARY_LIGHT = (props: any) => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : '#e8f5e9';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark'
+  ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)`
+  : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -1071,7 +1073,7 @@ const AnalyticsPage: React.FC = () => {
                   <h4 style={{
                     fontSize: `clamp(${theme.typography.fontSizes.lg}, 1.5vw, 22px)`,
                     fontWeight: theme.typography.fontWeights.bold,
-                    color: TEXT_COLOR_DARK,
+                    color: theme.colors.text,
                     margin: `${theme.spacing.lg} 0 ${theme.spacing.md}`,
                     textAlign: 'center'
                   }}>

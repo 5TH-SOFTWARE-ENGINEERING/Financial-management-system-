@@ -13,10 +13,10 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const PRIMARY_LIGHT = '#e8f5e9';
+const PRIMARY_LIGHT = (props: any) => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : '#e8f5e9';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -96,8 +96,8 @@ const StyledInput = styled.input`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -275,7 +275,7 @@ const StatusGrid = styled.div`
 
 const StatusItem = styled.div`
   padding: ${theme.spacing.md};
-  background: #f9fafb;
+  background: ${theme.colors.backgroundSecondary};
   border-radius: ${theme.borderRadius.sm};
   border: 1px solid #e5e7eb;
   

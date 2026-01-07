@@ -29,10 +29,10 @@ import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const PRIMARY_LIGHT = '#e8f5e9';
+const PRIMARY_LIGHT = (props: any) => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : '#e8f5e9';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -240,8 +240,8 @@ const StyledSelect = styled.select`
   border: 1.5px solid #e5e7eb;
   border-radius: 8px;
   font-size: 14px;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   cursor: pointer;
   
   &:focus {

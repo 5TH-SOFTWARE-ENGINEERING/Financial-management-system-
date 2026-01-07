@@ -76,7 +76,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h3`
   font-size: ${theme.typography.fontSizes.lg};
   font-weight: ${theme.typography.fontWeights.bold};
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   margin: 0;
   display: flex;
   align-items: center;
@@ -94,7 +94,7 @@ const CloseButton = styled.button`
   
   &:hover {
     background: ${theme.colors.backgroundSecondary};
-    color: #111827;
+    color: ${props => props.theme.colors.textDark};
   }
   
   svg {
@@ -129,7 +129,7 @@ const DetailsBox = styled.div`
 const DetailsTitle = styled.h4`
   font-size: ${theme.typography.fontSizes.md};
   font-weight: ${theme.typography.fontWeights.bold};
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   margin: 0 0 ${theme.spacing.md} 0;
   display: flex;
   align-items: center;
@@ -157,7 +157,7 @@ const DetailLabel = styled.span`
 
 const DetailValue = styled.span`
   font-size: ${theme.typography.fontSizes.md};
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   font-weight: 500;
 `;
 
@@ -169,7 +169,7 @@ const Label = styled.label`
   display: block;
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   margin-bottom: ${theme.spacing.xs};
 `;
 
@@ -186,7 +186,7 @@ const PasswordInputWrapper = styled.div`
     border-radius: ${theme.borderRadius.md};
     background: ${theme.colors.background};
     font-size: ${theme.typography.fontSizes.md};
-    color: #111827;
+    color: ${props => props.theme.colors.textDark};
     transition: all ${theme.transitions.default};
     
     &:focus {
@@ -223,7 +223,7 @@ const PasswordInputWrapper = styled.div`
     transition: all ${theme.transitions.default};
     
     &:hover {
-      color: #111827;
+      color: ${props => props.theme.colors.textDark};
       background: ${theme.colors.backgroundSecondary};
     }
     

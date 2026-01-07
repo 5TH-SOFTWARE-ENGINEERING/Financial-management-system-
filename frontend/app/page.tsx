@@ -194,7 +194,7 @@ const Subtitle = styled.p`
 
 const FeatureSection = styled.section`
   padding: 5rem 1.5rem;
-  background-color: #111827;
+  background-color: ${props => props.theme.colors.textDark};
   position: relative;
   z-index: 1;
   

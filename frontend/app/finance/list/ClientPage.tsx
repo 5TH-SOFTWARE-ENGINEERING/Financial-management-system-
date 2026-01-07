@@ -470,7 +470,7 @@ const Badge = styled.span<{ $variant: 'admin' | 'finance_manager' | 'finance_adm
       case 'inactive':
         return 'background-color: #fee2e2; color: #991b1b;';
       default:
-        return 'background-color: #f3f4f6; color: #374151;';
+        return 'background-color: ${theme.colors.backgroundSecondary}; color: #374151;';
     }
   }}
 `;

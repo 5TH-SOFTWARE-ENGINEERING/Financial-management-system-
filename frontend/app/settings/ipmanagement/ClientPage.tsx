@@ -44,9 +44,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { theme } from '@/components/common/theme';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark || '#000';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
 // Animations
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -61,20 +61,20 @@ const pulse = keyframes`
 
 // Styled Components
 const PageWrapper = styled.div`
-    padding: ${theme.spacing.xl};
+    padding: ${props => props.theme.spacing.xl};
     max-width: 100%;
     margin: 20px auto;
     min-height: 100vh;
-    background-color: #f0f2f5;
+    background-color: ${props => props.theme.colors.backgroundSecondary || '#f0f2f5'};
     animation: ${fadeIn} 0.5s ease-out;
 `;
 
 const HeaderSection = styled.div`
     max-width: 1200px;
-    margin: 0 auto ${theme.spacing.lg};
+    margin: 0 auto ${props => props.theme.spacing.lg};
     display: flex;
     flex-direction: column;
-    gap: ${theme.spacing.md};
+    gap: ${props => props.theme.spacing.md};
     
     @media (min-width: 768px) {
         flex-direction: row;
@@ -87,15 +87,15 @@ const TitleGroup = styled.div`
     h1 {
         font-size: 1.75rem;
         font-weight: 700;
-        color: #1c1e21;
+        color: ${props => props.theme.colors.textDark};
         margin: 0;
         display: flex;
         align-items: center;
-        gap: ${theme.spacing.sm};
+        gap: ${props => props.theme.spacing.sm};
         letter-spacing: -0.01em;
         
         svg {
-            color: ${theme.colors.primary};
+            color: ${props => props.theme.colors.primary};
             width: 28px;
             height: 28px;
         }
@@ -112,11 +112,11 @@ const TitleGroup = styled.div`
 const ActionButtons = styled.div`
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.sm};
+    gap: ${props => props.theme.spacing.sm};
 `;
 
 const Card = styled.div`
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
     border-radius: 8px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05);
     margin: 0 auto;
@@ -124,12 +124,12 @@ const Card = styled.div`
 `;
 
 const SearchContainer = styled.div`
-    padding: ${theme.spacing.md};
-    border-bottom: 1px solid #dfe3e8;
+    padding: ${props => props.theme.spacing.md};
+    border-bottom: 1px solid ${props => props.theme.colors.border};
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.md};
-    background: #fff;
+    gap: ${props => props.theme.spacing.md};
+    background: ${props => props.theme.colors.card};
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     
@@ -159,8 +159,8 @@ const SearchContainer = styled.div`
             width: 100%;
             
             &:focus {
-                background: white;
-                border-color: ${theme.colors.primary};
+                background: ${props => props.theme.colors.background};
+                border-color: ${props => props.theme.colors.primary};
                 box-shadow: 0 0 0 2px rgba(0, 170, 0, 0.1);
                 outline: none;
             }
@@ -184,23 +184,23 @@ const StyledTableContainer = styled.div`
     }
     
     th {
-        background: #f0f2f5; // Header bg
-        color: #65676b;
+        background: ${props => props.theme.colors.backgroundSecondary}; // Header bg
+        color: ${props => props.theme.colors.textSecondary};
         font-weight: 600;
         font-size: 0.8rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         padding: 12px 16px;
-        border-bottom: 1px solid #dfe3e8;
-        border-top: 1px solid #dfe3e8;
+        border-bottom: 1px solid ${props => props.theme.colors.border};
+        border-top: 1px solid ${props => props.theme.colors.border};
         text-align: left;
     }
     
     td {
         padding: 16px;
-        border-bottom: 1px solid #dfe3e8;
+        border-bottom: 1px solid ${props => props.theme.colors.border};
         vertical-align: middle;
-        color: #1c1e21;
+        color: ${props => props.theme.colors.textDark};
         font-size: 0.95rem;
     }
     
@@ -209,7 +209,8 @@ const StyledTableContainer = styled.div`
     }
     
     tr:hover td {
-        background: #f2f2f2;
+        background: ${props => props.theme.colors.backgroundSecondary};
+        opacity: 0.8;
     }
 `;
 
@@ -232,16 +233,16 @@ const IPBadge = styled.span<{ $status: 'allowed' | 'blocked' }>`
 `;
 
 const InfoBox = styled(Card)` // Reusing Card style
-    padding: ${theme.spacing.lg};
+    padding: ${props => props.theme.spacing.lg};
     display: flex;
-    gap: ${theme.spacing.md};
-    margin-top: ${theme.spacing.lg};
-    border-left: 4px solid ${theme.colors.primary};
-    background: #fff;
+    gap: ${props => props.theme.spacing.md};
+    margin-top: ${props => props.theme.spacing.lg};
+    border-left: 4px solid ${props => props.theme.colors.primary};
+    background: ${props => props.theme.colors.card};
     border-radius: 4px;
     
     .icon {
-        color: ${theme.colors.primary};
+        color: ${props => props.theme.colors.primary};
         width: 20px;
         height: 20px;
         flex-shrink: 0;
@@ -251,13 +252,13 @@ const InfoBox = styled(Card)` // Reusing Card style
     .content {
         h4 {
             margin: 0 0 4px 0;
-            color: #1c1e21;
+            color: ${props => props.theme.colors.textDark};
             font-weight: 600;
             font-size: 0.95rem;
         }
         p {
             margin: 0;
-            color: #65676b;
+            color: ${props => props.theme.colors.textSecondary};
             font-size: 0.9rem;
             line-height: 1.5;
         }
@@ -270,13 +271,13 @@ const LoadingState = styled.div`
     align-items: center;
     justify-content: center;
     padding: 60px 0;
-    color: #65676b;
+    color: ${props => props.theme.colors.textSecondary};
     
     svg {
         width: 40px;
         height: 40px;
-        margin-bottom: ${theme.spacing.md};
-        color: #1877f2;
+        margin-bottom: ${props => props.theme.spacing.md};
+        color: ${props => props.theme.colors.primary};
     }
 
     span {
@@ -295,19 +296,19 @@ const EmptyState = styled.div`
     svg {
         width: 60px;
         height: 60px;
-        color: #bcc0c4;
-        margin-bottom: ${theme.spacing.md};
+        color: ${props => props.theme.colors.textSecondary};
+        margin-bottom: ${props => props.theme.spacing.md};
     }
     
     h3 {
         font-size: 1.1rem;
         font-weight: 600;
-        color: #1c1e21;
+        color: ${props => props.theme.colors.textDark};
         margin: 0;
     }
     
     p {
-        color: #65676b;
+        color: ${props => props.theme.colors.textSecondary};
         max-width: 400px;
         margin: 8px 0 0;
         line-height: 1.5;
@@ -327,7 +328,7 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${props => props.theme.colors.background};
   border-radius: 8px;
   box-shadow: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1); // Meta shadow
   padding: 0;
@@ -346,24 +347,24 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid #dfe3e8;
-  background: white;
+  background: ${props => props.theme.colors.background};
 `;
 
 const ModalTitle = styled.h3`
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1c1e21;
+  color: ${props => props.theme.colors.textDark};
   margin: 0;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const ModalCloseButton = styled.button`
-    background: #e4e6eb; // Light gray circle
+    background: ${props => props.theme.colors.backgroundSecondary}; // Light circle-ish
     border: none;
     cursor: pointer;
-    color: #606770;
+    color: ${props => props.theme.colors.textSecondary};
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -373,7 +374,7 @@ const ModalCloseButton = styled.button`
     justify-content: center;
     
     &:hover {
-      background: #d8dadf;
+      background: ${props => props.theme.colors.border};
     }
 `;
 
@@ -383,7 +384,7 @@ const ModalFooter = styled.div`
     gap: 12px;
     padding: 16px 20px;
     border-top: 1px solid #dfe3e8;
-    background: white;
+    background: ${props => props.theme.colors.background};
 `;
 
 const ModalBody = styled.div`
@@ -391,7 +392,7 @@ const ModalBody = styled.div`
     display: flex;
     flex-direction: column;
     gap: 16px;
-    background: #f0f2f5; // Slight contrast for form body
+    background: ${props => props.theme.colors.backgroundSecondary}; // Slight contrast for form body
 `;
 
 interface IPRestriction {
@@ -577,7 +578,7 @@ export default function IPManagementPage() {
 
                     <Button
                         size="default" // Standard size
-                        style={{ background: PRIMARY_COLOR, color: 'white', fontWeight: 600, borderRadius: '6px' }}
+                        style={{ background: theme.colors.primary, color: 'white', fontWeight: 600, borderRadius: '6px' }}
                         onClick={() => {
                             setIpForm({ ip_address: '', description: '', status: 'allowed' });
                             setIsAddDialogOpen(true);
@@ -591,8 +592,8 @@ export default function IPManagementPage() {
                         <ModalContent onClick={e => e.stopPropagation()}>
                             <ModalHeader>
                                 <ModalTitle>
-                                    <div style={{ background: `${PRIMARY_COLOR}15`, padding: '8px', borderRadius: '8px', display: 'flex' }}>
-                                        <ShieldAlert size={20} color={PRIMARY_COLOR} />
+                                    <div style={{ background: `${theme.colors.primary}15`, padding: '8px', borderRadius: '8px', display: 'flex' }}>
+                                        <ShieldAlert size={20} color={theme.colors.primary} />
                                     </div>
                                     Add New IP Address
                                 </ModalTitle>
@@ -601,7 +602,7 @@ export default function IPManagementPage() {
                                 </ModalCloseButton>
                             </ModalHeader>
                             <ModalBody>
-                                <p style={{ color: TEXT_COLOR_MUTED, fontSize: '0.95rem', margin: 0 }}>
+                                <p style={{ color: theme.colors.textSecondary, fontSize: '0.95rem', margin: 0 }}>
                                     Define a new access rule for a specific network address. This will immediately affect incoming traffic.
                                 </p>
                                 <div className="grid gap-2">
@@ -622,7 +623,7 @@ export default function IPManagementPage() {
                                             variant={ipForm.status === 'allowed' ? 'default' : 'outline'}
                                             className="flex-1"
                                             style={ipForm.status === 'allowed' ? {
-                                                background: PRIMARY_COLOR,
+                                                background: theme.colors.primary,
                                                 fontSize: '1rem',
                                                 padding: '24px'
                                             } : { padding: '24px' }}
@@ -658,7 +659,7 @@ export default function IPManagementPage() {
                             <ModalFooter>
                                 <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)}>Discard</Button>
                                 <Button
-                                    style={{ background: PRIMARY_COLOR, color: 'white', fontWeight: 600, borderRadius: '6px' }}
+                                    style={{ background: theme.colors.primary, color: 'white', fontWeight: 600, borderRadius: '6px' }}
                                     onClick={handleCreateIP}
                                     disabled={isSubmitting}
                                 >
@@ -719,7 +720,7 @@ export default function IPManagementPage() {
                                             {!searchQuery && (
                                                 <Button
                                                     className="mt-4"
-                                                    style={{ background: PRIMARY_COLOR, color: 'white', fontWeight: 600 }}
+                                                    style={{ background: theme.colors.primary, color: 'white', fontWeight: 600 }}
                                                     onClick={() => setIsAddDialogOpen(true)}
                                                 >
                                                     <Plus className="mr-2 h-4 w-4" />
@@ -733,12 +734,12 @@ export default function IPManagementPage() {
                                 filteredRestrictions.map((item) => (
                                     <TableRow key={item.id}>
                                         <TableCell>
-                                            <div style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.95rem', color: TEXT_COLOR_DARK }}>
+                                            <div style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.95rem', color: theme.colors.textDark }}>
                                                 {item.ip_address}
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div style={{ color: TEXT_COLOR_MUTED }}>
+                                            <div style={{ color: theme.colors.textSecondary }}>
                                                 {item.description || '-'}
                                             </div>
                                         </TableCell>
@@ -748,7 +749,7 @@ export default function IPManagementPage() {
                                             </IPBadge>
                                         </TableCell>
                                         <TableCell>
-                                            <div style={{ fontSize: '0.9rem', color: TEXT_COLOR_MUTED }}>
+                                            <div style={{ fontSize: '0.9rem', color: theme.colors.textSecondary }}>
                                                 {new Date(item.created_at).toLocaleDateString('en-US', {
                                                     year: 'numeric',
                                                     month: 'short',
@@ -814,8 +815,8 @@ export default function IPManagementPage() {
                         </ModalCloseButton>
                     </ModalHeader>
                     <ModalBody>
-                        <p style={{ color: TEXT_COLOR_MUTED, fontSize: '0.95rem', margin: 0 }}>
-                            Updating configuration for <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEXT_COLOR_DARK }}>{selectedIP?.ip_address}</span>
+                        <p style={{ color: theme.colors.textSecondary, fontSize: '0.95rem', margin: 0 }}>
+                            Updating configuration for <span style={{ fontFamily: 'monospace', fontWeight: 700, color: theme.colors.textDark }}>{selectedIP?.ip_address}</span>
                         </p>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-ip">IP Address</Label>
@@ -834,7 +835,7 @@ export default function IPManagementPage() {
                                     variant={ipForm.status === 'allowed' ? 'default' : 'outline'}
                                     className="flex-1"
                                     style={ipForm.status === 'allowed' ? {
-                                        background: PRIMARY_COLOR,
+                                        background: theme.colors.primary,
                                         fontSize: '1rem',
                                         padding: '24px'
                                     } : { padding: '24px' }}
@@ -869,7 +870,7 @@ export default function IPManagementPage() {
                     <ModalFooter>
                         <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
                         <Button
-                            style={{ background: PRIMARY_COLOR, color: 'white', fontWeight: 600, borderRadius: '6px' }}
+                            style={{ background: theme.colors.primary, color: 'white', fontWeight: 600, borderRadius: '6px' }}
                             onClick={handleUpdateIP}
                             disabled={isSubmitting}
                         >

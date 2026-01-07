@@ -337,7 +337,7 @@ const FilterSelect = styled.select`
   padding-right: 40px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 16px;
-  background: white;
+  background: ${props => props.theme.colors.background};
   font-size: 14px;
   font-weight: 600;
   color: ${TEXT_COLOR_DARK};
@@ -617,7 +617,7 @@ const IconButton = styled.button`
 `;
 
 const EmptyState = styled.div`
-  background: white;
+  background: ${props => props.theme.colors.background};
   border-radius: 32px;
   padding: 80px 40px;
   text-align: center;

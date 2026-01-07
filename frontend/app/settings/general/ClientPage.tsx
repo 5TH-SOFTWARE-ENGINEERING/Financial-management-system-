@@ -14,6 +14,8 @@ const PRIMARY_COLOR = (props: any) => props.theme.colors.primary;
 const TEXT_COLOR = (props: any) => props.theme.colors.text;
 const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary;
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
+const BACKGROUND_COLOR = (props: any) => props.theme.colors.background;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -30,6 +32,8 @@ const Container = styled.div`
   max-width: 1000px;
   margin: 20px auto;
   padding: ${theme.spacing.md};
+  min-height: 100vh;
+  background-color: ${BACKGROUND_COLOR};
 `;
 
 const Header = styled.div`
@@ -38,7 +42,7 @@ const Header = styled.div`
   align-items: center;
   margin-bottom: ${theme.spacing.xl};
   padding-bottom: ${theme.spacing.md};
-  border-bottom: 2px solid ${theme.colors.border};
+  border-bottom: 2px solid ${BORDER_COLOR};
 `;
 
 const Title = styled.h1`

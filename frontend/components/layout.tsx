@@ -14,7 +14,7 @@ const LayoutContainer = styled.div`
 const MainContent = styled.main`
   flex: 1;
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: ${props => props.theme.colors.backgroundSecondary};
 `;
 
 const ContentWrapper = styled.div`

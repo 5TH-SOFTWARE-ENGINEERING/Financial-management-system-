@@ -28,7 +28,7 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%);
+  background: ${props => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`};
 `;
 
 const ContentContainer = styled.div`
@@ -109,8 +109,8 @@ const StyledInput = styled.input`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -119,7 +119,7 @@ const StyledInput = styled.input`
   &:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -131,7 +131,7 @@ const StyledInput = styled.input`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -161,8 +161,8 @@ const StyledTextarea = styled.textarea`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -173,7 +173,7 @@ const StyledTextarea = styled.textarea`
   &:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -185,7 +185,7 @@ const StyledTextarea = styled.textarea`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -201,8 +201,8 @@ const StyledSelect = styled.select`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -212,7 +212,7 @@ const StyledSelect = styled.select`
   &:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -220,7 +220,7 @@ const StyledSelect = styled.select`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -412,8 +412,8 @@ const PasswordInput = styled.input`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -422,7 +422,7 @@ const PasswordInput = styled.input`
   &:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -434,7 +434,7 @@ const PasswordInput = styled.input`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;

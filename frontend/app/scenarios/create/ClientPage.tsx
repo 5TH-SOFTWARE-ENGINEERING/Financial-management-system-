@@ -32,7 +32,7 @@ export const revalidate = 0;
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${theme.colors.background} 100%)`;
+const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -127,8 +127,8 @@ const StyledInput = styled.input`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -137,7 +137,7 @@ const StyledInput = styled.input`
   &:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -149,7 +149,7 @@ const StyledInput = styled.input`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -175,8 +175,8 @@ const StyledTextarea = styled.textarea`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -187,7 +187,7 @@ const StyledTextarea = styled.textarea`
   &:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -199,7 +199,7 @@ const StyledTextarea = styled.textarea`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -215,8 +215,8 @@ const StyledSelect = styled.select`
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.textDark};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -226,7 +226,7 @@ const StyledSelect = styled.select`
   &:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #ffffff;
+    background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
@@ -234,7 +234,7 @@ const StyledSelect = styled.select`
   }
 
   &:disabled {
-    background-color: #f9fafb;
+    background-color: ${theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -243,7 +243,7 @@ const StyledSelect = styled.select`
 `;
 
 const ItemCard = styled.div`
-  background: #f9fafb;
+  background: ${theme.colors.backgroundSecondary};
   border: 1px solid ${theme.colors.border};
   border-radius: ${theme.borderRadius.sm};
   padding: ${theme.spacing.md};

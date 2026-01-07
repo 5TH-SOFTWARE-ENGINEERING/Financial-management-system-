@@ -10,31 +10,31 @@ import apiClient from '@/lib/api';
 
 // Icon color mapping for different icon types
 const getIconColor = (iconType: string, active: boolean = false): string => {
-    if (active) {
-        // Active state colors (brighter)
-        const activeColors: Record<string, string> = {
-            'save': '#22c55e',              // Green
-            'mail': '#3b82f6',              // Blue
-            'message-square': '#8b5cf6',     // Purple
-            'bell': '#f59e0b',              // Amber
-            'bell-ring': '#10b981',         // Green
-            'phone-call': '#06b6d4',        // Cyan
-            'bell-off': '#ef4444',          // Red
-        };
-        return activeColors[iconType] || '#6b7280';
-    } else {
-        // Inactive state colors (muted but colorful)
-        const inactiveColors: Record<string, string> = {
-            'save': '#4ade80',              // Light Green
-            'mail': '#60a5fa',              // Light Blue
-            'message-square': '#a78bfa',    // Light Purple
-            'bell': '#fbbf24',              // Light Amber
-            'bell-ring': '#34d399',         // Light Green
-            'phone-call': '#22d3ee',        // Light Cyan
-            'bell-off': '#f87171',          // Light Red
-        };
-        return inactiveColors[iconType] || '#9ca3af';
-    }
+  if (active) {
+    // Active state colors (brighter)
+    const activeColors: Record<string, string> = {
+      'save': '#22c55e',              // Green
+      'mail': '#3b82f6',              // Blue
+      'message-square': '#8b5cf6',     // Purple
+      'bell': '#f59e0b',              // Amber
+      'bell-ring': '#10b981',         // Green
+      'phone-call': '#06b6d4',        // Cyan
+      'bell-off': '#ef4444',          // Red
+    };
+    return activeColors[iconType] || '#6b7280';
+  } else {
+    // Inactive state colors (muted but colorful)
+    const inactiveColors: Record<string, string> = {
+      'save': '#4ade80',              // Light Green
+      'mail': '#60a5fa',              // Light Blue
+      'message-square': '#a78bfa',    // Light Purple
+      'bell': '#fbbf24',              // Light Amber
+      'bell-ring': '#34d399',         // Light Green
+      'phone-call': '#22d3ee',        // Light Cyan
+      'bell-off': '#f87171',          // Light Red
+    };
+    return inactiveColors[iconType] || '#9ca3af';
+  }
 };
 
 // Icon styled components
@@ -93,7 +93,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
 `;
 
 const Card = styled.div`
@@ -114,7 +114,7 @@ const CardHeader = styled.div`
 const CardTitle = styled.h3`
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: ${props => props.theme.colors.textDark};
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -162,7 +162,7 @@ const ChannelOption = styled.div`
   cursor: pointer;
   
   &:hover {
-    background-color: #f9fafb;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
   }
 `;
 
@@ -299,12 +299,12 @@ export default function NotificationsSettingsPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [doNotDisturb, setDoNotDisturb] = useState(false);
   const [quietHours, setQuietHours] = useState(defaultQuietHours);
-  
+
   // Load settings from backend API and localStorage on mount
   useEffect(() => {
     const loadSettings = async () => {
       if (!user) return;
-      
+
       try {
         // Try to load from backend first
         const response = await apiClient.getNotificationPreferences();
@@ -323,7 +323,7 @@ export default function NotificationsSettingsPage() {
           if (prefs.quietHours) {
             setQuietHours(prefs.quietHours);
           }
-          
+
           // Also save to localStorage for offline access
           if (typeof window !== 'undefined') {
             localStorage.setItem('user_notification_settings', JSON.stringify(prefs));
@@ -335,7 +335,7 @@ export default function NotificationsSettingsPage() {
           console.log('Failed to load from backend, trying localStorage:', apiError);
         }
       }
-      
+
       // Fallback to localStorage if backend fails
       if (typeof window !== 'undefined') {
         try {
@@ -357,10 +357,10 @@ export default function NotificationsSettingsPage() {
         }
       }
     };
-    
+
     loadSettings();
   }, [user]);
-  
+
   // Initialize notification preferences for each type and channel
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationSettings>({
     [NotificationType.CLAIMS]: {
@@ -435,7 +435,7 @@ export default function NotificationsSettingsPage() {
   const handleSave = async () => {
     setLoading(true);
     setSuccess(null);
-    
+
     try {
       const settings = {
         notificationPreferences,
@@ -443,7 +443,7 @@ export default function NotificationsSettingsPage() {
         quietHours,
         lastUpdated: new Date().toISOString()
       };
-      
+
       // Save to backend API
       try {
         await apiClient.updateNotificationPreferences(settings);
@@ -457,7 +457,7 @@ export default function NotificationsSettingsPage() {
         if (typeof window !== 'undefined') {
           localStorage.setItem('user_notification_settings', JSON.stringify(settings));
         }
-        
+
         const errorMessage =
           typeof apiError === 'object' && apiError !== null && 'response' in apiError
             ? (apiError as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to save to server'
@@ -467,7 +467,7 @@ export default function NotificationsSettingsPage() {
         console.error('Failed to save to backend:', errorMessage);
         setSuccess('Settings saved locally, but failed to sync with server. Please try again.');
       }
-      
+
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Failed to save notification settings:', error);
@@ -562,10 +562,10 @@ export default function NotificationsSettingsPage() {
                       name="startTime"
                       value={quietHours.startTime}
                       onChange={handleQuietHoursChange}
-                      style={{ 
-                        padding: '0.5rem', 
-                        border: '1px solid #d1d5db', 
-                        borderRadius: '0.25rem' 
+                      style={{
+                        padding: '0.5rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.25rem'
                       }}
                     />
                   </div>
@@ -577,10 +577,10 @@ export default function NotificationsSettingsPage() {
                       name="endTime"
                       value={quietHours.endTime}
                       onChange={handleQuietHoursChange}
-                      style={{ 
-                        padding: '0.5rem', 
-                        border: '1px solid #d1d5db', 
-                        borderRadius: '0.25rem' 
+                      style={{
+                        padding: '0.5rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.25rem'
                       }}
                     />
                   </div>
@@ -881,9 +881,9 @@ export default function NotificationsSettingsPage() {
         </Card>
 
         <ActionButtons>
-          <Button 
-            variant="default" 
-            onClick={handleSave} 
+          <Button
+            variant="default"
+            onClick={handleSave}
             disabled={loading}
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
