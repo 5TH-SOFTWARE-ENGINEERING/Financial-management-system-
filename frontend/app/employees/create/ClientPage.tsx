@@ -145,10 +145,10 @@ const StyledInput = styled.input`
 
   &:disabled {
     background-color: ${props => props.theme.colors.backgroundSecondary};
-    color: #6b7280;
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &[type="number"] {
