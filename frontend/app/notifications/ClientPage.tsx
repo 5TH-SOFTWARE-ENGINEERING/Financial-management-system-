@@ -13,12 +13,11 @@ import { formatDate } from '@/lib/utils';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
 import Layout from '@/components/layout';
-import { theme } from '@/components/common/theme';
 import useNotificationStore, { Notification } from '@/store/notificationStore';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = (props: any) => props.theme.colors.text;
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.mutedForeground;
 
 // Type definitions for error handling
 type ErrorWithDetails = {
@@ -47,7 +46,8 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding-bottom: ${theme.spacing.xxl};
+  padding-bottom: ${props => props.theme.spacing.xxl};
+  background-color: ${props => props.theme.colors.background};
 `;
 
 const ContentContainer = styled.div`
@@ -56,17 +56,17 @@ const ContentContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, color-mix(in srgb, ${PRIMARY_COLOR}, #000 20%) 100%);
   color: #ffffff;
-  padding: ${theme.spacing.xl} ${theme.spacing.xl};
-  margin-bottom: ${theme.spacing.xl};
-  box-shadow: 0 10px 30px rgba(0, 170, 0, 0.15);
+  padding: ${props => props.theme.spacing.xl};
+  margin-bottom: ${props => props.theme.spacing.xl};
+  box-shadow: 0 10px 30px color-mix(in srgb, ${PRIMARY_COLOR}, transparent 85%);
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, white, transparent 90%);
   position: relative;
   overflow: hidden;
 
@@ -87,7 +87,7 @@ const HeaderContent = styled.div`
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: ${theme.spacing.lg};
+  gap: ${props => props.theme.spacing.lg};
   position: relative;
   z-index: 1;
   
@@ -95,7 +95,7 @@ const HeaderContent = styled.div`
     h1 {
       font-size: clamp(32px, 5vw, 48px);
       font-weight: 800;
-      margin: 0 0 ${theme.spacing.xs};
+      margin: 0 0 ${props => props.theme.spacing.xs};
       color: #ffffff;
       letter-spacing: -1.5px;
       display: flex;
@@ -104,7 +104,7 @@ const HeaderContent = styled.div`
     }
     
     p {
-      font-size: ${theme.typography.fontSizes.md || '16px'};
+      font-size: ${props => props.theme.typography.fontSizes.md || '16px'};
       font-weight: 500;
       opacity: 0.9;
       margin: 0;
@@ -153,21 +153,21 @@ const LiveIndicator = styled.div`
 const HeaderActions = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   flex-wrap: wrap;
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.xs};
-  padding: ${theme.spacing.sm} ${theme.spacing.lg};
-  font-size: ${theme.typography.fontSizes.sm || '14px'};
-  font-weight: ${theme.typography.fontWeights.medium};
-  border-radius: ${theme.borderRadius.md};
+  gap: ${props => props.theme.spacing.xs};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.lg};
+  font-size: ${props => props.theme.typography.fontSizes.sm || '14px'};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  border-radius: ${props => props.theme.borderRadius.md};
   border: none;
   cursor: pointer;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   white-space: nowrap;
   
   ${props => props.$variant === 'primary' ? `
@@ -205,16 +205,16 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 `;
 
 const ErrorBanner = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  background: color-mix(in srgb, ${props => props.theme.colors.error}, transparent 90%);
+  border: 1px solid color-mix(in srgb, ${props => props.theme.colors.error}, transparent 80%);
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: #991b1b;
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.colors.error};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 
   svg {
     flex-shrink: 0;
@@ -226,16 +226,16 @@ const ErrorBanner = styled.div`
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.xl};
+  gap: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.xl};
 `;
 
 const StatCard = styled.div<{ $delay: string }>`
-  background: ${theme.colors.background};
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 24px;
-  padding: ${theme.spacing.xl};
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  padding: ${props => props.theme.spacing.xl};
+  box-shadow: ${props => props.theme.shadows.sm};
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
@@ -250,8 +250,8 @@ const StatCard = styled.div<{ $delay: string }>`
   
   &:hover {
     transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(0, 170, 0, 0.08);
-    border-color: ${PRIMARY_COLOR}40;
+    box-shadow: ${props => props.theme.shadows.md};
+    border-color: color-mix(in srgb, ${PRIMARY_COLOR}, transparent 75%);
   }
 
   &::after {
@@ -261,7 +261,7 @@ const StatCard = styled.div<{ $delay: string }>`
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(90deg, transparent, ${PRIMARY_COLOR}40, transparent);
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, ${PRIMARY_COLOR}, transparent 75%), transparent);
     opacity: 0;
     transition: opacity 0.3s;
   }
@@ -322,20 +322,20 @@ const StatIcon = styled.div<{ $bgColor: string; $iconColor: string }>`
 const FiltersContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.lg};
+  gap: ${props => props.theme.spacing.lg};
   flex-wrap: wrap;
-  margin-bottom: ${theme.spacing.xl};
-  padding: ${theme.spacing.md} ${theme.spacing.sm};
-  background: rgba(255, 255, 255, 0.5);
+  margin-bottom: ${props => props.theme.spacing.xl};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.sm};
+  background: color-mix(in srgb, ${props => props.theme.colors.card}, transparent 50%);
   border-radius: 20px;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 0, 0, 0.03);
+  border: 1px solid ${props => props.theme.colors.border};
 `;
 
 const FilterSelect = styled.select`
   padding: 12px 20px;
   padding-right: 40px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 16px;
   background: ${props => props.theme.colors.background};
   font-size: 14px;
@@ -349,18 +349,18 @@ const FilterSelect = styled.select`
   background-size: 16px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 200px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  box-shadow: ${props => props.theme.shadows.sm};
   
   &:focus {
     outline: none;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 4px rgba(0, 170, 0, 0.1);
+    box-shadow: 0 0 0 4px color-mix(in srgb, ${PRIMARY_COLOR}, transparent 90%);
     transform: translateY(-1px);
   }
   
   &:hover {
-    border-color: ${PRIMARY_COLOR}80;
-    background-color: #fafafa;
+    border-color: color-mix(in srgb, ${PRIMARY_COLOR}, transparent 50%);
+    background-color: ${props => props.theme.colors.backgroundSecondary};
   }
 `;
 
@@ -369,15 +369,15 @@ const FilterCount = styled.span`
   font-weight: 600;
   color: ${PRIMARY_COLOR};
   padding: 6px 14px;
-  background: ${PRIMARY_COLOR}10;
+  background: color-mix(in srgb, ${PRIMARY_COLOR}, transparent 90%);
   border-radius: 12px;
-  border: 1px solid ${PRIMARY_COLOR}20;
+  border: 1px solid color-mix(in srgb, ${PRIMARY_COLOR}, transparent 80%);
 `;
 
 const NotificationsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.lg};
+  gap: ${props => props.theme.spacing.lg};
 `;
 
 const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string; $priority: string }>`
@@ -491,9 +491,9 @@ const NotificationIcon = styled.div<{ $displayType: string }>`
 const PriorityBadge = styled.span<{ $color: string }>`
   display: inline-flex;
   align-items: center;
-  padding: 4px ${theme.spacing.md};
-  font-size: ${theme.typography.fontSizes.xs || '11px'};
-  font-weight: ${theme.typography.fontWeights.bold || '700'};
+  padding: 4px ${props => props.theme.spacing.md};
+  font-size: ${props => props.theme.typography.fontSizes.xs || '11px'};
+  font-weight: ${props => props.theme.typography.fontWeights.bold || '700'};
   text-transform: uppercase;
   letter-spacing: 0.8px;
   border-radius: 12px;
@@ -511,16 +511,16 @@ const NotificationDetails = styled.div`
 const NotificationHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   flex-wrap: wrap;
 `;
 
 const NotificationTitle = styled.h3<{ $isRead: boolean }>`
-  font-size: ${theme.typography.fontSizes.lg || '18px'};
+  font-size: ${props => props.theme.typography.fontSizes.lg || '18px'};
   font-weight: ${props => props.$isRead
-    ? theme.typography.fontWeights.medium
-    : theme.typography.fontWeights.bold || '700'};
+    ? props.theme.typography.fontWeights.medium
+    : props.theme.typography.fontWeights.bold || '700'};
   color: ${TEXT_COLOR_DARK};
   margin: 0;
   line-height: 1.4;
@@ -531,9 +531,9 @@ const NotificationTitle = styled.h3<{ $isRead: boolean }>`
 const NewBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 4px ${theme.spacing.md};
-  font-size: ${theme.typography.fontSizes.xs || '11px'};
-  font-weight: ${theme.typography.fontWeights.bold || '700'};
+  padding: 4px ${props => props.theme.spacing.md};
+  font-size: ${props => props.theme.typography.fontSizes.xs || '11px'};
+  font-weight: ${props => props.theme.typography.fontWeights.bold || '700'};
   text-transform: uppercase;
   letter-spacing: 0.8px;
   border-radius: 12px;
@@ -543,34 +543,34 @@ const NewBadge = styled.span`
 `;
 
 const NotificationMessage = styled.p`
-  font-size: ${theme.typography.fontSizes.md || '15px'};
+  font-size: ${props => props.theme.typography.fontSizes.md || '15px'};
   color: ${TEXT_COLOR_MUTED};
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   line-height: 1.6;
 `;
 
 const NotificationMeta = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.lg};
+  gap: ${props => props.theme.spacing.lg};
   flex-wrap: wrap;
 `;
 
 const NotificationTime = styled.span`
-  font-size: ${theme.typography.fontSizes.sm || '13px'};
+  font-size: ${props => props.theme.typography.fontSizes.sm || '13px'};
   color: ${TEXT_COLOR_MUTED};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
 `;
 
 const ViewDetailsLink = styled.button`
-  font-size: ${theme.typography.fontSizes.sm || '14px'};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-size: ${props => props.theme.typography.fontSizes.sm || '14px'};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   color: ${PRIMARY_COLOR};
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   
   &:hover {
     color: #008800;
@@ -582,7 +582,7 @@ const ViewDetailsLink = styled.button`
 const NotificationActions = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.xs};
+  gap: ${props => props.theme.spacing.xs};
   flex-shrink: 0;
 `;
 
@@ -594,13 +594,13 @@ const IconButton = styled.button`
   height: 36px;
   border: none;
   background: transparent;
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   cursor: pointer;
   color: ${TEXT_COLOR_MUTED};
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   
   &:hover:not(:disabled) {
-    background: ${theme.colors.backgroundSecondary};
+    background: ${props => props.theme.colors.backgroundSecondary};
     color: ${TEXT_COLOR_DARK};
     transform: scale(1.1);
   }
@@ -617,19 +617,19 @@ const IconButton = styled.button`
 `;
 
 const EmptyState = styled.div`
-  background: ${props => props.theme.colors.background};
+  background: ${props => props.theme.colors.card};
   border-radius: 32px;
   padding: 80px 40px;
   text-align: center;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.03);
+  box-shadow: ${props => props.theme.shadows.sm};
+  border: 1px solid ${props => props.theme.colors.border};
   max-width: 600px;
   margin: 40px auto;
   
   .icon-container {
     width: 100px;
     height: 100px;
-    background: ${PRIMARY_COLOR}08;
+    background: color-mix(in srgb, ${PRIMARY_COLOR}, transparent 95%);
     border-radius: 30px;
     display: flex;
     align-items: center;
@@ -670,9 +670,9 @@ const LoadingContainer = styled.div`
   width: 100%;
   
   p {
-    margin-top: ${theme.spacing.md};
+    margin-top: ${props => props.theme.spacing.md};
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
   }
 `;
 
@@ -702,8 +702,8 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContainer = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.lg || '16px'};
+  background: ${props => props.theme.colors.background};
+  border-radius: ${props => props.theme.borderRadius.lg || '16px'};
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
   width: 90%;
   max-width: 640px;
@@ -711,18 +711,19 @@ const ModalContainer = styled.div`
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  border: 1px solid ${props => props.theme.colors.border};
 `;
 
 const ModalHeader = styled.div`
-  padding: ${theme.spacing.xl} ${theme.spacing.lg};
-  border-bottom: 1px solid ${theme.colors.border};
+  padding: ${props => props.theme.spacing.xl} ${props => props.theme.spacing.lg};
+  border-bottom: 1px solid ${props => props.theme.colors.border};
   display: flex;
   align-items: center;
   justify-content: space-between;
   
   h2 {
-    font-size: ${theme.typography.fontSizes.lg || '20px'};
-    font-weight: ${theme.typography.fontWeights.bold || '700'};
+    font-size: ${props => props.theme.typography.fontSizes.lg || '20px'};
+    font-weight: ${props => props.theme.typography.fontWeights.bold || '700'};
     color: ${TEXT_COLOR_DARK};
     margin: 0;
     letter-spacing: -0.3px;
@@ -733,12 +734,12 @@ const ModalHeader = styled.div`
     border: none;
     cursor: pointer;
     color: ${TEXT_COLOR_MUTED};
-    padding: ${theme.spacing.xs};
-    border-radius: ${theme.borderRadius.sm};
-    transition: all ${theme.transitions.default};
+    padding: ${props => props.theme.spacing.xs};
+    border-radius: ${props => props.theme.borderRadius.sm};
+    transition: all ${props => props.theme.transitions.default};
     
     &:hover {
-      background: ${theme.colors.backgroundSecondary};
+      background: ${props => props.theme.colors.backgroundSecondary};
       color: ${TEXT_COLOR_DARK};
       transform: scale(1.1);
     }
@@ -751,23 +752,23 @@ const ModalHeader = styled.div`
 `;
 
 const ModalBody = styled.div`
-  padding: ${theme.spacing.xl} ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.xl} ${props => props.theme.spacing.lg};
   flex: 1;
 `;
 
 const NotificationDetailSection = styled.div`
-  margin-bottom: ${theme.spacing.xl};
+  margin-bottom: ${props => props.theme.spacing.xl};
   
   h3 {
-    font-size: ${theme.typography.fontSizes.lg || '18px'};
-    font-weight: ${theme.typography.fontWeights.bold || '700'};
+    font-size: ${props => props.theme.typography.fontSizes.lg || '18px'};
+    font-weight: ${props => props.theme.typography.fontWeights.bold || '700'};
     color: ${TEXT_COLOR_DARK};
-    margin: 0 0 ${theme.spacing.lg};
+    margin: 0 0 ${props => props.theme.spacing.lg};
     letter-spacing: -0.2px;
   }
   
   p {
-    font-size: ${theme.typography.fontSizes.sm || '14px'};
+    font-size: ${props => props.theme.typography.fontSizes.sm || '14px'};
     color: ${TEXT_COLOR_MUTED};
     margin: 0;
     line-height: 1.6;
@@ -777,33 +778,33 @@ const NotificationDetailSection = styled.div`
 const DetailRow = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  gap: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   
   strong {
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
     min-width: 120px;
-    font-size: ${theme.typography.fontSizes.sm || '14px'};
+    font-size: ${props => props.theme.typography.fontSizes.sm || '14px'};
   }
   
   span {
     color: ${TEXT_COLOR_MUTED};
     flex: 1;
-    font-size: ${theme.typography.fontSizes.sm || '14px'};
+    font-size: ${props => props.theme.typography.fontSizes.sm || '14px'};
     line-height: 1.5;
   }
 `;
 
 const PasswordInputContainer = styled.div`
-  margin-top: ${theme.spacing.lg};
+  margin-top: ${props => props.theme.spacing.lg};
   
   label {
     display: block;
-    font-size: ${theme.typography.fontSizes.sm};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
-    margin-bottom: ${theme.spacing.sm};
+    margin-bottom: ${props => props.theme.spacing.sm};
   }
   
   .password-input-wrapper {
@@ -813,19 +814,19 @@ const PasswordInputContainer = styled.div`
     
     input {
       width: 100%;
-      padding: ${theme.spacing.sm} ${theme.spacing.md};
+      padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
       padding-right: 48px;
-      border: 1px solid ${theme.colors.border};
-      border-radius: ${theme.borderRadius.md};
-      background: ${theme.colors.background};
-      font-size: ${theme.typography.fontSizes.md};
+      border: 1px solid ${props => props.theme.colors.border};
+      border-radius: ${props => props.theme.borderRadius.md};
+      background: ${props => props.theme.colors.background};
+      font-size: ${props => props.theme.typography.fontSizes.md};
       color: ${TEXT_COLOR_DARK};
-      transition: all ${theme.transitions.default};
+      transition: all ${props => props.theme.transitions.default};
       
       &:focus {
         outline: none;
         border-color: ${PRIMARY_COLOR};
-        box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+        box-shadow: 0 0 0 3px color-mix(in srgb, ${PRIMARY_COLOR}, transparent 90%);
       }
       
       &::placeholder {
@@ -836,21 +837,21 @@ const PasswordInputContainer = styled.div`
     
     button {
       position: absolute;
-      right: ${theme.spacing.sm};
+      right: ${props => props.theme.spacing.sm};
       background: none;
       border: none;
       cursor: pointer;
       color: ${TEXT_COLOR_MUTED};
-      padding: ${theme.spacing.xs};
-      border-radius: ${theme.borderRadius.sm};
+      padding: ${props => props.theme.spacing.xs};
+      border-radius: ${props => props.theme.borderRadius.sm};
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all ${theme.transitions.default};
+      transition: all ${props => props.theme.transitions.default};
       
       &:hover {
         color: ${TEXT_COLOR_DARK};
-        background: ${theme.colors.backgroundSecondary};
+        background: ${props => props.theme.colors.backgroundSecondary};
       }
       
       svg {
@@ -861,48 +862,48 @@ const PasswordInputContainer = styled.div`
   }
   
   .error-message {
-    margin-top: ${theme.spacing.xs};
-    font-size: ${theme.typography.fontSizes.xs};
-    color: #ef4444;
+    margin-top: ${props => props.theme.spacing.xs};
+    font-size: ${props => props.theme.typography.fontSizes.xs};
+    color: ${props => props.theme.colors.error};
   }
 `;
 
 const ModalFooter = styled.div`
-  padding: ${theme.spacing.xl} ${theme.spacing.lg};
-  border-top: 1px solid ${theme.colors.border};
+  padding: ${props => props.theme.spacing.xl} ${props => props.theme.spacing.lg};
+  border-top: 1px solid ${props => props.theme.colors.border};
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   
   button {
-    padding: ${theme.spacing.md} ${theme.spacing.lg};
-    font-size: ${theme.typography.fontSizes.md || '15px'};
-    font-weight: ${theme.typography.fontWeights.medium};
-    border-radius: ${theme.borderRadius.md};
+    padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+    font-size: ${props => props.theme.typography.fontSizes.md || '15px'};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
+    border-radius: ${props => props.theme.borderRadius.md};
     border: none;
     cursor: pointer;
-    transition: all ${theme.transitions.default};
+    transition: all ${props => props.theme.transitions.default};
     min-width: 120px;
     
     &.cancel {
-      background: ${theme.colors.backgroundSecondary};
+      background: ${props => props.theme.colors.backgroundSecondary};
       color: ${TEXT_COLOR_DARK};
       
       &:hover:not(:disabled) {
-        background: ${theme.colors.border};
+        background: ${props => props.theme.colors.border};
         transform: translateY(-1px);
       }
     }
     
     &.delete {
-      background: #ef4444;
+      background: ${props => props.theme.colors.error};
       color: white;
       
       &:hover:not(:disabled) {
-        background: #dc2626;
+        background: color-mix(in srgb, ${props => props.theme.colors.error}, #000 10%);
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        box-shadow: 0 4px 12px color-mix(in srgb, ${props => props.theme.colors.error}, transparent 60%);
       }
     }
     
@@ -911,6 +912,12 @@ const ModalFooter = styled.div`
       cursor: not-allowed;
     }
   }
+`;
+
+const StyledUserInfo = styled.span`
+  font-size: ${props => props.theme.typography.fontSizes.sm || '14px'};
+  color: ${TEXT_COLOR_MUTED};
+  font-style: italic;
 `;
 
 
@@ -1618,14 +1625,11 @@ export default function NotificationsPage() {
                             <NotificationTime>{formatDate(notification.created_at)}</NotificationTime>
                             {/* Show user info for admins/finance admins viewing other users' notifications */}
                             {user && notification.user_id !== Number(user.id) && (notification.user_name || notification.user_id) && (
-                              <span style={{
-                                fontSize: theme.typography.fontSizes.sm,
-                                color: TEXT_COLOR_MUTED,
-                                fontStyle: 'italic'
-                              }}>
+                              <StyledUserInfo>
                                 {notification.user_name || `User #${notification.user_id}`}
-                              </span>
+                              </StyledUserInfo>
                             )}
+
                             {notification.action_url && (
                               <ViewDetailsLink
                                 onClick={(e) => {
