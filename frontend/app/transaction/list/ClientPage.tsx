@@ -11,24 +11,23 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { theme } from '@/components/common/theme';
 import { useAuth } from '@/lib/rbac/auth-context';
 import useUserStore from '@/store/userStore';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
+const BACKGROUND_CARD = (props: any) => props.theme.colors.background || '#ffffff';
+const BACKGROUND_SECONDARY = (props: any) => props.theme.colors.backgroundSecondary || '#f5f6fa';
 
-const CardShadow = `
-  0 2px 4px -1px rgba(0, 0, 0, 0.06),
-  0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
-`;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
-`;
+const CardShadow = (props: any) => props.theme.mode === 'dark'
+  ? '0 4px 16px rgba(0, 0, 0, 0.4)'
+  : `0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03), inset 0 0 0 1px rgba(0, 0, 0, 0.02)`;
+
+const CardShadowHover = (props: any) => props.theme.mode === 'dark'
+  ? '0 12px 28px rgba(0, 0, 0, 0.5)'
+  : `0 8px 12px -2px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04), inset 0 0 0 1px rgba(0, 0, 0, 0.03)`;
 
 const PageContainer = styled.div`
   display: flex;
@@ -42,28 +41,28 @@ const ContentContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
   background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
   color: #ffffff;
-  padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
   
   h1 {
     font-size: clamp(24px, 3vw, 36px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     color: #ffffff;
   }
   
   p {
-    font-size: ${theme.typography.fontSizes.md};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     opacity: 0.9;
     margin: 0;
     color: rgba(255, 255, 255, 0.95);
@@ -73,14 +72,14 @@ const HeaderContainer = styled.div`
 const ErrorBanner = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: ${theme.borderRadius.md};
-  color: #dc2626;
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.3)'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 
   svg {
     flex-shrink: 0;
@@ -92,15 +91,15 @@ const ErrorBanner = styled.div`
 const SummaryGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
 const BottomSummaryGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -108,12 +107,12 @@ const BottomSummaryGrid = styled.div`
 `;
 
 const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'net' | 'total' | 'inventory' }>`
-  background: ${theme.colors.background};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.lg};
-  border-radius: ${theme.borderRadius.md};
+  background: ${BACKGROUND_CARD};
+  border: 1px solid ${BORDER_COLOR};
+  padding: ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.md};
   box-shadow: ${CardShadow};
-  transition: transform ${theme.transitions.default}, box-shadow ${theme.transitions.default};
+  transition: transform ${props => props.theme.transitions.default}, box-shadow ${props => props.theme.transitions.default};
 
   &:hover {
     transform: translateY(-2px);
@@ -121,19 +120,20 @@ const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'net' | 'total'
   }
 
   .label {
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     color: ${TEXT_COLOR_MUTED};
-    margin-bottom: ${theme.spacing.sm};
-    font-weight: ${theme.typography.fontWeights.medium};
+    margin-bottom: ${props => props.theme.spacing.sm};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
   }
 
   .value {
     font-size: clamp(20px, 3vw, 24px);
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
     color: ${props => {
-    if (props.$type === 'revenue') return '#16a34a';
-    if (props.$type === 'expense') return '#dc2626';
-    if (props.$type === 'inventory') return '#1118d3ff';
+    const isDark = props.theme.mode === 'dark';
+    if (props.$type === 'revenue') return isDark ? '#4ade80' : '#16a34a';
+    if (props.$type === 'expense') return isDark ? '#f87171' : '#dc2626';
+    if (props.$type === 'inventory') return isDark ? '#818cf8' : '#1118d3ff';
     if (props.$type === 'net') return TEXT_COLOR_DARK;
     return TEXT_COLOR_DARK;
   }};
@@ -141,13 +141,13 @@ const SummaryCard = styled.div<{ $type?: 'revenue' | 'expense' | 'net' | 'total'
 `;
 
 const FiltersContainer = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  background: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   box-shadow: ${CardShadow};
-  transition: box-shadow ${theme.transitions.default};
+  transition: box-shadow ${props => props.theme.transitions.default};
 
   &:hover {
     box-shadow: ${CardShadowHover};
@@ -157,12 +157,12 @@ const FiltersContainer = styled.div`
 const FiltersGrid = styled.div`
   display: grid;
   grid-template-columns: 2fr 1fr 1fr auto;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   align-items: center;
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: ${theme.spacing.sm};
+    gap: ${props => props.theme.spacing.sm};
   }
 `;
 
@@ -172,7 +172,7 @@ const SearchContainer = styled.div`
 
   svg {
     position: absolute;
-    left: ${theme.spacing.md};
+    left: ${props => props.theme.spacing.md};
     top: 50%;
     transform: translateY(-50%);
     width: 18px;
@@ -184,13 +184,13 @@ const SearchContainer = styled.div`
 
 const SearchInput = styled.input`
   width: 70%;
-  padding: ${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} 40px;
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  font-size: ${theme.typography.fontSizes.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md} ${props => props.theme.spacing.sm} 40px;
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_CARD};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_DARK};
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
 
   &:focus {
     outline: none;
@@ -206,14 +206,14 @@ const SearchInput = styled.input`
 
 const Select = styled.select`
   width: 100%;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_CARD};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   cursor: pointer;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
 
   &:focus {
     outline: none;
@@ -223,34 +223,34 @@ const Select = styled.select`
 `;
 
 const TableContainer = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
   box-shadow: ${CardShadow};
   overflow: hidden;
 `;
 
 const EmptyState = styled.div`
-  padding: ${theme.spacing.xxl};
+  padding: ${props => props.theme.spacing.xxl};
   text-align: center;
   color: ${TEXT_COLOR_MUTED};
 
   svg {
     width: 48px;
     height: 48px;
-    margin: 0 auto ${theme.spacing.md};
+    margin: 0 auto ${props => props.theme.spacing.md};
     opacity: 0.5;
   }
 
   h3 {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.sm};
+    font-size: ${props => props.theme.typography.fontSizes.lg};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.sm};
     color: ${TEXT_COLOR_DARK};
   }
 
   p {
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
     margin: 0;
   }
 `;
@@ -262,15 +262,15 @@ const Table = styled.table`
 `;
 
 const TableHeader = styled.thead`
-  background: ${theme.colors.backgroundSecondary};
-  border-bottom: 2px solid ${theme.colors.border};
+  background: ${BACKGROUND_SECONDARY};
+  border-bottom: 2px solid ${BORDER_COLOR};
   
   th {
     text-align: left;
-    padding: ${theme.spacing.md} ${theme.spacing.lg};
-    font-weight: ${theme.typography.fontWeights.medium};
+    padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.xs};
+    font-size: ${props => props.theme.typography.fontSizes.xs};
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -278,11 +278,11 @@ const TableHeader = styled.thead`
 
 const TableBody = styled.tbody`
   tr {
-    border-bottom: 1px solid ${theme.colors.border};
-    transition: background-color ${theme.transitions.default};
+    border-bottom: 1px solid ${BORDER_COLOR};
+    transition: background-color ${props => props.theme.transitions.default};
     
     &:hover {
-      background-color: ${theme.colors.backgroundSecondary};
+      background-color: ${BACKGROUND_SECONDARY};
     }
     
     &:last-child {
@@ -290,9 +290,9 @@ const TableBody = styled.tbody`
     }
     
     td {
-      padding: ${theme.spacing.md} ${theme.spacing.lg};
+      padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
       color: ${TEXT_COLOR_DARK};
-      font-size: ${theme.typography.fontSizes.sm};
+      font-size: ${props => props.theme.typography.fontSizes.sm};
     }
   }
 `;
@@ -300,73 +300,80 @@ const TableBody = styled.tbody`
 const TypeBadge = styled.span<{ $type: 'revenue' | 'expense' | 'sale' | 'inventory' }>`
   display: inline-flex;
   align-items: center;
-  gap: ${theme.spacing.xs};
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
+  gap: ${props => props.theme.spacing.xs};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   background: ${props => {
-    if (props.$type === 'revenue') return 'rgba(16, 185, 129, 0.12)';
-    if (props.$type === 'expense') return 'rgba(239, 68, 68, 0.12)';
-    if (props.$type === 'sale') return 'rgba(59, 130, 246, 0.12)';
-    if (props.$type === 'inventory') return 'rgba(168, 85, 247, 0.12)';
-    return 'rgba(107, 114, 128, 0.12)';
+    const isDark = props.theme.mode === 'dark';
+    if (props.$type === 'revenue') return isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)';
+    if (props.$type === 'expense') return isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.12)';
+    if (props.$type === 'sale') return isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.12)';
+    if (props.$type === 'inventory') return isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.12)';
+    return isDark ? 'rgba(107, 114, 128, 0.2)' : 'rgba(107, 114, 128, 0.12)';
   }};
   color: ${props => {
-    if (props.$type === 'revenue') return '#065f46';
-    if (props.$type === 'expense') return '#991b1b';
-    if (props.$type === 'sale') return '#1e40af';
-    if (props.$type === 'inventory') return '#6b21a8';
-    return '#374151';
+    const isDark = props.theme.mode === 'dark';
+    if (props.$type === 'revenue') return isDark ? '#6ee7b7' : '#065f46';
+    if (props.$type === 'expense') return isDark ? '#fca5a5' : '#991b1b';
+    if (props.$type === 'sale') return isDark ? '#93c5fd' : '#1e40af';
+    if (props.$type === 'inventory') return isDark ? '#c4b5fd' : '#6b21a8';
+    return isDark ? '#d1d5db' : '#374151';
   }};
 `;
 
 const AmountCell = styled.td<{ $isExpense: boolean }>`
-  font-weight: ${theme.typography.fontWeights.bold};
-  color: ${props => props.$isExpense ? '#dc2626' : '#16a34a'} !important;
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  color: ${props => {
+    const isDark = props.theme.mode === 'dark';
+    return props.$isExpense ? (isDark ? '#f87171' : '#dc2626') : (isDark ? '#4ade80' : '#16a34a');
+  }} !important;
 `;
 
 const CategoryBadge = styled.span`
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
-  background: rgba(59, 130, 246, 0.12);
-  color: #1e40af;
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.12)'};
+  color: ${props => props.theme.mode === 'dark' ? '#93c5fd' : '#1e40af'};
 `;
 
 const StatusBadge = styled.span<{ $approved: boolean; $status?: string }>`
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   background: ${props => {
-    if (props.$status === 'posted') return 'rgba(16, 185, 129, 0.12)';
-    if (props.$status === 'cancelled') return 'rgba(239, 68, 68, 0.12)';
-    if (props.$approved) return 'rgba(16, 185, 129, 0.12)';
-    return 'rgba(251, 191, 36, 0.12)';
+    const isDark = props.theme.mode === 'dark';
+    if (props.$status === 'posted') return isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)';
+    if (props.$status === 'cancelled') return isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.12)';
+    if (props.$approved) return isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)';
+    return isDark ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 191, 36, 0.12)';
   }};
   color: ${props => {
-    if (props.$status === 'posted') return '#065f46';
-    if (props.$status === 'cancelled') return '#991b1b';
-    if (props.$approved) return '#065f46';
-    return '#92400e';
+    const isDark = props.theme.mode === 'dark';
+    if (props.$status === 'posted') return isDark ? '#6ee7b7' : '#065f46';
+    if (props.$status === 'cancelled') return isDark ? '#fca5a5' : '#991b1b';
+    if (props.$approved) return isDark ? '#6ee7b7' : '#065f46';
+    return isDark ? '#fcd34d' : '#92400e';
   }};
-  margin-right: ${theme.spacing.sm};
+  margin-right: ${props => props.theme.spacing.sm};
 `;
 
 const RecurringBadge = styled.span`
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
-  background: rgba(59, 130, 246, 0.12);
-  color: #1e40af;
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.12)'};
+  color: ${props => props.theme.mode === 'dark' ? '#93c5fd' : '#1e40af'};
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   align-items: center;
 `;
 
@@ -376,11 +383,11 @@ const LoadingContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
     margin: 0;
   }
 `;
@@ -388,7 +395,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${theme.colors.border};
+  border: 3px solid ${BORDER_COLOR};
   border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -399,7 +406,7 @@ const Spinner = styled.div`
 `;
 
 const TransactionTitle = styled.div`
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   color: ${TEXT_COLOR_DARK};
 `;
 
@@ -1110,7 +1117,7 @@ export default function TransactionListPage() {
                 variant="outline"
                 onClick={handleExport}
                 disabled={filteredTransactions.length === 0}
-                style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, height: '38px' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '38px' }}
               >
                 <Download size={16} />
                 Export
