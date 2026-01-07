@@ -47,15 +47,15 @@ const Message = styled.div`
 const PermissionManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('admin');
   const router = useRouter();
-  
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
-  
+
   const navigateToRoles = () => {
     router.push('/settings/users-roles/roles');
   };
-  
+
   const navigateToUserRoles = () => {
     router.push('/settings/users-roles/user-roles');
   };
@@ -63,9 +63,9 @@ const PermissionManagementPage: React.FC = () => {
   return (
     <Container>
       <Title>Permission Management</Title>
-      
-      <PermissionGate 
-        resource={Resource.SETTINGS} 
+
+      <PermissionGate
+        resource={Resource.SETTINGS}
         action={Action.UPDATE}
         fallback={
           <Message>
@@ -82,7 +82,7 @@ const PermissionManagementPage: React.FC = () => {
               Assign User Roles
             </Button>
           </ButtonGroup>
-          
+
           <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList>
               <TabsTrigger value="admin">Admin</TabsTrigger>
@@ -90,10 +90,10 @@ const PermissionManagementPage: React.FC = () => {
               <TabsTrigger value="accountant">Accountant</TabsTrigger>
               <TabsTrigger value="employee">Employee</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="admin">
-              <PermissionManager 
-                title="Admin Permission Management" 
+              <PermissionManager
+                title="Admin Permission Management"
                 adminType={UserType.ADMIN}
                 managedUserTypes={[
                   UserType.ADMIN,
@@ -103,10 +103,10 @@ const PermissionManagementPage: React.FC = () => {
                 ]}
               />
             </TabsContent>
-            
+
             <TabsContent value="finance">
-              <PermissionManager 
-                title="Finance Admin Permission Management" 
+              <PermissionManager
+                title="Finance Admin Permission Management"
                 adminType={UserType.FINANCE_ADMIN}
                 managedUserTypes={[
                   UserType.ACCOUNTANT,
@@ -114,10 +114,10 @@ const PermissionManagementPage: React.FC = () => {
                 ]}
               />
             </TabsContent>
-            
+
             <TabsContent value="accountant">
-              <PermissionManager 
-                title="Accountant Permission Management" 
+              <PermissionManager
+                title="Accountant Permission Management"
                 adminType={UserType.FINANCE_ADMIN}
                 managedUserTypes={[
                   UserType.ACCOUNTANT,
@@ -125,7 +125,7 @@ const PermissionManagementPage: React.FC = () => {
                 ]}
               />
             </TabsContent>
-            
+
             <TabsContent value="employee">
               <div style={{ padding: '24px', textAlign: 'center', color: theme.colors.textSecondary }}>
                 <p>Employees have limited permissions and cannot manage other users.</p>

@@ -23,7 +23,7 @@ const BACKGROUND_COLOR = (props: any) => props.theme.colors.background;
 const Container = styled.div`
   max-width: 1000px;
   margin: 20px auto;
-  padding: ${theme.spacing.md};
+  padding: ${props => props.theme.spacing.md};
   min-height: 100vh;
   background-color: ${BACKGROUND_COLOR};
 `;
@@ -32,8 +32,8 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${theme.spacing.xl};
-  padding-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.xl};
+  padding-bottom: ${props => props.theme.spacing.md};
   border-bottom: 2px solid ${BORDER_COLOR};
 `;
 
@@ -82,11 +82,11 @@ const CardTitle = styled.h3`
 `;
 
 const CardContent = styled.div`
-  padding: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: ${theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   
   &:last-child {
     margin-bottom: 0;
@@ -95,34 +95,34 @@ const FormGroup = styled.div`
 
 const Label = styled.label`
   display: block;
-  font-size: ${theme.typography.fontSizes.md};
-  font-weight: ${theme.typography.fontWeights.medium};
-  margin-bottom: ${theme.spacing.sm};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  margin-bottom: ${props => props.theme.spacing.sm};
   color: ${TEXT_COLOR_DARK};
 `;
 
 const HelperText = styled.p`
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_MUTED};
-  margin-top: ${theme.spacing.xs};
+  margin-top: ${props => props.theme.spacing.xs};
   margin-bottom: 0;
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  font-size: ${theme.typography.fontSizes.md};
-  background-color: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  background-color: ${props => props.theme.colors.card};
   color: ${TEXT_COLOR};
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   cursor: pointer;
   
   &:focus {
     outline: none;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    box-shadow: 0 0 0 3px color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 90%);
   }
   
   &:hover {
@@ -133,8 +133,8 @@ const Select = styled.select`
 const ActionButtons = styled.div`
   display: flex;
   justify-content: flex-end;
-  gap: ${theme.spacing.md};
-  margin-top: ${theme.spacing.xl};
+  gap: ${props => props.theme.spacing.md};
+  margin-top: ${props => props.theme.spacing.xl};
 `;
 
 const Switch = styled.label`
@@ -169,8 +169,8 @@ const SwitchSlider = styled.span`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: ${theme.colors.border};
-  transition: ${theme.transitions.default};
+  background-color: ${props => props.theme.colors.border};
+  transition: ${props => props.theme.transitions.default};
   border-radius: 24px;
   
   &:before {
@@ -180,10 +180,10 @@ const SwitchSlider = styled.span`
     width: 18px;
     left: 3px;
     bottom: 3px;
-    background-color: white;
-    transition: ${theme.transitions.default};
+    background-color: ${props => props.theme.colors.card};
+    transition: ${props => props.theme.transitions.default};
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: ${props => props.theme.shadows.sm};
   }
 `;
 
@@ -195,68 +195,68 @@ const SwitchContainer = styled.div`
 
 const ThemeOptions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   flex-wrap: wrap;
 `;
 
 const ThemeOption = styled.div<{ $isSelected: boolean }>`
-  padding: ${theme.spacing.md};
-  border: 2px solid ${props => props.$isSelected ? PRIMARY_COLOR : theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  border: 2px solid ${props => props.$isSelected ? props.theme.colors.primary : props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
   cursor: pointer;
-  background-color: ${props => props.$isSelected ? 'rgba(0, 170, 0, 0.1)' : theme.colors.background};
+  background-color: ${props => props.$isSelected ? `color-mix(in srgb, ${props.theme.colors.primary}, transparent 90%)` : props.theme.colors.card};
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   min-width: 100px;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   user-select: none;
   position: relative;
   
   &:hover {
-    border-color: ${PRIMARY_COLOR};
+    border-color: ${props => props.theme.colors.primary};
     transform: translateY(-2px);
     box-shadow: ${props => props.theme.shadows.md};
-    background-color: ${props => props.$isSelected ? 'rgba(0, 170, 0, 0.15)' : 'rgba(0, 170, 0, 0.05)'};
+    background-color: ${props => props.$isSelected
+    ? `color-mix(in srgb, ${props.theme.colors.primary}, transparent 85%)`
+    : `color-mix(in srgb, ${props.theme.colors.primary}, transparent 95%)`};
   }
   
   &:active {
     transform: translateY(0);
   }
-  
-  ${props => props.$isSelected && `
-    &::after {
-      content: '✓';
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 20px;
-      height: 20px;
-      background: ${PRIMARY_COLOR};
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: bold;
-    }
-  `}
+
+  &::after {
+    content: ${props => props.$isSelected ? "'✓'" : "''"};
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    background: ${props => props.$isSelected ? props.theme.colors.primary : 'transparent'};
+    color: white;
+    border-radius: 50%;
+    display: ${props => props.$isSelected ? 'flex' : 'none'};
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+  }
 `;
 
 const ThemeIcon = styled.div`
-  background-color: ${theme.colors.backgroundSecondary};
+  background-color: ${props => props.theme.colors.backgroundSecondary};
   width: 48px;
   height: 48px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color ${theme.transitions.default};
+  transition: background-color ${props => props.theme.transitions.default};
   
   ${ThemeOption}:hover & {
-    background-color: rgba(0, 170, 0, 0.1);
+    background-color: color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 90%);
   }
   
   svg {
@@ -267,22 +267,22 @@ const ThemeIcon = styled.div`
 `;
 
 const ThemeLabel = styled.span`
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   color: ${TEXT_COLOR_DARK};
 `;
 
 const SuccessBanner = styled.div`
-  background: ${props => props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#d1fae5'};
-  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : '#a7f3d0'};
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  background: color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 90%);
+  border: 1px solid color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 70%);
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: ${props => props.theme.mode === 'dark' ? '#86efac' : '#065f46'};
-  font-size: ${theme.typography.fontSizes.md};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.colors.primary};
+  font-size: ${props => props.theme.typography.fontSizes.md};
   
   svg {
     flex-shrink: 0;
