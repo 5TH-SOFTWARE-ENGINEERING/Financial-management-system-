@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import Link from 'next/link';
 import {
   AlertCircle,
@@ -22,26 +22,25 @@ import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { useUserStore } from '@/store/userStore';
-import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
+const BACKGROUND_CARD = (props: any) => props.theme.colors.background || '#ffffff';
+const BACKGROUND_PAGE = (props: any) => props.theme.colors.backgroundSecondary || '#f5f6fa';
 
-const CardShadow = `
-  0 2px 4px -1px rgba(0, 0, 0, 0.06),
-  0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
-`;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
-`;
+const CardShadow = (props: any) => props.theme.mode === 'dark'
+  ? '0 4px 20px rgba(0,0,0,0.4)'
+  : `0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03), inset 0 0 0 1px rgba(0, 0, 0, 0.02)`;
+
+const CardShadowHover = (props: any) => props.theme.mode === 'dark'
+  ? '0 8px 30px rgba(0,0,0,0.5)'
+  : `0 8px 12px -2px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04), inset 0 0 0 1px rgba(0, 0, 0, 0.02)`;
 
 const PageContainer = styled.div`
   display: flex;
@@ -55,22 +54,22 @@ const ContentContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
   background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
   color: #ffffff;
-  padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const HeaderContent = styled.div`
@@ -78,14 +77,14 @@ const HeaderContent = styled.div`
   
   h1 {
     font-size: clamp(24px, 3vw, 36px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     color: #ffffff;
   }
   
   p {
-    font-size: ${theme.typography.fontSizes.md};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     opacity: 0.9;
     margin: 0;
     color: rgba(255, 255, 255, 0.95);
@@ -97,7 +96,7 @@ const AddButton = styled(Button)`
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: #ffffff;
   backdrop-filter: blur(8px);
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
 
   &:hover {
     background: rgba(255, 255, 255, 0.25);
@@ -110,14 +109,14 @@ const AddButton = styled(Button)`
 const ErrorBanner = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: ${theme.borderRadius.md};
-  color: #dc2626;
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.3)'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 
   svg {
     flex-shrink: 0;
@@ -127,13 +126,13 @@ const ErrorBanner = styled.div`
 `;
 
 const FiltersContainer = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  background: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   box-shadow: ${CardShadow};
-  transition: box-shadow ${theme.transitions.default};
+  transition: box-shadow ${props => props.theme.transitions.default};
 
   &:hover {
     box-shadow: ${CardShadowHover};
@@ -143,11 +142,11 @@ const FiltersContainer = styled.div`
 const FiltersGrid = styled.div`
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: ${theme.spacing.sm};
+    gap: ${props => props.theme.spacing.sm};
   }
 `;
 
@@ -157,7 +156,7 @@ const SearchContainer = styled.div`
 
   svg {
     position: absolute;
-    left: ${theme.spacing.md};
+    left: ${props => props.theme.spacing.md};
     top: 50%;
     transform: translateY(-50%);
     width: 18px;
@@ -169,13 +168,13 @@ const SearchContainer = styled.div`
 
 const SearchInput = styled.input`
   width: 70%;
-  padding: ${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} 40px;
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  font-size: ${theme.typography.fontSizes.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md} ${props => props.theme.spacing.sm} 40px;
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_CARD};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_DARK};
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
 
   &:focus {
     outline: none;
@@ -191,14 +190,14 @@ const SearchInput = styled.input`
 
 const Select = styled.select`
   width: 100%;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_CARD};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   cursor: pointer;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
 
   &:focus {
     outline: none;
@@ -208,35 +207,35 @@ const Select = styled.select`
 `;
 
 const TableContainer = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
   box-shadow: ${CardShadow};
   overflow: hidden;
 `;
 
 const EmptyState = styled.div`
-  padding: ${theme.spacing.xxl};
+  padding: ${props => props.theme.spacing.xxl};
   text-align: center;
   color: ${TEXT_COLOR_MUTED};
 
   svg {
     width: 48px;
     height: 48px;
-    margin: 0 auto ${theme.spacing.md};
+    margin: 0 auto ${props => props.theme.spacing.md};
     opacity: 0.5;
   }
 
   h3 {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.sm};
+    font-size: ${props => props.theme.typography.fontSizes.lg};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.sm};
     color: ${TEXT_COLOR_DARK};
   }
 
   p {
-    font-size: ${theme.typography.fontSizes.md};
-    margin: 0 0 ${theme.spacing.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    margin: 0 0 ${props => props.theme.spacing.md};
   }
 `;
 
@@ -247,15 +246,15 @@ const Table = styled.table`
 `;
 
 const TableHeader = styled.thead`
-  background: ${theme.colors.backgroundSecondary};
-  border-bottom: 2px solid ${theme.colors.border};
+  background: ${BACKGROUND_PAGE};
+  border-bottom: 2px solid ${BORDER_COLOR};
   
   th {
     text-align: left;
-    padding: ${theme.spacing.md} ${theme.spacing.lg};
-    font-weight: ${theme.typography.fontWeights.medium};
+    padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.xs};
+    font-size: ${props => props.theme.typography.fontSizes.xs};
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -263,11 +262,11 @@ const TableHeader = styled.thead`
 
 const TableBody = styled.tbody`
   tr {
-    border-bottom: 1px solid ${theme.colors.border};
-    transition: background-color ${theme.transitions.default};
+    border-bottom: 1px solid ${BORDER_COLOR};
+    transition: background-color ${props => props.theme.transitions.default};
     
     &:hover {
-      background-color: ${theme.colors.backgroundSecondary};
+      background-color: ${BACKGROUND_PAGE};
     }
     
     &:last-child {
@@ -275,58 +274,58 @@ const TableBody = styled.tbody`
     }
     
     td {
-      padding: ${theme.spacing.md} ${theme.spacing.lg};
+      padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
       color: ${TEXT_COLOR_DARK};
-      font-size: ${theme.typography.fontSizes.sm};
+      font-size: ${props => props.theme.typography.fontSizes.sm};
     }
   }
 `;
 
 const StatusBadge = styled.span<{ $status: 'approved' | 'pending' | 'rejected' }>`
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
-  margin-right: ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  margin-right: ${props => props.theme.spacing.sm};
   background: ${props => {
-    if (props.$status === 'approved') return 'rgba(16, 185, 129, 0.12)';
-    if (props.$status === 'rejected') return 'rgba(239, 68, 68, 0.12)';
-    return 'rgba(251, 191, 36, 0.12)';
+    if (props.$status === 'approved') return (props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)');
+    if (props.$status === 'rejected') return (props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.12)');
+    return (props.theme.mode === 'dark' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 191, 36, 0.12)');
   }};
   color: ${props => {
-    if (props.$status === 'approved') return '#065f46';
-    if (props.$status === 'rejected') return '#991b1b';
-    return '#92400e';
+    if (props.$status === 'approved') return (props.theme.mode === 'dark' ? '#6ee7b7' : '#065f46');
+    if (props.$status === 'rejected') return (props.theme.mode === 'dark' ? '#fca5a5' : '#991b1b');
+    return (props.theme.mode === 'dark' ? '#fcd34d' : '#92400e');
   }};
 `;
 
 const RecurringBadge = styled.span`
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
-  background: rgba(59, 130, 246, 0.12);
-  color: #1e40af;
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.12)'};
+  color: ${props => props.theme.mode === 'dark' ? '#93c5fd' : '#1e40af'};
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   align-items: center;
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' | 'secondary' }>`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.xs};
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
+  gap: ${props => props.theme.spacing.xs};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   cursor: pointer;
-  transition: all ${theme.transitions.default};
-  background: ${theme.colors.background};
+  transition: all ${props => props.theme.transitions.default};
+  background: ${BACKGROUND_CARD};
   color: ${TEXT_COLOR_DARK};
 
   ${props => {
@@ -344,9 +343,9 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' | 'secondar
     }
     return `
       &:hover:not(:disabled) {
-        background: ${theme.colors.backgroundSecondary};
-        border-color: ${PRIMARY_COLOR};
-        color: ${PRIMARY_COLOR};
+        background: ${props.theme.colors.backgroundSecondary};
+        border-color: ${PRIMARY_COLOR(props)};
+        color: ${PRIMARY_COLOR(props)};
       }
     `;
   }}
@@ -369,11 +368,11 @@ const LoadingContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
     margin: 0;
   }
 `;
@@ -381,7 +380,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${theme.colors.border};
+  border: 3px solid ${BORDER_COLOR};
   border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -394,7 +393,7 @@ const Spinner = styled.div`
 const ExpenseTitle = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   
   svg {
     width: 16px;
@@ -404,7 +403,7 @@ const ExpenseTitle = styled.div`
   }
   
   span {
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
   }
 `;
@@ -412,7 +411,7 @@ const ExpenseTitle = styled.div`
 const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.5)'};
   display: ${props => props.$isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
@@ -421,15 +420,15 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContent = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.lg};
+  background: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  padding: ${props => props.theme.spacing.lg};
   max-width: 600px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: ${props => props.theme.mode === 'dark' ? '0 20px 60px rgba(0, 0, 0, 0.6)' : '0 20px 60px rgba(0, 0, 0, 0.3)'};
   display: flex;
   flex-direction: column;
   animation: slideUp 0.3s ease-out;
@@ -450,18 +449,18 @@ const ModalHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: ${theme.spacing.lg};
-  padding-bottom: ${theme.spacing.md};
-  border-bottom: 1px solid ${theme.colors.border};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  padding-bottom: ${props => props.theme.spacing.md};
+  border-bottom: 1px solid ${BORDER_COLOR};
   
   h3 {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-size: ${props => props.theme.typography.fontSizes.lg};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
     color: ${TEXT_COLOR_DARK};
     margin: 0;
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.sm};
+    gap: ${props => props.theme.spacing.sm};
   }
   
   button {
@@ -469,12 +468,12 @@ const ModalHeader = styled.div`
     border: none;
     cursor: pointer;
     color: ${TEXT_COLOR_MUTED};
-    padding: ${theme.spacing.xs};
-    border-radius: ${theme.borderRadius.sm};
-    transition: all ${theme.transitions.default};
+    padding: ${props => props.theme.spacing.xs};
+    border-radius: ${props => props.theme.borderRadius.sm};
+    transition: all ${props => props.theme.transitions.default};
     
     &:hover {
-      background: ${theme.colors.backgroundSecondary};
+      background: ${BACKGROUND_PAGE};
       color: ${TEXT_COLOR_DARK};
     }
     
@@ -486,43 +485,42 @@ const ModalHeader = styled.div`
 `;
 
 const ModalTitle = styled.h3`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   margin: 0;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const StyledLabel = styled.label`
   display: block;
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   color: ${TEXT_COLOR_DARK};
-  margin-bottom: ${theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.sm};
 `;
 
 const PasswordInputWrapper = styled.div`
   position: relative;
-  display: flex;
   align-items: center;
   
   input {
     width: 100%;
-    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
     padding-right: 48px;
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.md};
-    background: ${theme.colors.background};
-    font-size: ${theme.typography.fontSizes.md};
+    border: 1px solid ${BORDER_COLOR};
+    border-radius: ${props => props.theme.borderRadius.md};
+    background: ${BACKGROUND_CARD};
+    font-size: ${props => props.theme.typography.fontSizes.md};
     color: ${TEXT_COLOR_DARK};
-    transition: all ${theme.transitions.default};
+    transition: all ${props => props.theme.transitions.default};
     
     &:focus {
       outline: none;
       border-color: ${PRIMARY_COLOR};
-      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+      box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
     }
     
     &::placeholder {
@@ -531,7 +529,7 @@ const PasswordInputWrapper = styled.div`
     }
     
     &:disabled {
-      background-color: ${theme.colors.backgroundSecondary};
+      background-color: ${BACKGROUND_PAGE};
       color: ${TEXT_COLOR_MUTED};
       cursor: not-allowed;
       opacity: 0.7;
@@ -540,21 +538,21 @@ const PasswordInputWrapper = styled.div`
   
   button {
     position: absolute;
-    right: ${theme.spacing.sm};
+    right: ${props => props.theme.spacing.sm};
     background: none;
     border: none;
     cursor: pointer;
     color: ${TEXT_COLOR_MUTED};
-    padding: ${theme.spacing.xs};
-    border-radius: ${theme.borderRadius.sm};
+    padding: ${props => props.theme.spacing.xs};
+    border-radius: ${props => props.theme.borderRadius.sm};
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all ${theme.transitions.default};
+    transition: all ${props => props.theme.transitions.default};
     
     &:hover {
       color: ${TEXT_COLOR_DARK};
-      background: ${theme.colors.backgroundSecondary};
+      background: ${BACKGROUND_PAGE};
     }
     
     svg {
@@ -565,26 +563,26 @@ const PasswordInputWrapper = styled.div`
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const ErrorText = styled.p`
-  color: #dc2626;
-  font-size: ${theme.typography.fontSizes.sm};
-  margin: ${theme.spacing.xs} 0 0 0;
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  margin: ${props => props.theme.spacing.xs} 0 0 0;
 `;
 
 const WarningBox = styled.div`
-  padding: ${theme.spacing.md};
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: ${theme.borderRadius.md};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.md};
+  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.3)'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   
   p {
     margin: 0;
-    color: #dc2626;
-    font-size: ${theme.typography.fontSizes.sm};
+    color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     line-height: 1.5;
   }
 `;
@@ -595,16 +593,16 @@ const ModalAlertIcon = styled(XCircle)`
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.md};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_CARD};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
   resize: vertical;
   min-height: 120px;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
 
   &:focus {
     outline: none;
@@ -620,9 +618,9 @@ const TextArea = styled.textarea`
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   justify-content: flex-end;
-  margin-top: ${theme.spacing.lg};
+  margin-top: ${props => props.theme.spacing.lg};
 `;
 
 interface Expense {
@@ -660,6 +658,7 @@ interface ApiExpense {
 }
 
 export default function ExpenseListPage() {
+  const theme = useTheme();
   const { user } = useAuth();
   const { canApproveTransactions } = useUserStore();
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -690,7 +689,7 @@ export default function ExpenseListPage() {
       approval_status: exp.approval_status || (exp.is_approved ? 'approved' : 'pending'),
       created_by_id: exp.created_by_id ?? 0
     }));
-  
+
   const canApprove = () => {
     if (canApproveTransactions()) return true;
     if (!user) return false;
@@ -701,7 +700,7 @@ export default function ExpenseListPage() {
   const loadExpenses = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiClient.getExpenses();
       const rawData = Array.isArray(response.data) ? response.data : [];
@@ -740,7 +739,7 @@ export default function ExpenseListPage() {
 
   const verifyPassword = async (password: string): Promise<boolean> => {
     if (!user) return false;
-    
+
     try {
       // Use login endpoint to verify password
       const identifier = user.email || '';
@@ -785,7 +784,7 @@ export default function ExpenseListPage() {
     try {
       // First verify password
       const isValid = await verifyPassword(password.trim());
-      
+
       if (!isValid) {
         setDeletePasswordError('Incorrect password. Please try again.');
         setVerifyingPassword(false);
@@ -884,37 +883,37 @@ export default function ExpenseListPage() {
 
   const getItemType = (title: string): string => {
     if (!title) return '';
-    
+
     if (title.toLowerCase().startsWith('item:')) {
       const match = title.match(/item:\s*([^,]+)/i);
       if (match && match[1]) {
         return match[1].trim();
       }
     }
-    
+
     const buyAtIndex = title.toLowerCase().indexOf('buy-at');
     if (buyAtIndex > 0) {
       return title.substring(0, buyAtIndex).trim().replace(/^item:\s*/i, '').trim();
     }
-    
+
     return title.trim();
   };
 
   const categories = Array.from(new Set(expenses.map(e => e.category).filter(Boolean)));
 
   const filteredExpenses = expenses.filter(expense => {
-    const matchesSearch = 
+    const matchesSearch =
       expense.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       expense.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       expense.vendor?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesCategory = categoryFilter === 'all' || expense.category === categoryFilter;
     const status = getStatus(expense);
-    const matchesStatus = statusFilter === 'all' || 
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'approved' && status === 'approved') ||
       (statusFilter === 'pending' && status === 'pending') ||
       (statusFilter === 'rejected' && status === 'rejected');
-    
+
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -968,7 +967,7 @@ export default function ExpenseListPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </SearchContainer>
-              
+
               <Select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -978,7 +977,7 @@ export default function ExpenseListPage() {
                   <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
                 ))}
               </Select>
-              
+
               <Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -999,8 +998,8 @@ export default function ExpenseListPage() {
                   {expenses.length === 0 ? 'No expenses found' : 'No expenses match your filters'}
                 </h3>
                 <p>
-                  {expenses.length === 0 
-                    ? 'Get started by adding your first expense entry.' 
+                  {expenses.length === 0
+                    ? 'Get started by adding your first expense entry.'
                     : 'Try adjusting your search or filter criteria.'}
                 </p>
                 {expenses.length === 0 && (
@@ -1031,89 +1030,89 @@ export default function ExpenseListPage() {
                       const status = getStatus(expense);
                       const isPending = status === 'pending';
                       return (
-                      <tr key={expense.id}>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <ExpenseTitle>
-                            <DollarSign />
-                            <span>{getItemType(expense.title)}</span>
-                          </ExpenseTitle>
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
-                          {expense.category || 'N/A'}
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <span style={{ fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
-                            {formatCurrency(expense.amount)}
-                          </span>
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{expense.vendor || 'N/A'}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{formatDate(expense.date)}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <StatusBadge $status={status}>
-                            {status === 'approved'
-                              ? 'Approved'
-                              : status === 'rejected'
-                              ? 'Rejected'
-                              : 'Pending'}
-                          </StatusBadge>
-                          {expense.is_recurring && (
-                            <RecurringBadge>Recurring</RecurringBadge>
-                          )}
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <ActionButtons>
-                            <Link href={`/expenses/edit/${expense.id}`}>
-                              <ActionButton $variant="secondary" title="Edit">
-                                <Edit />
-                              </ActionButton>
-                            </Link>
-                            {isPending && !expense.is_approved && canApprove() && (
-                              <>
-                                <ActionButton
-                                  $variant="primary"
-                                  onClick={() => handleApprove(expense.id)}
-                                  disabled={approvingId === expense.id || rejectingId === expense.id}
-                                  style={{ background: PRIMARY_COLOR, color: 'white', borderColor: PRIMARY_COLOR }}
-                                >
-                                  {approvingId === expense.id ? (
-                                    <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
-                                  ) : (
-                                    <CheckCircle />
-                                  )}
-                                  Approve
-                                </ActionButton>
-                                <ActionButton
-                                  $variant="danger"
-                                  onClick={() => {
-                                    setShowRejectModal(expense.id);
-                                    setRejectionReason('');
-                                    setRejectPassword('');
-                                    setRejectPasswordError(null);
-                                  }}
-                                  disabled={approvingId === expense.id || rejectingId === expense.id}
-                                >
-                                  <XCircle />
-                                  Reject
-                                </ActionButton>
-                              </>
+                        <tr key={expense.id}>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <ExpenseTitle>
+                              <DollarSign />
+                              <span>{getItemType(expense.title)}</span>
+                            </ExpenseTitle>
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
+                            {expense.category || 'N/A'}
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <span style={{ fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK({ theme }) }}>
+                              {formatCurrency(expense.amount)}
+                            </span>
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{expense.vendor || 'N/A'}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{formatDate(expense.date)}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <StatusBadge $status={status}>
+                              {status === 'approved'
+                                ? 'Approved'
+                                : status === 'rejected'
+                                  ? 'Rejected'
+                                  : 'Pending'}
+                            </StatusBadge>
+                            {expense.is_recurring && (
+                              <RecurringBadge>Recurring</RecurringBadge>
                             )}
-                            <ActionButton
-                              $variant="danger"
-                              onClick={() => handleDeleteClick(expense.id)}
-                              disabled={deletingId === expense.id || approvingId === expense.id || rejectingId === expense.id}
-                              style={{ color: '#dc2626' }}
-                              title="Delete"
-                            >
-                              {deletingId === expense.id ? (
-                                <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
-                              ) : (
-                                <Trash2 />
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <ActionButtons>
+                              <Link href={`/expenses/edit/${expense.id}`}>
+                                <ActionButton $variant="secondary" title="Edit">
+                                  <Edit />
+                                </ActionButton>
+                              </Link>
+                              {isPending && !expense.is_approved && canApprove() && (
+                                <>
+                                  <ActionButton
+                                    $variant="primary"
+                                    onClick={() => handleApprove(expense.id)}
+                                    disabled={approvingId === expense.id || rejectingId === expense.id}
+                                    style={{ background: PRIMARY_COLOR({ theme }), color: 'white', borderColor: PRIMARY_COLOR({ theme }) }}
+                                  >
+                                    {approvingId === expense.id ? (
+                                      <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
+                                    ) : (
+                                      <CheckCircle />
+                                    )}
+                                    Approve
+                                  </ActionButton>
+                                  <ActionButton
+                                    $variant="danger"
+                                    onClick={() => {
+                                      setShowRejectModal(expense.id);
+                                      setRejectionReason('');
+                                      setRejectPassword('');
+                                      setRejectPasswordError(null);
+                                    }}
+                                    disabled={approvingId === expense.id || rejectingId === expense.id}
+                                  >
+                                    <XCircle />
+                                    Reject
+                                  </ActionButton>
+                                </>
                               )}
-                            </ActionButton>
-                          </ActionButtons>
-                        </td>
-                      </tr>
-                    );
+                              <ActionButton
+                                $variant="danger"
+                                onClick={() => handleDeleteClick(expense.id)}
+                                disabled={deletingId === expense.id || approvingId === expense.id || rejectingId === expense.id}
+                                style={{ color: '#dc2626' }}
+                                title="Delete"
+                              >
+                                {deletingId === expense.id ? (
+                                  <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
+                                ) : (
+                                  <Trash2 />
+                                )}
+                              </ActionButton>
+                            </ActionButtons>
+                          </td>
+                        </tr>
+                      );
                     })}
                   </TableBody>
                 </Table>
@@ -1134,7 +1133,7 @@ export default function ExpenseListPage() {
                   <ModalAlertIcon size={20} />
                   Reject Expense Entry
                 </ModalTitle>
-                
+
                 <WarningBox>
                   <p>
                     You are about to reject this expense entry. This action cannot be undone.
@@ -1226,7 +1225,7 @@ export default function ExpenseListPage() {
           {/* Delete Modal */}
           {showDeleteModal && (() => {
             const expenseToDelete = expenses.find((e: Expense) => e.id === showDeleteModal);
-            
+
             return (
               <ModalOverlay $isOpen={showDeleteModal !== null} onClick={handleDeleteCancel}>
                 <ModalContent onClick={(e) => e.stopPropagation()}>
@@ -1239,7 +1238,7 @@ export default function ExpenseListPage() {
                       <XCircle />
                     </button>
                   </ModalHeader>
-                  
+
                   <WarningBox>
                     <p>
                       You are about to permanently delete this expense entry. This action cannot be undone.
@@ -1249,8 +1248,8 @@ export default function ExpenseListPage() {
 
                   {expenseToDelete && (
                     <div style={{
-                      background: theme.colors.backgroundSecondary,
-                      border: '1px solid ' + theme.colors.border,
+                      background: BACKGROUND_PAGE({ theme }),
+                      border: '1px solid ' + BORDER_COLOR({ theme }),
                       borderRadius: theme.borderRadius.md,
                       padding: theme.spacing.lg,
                       marginBottom: theme.spacing.lg
@@ -1258,7 +1257,7 @@ export default function ExpenseListPage() {
                       <h4 style={{
                         fontSize: theme.typography.fontSizes.md,
                         fontWeight: theme.typography.fontWeights.bold,
-                        color: TEXT_COLOR_DARK,
+                        color: TEXT_COLOR_DARK({ theme }),
                         margin: `0 0 ${theme.spacing.md} 0`,
                         display: 'flex',
                         alignItems: 'center',
@@ -1270,35 +1269,35 @@ export default function ExpenseListPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
                           <div style={{ flex: '1 1 200px' }}>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Title</strong>
-                            <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
+                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }), marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Title</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK({ theme }), fontWeight: theme.typography.fontWeights.medium }}>
                               {getItemType(expenseToDelete.title) || expenseToDelete.title || 'N/A'}
                             </span>
                           </div>
                           <div style={{ flex: '1 1 200px' }}>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount</strong>
-                            <span style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK }}>
+                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }), marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: theme.typography.fontWeights.bold, color: TEXT_COLOR_DARK({ theme }) }}>
                               {formatCurrency(expenseToDelete.amount)}
                             </span>
                           </div>
                         </div>
                         {expenseToDelete.description && (
                           <div>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</strong>
-                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK, lineHeight: 1.6 }}>
+                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }), marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK({ theme }), lineHeight: 1.6 }}>
                               {expenseToDelete.description}
                             </span>
                           </div>
                         )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md, flexWrap: 'wrap' }}>
                           <div>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</strong>
-                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK, textTransform: 'capitalize' }}>
+                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }), marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK({ theme }), textTransform: 'capitalize' }}>
                               {expenseToDelete.category || 'N/A'}
                             </span>
                           </div>
                           <div>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</strong>
+                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }), marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</strong>
                             {(() => {
                               const status = getStatus(expenseToDelete as Expense);
                               return (
@@ -1307,8 +1306,8 @@ export default function ExpenseListPage() {
                                     {status === 'approved'
                                       ? 'Approved'
                                       : status === 'rejected'
-                                      ? 'Rejected'
-                                      : 'Pending'}
+                                        ? 'Rejected'
+                                        : 'Pending'}
                                   </StatusBadge>
                                   {expenseToDelete.is_recurring && (
                                     <RecurringBadge>Recurring</RecurringBadge>
@@ -1319,27 +1318,27 @@ export default function ExpenseListPage() {
                           </div>
                         </div>
                         {(expenseToDelete.vendor || expenseToDelete.date) && (
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + BORDER_COLOR({ theme }) }}>
                             {expenseToDelete.vendor && (
                               <div style={{ flex: '1 1 200px' }}>
-                                <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Vendor</strong>
-                                <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                                <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }), marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Vendor</strong>
+                                <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK({ theme }) }}>
                                   {expenseToDelete.vendor}
                                 </span>
                               </div>
                             )}
                             <div style={{ flex: '1 1 200px' }}>
-                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date</strong>
-                              <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                              <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }), marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date</strong>
+                              <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK({ theme }) }}>
                                 {formatDate(expenseToDelete.date)}
                               </span>
                             </div>
                           </div>
                         )}
                         {expenseToDelete.recurring_frequency && (
-                          <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recurring Frequency</strong>
-                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                          <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + BORDER_COLOR({ theme }) }}>
+                            <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }), marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recurring Frequency</strong>
+                            <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK({ theme }) }}>
                               {expenseToDelete.recurring_frequency}
                             </span>
                           </div>
@@ -1385,43 +1384,43 @@ export default function ExpenseListPage() {
                     )}
                   </FormGroup>
 
-                <ModalActions>
-                  <ActionButton
-                    $variant="secondary"
-                    onClick={handleDeleteCancel}
-                    disabled={deletingId === showDeleteModal}
-                  >
-                    Cancel
-                  </ActionButton>
-                  <ActionButton
-                    $variant="danger"
-                    onClick={() => {
-                      if (showDeleteModal !== null) {
-                        handleDelete(showDeleteModal, deletePassword);
-                      }
-                    }}
-                    disabled={!deletePassword.trim() || deletingId === showDeleteModal || verifyingPassword || showDeleteModal === null}
-                  >
-                    {verifyingPassword ? (
-                      <>
-                        <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
-                        Verifying...
-                      </>
-                    ) : deletingId === showDeleteModal ? (
-                      <>
-                        <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 />
-                        Delete Expense Entry
-                      </>
-                    )}
-                  </ActionButton>
-                </ModalActions>
-              </ModalContent>
-            </ModalOverlay>
+                  <ModalActions>
+                    <ActionButton
+                      $variant="secondary"
+                      onClick={handleDeleteCancel}
+                      disabled={deletingId === showDeleteModal}
+                    >
+                      Cancel
+                    </ActionButton>
+                    <ActionButton
+                      $variant="danger"
+                      onClick={() => {
+                        if (showDeleteModal !== null) {
+                          handleDelete(showDeleteModal, deletePassword);
+                        }
+                      }}
+                      disabled={!deletePassword.trim() || deletingId === showDeleteModal || verifyingPassword || showDeleteModal === null}
+                    >
+                      {verifyingPassword ? (
+                        <>
+                          <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
+                          Verifying...
+                        </>
+                      ) : deletingId === showDeleteModal ? (
+                        <>
+                          <Loader2 style={{ animation: 'spin 1s linear infinite' }} />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 />
+                          Delete Expense Entry
+                        </>
+                      )}
+                    </ActionButton>
+                  </ModalActions>
+                </ModalContent>
+              </ModalOverlay>
             );
           })()}
         </ContentContainer>

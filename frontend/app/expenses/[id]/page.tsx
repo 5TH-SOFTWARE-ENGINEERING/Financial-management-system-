@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   ArrowLeft,
   CheckCircle,
@@ -24,15 +24,17 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { useUserStore } from '@/store/userStore';
-import { theme } from '@/components/common/theme';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
+const BACKGROUND_CARD = (props: any) => props.theme.colors.background || '#ffffff';
+const BACKGROUND_PAGE = (props: any) => props.theme.colors.backgroundSecondary || '#f5f6fa';
 
 const PageContainer = styled.div`
   display: flex;
@@ -41,17 +43,17 @@ const PageContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm};
 `;
 
 const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   color: ${TEXT_COLOR_MUTED};
   text-decoration: none;
-  margin-bottom: ${theme.spacing.md};
-  transition: color ${theme.transitions.default};
+  margin-bottom: ${props => props.theme.spacing.md};
+  transition: color ${props => props.theme.transitions.default};
 
   &:hover {
     color: ${TEXT_COLOR_DARK};
@@ -59,14 +61,14 @@ const BackLink = styled(Link)`
 `;
 
 const HeaderSection = styled.div`
-  margin-bottom: ${theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
 const HeaderContent = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   flex-wrap: wrap;
 `;
 
@@ -75,14 +77,14 @@ const HeaderText = styled.div`
   
   h1 {
     font-size: clamp(24px, 3vw, 36px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     color: ${TEXT_COLOR_DARK};
   }
 
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
     margin: 0;
   }
 `;
@@ -90,48 +92,46 @@ const HeaderText = styled.div`
 const ActionButtons = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   flex-wrap: wrap;
 `;
 
 const Card = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.lg};
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06),
-    0 1px 2px -1px rgba(0, 0, 0, 0.03),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.02);
-  margin-bottom: ${theme.spacing.lg};
+  background: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  padding: ${props => props.theme.spacing.lg};
+  box-shadow: ${props => props.theme.mode === 'dark' ? '0 4px 20px rgba(0,0,0,0.4)' : '0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03), inset 0 0 0 1px rgba(0, 0, 0, 0.02)'};
+  margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
 const CardTitle = styled.h2`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
-  margin: 0 0 ${theme.spacing.md};
+  margin: 0 0 ${props => props.theme.spacing.md};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const StatusBadge = styled.span<{ $status: boolean }>`
   display: inline-flex;
   align-items: center;
-  padding: ${theme.spacing.xs} ${theme.spacing.md};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.md};
   border-radius: 999px;
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background-color: ${props => props.$status ? 'rgba(16, 185, 129, 0.12)' : 'rgba(251, 191, 36, 0.12)'};
-  color: ${props => props.$status ? '#065f46' : '#b45309'};
+  background-color: ${props => props.$status ? (props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)') : (props.theme.mode === 'dark' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 191, 36, 0.12)')};
+  color: ${props => props.$status ? (props.theme.mode === 'dark' ? '#6ee7b7' : '#065f46') : (props.theme.mode === 'dark' ? '#fcd34d' : '#b45309')};
 `;
 
 const InfoGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 
   @media (min-width: 768px) {
     grid-template-columns: 1fr 1fr;
@@ -141,7 +141,7 @@ const InfoGrid = styled.div`
 const InfoItem = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const IconWrapper = styled.div`
@@ -154,14 +154,14 @@ const InfoContent = styled.div`
   flex: 1;
   
   p:first-child {
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     color: ${TEXT_COLOR_MUTED};
-    margin: 0 0 ${theme.spacing.xs};
+    margin: 0 0 ${props => props.theme.spacing.xs};
   }
 
   p:last-child {
-    font-size: ${theme.typography.fontSizes.sm};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
     margin: 0;
     word-break: break-word;
@@ -169,10 +169,10 @@ const InfoContent = styled.div`
 `;
 
 const Description = styled.div`
-  padding: ${theme.spacing.md};
-  background: ${theme.colors.backgroundSecondary};
-  border-radius: ${theme.borderRadius.md};
-  margin-top: ${theme.spacing.md};
+  padding: ${props => props.theme.spacing.md};
+  background: ${BACKGROUND_PAGE};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-top: ${props => props.theme.spacing.md};
   
   p {
     margin: 0;
@@ -182,15 +182,15 @@ const Description = styled.div`
 `;
 
 const ErrorBanner = styled.div`
-  padding: ${theme.spacing.md};
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: ${theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.3)'};
+  border-radius: ${props => props.theme.borderRadius.md};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: #dc2626;
-  margin-bottom: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const LoadingContainer = styled.div`
@@ -199,18 +199,18 @@ const LoadingContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
   }
 `;
 
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${theme.colors.border};
+  border: 3px solid ${BORDER_COLOR};
   border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -221,16 +221,16 @@ const Spinner = styled.div`
 `;
 
 const AmountDisplay = styled.div`
-  font-size: ${theme.typography.fontSizes.xxl};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.xxl};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${PRIMARY_COLOR};
-  margin: ${theme.spacing.md} 0;
+  margin: ${props => props.theme.spacing.md} 0;
 `;
 
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.5)'};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -239,34 +239,34 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.xl};
+  background: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  padding: ${props => props.theme.spacing.xl};
   max-width: 500px;
   width: 90%;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  box-shadow: ${props => props.theme.mode === 'dark' ? '0 20px 50px rgba(0, 0, 0, 0.6)' : '0 20px 50px rgba(0, 0, 0, 0.3)'};
 `;
 
 const ModalTitle = styled.h3`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
-  margin: 0 0 ${theme.spacing.lg};
+  margin: 0 0 ${props => props.theme.spacing.lg};
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.md};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_CARD};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
   resize: vertical;
   min-height: 120px;
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   
   &:focus {
     outline: none;
@@ -277,14 +277,14 @@ const TextArea = styled.textarea`
 
 const PasswordInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.md};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_CARD};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   
   &:focus {
     outline: none;
@@ -294,42 +294,42 @@ const PasswordInput = styled.input`
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const Label = styled.label`
   display: block;
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   color: ${TEXT_COLOR_DARK};
-  margin-bottom: ${theme.spacing.xs};
+  margin-bottom: ${props => props.theme.spacing.xs};
 `;
 
 const ErrorText = styled.p`
-  color: #dc2626;
-  font-size: ${theme.typography.fontSizes.xs};
-  margin-top: ${theme.spacing.xs};
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  margin-top: ${props => props.theme.spacing.xs};
   margin-bottom: 0;
 `;
 
 const WarningBox = styled.div`
-  padding: ${theme.spacing.md};
-  background-color: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  border-radius: ${theme.borderRadius.md};
-  margin-bottom: ${theme.spacing.md};
+  padding: ${props => props.theme.spacing.md};
+  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(251, 191, 36, 0.15)' : 'rgba(251, 191, 36, 0.1)'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(251, 191, 36, 0.3)' : 'rgba(251, 191, 36, 0.3)'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   
   p {
     margin: 0;
     color: ${TEXT_COLOR_DARK};
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     line-height: 1.5;
   }
 `;
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   justify-content: flex-end;
 `;
 
@@ -366,6 +366,7 @@ interface StoreUser {
 }
 
 export default function ExpenseDetailPage() {
+  const theme = useTheme();
   const router = useRouter();
   const params = useParams();
   const expenseId = params?.id ? parseInt(params.id as string, 10) : null;
@@ -615,7 +616,7 @@ export default function ExpenseDetailPage() {
             <ArrowLeft size={16} />
             Back to Expenses
           </BackLink>
-          
+
           <HeaderContent>
             <HeaderText>
               <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md, flexWrap: 'wrap' }}>
@@ -633,7 +634,7 @@ export default function ExpenseDetailPage() {
                   <Button
                     onClick={handleApprove}
                     disabled={processing}
-                    style={{ backgroundColor: PRIMARY_COLOR, color: '#fff' }}
+                    style={{ backgroundColor: PRIMARY_COLOR({ theme }), color: '#fff' }}
                   >
                     {processing ? (
                       <>
@@ -657,7 +658,7 @@ export default function ExpenseDetailPage() {
                   </Button>
                 </>
               )}
-              
+
               {canEdit() && (
                 <Button
                   variant="outline"
@@ -832,7 +833,7 @@ export default function ExpenseDetailPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: theme.spacing.sm,
-                    color: PRIMARY_COLOR,
+                    color: PRIMARY_COLOR({ theme }),
                     textDecoration: 'none',
                     fontSize: theme.typography.fontSizes.sm,
                   }}
@@ -851,7 +852,7 @@ export default function ExpenseDetailPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: theme.spacing.sm,
-                    color: PRIMARY_COLOR,
+                    color: PRIMARY_COLOR({ theme }),
                     textDecoration: 'none',
                     fontSize: theme.typography.fontSizes.sm,
                   }}
@@ -974,7 +975,7 @@ export default function ExpenseDetailPage() {
               <ModalTitle>Delete Expense Entry</ModalTitle>
               <WarningBox>
                 <p>
-                  <strong>Warning:</strong> You are about to permanently delete this expense entry. 
+                  <strong>Warning:</strong> You are about to permanently delete this expense entry.
                   This action cannot be undone. Please enter your password to confirm this deletion.
                 </p>
               </WarningBox>
