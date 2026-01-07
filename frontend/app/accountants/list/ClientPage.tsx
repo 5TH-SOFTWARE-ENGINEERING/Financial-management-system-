@@ -12,9 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { type ApiUser } from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -50,16 +48,16 @@ const ContentContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  background: linear-gradient(135deg, ${props => props.theme.colors.primary} 0%, ${props => props.theme.mode === 'dark' ? '#064e3b' : '#008800'} 100%);
   color: #ffffff;
-  padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
 `;
 
@@ -68,18 +66,18 @@ const HeaderContent = styled.div`
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   
   h1 {
     font-size: clamp(24px, 3vw, 36px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     color: #ffffff;
   }
   
   p {
-    font-size: ${theme.typography.fontSizes.md};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     opacity: 0.9;
     margin: 0;
     color: rgba(255, 255, 255, 0.95);
@@ -89,15 +87,15 @@ const HeaderContent = styled.div`
 const AddButton = styled(Link)`
   display: inline-flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
   background: rgba(255, 255, 255, 0.2);
   color: #ffffff;
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   text-decoration: none;
-  font-weight: ${theme.typography.fontWeights.medium};
-  font-size: ${theme.typography.fontSizes.md};
-  transition: all ${theme.transitions.default};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  transition: all ${props => props.theme.transitions.default};
   border: 1px solid rgba(255, 255, 255, 0.3);
 
   &:hover {
@@ -113,16 +111,16 @@ const AddButton = styled(Link)`
 `;
 
 const ErrorBanner = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fef2f2'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : '#fecaca'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: #991b1b;
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#991b1b'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 
   svg {
     flex-shrink: 0;
@@ -132,12 +130,12 @@ const ErrorBanner = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${theme.colors.background};
-  padding: ${theme.spacing.xl};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${props => props.theme.colors.background};
+  padding: ${props => props.theme.spacing.xl};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: ${CardShadow};
-  transition: box-shadow ${theme.transitions.default};
+  transition: box-shadow ${props => props.theme.transitions.default};
 
   &:hover {
     box-shadow: ${CardShadowHover};
@@ -146,18 +144,18 @@ const Card = styled.div`
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: ${theme.spacing.xxl} ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.xxl} ${props => props.theme.spacing.lg};
   
   p {
-    color: ${TEXT_COLOR_MUTED};
-    margin-bottom: ${theme.spacing.md};
-    font-size: ${theme.typography.fontSizes.md};
+    color: ${props => props.theme.colors.mutedForeground};
+    margin-bottom: ${props => props.theme.spacing.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
   }
 `;
 
 const TableContainer = styled.div`
   overflow-x: auto;
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
 `;
 
 const Table = styled.table`
@@ -166,14 +164,14 @@ const Table = styled.table`
 `;
 
 const TableHeader = styled.thead`
-  border-bottom: 2px solid ${theme.colors.border};
+  border-bottom: 2px solid ${props => props.theme.colors.border};
   
   th {
     text-align: left;
-    padding: ${theme.spacing.md};
-    font-weight: ${theme.typography.fontWeights.bold};
-    color: ${TEXT_COLOR_DARK};
-    font-size: ${theme.typography.fontSizes.sm};
+    padding: ${props => props.theme.spacing.md};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    color: ${props => props.theme.colors.textDark};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -181,11 +179,11 @@ const TableHeader = styled.thead`
 
 const TableBody = styled.tbody`
   tr {
-    border-bottom: 1px solid ${theme.colors.border};
-    transition: background-color ${theme.transitions.default};
+    border-bottom: 1px solid ${props => props.theme.colors.border};
+    transition: background-color ${props => props.theme.transitions.default};
     
     &:hover {
-      background: ${theme.colors.backgroundSecondary};
+      background: ${props => props.theme.colors.backgroundSecondary};
     }
     
     &:last-child {
@@ -193,9 +191,9 @@ const TableBody = styled.tbody`
     }
     
     td {
-      padding: ${theme.spacing.md};
-      color: ${TEXT_COLOR_MUTED};
-      font-size: ${theme.typography.fontSizes.md};
+      padding: ${props => props.theme.spacing.md};
+      color: ${props => props.theme.colors.mutedForeground};
+      font-size: ${props => props.theme.typography.fontSizes.md};
     }
   }
 `;
@@ -203,28 +201,28 @@ const TableBody = styled.tbody`
 const StatusBadge = styled.span<{ $isActive: boolean }>`
   display: inline-flex;
   align-items: center;
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 
-  ${({ $isActive }) =>
+  ${({ $isActive, theme }) =>
     $isActive
       ? `
-        background: #D1FAE5;
-        color: #065F46;
+        background: ${theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5'};
+        color: ${theme.mode === 'dark' ? '#6ee7b7' : '#065F46'};
       `
       : `
-        background: #FEE2E2;
-        color: #991B1B;
+        background: ${theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2'};
+        color: ${theme.mode === 'dark' ? '#fca5a5' : '#991B1B'};
       `}
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   align-items: center;
 `;
 
@@ -237,16 +235,16 @@ const LoadingContainer = styled.div`
   width: 100%;
   
   p {
-    margin-top: ${theme.spacing.md};
-    color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    margin-top: ${props => props.theme.spacing.md};
+    color: ${props => props.theme.colors.mutedForeground};
+    font-size: ${props => props.theme.typography.fontSizes.md};
   }
 `;
 
 const Spinner = styled(Loader2)`
   width: 40px;
   height: 40px;
-  color: ${PRIMARY_COLOR};
+  color: ${props => props.theme.colors.primary};
   animation: spin 1s linear infinite;
   
   @keyframes spin {
@@ -266,10 +264,10 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContent = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.lg};
+  background: ${props => props.theme.colors.background};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
+  padding: ${props => props.theme.spacing.lg};
   max-width: 600px;
   width: 90%;
   max-height: 90vh;
@@ -295,32 +293,32 @@ const ModalHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: ${theme.spacing.lg};
-  padding-bottom: ${theme.spacing.md};
-  border-bottom: 1px solid ${theme.colors.border};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  padding-bottom: ${props => props.theme.spacing.md};
+  border-bottom: 1px solid ${props => props.theme.colors.border};
   
   h3 {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.bold};
-    color: ${TEXT_COLOR_DARK};
+    font-size: ${props => props.theme.typography.fontSizes.lg};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    color: ${props => props.theme.colors.textDark};
     margin: 0;
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.sm};
+    gap: ${props => props.theme.spacing.sm};
   }
   
   button {
     background: none;
     border: none;
     cursor: pointer;
-    color: ${TEXT_COLOR_MUTED};
-    padding: ${theme.spacing.xs};
-    border-radius: ${theme.borderRadius.sm};
-    transition: all ${theme.transitions.default};
+    color: ${props => props.theme.colors.mutedForeground};
+    padding: ${props => props.theme.spacing.xs};
+    border-radius: ${props => props.theme.borderRadius.sm};
+    transition: all ${props => props.theme.transitions.default};
     
     &:hover {
-      background: ${theme.colors.backgroundSecondary};
-      color: ${TEXT_COLOR_DARK};
+      background: ${props => props.theme.colors.backgroundSecondary};
+      color: ${props => props.theme.colors.textDark};
     }
     
     svg {
@@ -331,40 +329,40 @@ const ModalHeader = styled.div`
 `;
 
 const ModalTitle = styled.h3`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
-  color: ${TEXT_COLOR_DARK};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  color: ${props => props.theme.colors.textDark};
   margin: 0;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const WarningBox = styled.div`
-  padding: ${theme.spacing.md};
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: ${theme.borderRadius.md};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.1)'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.3)'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   
   p {
     margin: 0;
-    color: #dc2626;
-    font-size: ${theme.typography.fontSizes.sm};
+    color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     line-height: 1.5;
   }
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const Label = styled.label`
   display: block;
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.medium};
-  color: ${TEXT_COLOR_DARK};
-  margin-bottom: ${theme.spacing.xs};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  color: ${props => props.theme.colors.textDark};
+  margin-bottom: ${props => props.theme.spacing.xs};
 `;
 
 const PasswordInputWrapper = styled.div`
@@ -374,29 +372,29 @@ const PasswordInputWrapper = styled.div`
   
   input {
     width: 100%;
-    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
     padding-right: 48px;
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.md};
-    background: ${theme.colors.background};
-    font-size: ${theme.typography.fontSizes.md};
-    color: ${TEXT_COLOR_DARK};
-    transition: all ${theme.transitions.default};
+    border: 1px solid ${props => props.theme.colors.border};
+    border-radius: ${props => props.theme.borderRadius.md};
+    background: ${props => props.theme.colors.background};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    color: ${props => props.theme.colors.textDark};
+    transition: all ${props => props.theme.transitions.default};
     
     &:focus {
       outline: none;
-      border-color: ${PRIMARY_COLOR};
-      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+      border-color: ${props => props.theme.colors.primary};
+      box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
     }
     
     &::placeholder {
-      color: ${TEXT_COLOR_MUTED};
+      color: ${props => props.theme.colors.mutedForeground};
       opacity: 0.5;
     }
     
     &:disabled {
-      background-color: ${theme.colors.backgroundSecondary};
-      color: ${TEXT_COLOR_MUTED};
+      background-color: ${props => props.theme.colors.backgroundSecondary};
+      color: ${props => props.theme.colors.mutedForeground};
       cursor: not-allowed;
       opacity: 0.7;
     }
@@ -404,21 +402,21 @@ const PasswordInputWrapper = styled.div`
   
   button {
     position: absolute;
-    right: ${theme.spacing.sm};
+    right: ${props => props.theme.spacing.sm};
     background: none;
     border: none;
     cursor: pointer;
-    color: ${TEXT_COLOR_MUTED};
-    padding: ${theme.spacing.xs};
-    border-radius: ${theme.borderRadius.sm};
+    color: ${props => props.theme.colors.mutedForeground};
+    padding: ${props => props.theme.spacing.xs};
+    border-radius: ${props => props.theme.borderRadius.sm};
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all ${theme.transitions.default};
+    transition: all ${props => props.theme.transitions.default};
     
     &:hover {
-      color: ${TEXT_COLOR_DARK};
-      background: ${theme.colors.backgroundSecondary};
+      color: ${props => props.theme.colors.textDark};
+      background: ${props => props.theme.colors.backgroundSecondary};
     }
     
     svg {
@@ -429,22 +427,22 @@ const PasswordInputWrapper = styled.div`
 `;
 
 const ErrorText = styled.p`
-  color: #dc2626;
-  font-size: ${theme.typography.fontSizes.sm};
-  margin: ${theme.spacing.xs} 0 0 0;
+  color: ${props => props.theme.colors.error};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  margin: ${props => props.theme.spacing.xs} 0 0 0;
 `;
 
 const ModalActions = styled.div`
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  margin-top: ${theme.spacing.lg};
+  margin-top: ${props => props.theme.spacing.lg};
 `;
 
 const SearchContainer = styled.div`
   display: flex;
-  gap: ${theme.spacing.sm};
-  margin-bottom: ${theme.spacing.lg};
+  gap: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.lg};
   align-items: center;
 `;
 
@@ -456,32 +454,32 @@ const SearchInputWrapper = styled.div`
   
   input {
     width: 100%;
-    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
     padding-left: 40px;
     padding-right: 40px;
-    border: 1px solid ${theme.colors.border};
-    border-radius: ${theme.borderRadius.md};
-    background: ${theme.colors.background};
-    font-size: ${theme.typography.fontSizes.md};
-    color: ${TEXT_COLOR_DARK};
-    transition: all ${theme.transitions.default};
+    border: 1px solid ${props => props.theme.colors.border};
+    border-radius: ${props => props.theme.borderRadius.md};
+    background: ${props => props.theme.colors.background};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    color: ${props => props.theme.colors.textDark};
+    transition: all ${props => props.theme.transitions.default};
     
     &:focus {
       outline: none;
-      border-color: ${PRIMARY_COLOR};
-      box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+      border-color: ${props => props.theme.colors.primary};
+      box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
     }
     
     &::placeholder {
-      color: ${TEXT_COLOR_MUTED};
+      color: ${props => props.theme.colors.mutedForeground};
       opacity: 0.5;
     }
   }
   
   .search-icon {
     position: absolute;
-    left: ${theme.spacing.sm};
-    color: ${TEXT_COLOR_MUTED};
+    left: ${props => props.theme.spacing.sm};
+    color: ${props => props.theme.colors.mutedForeground};
     width: 18px;
     height: 18px;
     pointer-events: none;
@@ -489,21 +487,21 @@ const SearchInputWrapper = styled.div`
   
   .clear-button {
     position: absolute;
-    right: ${theme.spacing.sm};
+    right: ${props => props.theme.spacing.sm};
     background: none;
     border: none;
     cursor: pointer;
-    color: ${TEXT_COLOR_MUTED};
-    padding: ${theme.spacing.xs};
-    border-radius: ${theme.borderRadius.sm};
+    color: ${props => props.theme.colors.mutedForeground};
+    padding: ${props => props.theme.spacing.xs};
+    border-radius: ${props => props.theme.borderRadius.sm};
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all ${theme.transitions.default};
+    transition: all ${props => props.theme.transitions.default};
     
     &:hover {
-      color: ${TEXT_COLOR_DARK};
-      background: ${theme.colors.backgroundSecondary};
+      color: ${props => props.theme.colors.textDark};
+      background: ${props => props.theme.colors.backgroundSecondary};
     }
     
     svg {
@@ -516,8 +514,8 @@ const SearchInputWrapper = styled.div`
 const SearchButton = styled(Button)`
   display: inline-flex;
   align-items: center;
-  gap: ${theme.spacing.xs};
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.xs};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
   
   svg {
     width: 16px;
@@ -526,40 +524,39 @@ const SearchButton = styled(Button)`
 `;
 
 const SearchResultsInfo = styled.div`
-  font-size: ${theme.typography.fontSizes.sm};
-  color: ${TEXT_COLOR_MUTED};
-  margin-bottom: ${theme.spacing.md};
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  background: ${theme.colors.backgroundSecondary};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  color: ${props => props.theme.colors.mutedForeground};
+  margin-bottom: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
 `;
 
 const Badge = styled.span<{ $variant: 'admin' | 'finance_manager' | 'finance_admin' | 'accountant' | 'employee' | 'active' | 'inactive' | 'default' }>`
   display: inline-flex;
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.bold};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   border-radius: 9999px;
 
-  ${(p) => {
-    switch (p.$variant) {
+  ${({ $variant, theme }) => {
+    switch ($variant) {
       case 'admin':
-        return 'background-color: #f3e8ff; color: #6b21a8;';
+        return `background-color: ${theme.mode === 'dark' ? 'rgba(107, 33, 168, 0.2)' : '#f3e8ff'}; color: ${theme.mode === 'dark' ? '#d8b4fe' : '#6b21a8'};`;
       case 'finance_manager':
-        return 'background-color: #dbeafe; color: #1e40af;';
       case 'finance_admin':
-        return 'background-color: #dbeafe; color: #1e40af;';
+        return `background-color: ${theme.mode === 'dark' ? 'rgba(30, 64, 175, 0.2)' : '#dbeafe'}; color: ${theme.mode === 'dark' ? '#93c5fd' : '#1e40af'};`;
       case 'accountant':
-        return 'background-color: #dcfce7; color: #166534;';
+        return `background-color: ${theme.mode === 'dark' ? 'rgba(22, 101, 52, 0.2)' : '#dcfce7'}; color: ${theme.mode === 'dark' ? '#86efac' : '#166534'};`;
       case 'employee':
-        return 'background-color: #fed7aa; color: #9a3412;';
+        return `background-color: ${theme.mode === 'dark' ? 'rgba(154, 52, 18, 0.2)' : '#fed7aa'}; color: ${theme.mode === 'dark' ? '#fdba74' : '#9a3412'};`;
       case 'active':
-        return 'background-color: #dcfce7; color: #166534;';
+        return `background-color: ${theme.mode === 'dark' ? 'rgba(22, 101, 52, 0.2)' : '#dcfce7'}; color: ${theme.mode === 'dark' ? '#86efac' : '#166534'};`;
       case 'inactive':
-        return 'background-color: #fee2e2; color: #991b1b;';
+        return `background-color: ${theme.mode === 'dark' ? 'rgba(153, 27, 27, 0.2)' : '#fee2e2'}; color: ${theme.mode === 'dark' ? '#fca5a5' : '#991b1b'};`;
       default:
-        return 'background-color: ${theme.colors.backgroundSecondary}; color: #374151;';
+        return `background-color: ${theme.colors.backgroundSecondary}; color: ${theme.colors.text};`;
     }
   }}
 `;
@@ -648,7 +645,7 @@ function AccountantListPageInner() {
   const loadAccountants = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiClient.getUsers();
       const users = Array.isArray(response.data) ? (response.data as ApiUser[]) : [];
@@ -656,15 +653,15 @@ function AccountantListPageInner() {
       const accountantUsers = users
         .filter((user) => user.role?.toLowerCase() === 'accountant')
         .map((user) => ({
-        id: user.id,
-        full_name: user.full_name || '',
-        email: user.email || '',
-        username: user.username || '',
-        phone: user.phone || null,
-        role: user.role || 'accountant',
-        is_active: user.is_active ?? true,
-        department: user.department || null,
-      }));
+          id: user.id,
+          full_name: user.full_name || '',
+          email: user.email || '',
+          username: user.username || '',
+          phone: user.phone || null,
+          role: user.role || 'accountant',
+          is_active: user.is_active ?? true,
+          department: user.department || null,
+        }));
       setAccountants(accountantUsers);
     } catch (err: unknown) {
       const errorMsg = getErrorMessage(err, 'Failed to load accountants');
@@ -677,7 +674,7 @@ function AccountantListPageInner() {
 
   const verifyPassword = async (password: string): Promise<boolean> => {
     if (!user) return false;
-    
+
     try {
       // Use login endpoint to verify password
       const identifier = user.email || '';
@@ -726,7 +723,7 @@ function AccountantListPageInner() {
     try {
       // First verify password
       const isValid = await verifyPassword(deletePassword.trim());
-      
+
       if (!isValid) {
         setDeletePasswordError('Incorrect password. Please try again.');
         setVerifyingPassword(false);
@@ -991,7 +988,7 @@ function AccountantListPageInner() {
                                 aria-label={`${accountant.is_active ? 'Deactivate' : 'Activate'} ${accountant.full_name}`}
                               />
                               {togglingId === accountant.id && (
-                                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', color: TEXT_COLOR_MUTED }} />
+                                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', color:theme.colors.mutedForeground }} />
                               )}
                             </div>
                           </td>
@@ -1002,8 +999,8 @@ function AccountantListPageInner() {
                                   <Edit size={14} className="h-4 w-4 mr-1" />
                                 </Button>
                               </Link>
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 variant="destructive"
                                 onClick={() => handleDeleteClick(accountant)}
                                 disabled={deleting}
@@ -1013,7 +1010,7 @@ function AccountantListPageInner() {
                                     <Loader2 size={16} className="h-4 w-4 mr-1 animate-spin" />
                                   </>
                                 ) : (
-                                  <Trash2 size={14}className="h-4 w-4 mr-1" />
+                                  <Trash2 size={14} className="h-4 w-4 mr-1" />
                                 )}
                               </Button>
                             </ActionButtons>
@@ -1044,7 +1041,7 @@ function AccountantListPageInner() {
             </ModalHeader>
             <WarningBox>
               <p>
-                <strong>Warning:</strong> You are about to permanently delete this accountant. 
+                <strong>Warning:</strong> You are about to permanently delete this accountant.
                 This action cannot be undone. Please enter <strong>your own password</strong> to verify this action.
               </p>
             </WarningBox>
@@ -1059,7 +1056,7 @@ function AccountantListPageInner() {
               <h4 style={{
                 fontSize: theme.typography.fontSizes.md,
                 fontWeight: theme.typography.fontWeights.bold,
-                color: TEXT_COLOR_DARK,
+                color: theme.colors.textDark,
                 margin: `0 0 ${theme.spacing.md} 0`,
                 display: 'flex',
                 alignItems: 'center',
@@ -1071,14 +1068,14 @@ function AccountantListPageInner() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
                   <div style={{ flex: '1 1 200px' }}>
-                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
+                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.md, color: theme.colors.textDark, fontWeight: theme.typography.fontWeights.medium }}>
                       {accountantToDelete.full_name || 'N/A'}
                     </span>
                   </div>
                   <div style={{ flex: '1 1 200px' }}>
-                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>
                       {accountantToDelete.email}
                     </span>
                   </div>
@@ -1086,16 +1083,16 @@ function AccountantListPageInner() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
                   {accountantToDelete.username && (
                     <div style={{ flex: '1 1 200px' }}>
-                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Username</strong>
-                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Username</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>
                         {accountantToDelete.username}
                       </span>
                     </div>
                   )}
                   {accountantToDelete.phone && (
                     <div style={{ flex: '1 1 200px' }}>
-                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone</strong>
-                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>
                         {accountantToDelete.phone}
                       </span>
                     </div>
@@ -1105,20 +1102,20 @@ function AccountantListPageInner() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
                     {accountantToDelete.department && (
                       <div style={{ flex: '1 1 200px' }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>
                           {accountantToDelete.department}
                         </span>
                       </div>
                     )}
                     <div style={{ flex: '1 1 200px' }}>
-                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Role</strong>
+                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Role</strong>
                       <Badge $variant={getRoleBadgeVariant(accountantToDelete.role)}>
                         {getRoleDisplayName(accountantToDelete.role)}
                       </Badge>
                     </div>
                     <div style={{ flex: '1 1 200px' }}>
-                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</strong>
+                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</strong>
                       <Badge $variant={accountantToDelete.is_active ? 'active' : 'inactive'}>
                         {accountantToDelete.is_active ? 'Active' : 'Inactive'}
                       </Badge>
@@ -1307,56 +1304,56 @@ function AccountantListPageInner() {
               <h4 style={{
                 fontSize: theme.typography.fontSizes.sm,
                 fontWeight: theme.typography.fontWeights.bold,
-                color: TEXT_COLOR_DARK,
+                color: theme.colors.textDark,
                 margin: `0 0 ${theme.spacing.md} 0`
               }}>
                 Accountant Details to be Deactivated:
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
-                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>Name:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                     {accountantToDeactivate.full_name || 'N/A'}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Email:</strong>
-                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>Email:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                     {accountantToDeactivate.email}
                   </span>
                 </div>
                 {accountantToDeactivate.username && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Username:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>Username:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                       {accountantToDeactivate.username}
                     </span>
                   </div>
                 )}
                 {accountantToDeactivate.phone && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Phone:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>Phone:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                       {accountantToDeactivate.phone}
                     </span>
                   </div>
                 )}
                 {accountantToDeactivate.department && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Department:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>Department:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                       {accountantToDeactivate.department}
                     </span>
                   </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>Role:</strong>
                   <Badge $variant={getRoleBadgeVariant(accountantToDeactivate.role)}>
                     {getRoleDisplayName(accountantToDeactivate.role)}
                   </Badge>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.textDark }}>Status:</strong>
                   <Badge $variant={accountantToDeactivate.is_active ? 'active' : 'inactive'}>
                     {accountantToDeactivate.is_active ? 'Active' : 'Inactive'}
                   </Badge>

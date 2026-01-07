@@ -44,14 +44,14 @@ type FormData = z.infer<typeof UpdateFinanceSchema>;
 
 const LayoutWrapper = styled.div`
   display: flex;
-  background: #f5f6fa;
+  background: ${props => props.theme.colors.background};
   min-height: 100vh;
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
+  background: ${props => props.theme.colors.card};
+  border-right: 1px solid ${props => props.theme.colors.border};
   position: fixed;
   left: 0;
   top: 0;
@@ -81,13 +81,13 @@ const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   font-size: 14px;
   margin-bottom: 16px;
   transition: 0.2s;
 
   &:hover {
-    color: var(--foreground);
+    color: ${props => props.theme.colors.text};
   }
 `;
 
@@ -98,10 +98,11 @@ const Title = styled.h1`
   display: flex;
   align-items: center;
   gap: 12px;
+  color: ${props => props.theme.colors.textDark};
 `;
 
 const Subtitle = styled.p`
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   margin-bottom: 24px;
 `;
 
@@ -114,20 +115,26 @@ const AlertBox = styled.div<{ status: 'error' | 'success' }>`
   align-items: center;
   gap: 8px;
 
-  background: ${({ status }) =>
-    status === 'error' ? '#FEF2F2' : '#ECFDF5'};
+  background: ${({ status, theme }) =>
+    status === 'error'
+      ? (theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#FEF2F2')
+      : (theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#ECFDF5')};
   border: 1px solid
-    ${({ status }) =>
-      status === 'error' ? '#FECACA' : '#A7F3D0'};
-  color: ${({ status }) =>
-    status === 'error' ? '#B91C1C' : '#047857'};
+    ${({ status, theme }) =>
+    status === 'error'
+      ? (theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : '#FECACA')
+      : (theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.5)' : '#A7F3D0')};
+  color: ${({ status, theme }) =>
+    status === 'error'
+      ? (theme.mode === 'dark' ? '#fca5a5' : '#B91C1C')
+      : (theme.mode === 'dark' ? '#6ee7b7' : '#047857')};
 `;
 
 const FormCard = styled.form`
-  background: #fff;
+  background: ${props => props.theme.colors.card};
   padding: 28px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
@@ -157,11 +164,11 @@ const FormRow = styled.div`
 const HelpText = styled.p`
   margin-top: 4px;
   font-size: 13px;
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
+  color: ${props => props.theme.colors.error};
   font-size: 14px;
   margin-top: 4px;
 `;
@@ -170,7 +177,7 @@ const StyledInput = styled.input`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -182,25 +189,25 @@ const StyledInput = styled.input`
   margin: 0;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
     background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.textSecondary};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.textSecondary};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &[type="number"] {
@@ -309,7 +316,7 @@ export default function EditFinancePage() {
       const msg =
         (err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail ||
-            (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message
           : undefined) || 'Failed to update finance manager';
 
       setError(msg);
@@ -430,7 +437,7 @@ export default function EditFinancePage() {
                 placeholder="Enter manager ID (optional)"
               />
               <HelpText>
-              Manager ID cannot be changed. Contact an administrator to modify this field.
+                Manager ID cannot be changed. Contact an administrator to modify this field.
               </HelpText>
             </FormGroup>
 

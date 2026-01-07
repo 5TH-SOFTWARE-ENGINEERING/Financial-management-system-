@@ -952,8 +952,8 @@ export default function EmployeeListPage() {
                       <tr key={employee.id}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                            <Users size={16} style={{ color: TEXT_COLOR_MUTED }} />
-                            <span style={{ fontWeight: theme.typography.fontWeights.medium, color: TEXT_COLOR_DARK }}>
+                            <Users size={16} style={{ color: theme.colors.mutedForeground }} />
+                            <span style={{ fontWeight: theme.typography.fontWeights.medium, color: theme.colors.mutedForeground }}>
                               {employee.full_name || 'N/A'}
                             </span>
                           </div>
@@ -1042,7 +1042,7 @@ export default function EmployeeListPage() {
               <h4 style={{
                 fontSize: theme.typography.fontSizes.md,
                 fontWeight: theme.typography.fontWeights.bold,
-                color: TEXT_COLOR_DARK,
+                color: theme.colors.mutedForeground,
                 margin: `0 0 ${theme.spacing.md} 0`,
                 display: 'flex',
                 alignItems: 'center',
@@ -1055,13 +1055,13 @@ export default function EmployeeListPage() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap' }}>
                   <div style={{ flex: '1 1 200px' }}>
                     <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK, fontWeight: theme.typography.fontWeights.medium }}>
+                    <span style={{ fontSize: theme.typography.fontSizes.md, color: theme.colors.mutedForeground, fontWeight: theme.typography.fontWeights.medium }}>
                       {employeeToDelete.full_name || 'N/A'}
                     </span>
                   </div>
                   <div style={{ flex: '1 1 200px' }}>
                     <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.md, color: TEXT_COLOR_DARK }}>
+                    <span style={{ fontSize: theme.typography.fontSizes.md, color: theme.colors.mutedForeground }}>
                       {employeeToDelete.email}
                     </span>
                   </div>
@@ -1070,16 +1070,16 @@ export default function EmployeeListPage() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
                     {employeeToDelete.username && (
                       <div style={{ flex: '1 1 200px' }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Username</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Username</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                           {employeeToDelete.username}
                         </span>
                       </div>
                     )}
                     {employeeToDelete.phone && (
                       <div style={{ flex: '1 1 200px' }}>
-                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone</strong>
-                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                        <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone</strong>
+                        <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                           {employeeToDelete.phone}
                         </span>
                       </div>
@@ -1089,8 +1089,8 @@ export default function EmployeeListPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md, flexWrap: 'wrap', paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
                   {employeeToDelete.department && (
                     <div>
-                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</strong>
-                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                      <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</strong>
+                      <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                         {employeeToDelete.department}
                       </span>
                     </div>
@@ -1110,8 +1110,8 @@ export default function EmployeeListPage() {
                 </div>
                 {employeeToDelete.manager_id && (
                   <div style={{ paddingTop: theme.spacing.sm, borderTop: '1px solid ' + theme.colors.border }}>
-                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Manager ID</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>
+                    <strong style={{ display: 'block', fontSize: theme.typography.fontSizes.xs, color: theme.colors.mutedForeground, marginBottom: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Manager ID</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                       {employeeToDelete.manager_id}
                     </span>
                   </div>
@@ -1290,64 +1290,64 @@ export default function EmployeeListPage() {
               <h4 style={{
                 fontSize: theme.typography.fontSizes.sm,
                 fontWeight: theme.typography.fontWeights.bold,
-                color: TEXT_COLOR_DARK,
+                color: theme.colors.mutedForeground,
                 margin: `0 0 ${theme.spacing.md} 0`
               }}>
                 Employee Details to be Deactivated:
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Name:</strong>
-                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>Name:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                     {employeeToDeactivate.full_name || 'N/A'}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Email:</strong>
-                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>Email:</strong>
+                  <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                     {employeeToDeactivate.email}
                   </span>
                 </div>
                 {employeeToDeactivate.username && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Username:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>Username:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                       {employeeToDeactivate.username}
                     </span>
                   </div>
                 )}
                 {employeeToDeactivate.phone && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Phone:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>Phone:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                       {employeeToDeactivate.phone}
                     </span>
                   </div>
                 )}
                 {employeeToDeactivate.department && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Department:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>Department:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                       {employeeToDeactivate.department}
                     </span>
                   </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Role:</strong>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>Role:</strong>
                   <Badge $variant={getRoleBadgeVariant(employeeToDeactivate.role)}>
                     {getRoleDisplayName(employeeToDeactivate.role)}
                   </Badge>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Status:</strong>
+                  <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>Status:</strong>
                   <Badge $variant={employeeToDeactivate.is_active ? 'active' : 'inactive'}>
                     {employeeToDeactivate.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
                 {employeeToDeactivate.manager_id && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_DARK }}>Manager ID:</strong>
-                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    <strong style={{ minWidth: '120px', fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>Manager ID:</strong>
+                    <span style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.mutedForeground }}>
                       {employeeToDeactivate.manager_id}
                     </span>
                   </div>

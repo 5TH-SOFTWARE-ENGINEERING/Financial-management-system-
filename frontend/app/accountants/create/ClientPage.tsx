@@ -17,9 +17,6 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
   0 1px 2px -1px rgba(0, 0, 0, 0.03),
@@ -43,37 +40,37 @@ const ContentContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  background: linear-gradient(135deg, ${props => props.theme.colors.primary} 0%, ${props => props.theme.mode === 'dark' ? '#064e3b' : '#008800'} 100%);
   color: #ffffff;
-  padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
 `;
 
 const HeaderContent = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   
   h1 {
     font-size: clamp(24px, 3vw, 36px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     color: #ffffff;
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.md};
+    gap: ${props => props.theme.spacing.md};
   }
   
   p {
-    font-size: ${theme.typography.fontSizes.md};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     opacity: 0.9;
     margin: 0;
     color: rgba(255, 255, 255, 0.95);
@@ -88,15 +85,15 @@ const HeaderContent = styled.div`
 const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: ${TEXT_COLOR_MUTED};
-  font-size: ${theme.typography.fontSizes.md};
-  margin-bottom: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.colors.mutedForeground};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   text-decoration: none;
-  transition: color ${theme.transitions.default};
+  transition: color ${props => props.theme.transitions.default};
 
   &:hover {
-    color: ${PRIMARY_COLOR};
+    color: ${props => props.theme.colors.text};
   }
 
   svg {
@@ -106,15 +103,15 @@ const BackLink = styled(Link)`
 `;
 
 const FormCard = styled.form`
-  background: ${theme.colors.background};
-  padding: ${theme.spacing.xl};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${props => props.theme.colors.card};
+  padding: ${props => props.theme.spacing.xl};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: ${CardShadow};
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.lg};
-  transition: box-shadow ${theme.transitions.default};
+  gap: ${props => props.theme.spacing.lg};
+  transition: box-shadow ${props => props.theme.transitions.default};
 
   &:hover {
     box-shadow: ${CardShadowHover};
@@ -124,13 +121,13 @@ const FormCard = styled.form`
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const FormRow = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: ${theme.spacing.lg};
+  gap: ${props => props.theme.spacing.lg};
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -138,15 +135,15 @@ const FormRow = styled.div`
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
-  font-size: ${theme.typography.fontSizes.sm};
-  margin-top: ${theme.spacing.xs};
+  color: ${props => props.theme.colors.error};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  margin-top: ${props => props.theme.spacing.xs};
 `;
 
 const StyledInput = styled.input`
   width: 70%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -156,25 +153,25 @@ const StyledInput = styled.input`
   outline: none;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
     background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.textSecondary};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.textSecondary};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &[type="number"] {
@@ -210,7 +207,7 @@ const TogglePasswordButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: ${props => props.theme.colors.textSecondary};
   padding: 4px;
   display: flex;
   align-items: center;
@@ -219,13 +216,13 @@ const TogglePasswordButton = styled.button`
   transition: all 0.2s ease-in-out;
 
   &:hover {
-    color: #4b5563;
-    background: ${theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.text};
+    background: ${props => props.theme.colors.backgroundSecondary};
   }
 
   &:focus {
     outline: none;
-    background: ${theme.colors.backgroundSecondary};
+    background: ${props => props.theme.colors.backgroundSecondary};
   }
 
   &:disabled {
@@ -235,16 +232,16 @@ const TogglePasswordButton = styled.button`
 `;
 
 const ErrorBanner = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fef2f2'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : '#fecaca'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: #991b1b;
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#991b1b'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 
   svg {
     flex-shrink: 0;
@@ -254,16 +251,16 @@ const ErrorBanner = styled.div`
 `;
 
 const SuccessBanner = styled.div`
-  background: #d1fae5;
-  border: 1px solid #a7f3d0;
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#d1fae5'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.5)' : '#a7f3d0'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: #065f46;
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.mode === 'dark' ? '#6ee7b7' : '#065f46'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 
   svg {
     flex-shrink: 0;
@@ -274,9 +271,9 @@ const SuccessBanner = styled.div`
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
-  padding-top: ${theme.spacing.md};
-  margin-top: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.md};
+  padding-top: ${props => props.theme.spacing.md};
+  margin-top: ${props => props.theme.spacing.sm};
   justify-content: space-between;
   align-items: center;
 `;
@@ -333,7 +330,7 @@ export default function CreateAccountantPage() {
 
       // Check user role to determine which endpoint to use
       const userRole = user?.role?.toLowerCase();
-      
+
       // Finance managers (manager) should use /subordinates endpoint
       // Admins can use either endpoint, but /users is more appropriate for admins
       if (userRole === 'manager' || userRole === 'finance_manager') {
@@ -428,11 +425,11 @@ export default function CreateAccountantPage() {
               <FormGroup>
                 <Label htmlFor="password">Password </Label>
                 <PasswordInputContainer>
-                  <PasswordInput 
-                    id="password" 
-                    type={showPassword ? 'text' : 'password'} 
-                    {...register('password')} 
-                    disabled={loading} 
+                  <PasswordInput
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    {...register('password')}
+                    disabled={loading}
                   />
                   <TogglePasswordButton
                     type="button"
@@ -449,11 +446,11 @@ export default function CreateAccountantPage() {
               <FormGroup>
                 <Label htmlFor="confirmPassword">Confirm Password </Label>
                 <PasswordInputContainer>
-                  <PasswordInput 
-                    id="confirmPassword" 
-                    type={showConfirmPassword ? 'text' : 'password'} 
-                    {...register('confirmPassword')} 
-                    disabled={loading} 
+                  <PasswordInput
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    {...register('confirmPassword')}
+                    disabled={loading}
                   />
                   <TogglePasswordButton
                     type="button"

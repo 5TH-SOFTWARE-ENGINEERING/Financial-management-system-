@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { z } from 'zod';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateProjectSchema } from '@/lib/validation';
@@ -16,19 +16,20 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
 
+
 // ──────────────────────────────────────────
 // Styled Components Layout
 // ──────────────────────────────────────────
 const LayoutWrapper = styled.div`
   display: flex;
-  background: #f5f6fa;
+  background: ${props => props.theme.colors.backgroundSecondary};
   min-height: 100vh;
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
+  background: ${props => props.theme.colors.card};
+  border-right: 1px solid ${props => props.theme.colors.border};
   position: fixed;
   left: 0;
   top: 0;
@@ -58,13 +59,13 @@ const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   font-size: 14px;
   margin-bottom: 16px;
   transition: 0.2s;
 
   &:hover {
-    color: var(--foreground);
+    color: ${props => props.theme.colors.text};
   }
 `;
 
@@ -78,16 +79,16 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   margin-bottom: 24px;
 `;
 
 const FormCard = styled.form`
-  background: #fff;
+  background: ${props => props.theme.colors.card};
   padding: 28px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid ${props => props.theme.colors.border};
+  box-shadow: ${props => props.theme.shadows.sm};
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -105,7 +106,7 @@ const FormGroup = styled.div`
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
+  color: ${props => props.theme.colors.error};
   font-size: 14px;
   margin-top: 4px;
 `;
@@ -150,7 +151,7 @@ const StyledInput = styled.input`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -168,19 +169,19 @@ const StyledInput = styled.input`
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.mutedForeground};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &[type="number"] {
@@ -202,7 +203,7 @@ const StyledTextarea = styled.textarea`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -222,19 +223,19 @@ const StyledTextarea = styled.textarea`
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.mutedForeground};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 `;
 
@@ -242,7 +243,7 @@ const StyledSelect = styled.select`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -261,15 +262,15 @@ const StyledSelect = styled.select`
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 `;
 
@@ -296,7 +297,7 @@ const GridRow = styled.div`
 const UsersList = styled.div`
   max-height: 192px;
   overflow-y: auto;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 6px;
   padding: 12px;
   display: flex;
@@ -328,12 +329,13 @@ const LoadingContainer = styled.div`
   text-align: center;
   
   p {
-    color: var(--muted-foreground);
+    color: ${props => props.theme.colors.mutedForeground};
     margin-top: 16px;
   }
 `;
 
 export default function EditProjectPage() {
+  const theme = useTheme();
   const router = useRouter();
   const params = useParams();
   const projectId = params?.id ? parseInt(params.id as string, 10) : null;
@@ -364,7 +366,7 @@ export default function EditProjectPage() {
       const response = await apiClient.getProjects();
       const projects = (response.data || []) as ApiProject[];
       const project = projects.find((p) => p.id === projectId);
-      
+
       if (!project) {
         setError('Project not found');
         return;
@@ -373,7 +375,7 @@ export default function EditProjectPage() {
       // Format dates for input fields
       const startDate = project.start_date ? new Date(project.start_date).toISOString().split('T')[0] : '';
       const endDate = project.end_date ? new Date(project.end_date).toISOString().split('T')[0] : '';
-      
+
       reset({
         name: project.name || '',
         description: project.description || '',
@@ -424,7 +426,7 @@ export default function EditProjectPage() {
       // Format dates for API
       const startDate = new Date(data.startDate).toISOString();
       const endDate = data.endDate ? new Date(data.endDate).toISOString() : null;
-      
+
       const projectData = {
         name: data.name,
         description: data.description || null,
@@ -438,7 +440,7 @@ export default function EditProjectPage() {
       await apiClient.updateProject(projectId, projectData);
       setSuccess('Project updated successfully!');
       toast.success('Project updated successfully!');
-      
+
       // Redirect after 2 seconds
       setTimeout(() => {
         router.push('/project/list');
@@ -457,8 +459,8 @@ export default function EditProjectPage() {
   };
 
   const toggleUser = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
@@ -598,7 +600,7 @@ export default function EditProjectPage() {
               <Label>Assigned Users</Label>
               <UsersList>
                 {allUsers.length === 0 ? (
-                  <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>No users available</p>
+                  <p style={{ fontSize: '14px', color: theme.colors.mutedForeground }}>No users available</p>
                 ) : (
                   allUsers.map((user) => (
                     <CheckboxItem key={user.id}>

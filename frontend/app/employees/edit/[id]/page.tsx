@@ -20,14 +20,14 @@ import { toast } from 'sonner';
 // ──────────────────────────────────────────
 const LayoutWrapper = styled.div`
   display: flex;
-  background: #f5f6fa;
+  background: ${props => props.theme.colors.backgroundSecondary};
   min-height: 100vh;
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
+  background: ${props => props.theme.colors.card};
+  border-right: 1px solid ${props => props.theme.colors.border};
   position: fixed;
   left: 0;
   top: 0;
@@ -57,13 +57,13 @@ const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   font-size: 14px;
   margin-bottom: 16px;
   transition: 0.2s;
 
   &:hover {
-    color: var(--foreground);
+    color: ${props => props.theme.colors.text};
   }
 `;
 
@@ -77,16 +77,16 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   margin-bottom: 24px;
 `;
 
 const FormCard = styled.form`
-  background: #fff;
+  background: ${props => props.theme.colors.card};
   padding: 28px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid ${props => props.theme.colors.border};
+  box-shadow: ${props => props.theme.shadows.sm};
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -116,7 +116,7 @@ const StyledInput = styled.input`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -134,19 +134,19 @@ const StyledInput = styled.input`
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.mutedForeground};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &[type="number"] {
@@ -163,11 +163,11 @@ const StyledInput = styled.input`
 const HelpText = styled.p`
   margin-top: 4px;
   font-size: 13px;
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
+  color: ${props => props.theme.colors.error};
   font-size: 14px;
   margin-top: 4px;
 `;
@@ -223,26 +223,26 @@ export default function EditEmployeePage() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
     resolver: zodResolver(UpdateEmployeeSchema),
   });
 
   const loadUser = useCallback(async () => {
     if (!id) return;
-    
+
     setLoadingUser(true);
     setError(null);
-    
+
     try {
       const response = await apiClient.getUser(parseInt(id, 10));
       const user = response.data;
-      
+
       if (!user) {
         setError('Employee not found');
         return;
       }
-      
+
       // Populate form with user data
       reset({
         full_name: user.full_name || '',
@@ -270,11 +270,11 @@ export default function EditEmployeePage() {
 
   const onSubmit = async (data: FormData) => {
     if (!id) return;
-    
+
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       const userData = {
         full_name: data.full_name,
@@ -284,14 +284,14 @@ export default function EditEmployeePage() {
         department: data.department || undefined,
         manager_id: data.managerId ? parseInt(data.managerId, 10) : undefined,
       };
-      
+
       await apiClient.updateUser(parseInt(id, 10), userData);
       await updateUser(id, userData); // Update store
       await fetchAllUsers(); // Refresh user list
-      
+
       setSuccess('Employee updated successfully!');
       toast.success('Employee updated successfully!');
-      
+
       // Redirect after 2 seconds
       setTimeout(() => {
         router.push('/employees/list');
@@ -300,7 +300,7 @@ export default function EditEmployeePage() {
       const errorMessage =
         (err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail ||
-            (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message
+          (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message
           : undefined) || 'Failed to update employee';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -435,9 +435,9 @@ export default function EditEmployeePage() {
             </FormGroup>
 
             <ButtonRow>
-              <Button 
-                type="button" 
-                variant="secondary" 
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={() => router.push('/employees/list')}
                 disabled={loading}
               >

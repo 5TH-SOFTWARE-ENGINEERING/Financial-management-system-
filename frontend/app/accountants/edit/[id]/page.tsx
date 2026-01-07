@@ -15,8 +15,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { theme } from '@/components/common/theme';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+
 
 const UpdateAccountantSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -40,37 +39,37 @@ const ContentContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  background: linear-gradient(135deg, ${props => props.theme.colors.primary} 0%, ${props => props.theme.mode === 'dark' ? '#064e3b' : '#008800'} 100%);
   color: #ffffff;
-  padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
 `;
 
 const HeaderContent = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   
   h1 {
     font-size: clamp(24px, 3vw, 36px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     color: #ffffff;
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.md};
+    gap: ${props => props.theme.spacing.md};
   }
   
   p {
-    font-size: ${theme.typography.fontSizes.md};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     opacity: 0.9;
     margin: 0;
     color: rgba(255, 255, 255, 0.95);
@@ -85,15 +84,15 @@ const HeaderContent = styled.div`
 const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: ${TEXT_COLOR_MUTED};
-  font-size: ${theme.typography.fontSizes.md};
-  margin-bottom: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.colors.mutedForeground};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   text-decoration: none;
-  transition: color ${theme.transitions.default};
+  transition: color ${props => props.theme.transitions.default};
 
   &:hover {
-    color: ${PRIMARY_COLOR};
+    color: ${props => props.theme.colors.text};
   }
 
   svg {
@@ -103,10 +102,10 @@ const BackLink = styled(Link)`
 `;
 
 const FormCard = styled.form`
-  background: #fff;
+  background: ${props => props.theme.colors.card};
   padding: 28px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
@@ -137,7 +136,7 @@ const StyledInput = styled.input`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -149,45 +148,45 @@ const StyledInput = styled.input`
   margin: 0;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
     background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.textSecondary};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.textSecondary};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
-  font-size: ${theme.typography.fontSizes.sm};
-  margin-top: ${theme.spacing.xs};
+  color: ${props => props.theme.colors.error};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  margin-top: ${props => props.theme.spacing.xs};
 `;
 
 const ErrorBanner = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fef2f2'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : '#fecaca'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: #991b1b;
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#991b1b'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 
   svg {
     flex-shrink: 0;
@@ -197,16 +196,16 @@ const ErrorBanner = styled.div`
 `;
 
 const SuccessBanner = styled.div`
-  background: #d1fae5;
-  border: 1px solid #a7f3d0;
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.lg};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#d1fae5'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.5)' : '#a7f3d0'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: #065f46;
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.mode === 'dark' ? '#6ee7b7' : '#065f46'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 
   svg {
     flex-shrink: 0;
@@ -232,16 +231,16 @@ const LoadingContainer = styled.div`
   width: 100%;
   
   p {
-    margin-top: ${theme.spacing.md};
-    color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    margin-top: ${props => props.theme.spacing.md};
+    color: ${props => props.theme.colors.mutedForeground};
+    font-size: ${props => props.theme.typography.fontSizes.md};
   }
 `;
 
 const Spinner = styled(Loader2)`
   width: 40px;
   height: 40px;
-  color: ${PRIMARY_COLOR};
+  color: ${props => props.theme.colors.primary};
   animation: spin 1s linear infinite;
   
   @keyframes spin {
@@ -254,31 +253,31 @@ export default function EditAccountantPage() {
   const params = useParams();
   const id = params?.id as string;
   const { updateUser } = useUserStore();
-  
+
   const [loading, setLoading] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
     resolver: zodResolver(UpdateAccountantSchema),
   });
 
   const loadUser = useCallback(async () => {
     if (!id) return;
-    
+
     setLoadingUser(true);
     setError(null);
-    
+
     try {
       const response = await apiClient.getUser(parseInt(id, 10));
       const user = response.data;
-      
+
       if (!user) {
         setError('Accountant not found');
         return;
       }
-      
+
       // Populate form with user data
       reset({
         full_name: user.full_name || '',
@@ -304,11 +303,11 @@ export default function EditAccountantPage() {
 
   const onSubmit = async (data: FormData) => {
     if (!id) return;
-    
+
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       const userData = {
         full_name: data.full_name,
@@ -317,13 +316,13 @@ export default function EditAccountantPage() {
         phone: data.phone || null,
         department: data.department || undefined,
       };
-      
+
       await apiClient.updateUser(parseInt(id, 10), userData);
       await updateUser(id, userData); // Update store
-      
+
       setSuccess('Accountant updated successfully!');
       toast.success('Accountant updated successfully!');
-      
+
       // Redirect after 2 seconds
       setTimeout(() => {
         router.push('/accountants/list');
@@ -455,9 +454,9 @@ export default function EditAccountantPage() {
             </FormRow>
 
             <ButtonRow>
-              <Button 
-                type="button" 
-                variant="secondary" 
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={() => router.push('/accountants/list')}
                 disabled={loading}
               >

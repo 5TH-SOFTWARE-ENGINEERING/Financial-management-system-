@@ -51,14 +51,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 const LayoutWrapper = styled.div`
   display: flex;
-  background: #f5f6fa;
+  background: ${props => props.theme.colors.background};
   min-height: 100vh;
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
+  background: ${props => props.theme.colors.card};
+  border-right: 1px solid ${props => props.theme.colors.border};
   position: fixed;
   left: 0;
   top: 0;
@@ -90,13 +90,13 @@ const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   font-size: 14px;
   margin-bottom: 16px;
   transition: 0.2s;
 
   &:hover {
-    color: var(--foreground);
+    color: ${props => props.theme.colors.text};
   }
 `;
 
@@ -107,10 +107,11 @@ const Title = styled.h1`
   display: flex;
   align-items: center;
   gap: 12px;
+  color: ${props => props.theme.colors.textDark};
 `;
 
 const Subtitle = styled.p`
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   margin-bottom: 24px;
 `;
 
@@ -123,20 +124,26 @@ const AlertBox = styled.div<{ $status: 'error' | 'success' }>`
   align-items: center;
   gap: 8px;
 
-  background: ${({ $status }) =>
-    $status === 'error' ? '#FEF2F2' : '#ECFDF5'};
+  background: ${({ $status, theme }) =>
+    $status === 'error'
+      ? (theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#FEF2F2')
+      : (theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#ECFDF5')};
   border: 1px solid
-    ${({ $status }) =>
-      $status === 'error' ? '#FECACA' : '#A7F3D0'};
-  color: ${({ $status }) =>
-    $status === 'error' ? '#B91C1C' : '#047857'};
+    ${({ $status, theme }) =>
+    $status === 'error'
+      ? (theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : '#FECACA')
+      : (theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.5)' : '#A7F3D0')};
+  color: ${({ $status, theme }) =>
+    $status === 'error'
+      ? (theme.mode === 'dark' ? '#fca5a5' : '#B91C1C')
+      : (theme.mode === 'dark' ? '#6ee7b7' : '#047857')};
 `;
 
 const FormCard = styled.form`
-  background: #fff;
+  background: ${props => props.theme.colors.card};
   padding: 28px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
@@ -160,7 +167,7 @@ const FormRow = styled.div`
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
+  color: ${props => props.theme.colors.error};
   font-size: 14px;
   margin-top: 4px;
 `;
@@ -168,7 +175,7 @@ const FieldError = styled.p`
 const StyledInput = styled.input`
   width: 70%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -178,25 +185,25 @@ const StyledInput = styled.input`
   outline: none;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
     background: ${props => props.theme.colors.background};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.textSecondary};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.textSecondary};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &[type="number"] {
@@ -232,7 +239,7 @@ const TogglePasswordButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: ${props => props.theme.colors.textSecondary};
   padding: 4px;
   display: flex;
   align-items: center;
@@ -241,13 +248,13 @@ const TogglePasswordButton = styled.button`
   transition: all 0.2s ease-in-out;
 
   &:hover {
-    color: #4b5563;
-    background: ${theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.text};
+    background: ${props => props.theme.colors.backgroundSecondary};
   }
 
   &:focus {
     outline: none;
-    background: ${theme.colors.backgroundSecondary};
+    background: ${props => props.theme.colors.backgroundSecondary};
   }
 
   &:disabled {
@@ -338,7 +345,7 @@ export default function CreateFinancePage() {
         'SUPER_ADMIN': 'super_admin'
       };
       const roleValue = roleMap[data.role || 'FINANCE_ADMIN'] || 'finance_manager';
-      
+
       const userData = {
         full_name: trimmedFullName,
         email: trimmedEmail,
@@ -361,20 +368,20 @@ export default function CreateFinancePage() {
       setTimeout(() => router.push('/finance/list'), 2000);
     } catch (err: unknown) {
       console.error('Error creating finance manager:', err);
-      
+
       let errorMessage = 'Failed to create finance manager';
-      
+
       if (err && typeof err === 'object' && 'response' in err) {
         const response = (err as { response?: { data?: unknown; status?: number } }).response;
         const data = response?.data;
         const statusCode = response?.status;
-        
+
         if (statusCode === 422) {
           // Handle Pydantic validation errors (422 Unprocessable Entity)
           if (data && typeof data === 'object') {
             const errorObj = data as { detail?: unknown };
             const detail = errorObj.detail;
-            
+
             if (Array.isArray(detail)) {
               // Pydantic validation errors come as an array
               const validationErrors = detail
@@ -386,7 +393,7 @@ export default function CreateFinancePage() {
                   return errItem.msg || JSON.stringify(errItem);
                 })
                 .filter((msg: string) => msg && typeof msg === 'string');
-              
+
               if (validationErrors.length > 0) {
                 errorMessage = validationErrors.join(', ');
               }
@@ -406,7 +413,7 @@ export default function CreateFinancePage() {
             const detail = errorObj.detail;
             const message = errorObj.message;
             const errorText = errorObj.error;
-            
+
             // Handle array of validation errors
             if (Array.isArray(detail)) {
               const validationErrors = detail
@@ -418,7 +425,7 @@ export default function CreateFinancePage() {
                   return errItem.msg || String(errItem);
                 })
                 .filter((msg: string) => msg && typeof msg === 'string');
-              
+
               errorMessage = validationErrors.length > 0 ? validationErrors.join(', ') : errorMessage;
             } else if (typeof detail === 'string') {
               errorMessage = detail;
@@ -504,11 +511,11 @@ export default function CreateFinancePage() {
               <FormGroup>
                 <Label htmlFor="password">Password </Label>
                 <PasswordInputContainer>
-                  <PasswordInput 
-                    id="password" 
-                    type={showPassword ? 'text' : 'password'} 
-                    {...register('password')} 
-                    disabled={loading} 
+                  <PasswordInput
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    {...register('password')}
+                    disabled={loading}
                   />
                   <TogglePasswordButton
                     type="button"
@@ -527,11 +534,11 @@ export default function CreateFinancePage() {
               <FormGroup>
                 <Label htmlFor="confirmPassword">Confirm Password </Label>
                 <PasswordInputContainer>
-                  <PasswordInput 
-                    id="confirmPassword" 
-                    type={showConfirmPassword ? 'text' : 'password'} 
-                    {...register('confirmPassword')} 
-                    disabled={loading} 
+                  <PasswordInput
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    {...register('confirmPassword')}
+                    disabled={loading}
                   />
                   <TogglePasswordButton
                     type="button"
@@ -570,9 +577,9 @@ export default function CreateFinancePage() {
                 Cancel
               </Button>
 
-              <Button 
-                type="submit" 
-                disabled={loading || isSubmitting} 
+              <Button
+                type="submit"
+                disabled={loading || isSubmitting}
                 onClick={(e) => {
                   // Prevent double submission
                   if (loading || isSubmitting) {

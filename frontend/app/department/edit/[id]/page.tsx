@@ -19,14 +19,14 @@ import Link from 'next/link';
 // ──────────────────────────────────────────
 const LayoutWrapper = styled.div`
   display: flex;
-  background: #f5f6fa;
+  background: ${props => props.theme.colors.backgroundSecondary};
   min-height: 100vh;
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
+  background: ${props => props.theme.colors.card};
+  border-right: 1px solid ${props => props.theme.colors.border};
   position: fixed;
   left: 0;
   top: 0;
@@ -56,13 +56,13 @@ const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   font-size: 14px;
   margin-bottom: 16px;
   transition: 0.2s;
 
   &:hover {
-    color: var(--foreground);
+    color: ${props => props.theme.colors.text};
   }
 `;
 
@@ -76,16 +76,16 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  color: var(--muted-foreground);
+  color: ${props => props.theme.colors.mutedForeground};
   margin-bottom: 24px;
 `;
 
 const FormCard = styled.form`
-  background: #fff;
+  background: ${props => props.theme.colors.card};
   padding: 28px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid ${props => props.theme.colors.border};
+  box-shadow: ${props => props.theme.shadows.sm};
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -103,7 +103,7 @@ const FormGroup = styled.div`
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
+  color: ${props => props.theme.colors.error};
   font-size: 14px;
   margin-top: 4px;
 `;
@@ -125,7 +125,7 @@ const StyledInput = styled.input`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -143,19 +143,19 @@ const StyledInput = styled.input`
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.mutedForeground};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 `;
 
@@ -163,7 +163,7 @@ const StyledTextarea = styled.textarea`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -183,19 +183,19 @@ const StyledTextarea = styled.textarea`
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.colors.border};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.colors.mutedForeground};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.colors.backgroundSecondary};
+    color: ${props => props.theme.colors.mutedForeground};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${props => props.theme.colors.border};
   }
 `;
 
@@ -212,7 +212,7 @@ const LoadingContainer = styled.div`
   text-align: center;
   
   p {
-    color: var(--muted-foreground);
+    color: ${props => props.theme.colors.mutedForeground};
     margin-top: 16px;
   }
 `;
@@ -247,7 +247,7 @@ export default function EditDepartmentPage() {
     try {
       // Decode the department ID if it's URL encoded
       const decodedId = decodeURIComponent(departmentId);
-      
+
       // Log for debugging
       if (process.env.NODE_ENV === 'development') {
         console.log('Loading department with ID:', {
@@ -255,9 +255,9 @@ export default function EditDepartmentPage() {
           decoded: decodedId,
         });
       }
-      
+
       const response = await apiClient.getDepartment(decodedId);
-      
+
       // Handle both direct response and wrapped response
       const department = (response?.data || response) as {
         id?: string;
@@ -265,16 +265,16 @@ export default function EditDepartmentPage() {
         description?: string | null;
         user_count?: number;
       };
-      
+
       if (!department) {
         throw new Error('Invalid response from server');
       }
-      
+
       // Check if department has required fields
       if (!department.name) {
         throw new Error('Department name is missing in response');
       }
-      
+
       reset({
         name: department.name || '',
         description: department.description || undefined,
@@ -282,16 +282,16 @@ export default function EditDepartmentPage() {
       });
     } catch (err: unknown) {
       console.error('Error loading department:', err);
-      
+
       let errorMessage = 'Failed to load department';
-      
+
       if (typeof err === 'object' && err !== null) {
         // Handle Axios errors
         if ('response' in err) {
           const axiosError = err as { response?: { status?: number; data?: { detail?: string; message?: string } } };
           const status = axiosError.response?.status;
           const detail = axiosError.response?.data?.detail || axiosError.response?.data?.message;
-          
+
           if (status === 404) {
             errorMessage = `Department not found. The department with ID "${departmentId}" does not exist or has no active users.`;
           } else if (status === 403) {
@@ -308,7 +308,7 @@ export default function EditDepartmentPage() {
           errorMessage = (err as { message: string }).message;
         }
       }
-      
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -334,7 +334,7 @@ export default function EditDepartmentPage() {
     try {
       // Decode the department ID if it's URL encoded
       const decodedId = decodeURIComponent(departmentId);
-      
+
       const departmentData = {
         name: data.name.trim(),
         description: data.description?.trim() || null,
@@ -353,16 +353,16 @@ export default function EditDepartmentPage() {
       router.push('/department/list');
     } catch (err: unknown) {
       console.error('Error updating department:', err);
-      
+
       let errorMessage = 'Failed to update department';
-      
+
       if (typeof err === 'object' && err !== null) {
         // Handle Axios errors
         if ('response' in err) {
           const axiosError = err as { response?: { status?: number; data?: { detail?: string; message?: string } } };
           const status = axiosError.response?.status;
           const detail = axiosError.response?.data?.detail || axiosError.response?.data?.message;
-          
+
           if (status === 404) {
             errorMessage = `Department not found. The department with ID "${departmentId}" does not exist or has no users.`;
           } else if (status === 403) {
@@ -381,7 +381,7 @@ export default function EditDepartmentPage() {
           errorMessage = (err as { message: string }).message;
         }
       }
-      
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
