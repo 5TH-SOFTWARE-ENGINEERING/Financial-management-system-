@@ -1,12 +1,12 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import styled, { css } from 'styled-components';
+import styled, { css, useTheme } from 'styled-components';
 import Link from 'next/link';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { UserType } from '@/lib/rbac/models';
 import { Settings, Users, Globe, Lock, Bell, Database, List, History, RefreshCw, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
-import { theme } from '@/components/common/theme';
+
 import apiClient from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -95,7 +95,7 @@ const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: 
     display: flex;
     align-items: center;
     justify-content: center;
-    color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : '#6b7280'};
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : props.theme.colors.mutedForeground};
     opacity: ${props => props.$active ? 1 : 0.8};
     transition: all 0.2s ease;
     
@@ -115,46 +115,59 @@ const QuickActionIconWrapper = styled(IconWrapper)`
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: rgba(0, 170, 0, 0.1);
-    color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : '#10b981'};
+    background: color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 90%);
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : props.theme.colors.primary};
 `;
 
 const MessageIcon = styled(IconWrapper)`
-    margin-right: ${theme.spacing.sm};
+    margin-right: ${props => props.theme.spacing.sm};
 `;
 
-const PRIMARY_COLOR = '#10b981'; // Modern emerald green
-const ACCENT_BLUE = '#3b82f6';
-const TEXT_COLOR_DARK = '#0f172a';
-const TEXT_COLOR_MUTED = '#64748b';
+const PageWrapper = styled.div`
+  background-color: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text};
+  min-height: 100vh;
+  width: 100%;
+  padding: 40px;
+  box-sizing: border-box;
+`;
+
+const ContentContainer = styled.div`
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${props => props.theme.spacing.sm};
+`;
 
 const glassBackground = css`
-  background: rgba(255, 255, 255, 0.7);
+  background: ${props => props.theme.colors.card};
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid ${props => props.theme.colors.border};
 `;
 
-const CardShadow = `
+const CardShadow = css`
   0 4px 6px -1px rgba(0, 0, 0, 0.05),
   0 2px 4px -1px rgba(0, 0, 0, 0.03),
   inset 0 0 0 1px rgba(255, 255, 255, 0.1)
 `;
 
 const DashboardHeader = styled.div`
-  margin-bottom: ${theme.spacing.xl};
+  margin-bottom: ${props => props.theme.spacing.xl};
   
   h1 {
     font-size: 28px;
     font-weight: 800;
-    color: ${TEXT_COLOR_DARK};
+    color: ${props => props.theme.colors.text};
     margin: 0 auto;
     letter-spacing: -0.02em;
   }
   
   p {
-    color: ${TEXT_COLOR_MUTED};
-    margin-top: 80px auto;
+    color: ${props => props.theme.colors.mutedForeground};
+    margin-top: 8px auto;
   }
 `;
 
@@ -175,23 +188,23 @@ const ContentHeader = styled.div`
   h2 {
     font-size: 24px;
     font-weight: 800;
-    color: ${TEXT_COLOR_DARK};
+    color: ${props => props.theme.colors.text};
     margin: 0;
     letter-spacing: -0.01em;
   }
 `;
 
 const ErrorBanner = styled.div`
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  color: #dc2626;
-  margin-bottom: ${theme.spacing.lg};
+  background: color-mix(in srgb, ${props => props.theme.colors.error}, transparent 90%);
+  border: 1px solid color-mix(in srgb, ${props => props.theme.colors.error}, transparent 70%);
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  color: ${props => props.theme.colors.error};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 `;
 
 const LoadingState = styled.div`
@@ -199,30 +212,30 @@ const LoadingState = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   min-height: 200px;
-  color: ${TEXT_COLOR_MUTED};
+  color: ${props => props.theme.colors.mutedForeground};
 `;
 
 const StatGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.xl};
+  gap: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.xl};
 `;
 
 const StatCard = styled.div`
   border-radius: 20px;
   padding: 24px;
-  background: ${props => props.theme.colors.background};
-  border: 1px solid #e2e8f0;
+  background: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.border};
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: ${props => props.theme.shadows.sm};
 
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
-    border-color: ${PRIMARY_COLOR}30;
+    box-shadow: ${props => props.theme.shadows.md};
+    border-color: color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 80%);
   }
 `;
 
@@ -230,7 +243,7 @@ const StatLabel = styled.p`
   margin: 0;
   font-size: 13px;
   font-weight: 700;
-  color: ${TEXT_COLOR_MUTED};
+  color: ${props => props.theme.colors.mutedForeground};
   text-transform: uppercase;
   letter-spacing: 0.08em;
 `;
@@ -239,7 +252,7 @@ const StatValue = styled.p`
   margin: 8px 0 4px 0;
   font-size: 32px;
   font-weight: 800;
-  color: ${TEXT_COLOR_DARK};
+  color: ${props => props.theme.colors.text};
   letter-spacing: -0.02em;
 `;
 
@@ -247,13 +260,13 @@ const StatSubtext = styled.p`
   margin: 0;
   font-size: 13px;
   font-weight: 500;
-  color: ${TEXT_COLOR_MUTED};
+  color: ${props => props.theme.colors.mutedForeground};
 `;
 
 const SectionHeader = styled.h3`
   font-size: 18px;
   font-weight: 800;
-  color: ${TEXT_COLOR_DARK};
+  color: ${props => props.theme.colors.text};
   margin: 48px 0 24px;
   display: flex;
   align-items: center;
@@ -264,14 +277,14 @@ const SectionHeader = styled.h3`
     content: '';
     flex: 1;
     height: 1px;
-    background: linear-gradient(to right, #e2e8f0, transparent);
+    background: linear-gradient(to right, ${props => props.theme.colors.border}, transparent);
   }
 `;
 
 const ServiceList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const ServiceRow = styled.div`
@@ -279,19 +292,19 @@ const ServiceRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: ${props => props.theme.colors.background};
-  border: 1px solid #f1f5f9;
+  background: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 16px;
   transition: all 0.2s;
 
   &:hover {
-    border-color: ${PRIMARY_COLOR}20;
-    background: ${PRIMARY_COLOR}05;
+    border-color: color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 87%);
+    background: color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 98%);
   }
 
   span {
     font-weight: 600;
-    color: ${TEXT_COLOR_DARK};
+    color: ${props => props.theme.colors.text};
   }
 `;
 
@@ -305,16 +318,16 @@ const StatusPill = styled.span<{ $healthy: boolean }>`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: ${props => props.$healthy ? '#ecfdf5' : '#fef2f2'};
-  color: ${props => props.$healthy ? '#059669' : '#dc2626'};
-  border: 1px solid ${props => props.$healthy ? '#10b98130' : '#ef444430'};
+  background: color-mix(in srgb, ${props => props.$healthy ? props.theme.colors.primary : props.theme.colors.error}, transparent 90%);
+  color: ${props => props.$healthy ? props.theme.colors.primary : props.theme.colors.error};
+  border: 1px solid color-mix(in srgb, ${props => props.$healthy ? props.theme.colors.primary : props.theme.colors.error}, transparent 80%);
 `;
 
 const QuickActionsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: ${theme.spacing.md};
-  margin-top: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
+  margin-top: ${props => props.theme.spacing.md};
 `;
 
 const QuickActionCard = styled(Link)`
@@ -325,13 +338,13 @@ const QuickActionCard = styled(Link)`
   gap: 20px;
   align-items: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: ${props => props.theme.shadows.sm};
 
   &:hover {
     transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.1);
-    background: ${props => props.theme.colors.background};
-    border-color: ${PRIMARY_COLOR}40;
+    box-shadow: ${props => props.theme.shadows.md};
+    background: ${props => props.theme.colors.card};
+    border-color: color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 75%);
   }
 `;
 
@@ -339,30 +352,32 @@ const QuickActionCard = styled(Link)`
 const QuickActionContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.xs};
+  gap: ${props => props.theme.spacing.xs};
 
   h4 {
     margin: 0;
-    font-size: ${theme.typography.fontSizes.sm};
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    color: ${props => props.theme.colors.text};
   }
 
   p {
     margin: 0;
-    font-size: ${theme.typography.fontSizes.xs};
-    color: ${TEXT_COLOR_MUTED};
+    font-size: ${props => props.theme.typography.fontSizes.xs};
+    color: ${props => props.theme.colors.mutedForeground};
   }
 `;
+
 
 const RoleList = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const RoleCard = styled.div`
-  background: ${props => props.theme.colors.background};
-  border: 1px solid #f1f5f9;
+  background: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 16px;
   padding: 20px;
   display: flex;
@@ -371,19 +386,20 @@ const RoleCard = styled.div`
   transition: all 0.2s;
 
   &:hover {
-    border-color: ${ACCENT_BLUE}30;
+    border-color: color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 80%);
     transform: translateY(-2px);
   }
 
   strong {
     font-size: 15px;
     font-weight: 700;
-    color: ${TEXT_COLOR_DARK};
+    color: ${props => props.theme.colors.text};
   }
 `;
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
+  const theme = useTheme();
   // Allow access for both admin and super_admin roles
   const isAdmin = user?.role?.toLowerCase() === 'admin' ||
     user?.role?.toLowerCase() === 'super_admin' ||
@@ -589,198 +605,200 @@ const SettingsPage: React.FC = () => {
 
   return (
     <ComponentGate componentId={ComponentId.SETTINGS_VIEW}>
-      <div style={{ width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
-          <DashboardHeader style={{ marginBottom: 0 }}>
-            <h1>System Overview</h1>
-            <p>Real-time metrics and system health indicators.</p>
-          </DashboardHeader>
+      <PageWrapper>
+        <ContentContainer>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+            <DashboardHeader style={{ marginBottom: 0 }}>
+              <h1>System Overview</h1>
+              <p>Real-time metrics and system health indicators.</p>
+            </DashboardHeader>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchSystemData}
-            disabled={loading}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.8rem',
-              borderRadius: '12px',
-              padding: '8px 16px',
-              fontWeight: '600',
-              height: '40px'
-            }}
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            {loading ? 'Updating...' : 'Refresh Data'}
-          </Button>
-        </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchSystemData}
+              disabled={loading}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.8rem',
+                borderRadius: '12px',
+                padding: '8px 16px',
+                fontWeight: '600',
+                height: '40px'
+              }}
+            >
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              {loading ? 'Updating...' : 'Refresh Data'}
+            </Button>
+          </div>
 
-        {error && (
-          <ErrorBanner>
-            <MessageIcon $iconType="alert-triangle" $size={20} $active={true}>
-              <AlertTriangle size={20} />
-            </MessageIcon>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: '700', marginBottom: '4px' }}>Connection Error</div>
-              <div style={{ opacity: 0.9 }}>{error}</div>
-            </div>
-          </ErrorBanner>
-        )}
-
-        {loading && isAdmin && !systemStats ? (
-          <LoadingState>
-            <IconWrapper $iconType="loader2" $size={40} $active={true}>
-              <Loader2 size={40} className="animate-spin" />
-            </IconWrapper>
-            <p style={{ fontWeight: '600', fontSize: '16px' }}>Synchronizing system metrics...</p>
-          </LoadingState>
-        ) : (
-          <>
-            {isAdmin ? (
-              <>
-                <StatGrid>
-                  <StatCard>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <StatLabel>Total Users</StatLabel>
-                        <StatValue>{formatNumber(systemStats?.users?.total)}</StatValue>
-                      </div>
-                      <IconWrapper $iconType="users" $size={24} $active={true}>
-                        <Users size={24} />
-                      </IconWrapper>
-                    </div>
-                    <StatSubtext>{formatNumber(systemStats?.users?.active)} active members</StatSubtext>
-                  </StatCard>
-
-                  <StatCard>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <StatLabel>Pending Actions</StatLabel>
-                        <StatValue>{formatNumber(systemStats?.pending_approvals)}</StatValue>
-                      </div>
-                      <IconWrapper $iconType="history" $size={24} $active={true}>
-                        <History size={24} />
-                      </IconWrapper>
-                    </div>
-                    <StatSubtext>Awaiting administrative review</StatSubtext>
-                  </StatCard>
-
-                  <StatCard>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <StatLabel>Monthly Revenue</StatLabel>
-                        <StatValue style={{ color: PRIMARY_COLOR }}>{formatCurrency(systemStats?.financials?.total_revenue)}</StatValue>
-                      </div>
-                      <IconWrapper $iconType="globe" $size={24} $active={true}>
-                        <Globe size={24} />
-                      </IconWrapper>
-                    </div>
-                    <StatSubtext>Net profit: {formatCurrency(systemStats?.financials?.net_profit)}</StatSubtext>
-                  </StatCard>
-
-                  <StatCard>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <StatLabel>Operational Costs</StatLabel>
-                        <StatValue style={{ color: '#ef4444' }}>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
-                      </div>
-                      <IconWrapper $iconType="alert-triangle" $size={24} $active={true}>
-                        <AlertTriangle size={24} />
-                      </IconWrapper>
-                    </div>
-                    <StatSubtext>Expenditure tracking active</StatSubtext>
-                  </StatCard>
-                </StatGrid>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-                  <div>
-                    <SectionHeader>Service Infrastructure</SectionHeader>
-                    <ServiceList>
-                      {serviceStatuses.map((service) => (
-                        <ServiceRow key={service.label}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <IconWrapper
-                              $iconType={service.label.toLowerCase().includes('database') ? 'database' :
-                                service.label.toLowerCase().includes('email') ? 'bell' :
-                                  service.label.toLowerCase().includes('redis') ? 'refresh-cw' : 'globe'}
-                              $size={18}
-                              $active={true}
-                            >
-                              {service.label.toLowerCase().includes('database') && <Database size={18} />}
-                              {service.label.toLowerCase().includes('email') && <Bell size={18} />}
-                              {service.label.toLowerCase().includes('redis') && <RefreshCw size={18} />}
-                              {service.label.toLowerCase().includes('s3') && <Globe size={18} />}
-                            </IconWrapper>
-                            <span>{service.label}</span>
-                          </div>
-                          <StatusPill $healthy={service.healthy}>
-                            {service.healthy ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />}
-                            {service.status}
-                          </StatusPill>
-                        </ServiceRow>
-                      ))}
-                    </ServiceList>
-                  </div>
-
-                  <div>
-                    <SectionHeader>Global Accessibility</SectionHeader>
-                    <RoleList>
-                      {roleDistribution.map(([role, count]) => (
-                        <RoleCard key={role}>
-                          <div>
-                            <strong style={{ textTransform: 'capitalize' }}>{role.replace('_', ' ')}</strong>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: TEXT_COLOR_MUTED }}>System Role</p>
-                          </div>
-                          <StatValue style={{ fontSize: '24px', margin: 0 }}>{formatNumber(count as number)}</StatValue>
-                        </RoleCard>
-                      ))}
-                    </RoleList>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div style={{
-                padding: '60px',
-                textAlign: 'center',
-                background: '#ffffff',
-                borderRadius: '24px',
-                border: '1px dashed #e2e8f0',
-                marginTop: '40px'
-              }}>
-                <IconWrapper $iconType="lock" $size={48} $active={true} style={{ margin: '0 auto 20px' }}>
-                  <Lock size={48} />
-                </IconWrapper>
-                <h3 style={{ fontWeight: '800', marginBottom: '12px', fontSize: '20px', color: TEXT_COLOR_DARK }}>Administrator Access Only</h3>
-                <p style={{ color: TEXT_COLOR_MUTED, maxWidth: '400px', margin: '0 auto', fontSize: '15px', lineHeight: '1.6' }}>
-                  Detailed system metrics and infrastructure controls are reserved for administrators.
-                  Please use the connection shortcuts below for your personal settings.
-                </p>
+          {error && (
+            <ErrorBanner>
+              <MessageIcon $iconType="alert-triangle" $size={20} $active={true}>
+                <AlertTriangle size={20} />
+              </MessageIcon>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: '700', marginBottom: '4px' }}>Connection Error</div>
+                <div style={{ opacity: 0.9 }}>{error}</div>
               </div>
-            )}
+            </ErrorBanner>
+          )}
 
-            <SectionHeader>Control Center Shortcuts</SectionHeader>
-            <QuickActionsGrid>
-              {quickLinks.map((link) => (
-                <QuickActionCard key={link.href} href={link.href}>
-                  <QuickActionIconWrapper $iconType={link.iconType} $size={20} $active={true}>
-                    {link.iconType === 'globe' && <Globe size={20} />}
-                    {link.iconType === 'bell' && <Bell size={20} />}
-                    {link.iconType === 'lock' && <Lock size={20} />}
-                    {link.iconType === 'database' && <Database size={20} />}
-                    {link.iconType === 'list' && <List size={20} />}
-                    {link.iconType === 'users' && <Users size={20} />}
-                  </QuickActionIconWrapper>
-                  <QuickActionContent>
-                    <h4>{link.title}</h4>
-                    <p>{link.description}</p>
-                  </QuickActionContent>
-                </QuickActionCard>
-              ))}
-            </QuickActionsGrid>
-          </>
-        )}
-      </div>
+          {loading && isAdmin && !systemStats ? (
+            <LoadingState>
+              <IconWrapper $iconType="loader2" $size={40} $active={true}>
+                <Loader2 size={40} className="animate-spin" />
+              </IconWrapper>
+              <p style={{ fontWeight: '600', fontSize: '16px' }}>Synchronizing system metrics...</p>
+            </LoadingState>
+          ) : (
+            <>
+              {isAdmin ? (
+                <>
+                  <StatGrid>
+                    <StatCard>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <StatLabel>Total Users</StatLabel>
+                          <StatValue>{formatNumber(systemStats?.users?.total)}</StatValue>
+                        </div>
+                        <IconWrapper $iconType="users" $size={24} $active={true}>
+                          <Users size={24} />
+                        </IconWrapper>
+                      </div>
+                      <StatSubtext>{formatNumber(systemStats?.users?.active)} active members</StatSubtext>
+                    </StatCard>
+
+                    <StatCard>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <StatLabel>Pending Actions</StatLabel>
+                          <StatValue>{formatNumber(systemStats?.pending_approvals)}</StatValue>
+                        </div>
+                        <IconWrapper $iconType="history" $size={24} $active={true}>
+                          <History size={24} />
+                        </IconWrapper>
+                      </div>
+                      <StatSubtext>Awaiting administrative review</StatSubtext>
+                    </StatCard>
+
+                    <StatCard>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <StatLabel>Monthly Revenue</StatLabel>
+                          <StatValue style={{ color: theme.colors.primary }}>{formatCurrency(systemStats?.financials?.total_revenue)}</StatValue>
+                        </div>
+                        <IconWrapper $iconType="globe" $size={24} $active={true}>
+                          <Globe size={24} />
+                        </IconWrapper>
+                      </div>
+                      <StatSubtext>Net profit: {formatCurrency(systemStats?.financials?.net_profit)}</StatSubtext>
+                    </StatCard>
+
+                    <StatCard>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <StatLabel>Operational Costs</StatLabel>
+                          <StatValue style={{ color: theme.colors.error || '#ef4444' }}>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
+                        </div>
+                        <IconWrapper $iconType="alert-triangle" $size={24} $active={true}>
+                          <AlertTriangle size={24} />
+                        </IconWrapper>
+                      </div>
+                      <StatSubtext>Expenditure tracking active</StatSubtext>
+                    </StatCard>
+                  </StatGrid>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+                    <div>
+                      <SectionHeader>Service Infrastructure</SectionHeader>
+                      <ServiceList>
+                        {serviceStatuses.map((service) => (
+                          <ServiceRow key={service.label}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <IconWrapper
+                                $iconType={service.label.toLowerCase().includes('database') ? 'database' :
+                                  service.label.toLowerCase().includes('email') ? 'bell' :
+                                    service.label.toLowerCase().includes('redis') ? 'refresh-cw' : 'globe'}
+                                $size={18}
+                                $active={true}
+                              >
+                                {service.label.toLowerCase().includes('database') && <Database size={18} />}
+                                {service.label.toLowerCase().includes('email') && <Bell size={18} />}
+                                {service.label.toLowerCase().includes('redis') && <RefreshCw size={18} />}
+                                {service.label.toLowerCase().includes('s3') && <Globe size={18} />}
+                              </IconWrapper>
+                              <span>{service.label}</span>
+                            </div>
+                            <StatusPill $healthy={service.healthy}>
+                              {service.healthy ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />}
+                              {service.status}
+                            </StatusPill>
+                          </ServiceRow>
+                        ))}
+                      </ServiceList>
+                    </div>
+
+                    <div>
+                      <SectionHeader>Global Accessibility</SectionHeader>
+                      <RoleList>
+                        {roleDistribution.map(([role, count]) => (
+                          <RoleCard key={role}>
+                            <div>
+                              <strong style={{ textTransform: 'capitalize' }}>{role.replace('_', ' ')}</strong>
+                              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: theme.colors.mutedForeground }}>System Role</p>
+                            </div>
+                            <StatValue style={{ fontSize: '24px', margin: 0 }}>{formatNumber(count as number)}</StatValue>
+                          </RoleCard>
+                        ))}
+                      </RoleList>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{
+                  padding: '60px',
+                  textAlign: 'center',
+                  background: theme.colors.card,
+                  borderRadius: '24px',
+                  border: `1px dashed ${theme.colors.border}`,
+                  marginTop: '40px'
+                }}>
+                  <IconWrapper $iconType="lock" $size={48} $active={true} style={{ margin: '0 auto 20px' }}>
+                    <Lock size={48} />
+                  </IconWrapper>
+                  <h3 style={{ fontWeight: '800', marginBottom: '12px', fontSize: '20px', color: theme.colors.text }}>Administrator Access Only</h3>
+                  <p style={{ color: theme.colors.mutedForeground, maxWidth: '400px', margin: '0 auto', fontSize: '15px', lineHeight: '1.6' }}>
+                    Detailed system metrics and infrastructure controls are reserved for administrators.
+                    Please use the connection shortcuts below for your personal settings.
+                  </p>
+                </div>
+              )}
+
+              <SectionHeader>Control Center Shortcuts</SectionHeader>
+              <QuickActionsGrid>
+                {quickLinks.map((link) => (
+                  <QuickActionCard key={link.href} href={link.href}>
+                    <QuickActionIconWrapper $iconType={link.iconType} $size={20} $active={true}>
+                      {link.iconType === 'globe' && <Globe size={20} />}
+                      {link.iconType === 'bell' && <Bell size={20} />}
+                      {link.iconType === 'lock' && <Lock size={20} />}
+                      {link.iconType === 'database' && <Database size={20} />}
+                      {link.iconType === 'list' && <List size={20} />}
+                      {link.iconType === 'users' && <Users size={20} />}
+                    </QuickActionIconWrapper>
+                    <QuickActionContent>
+                      <h4>{link.title}</h4>
+                      <p>{link.description}</p>
+                    </QuickActionContent>
+                  </QuickActionCard>
+                ))}
+              </QuickActionsGrid>
+            </>
+          )}
+        </ContentContainer>
+      </PageWrapper>
     </ComponentGate>
   );
 };
