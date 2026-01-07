@@ -142,9 +142,9 @@ const MessageBox = styled.div<{ type: 'error' | 'success' }>`
   gap: 10px;
   align-items: center;
 
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  background: ${(p) => (p.type === 'error' ? props => `color-mix(in srgb, ${props.theme.colors.error}, transparent 90%)` : props => `color-mix(in srgb, ${props.theme.colors.primary}, transparent 90%)`)};
+  border: 1px solid ${(p) => (p.type === 'error' ? props => `color-mix(in srgb, ${props.theme.colors.error}, transparent 70%)` : props => `color-mix(in srgb, ${props.theme.colors.primary}, transparent 80%)`)};
+  color: ${(p) => (p.type === 'error' ? props => props.theme.colors.error : props => props.theme.colors.primary)};
 `;
 
 const StyledInput = styled.input`
