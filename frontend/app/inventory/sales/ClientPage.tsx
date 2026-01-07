@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   ShoppingCart, Package, Plus, Receipt,
   Loader2,
@@ -13,19 +13,20 @@ import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 import useUserStore from '@/store/userStore';
 import { toast } from 'sonner';
-import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { ComponentGate } from '@/lib/rbac/component-gate';
 import { ComponentId } from '@/lib/rbac/component-access';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
+const PRIMARY_LIGHT = (props: any) => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : 'rgba(0, 170, 0, 0.05)';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
-const CardShadow = `
+const CardShadow = (props: any) => `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
   0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+  inset 0 0 0 1px ${props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'}
 `;
 
 const PageContainer = styled.div`
@@ -34,15 +35,17 @@ const PageContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm};
+  background: ${BACKGROUND_GRADIENT};
+  min-height: 100vh;
 `;
 
 const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, color-mix(in srgb, ${PRIMARY_COLOR}, #000 20%) 100%);
   color: #ffffff;
-  padding: ${theme.spacing.xl};
-  margin-bottom: ${theme.spacing.xl};
-  border-radius: ${theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.xl};
+  margin-bottom: ${props => props.theme.spacing.xl};
+  border-radius: ${props => props.theme.borderRadius.md};
   box-shadow: ${CardShadow};
 `;
 
@@ -51,15 +54,17 @@ const HeaderContent = styled.div`
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const HeaderText = styled.div`
   h1 {
     font-size: clamp(24px, 3vw, 32px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     color: #ffffff;
+    display: flex;
+    align-items: center;
   }
   p {
     color: rgba(255, 255, 255, 0.9);
@@ -70,7 +75,7 @@ const HeaderText = styled.div`
 const TwoColumnLayout = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: ${theme.spacing.xl};
+  gap: ${props => props.theme.spacing.xl};
   
   @media (max-width: 968px) {
     grid-template-columns: 1fr;
@@ -78,19 +83,19 @@ const TwoColumnLayout = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.xl};
+  background: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
+  padding: ${props => props.theme.spacing.xl};
   box-shadow: ${CardShadow};
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const CardTitle = styled.h2`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   margin: 0;
 `;
@@ -98,22 +103,30 @@ const CardTitle = styled.h2`
 const ItemsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   max-height: 500px;
   overflow-y: auto;
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.colors.border};
+    border-radius: 3px;
+  }
 `;
 
 const ItemCard = styled.div<{ selected?: boolean }>`
-  background: ${props => props.selected ? PRIMARY_COLOR + '15' : theme.colors.background};
-  border: 2px solid ${props => props.selected ? PRIMARY_COLOR : theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
+  background: ${props => props.selected ? (props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : 'rgba(0, 170, 0, 0.05)') : props.theme.colors.card};
+  border: 2px solid ${props => props.selected ? PRIMARY_COLOR : props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
   cursor: pointer;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.xs};
+  gap: ${props => props.theme.spacing.xs};
 
   &:hover {
     border-color: ${PRIMARY_COLOR};
@@ -125,7 +138,7 @@ const ItemInfoRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   flex-wrap: wrap;
   
   @media (max-width: 480px) {
@@ -135,138 +148,150 @@ const ItemInfoRow = styled.div`
 `;
 
 const ItemName = styled.div`
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   flex: 1;
   min-width: 0;
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 `;
 
 const ItemPrice = styled.div`
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${PRIMARY_COLOR};
   white-space: nowrap;
 `;
 
 const ItemStock = styled.div`
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_MUTED};
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.xs};
+  gap: ${props => props.theme.spacing.xs};
 `;
 
 const Badge = styled.span<{ $variant: 'success' | 'warning' | 'danger' }>`
   display: inline-flex;
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.bold};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   border-radius: 9999px;
-  ${(p) => {
-    switch (p.$variant) {
-      case 'success':
-        return 'background-color: #dcfce7; color: #166534;';
-      case 'warning':
-        return 'background-color: #fef3c7; color: #92400e;';
-      case 'danger':
-        return 'background-color: #fee2e2; color: #991b1b;';
+  background: ${props => {
+    switch (props.$variant) {
+      case 'success': return props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.1)' : '#dcfce7';
+      case 'warning': return props.theme.mode === 'dark' ? 'rgba(245, 158, 11, 0.1)' : '#fef3c7';
+      case 'danger': return props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#fee2e2';
     }
-  }}
+  }};
+  color: ${props => {
+    switch (props.$variant) {
+      case 'success': return props.theme.mode === 'dark' ? '#34d399' : '#166534';
+      case 'warning': return props.theme.mode === 'dark' ? '#fbbf24' : '#92400e';
+      case 'danger': return props.theme.mode === 'dark' ? '#f87171' : '#991b1b';
+    }
+  }};
+  border: 1px solid ${props => {
+    switch (props.$variant) {
+      case 'success': return props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'transparent';
+      case 'warning': return props.theme.mode === 'dark' ? 'rgba(245, 158, 11, 0.2)' : 'transparent';
+      case 'danger': return props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : 'transparent';
+    }
+  }};
 `;
 
 const SaleForm = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const FormRow = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: ${theme.spacing.xl};
+  gap: ${props => props.theme.spacing.xl};
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: ${theme.spacing.lg};
+    gap: ${props => props.theme.spacing.lg};
   }
 `;
 
 const SummaryCard = styled.div`
-  background: ${theme.colors.backgroundSecondary};
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.lg};
-  margin-top: ${theme.spacing.md};
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.lg};
+  margin-top: ${props => props.theme.spacing.md};
+  border: 1px solid ${props => props.theme.colors.border};
 `;
 
 const SummaryRow = styled.div`
   display: flex;
   justify-content: space-between;
-  margin-bottom: ${theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.sm};
   
   &:last-child {
     margin-bottom: 0;
-    padding-top: ${theme.spacing.sm};
-    border-top: 1px solid ${theme.colors.border};
-    font-weight: ${theme.typography.fontWeights.bold};
-    font-size: ${theme.typography.fontSizes.lg};
+    padding-top: ${props => props.theme.spacing.sm};
+    border-top: 1px solid ${props => props.theme.colors.border};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    font-size: ${props => props.theme.typography.fontSizes.lg};
   }
 `;
 
 const ReceiptModal = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
 `;
 
 const ReceiptContent = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.xl};
+  background: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.xl};
   max-width: 500px;
   width: 90%;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  border: 1px solid ${props => props.theme.colors.border};
 `;
 
 const CustomerInfoSection = styled.div`
-  margin-top: ${theme.spacing.lg};
+  margin-top: ${props => props.theme.spacing.lg};
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
-
 
 const StyledInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${props => props.theme.colors.background};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   box-sizing: border-box;
   margin: 0;
 
   &:focus {
     outline: none;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    box-shadow: 0 0 0 3px color-mix(in srgb, ${PRIMARY_COLOR}, transparent 90%);
   }
 
   &:hover:not(:disabled) {
-    border-color: ${PRIMARY_COLOR}80;
+    border-color: color-mix(in srgb, ${PRIMARY_COLOR}, transparent 50%);
   }
 
   &:disabled {
-    background: ${theme.colors.backgroundSecondary};
+    background: ${props => props.theme.colors.backgroundSecondary};
     cursor: not-allowed;
     opacity: 0.6;
   }
@@ -279,31 +304,31 @@ const StyledInput = styled.input`
 
 const StyledTextarea = styled.textarea`
   width: 100%;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${props => props.theme.colors.background};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   box-sizing: border-box;
   margin: 0;
-  min-height: 60px;
+  min-height: 80px;
   resize: vertical;
 
   &:focus {
     outline: none;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    box-shadow: 0 0 0 3px color-mix(in srgb, ${PRIMARY_COLOR}, transparent 90%);
   }
 
   &:hover:not(:disabled) {
-    border-color: ${PRIMARY_COLOR}80;
+    border-color: color-mix(in srgb, ${PRIMARY_COLOR}, transparent 50%);
   }
 
   &:disabled {
-    background: ${theme.colors.backgroundSecondary};
+    background: ${props => props.theme.colors.backgroundSecondary};
     cursor: not-allowed;
     opacity: 0.6;
   }
@@ -316,10 +341,10 @@ const StyledTextarea = styled.textarea`
 
 const StyledLabel = styled.label`
   display: block;
-  margin-bottom: ${theme.spacing.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
+  margin-bottom: ${props => props.theme.spacing.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 `;
 
 const FormGroup = styled.div`
@@ -330,8 +355,8 @@ const FormGroup = styled.div`
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.xs};
-  margin-bottom: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.xs};
+  margin-bottom: ${props => props.theme.spacing.md};
 
   label {
     margin-bottom: 0;
@@ -339,10 +364,10 @@ const FormGroup = styled.div`
 `;
 
 const HelpText = styled.p`
-  font-size: ${theme.typography.fontSizes.xs};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
   color: ${TEXT_COLOR_MUTED};
   margin: 0;
-  margin-top: ${theme.spacing.xs};
+  margin-top: ${props => props.theme.spacing.xs};
 `;
 
 const CompleteSaleButton = styled(Button).withConfig({
@@ -352,7 +377,7 @@ const CompleteSaleButton = styled(Button).withConfig({
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 interface InventoryItem {
@@ -399,6 +424,7 @@ interface ReceiptData {
 }
 
 export default function SalesPage() {
+  const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const storeUser = useUserStore((state) => state.user);
@@ -704,12 +730,12 @@ export default function SalesPage() {
               </div>
               {loading ? (
                 <div style={{ textAlign: 'center', padding: theme.spacing.xxl }}>
-                  <Loader2 size={32} className="animate-spin" style={{ color: PRIMARY_COLOR, margin: '0 auto' }} />
+                  <Loader2 size={32} className="animate-spin" style={{ color: PRIMARY_COLOR({ theme }), margin: '0 auto' }} />
                 </div>
               ) : (
                 <ItemsGrid>
                   {filteredItems.length === 0 ? (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: theme.spacing.xxl, color: TEXT_COLOR_MUTED }}>
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: theme.spacing.xxl, color: TEXT_COLOR_MUTED({ theme }) }}>
                       <Package size={48} style={{ margin: '0 auto', opacity: 0.5, marginBottom: theme.spacing.md }} />
                       <p>No items available</p>
                     </div>
@@ -733,13 +759,14 @@ export default function SalesPage() {
                         }}
                         style={{
                           opacity: Number(item.quantity || 0) === 0 ? 0.6 : 1,
-                          cursor: Number(item.quantity || 0) === 0 ? 'not-allowed' : 'pointer'
+                          cursor: Number(item.quantity || 0) === 0 ? 'not-allowed' : 'pointer',
+                          background: selectedItem?.id === item.id ? (theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : 'rgba(0, 170, 0, 0.05)') : 'transparent'
                         }}
                       >
                         <ItemInfoRow>
                           <ItemName>{item.item_name}</ItemName>
                           <ItemPrice>
-                            <span style={{ color: '#dc2626' }}>selling price:</span> ${Number(item.selling_price).toFixed(2)}
+                            <span style={{ color: theme.mode === 'dark' ? '#f87171' : '#dc2626' }}>price:</span> ${Number(item.selling_price).toFixed(2)}
                           </ItemPrice>
                           <ItemStock>
                             <span>Stock:</span>
@@ -749,17 +776,17 @@ export default function SalesPage() {
                           </ItemStock>
                         </ItemInfoRow>
                         {Number(item.quantity || 0) === 0 && (
-                          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: '#dc2626' }}>
+                          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: theme.mode === 'dark' ? '#f87171' : '#dc2626' }}>
                             Out of Stock
                           </div>
                         )}
                         {item.category && (
-                          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }) }}>
                             {item.category}
                           </div>
                         )}
                         {item.sku && (
-                          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED }}>
+                          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }) }}>
                             SKU: {item.sku}
                           </div>
                         )}
@@ -831,7 +858,7 @@ export default function SalesPage() {
                                 onChange={(e) => handleUpdateQuantity(item.item_id, parseInt(e.target.value) || 1)}
                                 style={{ width: '80px', padding: theme.spacing.xs }}
                               />
-                              <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                              <span style={{ fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED({ theme }) }}>
                                 × ${Number(item.selling_price).toFixed(2)}
                               </span>
                             </div>
@@ -861,7 +888,7 @@ export default function SalesPage() {
                     </SummaryRow>
                     <SummaryRow>
                       <span>Total:</span>
-                      <span style={{ color: PRIMARY_COLOR }}>${totalSale.toFixed(2)}</span>
+                      <span style={{ color: PRIMARY_COLOR({ theme }) }}>${totalSale.toFixed(2)}</span>
                     </SummaryRow>
                   </SummaryCard>
 
@@ -923,7 +950,7 @@ export default function SalesPage() {
                 <div style={{ textAlign: 'center', marginBottom: theme.spacing.lg }}>
                   <h2 style={{ margin: 0, marginBottom: theme.spacing.sm }}>Receipt</h2>
                   {completedSales[0]?.receipt_number && (
-                    <p style={{ color: TEXT_COLOR_MUTED, margin: 0 }}>#{completedSales[0].receipt_number}</p>
+                    <p style={{ color: TEXT_COLOR_MUTED({ theme }), margin: 0 }}>#{completedSales[0].receipt_number}</p>
                   )}
                 </div>
                 <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: theme.spacing.md }}>
@@ -933,11 +960,11 @@ export default function SalesPage() {
                         <div style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>
                           {sale.item_name || 'Sale Item'}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED({ theme }) }}>
                           <span>
                             Quantity: {sale.quantity_sold || 0} × ${Number(sale.selling_price || 0).toFixed(2)}
                           </span>
-                          <span style={{ fontWeight: 'bold', color: TEXT_COLOR_DARK }}>
+                          <span style={{ fontWeight: 'bold', color: TEXT_COLOR_DARK({ theme }) }}>
                             ${Number(sale.total_sale || 0).toFixed(2)}
                           </span>
                         </div>
@@ -947,17 +974,17 @@ export default function SalesPage() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: theme.typography.fontSizes.lg, paddingTop: theme.spacing.md, borderTop: `2px solid ${theme.colors.border}` }}>
                     <span>Grand Total:</span>
-                    <span style={{ color: PRIMARY_COLOR }}>
+                    <span style={{ color: PRIMARY_COLOR({ theme }) }}>
                       ${completedSales.reduce((sum, s) => sum + Number(s.total_sale || 0), 0).toFixed(2)}
                     </span>
                   </div>
 
                   {completedSales[0]?.customer_name && (
-                    <div style={{ marginTop: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                    <div style={{ marginTop: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED({ theme }) }}>
                       Customer: {completedSales[0].customer_name}
                     </div>
                   )}
-                  <div style={{ marginTop: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED }}>
+                  <div style={{ marginTop: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, color: TEXT_COLOR_MUTED({ theme }) }}>
                     Date: {completedSales[0]?.created_at ? new Date(completedSales[0].created_at).toLocaleString() : new Date().toLocaleString()}
                   </div>
                 </div>
