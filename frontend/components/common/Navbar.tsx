@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { keyframes, css, useTheme } from 'styled-components';
 import {
   Search, Plus, Bell, FileSpreadsheet, Globe, User, Users, LogOut, Settings, HelpCircle,
   Clock, ChevronDown, ChevronUp, AlertCircle, XCircle, CheckCircle, Info
@@ -12,7 +12,7 @@ import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { useUserStore, type StoreUser } from '@/store/userStore';
 import { type User as RbacUser } from '@/lib/rbac/models';
-import { theme } from './theme';
+import { theme as staticTheme } from './theme';
 import apiClient from '@/lib/api';
 import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
@@ -22,6 +22,13 @@ import useNotificationStore, { type Notification } from '@/store/notificationSto
 const PRIMARY_ACCENT = '#06b6d4';
 const PRIMARY_HOVER = '#0891b2';
 const DANGER_COLOR = '#ef4444';
+
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const BACKGROUND_SECONDARY = (props: any) => props.theme.colors.backgroundSecondary;
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
+const CARD_BG = (props: any) => props.theme.colors.card;
 
 // Animations
 const pulse = keyframes`
@@ -40,7 +47,7 @@ const slideDown = keyframes`
   }
 `;
 
-const getIconColor = (iconType: string, active: boolean = false): string => {
+const getIconColor = (iconType: string, active: boolean = false, theme?: any): string => {
   if (active) {
     const activeColors: Record<string, string> = {
       'search': '#3b82f6',
@@ -68,7 +75,7 @@ const getIconColor = (iconType: string, active: boolean = false): string => {
       'help-circle': '#2dd4bf',
       'log-out': '#f87171',
     };
-    return inactiveColors[iconType] || theme.colors.textSecondary;
+    return inactiveColors[iconType] || (theme?.colors?.textSecondary || '#666');
   }
 };
 
@@ -80,9 +87,9 @@ const HeaderContainer = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
-  background: ${theme.colors.background};
-  border-bottom: 1px solid ${theme.colors.border};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  background: ${props => props.theme.colors.background};
+  border-bottom: 1px solid ${BORDER_COLOR};
   height: 46px;
   width: calc(100% - 280px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -94,32 +101,32 @@ const SearchContainer = styled.div`
   position: relative;
   flex: 1;
   max-width: 400px;
-  margin: 0 ${theme.spacing.lg};
+  margin: 0 ${props => props.theme.spacing.lg};
 `;
 
 const SearchInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
   padding-left: 48px;
   padding-right: 40px;
-  border: 2px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.backgroundSecondary};
-  font-size: ${theme.typography.fontSizes.sm};
-  color: ${theme.colors.textSecondary};
+  border: 2px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_SECONDARY};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  color: ${TEXT_COLOR_MUTED};
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 
   &:focus {
     outline: none;
     border-color: ${PRIMARY_ACCENT};
-    background: ${theme.colors.background};
+    background: ${props => props.theme.colors.background};
     box-shadow: 0 0 0 4px ${PRIMARY_ACCENT}15, 0 4px 12px rgba(0, 0, 0, 0.1);
     transform: translateY(-1px);
   }
 
   &::placeholder {
-    color: ${theme.colors.textSecondary};
+    color: ${TEXT_COLOR_MUTED};
     opacity: 0.5;
   }
 `;
@@ -156,11 +163,11 @@ const KeyboardHint = styled.div`
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: ${theme.colors.backgroundSecondary};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.sm};
+  background: ${BACKGROUND_SECONDARY};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.sm};
   font-size: 11px;
-  color: ${theme.colors.textSecondary};
+  color: ${TEXT_COLOR_MUTED};
   opacity: 0.6;
   pointer-events: none;
   transition: opacity 0.2s;
@@ -170,8 +177,8 @@ const KeyboardHint = styled.div`
   }
 
   kbd {
-    background: ${theme.colors.background};
-    border: 1px solid ${theme.colors.border};
+    background: ${props => props.theme.colors.background};
+    border: 1px solid ${BORDER_COLOR};
     border-radius: 3px;
     padding: 2px 6px;
     font-family: monospace;
@@ -185,9 +192,9 @@ const SearchSuggestions = styled.div<{ $isOpen: boolean }>`
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: ${theme.colors.background};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
+  background: ${props => props.theme.colors.background};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   max-height: 400px;
@@ -202,38 +209,38 @@ const SearchSuggestions = styled.div<{ $isOpen: boolean }>`
 `;
 
 const SuggestionSection = styled.div`
-  padding: ${theme.spacing.sm} 0;
-  border-bottom: 1px solid ${theme.colors.border};
+  padding: ${props => props.theme.spacing.sm} 0;
+  border-bottom: 1px solid ${BORDER_COLOR};
 
   &:last-child {
     border-bottom: none;
   }
 
   h4 {
-    padding: ${theme.spacing.sm} ${theme.spacing.md};
-    font-size: ${theme.typography.fontSizes.xs};
+    padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+    font-size: ${props => props.theme.typography.fontSizes.xs};
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: ${theme.colors.textSecondary};
+    color: ${TEXT_COLOR_MUTED};
     opacity: 0.7;
     margin: 0;
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
   }
 `;
 
 const SuggestionItem = styled.div<{ $active?: boolean; $isRecent?: boolean }>`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
-  padding: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.md};
   cursor: pointer;
   transition: all 0.15s;
-  background: ${props => props.$active ? theme.colors.backgroundSecondary : 'transparent'};
+  background: ${props => props.$active ? BACKGROUND_SECONDARY : 'transparent'};
   border-left: 3px solid ${props => props.$active ? PRIMARY_ACCENT : 'transparent'};
 
   &:hover {
-    background: ${theme.colors.backgroundSecondary};
-    padding-left: ${theme.spacing.lg};
+    background: ${BACKGROUND_SECONDARY};
+    padding-left: ${props => props.theme.spacing.lg};
     border-left-color: ${PRIMARY_ACCENT};
   }
 
@@ -246,18 +253,18 @@ const SuggestionItem = styled.div<{ $active?: boolean; $isRecent?: boolean }>`
 
   span {
     flex: 1;
-    font-size: ${theme.typography.fontSizes.sm};
-    color: ${theme.colors.textSecondary};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
   }
 
   kbd {
-    background: ${theme.colors.backgroundSecondary};
-    border: 1px solid ${theme.colors.border};
+    background: ${BACKGROUND_SECONDARY};
+    border: 1px solid ${BORDER_COLOR};
     border-radius: 3px;
     padding: 2px 6px;
     font-family: monospace;
     font-size: 10px;
-    color: ${theme.colors.textSecondary};
+    color: ${TEXT_COLOR_MUTED};
     opacity: 0.6;
   }
 `;
@@ -265,14 +272,14 @@ const SuggestionItem = styled.div<{ $active?: boolean; $isRecent?: boolean }>`
 const ActionsContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const IconWrapper = styled.div<{ $iconType?: string; $active?: boolean; $size?: number }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : theme.colors.textSecondary};
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false, props.theme) : TEXT_COLOR_MUTED};
   opacity: ${props => props.$active ? 1 : 0.8};
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
@@ -293,7 +300,7 @@ const NavIcon = styled.div<{ $iconType?: string; $active?: boolean; $size?: numb
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : theme.colors.textSecondary};
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false, props.theme) : TEXT_COLOR_MUTED};
   opacity: ${props => props.$active ? 1 : 0.8};
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
@@ -313,7 +320,7 @@ const ButtonIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : 'white'};
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false, props.theme) : 'white'};
   transition: all 0.2s;
   
   svg {
@@ -328,7 +335,7 @@ const DropdownIcon = styled.div<{ $iconType?: string; $active?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false) : theme.colors.textSecondary};
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, props.$active || false, props.theme) : TEXT_COLOR_MUTED};
   opacity: ${props => props.$active ? 1 : 0.8};
   transition: all 0.2s;
   
@@ -352,8 +359,8 @@ const AddButton = styled.button`
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: ${theme.borderRadius.md};
-  background: linear-gradient(135deg, ${getIconColor('plus', true)} 0%, #16a34a 100%);
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: linear-gradient(135deg, ${props => getIconColor('plus', true, props.theme)} 0%, #16a34a 100%);
   color: white;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -373,7 +380,7 @@ const AddButton = styled.button`
   }
 
   &:hover {
-    background: linear-gradient(135deg, #16a34a 0%, ${getIconColor('plus', true)} 100%);
+    background: linear-gradient(135deg, #16a34a 0%, ${props => getIconColor('plus', true, props.theme)} 100%);
     filter: brightness(1.1);
     transform: translateY(-2px) scale(1.05);
     box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35);
@@ -399,16 +406,16 @@ const IconButton = styled.button<{ $iconType?: string; $hasBadge?: boolean }>`
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   background: transparent;
-  color: ${props => props.$iconType ? getIconColor(props.$iconType, false) : theme.colors.textSecondary};
+  color: ${props => props.$iconType ? getIconColor(props.$iconType, false, props.theme) : TEXT_COLOR_MUTED};
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 
   &:hover {
-    background: ${theme.colors.backgroundSecondary};
-    color: ${props => props.$iconType ? getIconColor(props.$iconType, true) : PRIMARY_ACCENT};
+    background: ${BACKGROUND_SECONDARY};
+    color: ${props => props.$iconType ? getIconColor(props.$iconType, true, props.theme) : PRIMARY_ACCENT};
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     
@@ -442,7 +449,7 @@ const NotificationBadge = styled.div`
     background: linear-gradient(135deg, ${DANGER_COLOR} 0%, #dc2626 100%);
     color: white;
     font-size: 10px;
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
     min-width: 20px;
     height: 20px;
     padding: 0 0px;
@@ -450,7 +457,7 @@ const NotificationBadge = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid ${theme.colors.background};
+    border: 2px solid ${props => props.theme.colors.background};
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
     animation: ${pulse} 2s ease-in-out infinite;
     z-index: 1;
@@ -465,7 +472,7 @@ const ActivityIndicator = styled.div<{ $isActive: boolean }>`
   height: 10px;
   border-radius: 50%;
   background: ${props => props.$isActive ? '#22c55e' : '#94a3b8'};
-  border: 2px solid ${theme.colors.background};
+  border: 2px solid ${props => props.theme.colors.background};
   box-shadow: 0 0 0 2px ${props => props.$isActive ? '#22c55e' : 'transparent'};
   ${props => props.$isActive && css`
     animation: ${pulse} 2s infinite;
@@ -476,16 +483,16 @@ const ActivityIndicator = styled.div<{ $isActive: boolean }>`
 const LanguageSelector = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   cursor: pointer;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border-radius: ${theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
 
   &:hover {
-    background: ${theme.colors.backgroundSecondary};
-    border-color: ${theme.colors.border};
+    background: ${BACKGROUND_SECONDARY};
+    border-color: ${BORDER_COLOR};
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     
@@ -501,9 +508,9 @@ const LanguageSelector = styled.div`
   }
 
   span {
-    font-size: ${theme.typography.fontSizes.sm};
-    font-weight: ${theme.typography.fontWeights.medium};
-    color: ${theme.colors.textSecondary};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
+    color: ${TEXT_COLOR_MUTED};
     transition: color 0.2s;
   }
 `;
@@ -512,16 +519,16 @@ const UserProfileContainer = styled.div`
   position: relative;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   cursor: pointer;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border-radius: ${theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.md};
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
 
   &:hover {
-    background: ${theme.colors.backgroundSecondary};
-    border-color: ${theme.colors.border};
+    background: ${BACKGROUND_SECONDARY};
+    border-color: ${BORDER_COLOR};
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
 `;
@@ -535,8 +542,8 @@ const UserAvatar = styled.div`
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: ${theme.typography.fontWeights.bold};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   box-shadow: 0 4px 8px rgba(6, 182, 212, 0.25);
   transition: transform 0.2s;
   position: relative;
@@ -553,27 +560,27 @@ const UserInfo = styled.div`
 `;
 
 const UserName = styled.span`
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.medium};
-  color: ${theme.colors.textSecondary};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  color: ${TEXT_COLOR_MUTED};
   line-height: 1.2;
 `;
 
 const UserRole = styled.span`
-  font-size: ${theme.typography.fontSizes.xs};
-  color: ${theme.colors.textSecondary};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  color: ${TEXT_COLOR_MUTED};
   opacity: 0.7;
   line-height: 1.2;
 `;
 
 const DropdownMenu = styled.div<{ $isOpen: boolean }>`
   position: absolute;
-  top: calc(100% + ${theme.spacing.sm});
+  top: calc(100% + ${props => props.theme.spacing.sm});
   right: 0;
   width: 260px;
-  background: ${theme.colors.background};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
+  background: ${props => props.theme.colors.background};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   opacity: ${props => (props.$isOpen ? 1 : 0)};
@@ -591,18 +598,18 @@ const DropdownMenu = styled.div<{ $isOpen: boolean }>`
 const DropdownItem = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.md};
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
-  color: ${theme.colors.textSecondary};
+  gap: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  color: ${TEXT_COLOR_MUTED};
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   position: relative;
 
   &:hover {
     background: ${PRIMARY_ACCENT}10;
     color: ${PRIMARY_ACCENT};
-    padding-left: ${theme.spacing.xl};
+    padding-left: ${props => props.theme.spacing.xl};
     
     ${DropdownIcon} {
       opacity: 1;
@@ -611,7 +618,7 @@ const DropdownItem = styled.div`
   }
 
   &:not(:last-child) {
-    border-bottom: 1px solid ${theme.colors.border};
+    border-bottom: 1px solid ${BORDER_COLOR};
   }
   
   span {
@@ -621,13 +628,13 @@ const DropdownItem = styled.div`
 
 const SignOutItem = styled(DropdownItem)`
   color: ${DANGER_COLOR};
-  border-top: 2px solid ${theme.colors.border};
-  margin-top: ${theme.spacing.xs};
+  border-top: 2px solid ${BORDER_COLOR};
+  margin-top: ${props => props.theme.spacing.xs};
   
   &:hover {
     background: ${DANGER_COLOR}10;
     color: #dc2626;
-    padding-left: ${theme.spacing.xl};
+    padding-left: ${props => props.theme.spacing.xl};
     
     ${DropdownIcon} {
       opacity: 1;
@@ -649,7 +656,7 @@ const NotificationPanel = styled.div<{ $isOpen: boolean }>`
   background: ${props => props.theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.85)'};
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid ${theme.colors.border};
+  border: 1px solid ${BORDER_COLOR};
   border-radius: 20px;
   box-shadow: 
     0 20px 40px rgba(0, 0, 0, 0.12),
@@ -685,7 +692,7 @@ const NotificationPanelHeader = styled.div`
   h3 {
     font-size: 18px;
     font-weight: 700;
-    color: ${theme.colors.text};
+    color: ${props => props.theme.colors.text};
     margin: 0;
     letter-spacing: -0.02em;
   }
@@ -740,7 +747,7 @@ const NotificationListItem = styled.div<{ $isRead: boolean; $type?: string }>`
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   background: ${props => props.$isRead ? 'transparent' : (props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : '#ffffff')};
-  border: 1px solid ${props => props.$isRead ? 'transparent' : theme.colors.border};
+  border: 1px solid ${props => props.$isRead ? 'transparent' : BORDER_COLOR};
   display: flex;
   gap: 16px;
   position: relative;
@@ -811,14 +818,14 @@ const NotificationContent = styled.div`
 const NotificationTitle = styled.h4<{ $isRead: boolean }>`
   font-size: 14px;
   font-weight: ${props => props.$isRead ? 500 : 700};
-  color: ${theme.colors.text};
+  color: ${props => props.theme.colors.text};
   margin: 0;
   line-height: 1.4;
 `;
 
 const NotificationMessage = styled.p`
   font-size: 13px;
-  color: ${theme.colors.textSecondary};
+  color: ${TEXT_COLOR_MUTED};
   margin: 0;
   line-height: 1.5;
 `;
@@ -832,7 +839,7 @@ const NotificationMeta = styled.div`
   .time {
     font-size: 11px;
     font-weight: 600;
-    color: ${theme.colors.textSecondary};
+    color: ${TEXT_COLOR_MUTED};
     opacity: 0.8;
     display: flex;
     align-items: center;
@@ -859,16 +866,16 @@ const CollapseButton = styled.button`
 `;
 
 const NotificationItem = styled.div<{ $isRead: boolean }>`
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
-  border-bottom: 1px solid ${theme.colors.border};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  border-bottom: 1px solid ${BORDER_COLOR};
   cursor: pointer;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  background: ${props => props.$isRead ? theme.colors.background : 'rgba(6, 182, 212, 0.05)'};
+  background: ${props => props.$isRead ? props.theme.colors.background : 'rgba(6, 182, 212, 0.05)'};
   position: relative;
   
   &:hover {
-    background: ${theme.colors.backgroundSecondary};
-    padding-left: ${theme.spacing.xl};
+    background: ${BACKGROUND_SECONDARY};
+    padding-left: ${props => props.theme.spacing.xl};
     transform: translateX(4px);
   }
   
@@ -892,23 +899,23 @@ const NotificationItem = styled.div<{ $isRead: boolean }>`
 
 const NotificationItemContent = styled.div`
   display: flex;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const NotificationText = styled.div<{ $isRead?: boolean }>`
   flex: 1;
   
   p {
-    font-size: ${theme.typography.fontSizes.sm};
-    color: ${theme.colors.textSecondary};
-    margin: 0 0 ${theme.spacing.xs};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
+    color: ${TEXT_COLOR_MUTED};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     line-height: 1.5;
-    font-weight: ${props => props.$isRead ? theme.typography.fontWeights.medium : theme.typography.fontWeights.bold};
+    font-weight: ${props => props.$isRead ? props.theme.typography.fontWeights.medium : props.theme.typography.fontWeights.bold};
   }
   
   span {
-    font-size: ${theme.typography.fontSizes.xs};
-    color: ${theme.colors.textSecondary};
+    font-size: ${props => props.theme.typography.fontSizes.xs};
+    color: ${TEXT_COLOR_MUTED};
     opacity: 0.7;
   }
 `;
@@ -921,7 +928,7 @@ const NotificationListText = styled.div<{ $isRead?: boolean }>`
   
   p {
     font-size: 14px;
-    color: ${props => props.$isRead ? theme.colors.textSecondary : theme.colors.text};
+    color: ${props => props.$isRead ? TEXT_COLOR_MUTED : props.theme.colors.text};
     margin: 0;
     line-height: 1.5;
     font-weight: ${props => props.$isRead ? 500 : 600};
@@ -938,7 +945,7 @@ const NotificationListText = styled.div<{ $isRead?: boolean }>`
   
   .notification-time {
     font-size: 12px;
-    color: ${theme.colors.textSecondary};
+    color: ${TEXT_COLOR_MUTED};
     opacity: 0.8;
     font-weight: 500;
     white-space: nowrap;
@@ -946,7 +953,7 @@ const NotificationListText = styled.div<{ $isRead?: boolean }>`
   
   span {
     font-size: 12px;
-    color: ${theme.colors.textSecondary};
+    color: ${TEXT_COLOR_MUTED};
     opacity: 0.8;
     font-weight: 500;
   }
@@ -954,8 +961,8 @@ const NotificationListText = styled.div<{ $isRead?: boolean }>`
 
 const NotificationPanelFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid ${theme.colors.border};
-  background: ${theme.colors.backgroundSecondary};
+  border-top: 1px solid ${BORDER_COLOR};
+  background: ${BACKGROUND_SECONDARY};
   display: flex;
   gap: 12px;
 `;
@@ -992,24 +999,24 @@ const EmptyNotifications = styled.div`
     width: 64px;
     height: 64px;
     border-radius: 20px;
-    background: ${theme.colors.backgroundSecondary};
+    background: ${BACKGROUND_SECONDARY};
     display: flex;
     align-items: center;
     justify-content: center;
-    color: ${theme.colors.textSecondary};
+    color: ${TEXT_COLOR_MUTED};
     margin-bottom: 8px;
   }
 
   p {
     font-size: 15px;
     font-weight: 600;
-    color: ${theme.colors.text};
+    color: ${props => props.theme.colors.text};
     margin: 0;
   }
 
   span {
     font-size: 13px;
-    color: ${theme.colors.textSecondary};
+    color: ${TEXT_COLOR_MUTED};
   }
 `;
 
