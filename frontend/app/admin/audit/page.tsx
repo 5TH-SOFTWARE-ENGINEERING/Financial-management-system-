@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import Sidebar from '@/components/common/Sidebar';
 import Navbar from '@/components/common/Navbar';
 import {
@@ -445,8 +445,12 @@ const MetaItem = styled.div`
 `;
 
 const JsonBlock = styled.div<{ $variant: 'old' | 'new' }>`
-    background: ${props => props.$variant === 'old' ? '#fef2f2' : '#f0fdf4'};
-    border: 1px solid ${props => props.$variant === 'old' ? '#fecaca' : '#bbf7d0'};
+    background: ${props => props.$variant === 'old'
+        ? `color-mix(in srgb, ${props.theme.colors.error}, transparent 95%)`
+        : `color-mix(in srgb, ${props.theme.colors.primary}, transparent 95%)`};
+    border: 1px solid ${props => props.$variant === 'old'
+        ? `color-mix(in srgb, ${props.theme.colors.error}, transparent 80%)`
+        : `color-mix(in srgb, ${props.theme.colors.primary}, transparent 80%)`};
     border-radius: 10px;
     padding: 16px;
     font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
@@ -455,6 +459,7 @@ const JsonBlock = styled.div<{ $variant: 'old' | 'new' }>`
     overflow-x: auto;
     white-space: pre-wrap;
     word-break: break-all;
+    color: ${TEXT_PRIMARY};
 
     pre {
         margin: 0;
@@ -467,7 +472,7 @@ const JsonLabel = styled.div<{ $variant: 'old' | 'new' }>`
     gap: 8px;
     font-size: 13px;
     font-weight: 600;
-    color: ${props => props.$variant === 'old' ? '#b91c1c' : '#15803d'};
+    color: ${props => props.$variant === 'old' ? props.theme.colors.error : props.theme.colors.primary};
     margin-bottom: 10px;
 `;
 
@@ -477,10 +482,10 @@ const Pagination = styled.div`
     justify-content: space-between;
     align-items: center;
     padding: 18px 24px;
-    background: linear-gradient(180deg, #fafbfc 0%, #f8fafc 100%);
-    border-top: 1px solid #e2e8f0;
+    background: ${props => props.theme.colors.backgroundSecondary};
+    border-top: 1px solid ${BORDER_COLOR};
     font-size: 14px;
-    color: #64748b;
+    color: ${TEXT_SECONDARY};
     
     b {
         color: ${TEXT_PRIMARY};
@@ -506,7 +511,7 @@ const PageActions = styled.div`
         transition: all 0.2s ease;
 
         &:hover:not(:disabled) {
-            background: #f8fafc;
+            background: ${props => props.theme.colors.backgroundSecondary};
             border-color: #667eea;
             color: #667eea;
         }
@@ -569,6 +574,7 @@ const EmptyState = styled.div`
 export default function AuditLogsPage() {
     const router = useRouter();
     const { user, isAuthenticated, isLoading } = useAuth();
+    const theme = useTheme();
 
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
@@ -645,15 +651,16 @@ export default function AuditLogsPage() {
     };
 
     const getActionStyles = (action: string) => {
-        switch (action.toLowerCase()) {
-            case 'create': return { color: '#15803d', bg: '#dcfce7' };
-            case 'update': return { color: '#1d4ed8', bg: '#dbeafe' };
-            case 'delete': return { color: '#b91c1c', bg: '#fee2e2' };
-            case 'login': return { color: '#7e22ce', bg: '#f3e8ff' };
-            case 'logout': return { color: '#4b5563', bg: '#f3f4f6' };
-            case 'approve': return { color: '#047857', bg: '#d1fae5' };
-            case 'reject': return { color: '#c2410c', bg: '#ffedd5' };
-            default: return { color: '#4b5563', bg: '#f3f4f6' };
+        const type = action.toLowerCase();
+        switch (type) {
+            case 'create': return { color: theme.colors.primary, bg: `color-mix(in srgb, ${theme.colors.primary}, transparent 90%)` };
+            case 'update': return { color: '#3b82f6', bg: `color-mix(in srgb, #3b82f6, transparent 90%)` };
+            case 'delete': return { color: theme.colors.error, bg: `color-mix(in srgb, ${theme.colors.error}, transparent 90%)` };
+            case 'login': return { color: '#a855f7', bg: `color-mix(in srgb, #a855f7, transparent 90%)` };
+            case 'logout': return { color: theme.colors.mutedForeground, bg: `color-mix(in srgb, ${theme.colors.mutedForeground}, transparent 90%)` };
+            case 'approve': return { color: '#22c55e', bg: `color-mix(in srgb, #22c55e, transparent 90%)` };
+            case 'reject': return { color: '#f97316', bg: `color-mix(in srgb, #f97316, transparent 90%)` };
+            default: return { color: theme.colors.mutedForeground, bg: `color-mix(in srgb, ${theme.colors.mutedForeground}, transparent 90%)` };
         }
     };
 
@@ -808,7 +815,7 @@ export default function AuditLogsPage() {
                                                     </td>
 
 
-                                                    <td style={{ color: '#94a3b8', fontFamily: "'SF Mono', monospace", fontSize: 13 }}>
+                                                    <td style={{ color: theme.colors.mutedForeground, fontFamily: "'SF Mono', monospace", fontSize: 13 }}>
                                                         {log.ip_address || '—'}
                                                     </td>
                                                 </tr>
@@ -897,7 +904,7 @@ export default function AuditLogsPage() {
                                 <DetailValue>
                                     {selectedLog.user?.full_name || selectedLog.user_full_name || selectedLog.user?.username || 'System'}
                                     {(selectedLog.user?.email || selectedLog.user_email) && (
-                                        <span style={{ color: '#94a3b8', marginLeft: 8 }}>
+                                        <span style={{ color: theme.colors.mutedForeground, marginLeft: 8 }}>
                                             ({selectedLog.user?.email || selectedLog.user_email})
                                         </span>
                                     )}
@@ -939,15 +946,15 @@ export default function AuditLogsPage() {
                                 <DetailSection>
                                     <div style={{
                                         padding: '20px',
-                                        background: '#f8fafc',
+                                        background: theme.colors.backgroundSecondary,
                                         borderRadius: '10px',
                                         textAlign: 'center',
-                                        color: '#64748b',
+                                        color: theme.colors.mutedForeground,
                                         fontSize: '14px'
                                     }}>
                                         <Info size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
                                         <p style={{ margin: 0 }}>No data changes recorded for this action.</p>
-                                        <p style={{ margin: '8px 0 0 0', fontSize: 12, color: '#94a3b8' }}>
+                                        <p style={{ margin: '8px 0 0 0', fontSize: 12, color: theme.colors.mutedForeground }}>
                                             This is typically for actions like login, logout, or view events.
                                         </p>
                                     </div>
@@ -958,7 +965,7 @@ export default function AuditLogsPage() {
                             {selectedLog.user_agent && (
                                 <DetailSection>
                                     <DetailLabel>User Agent</DetailLabel>
-                                    <DetailValue style={{ fontSize: 12, color: '#64748b', wordBreak: 'break-all' }}>
+                                    <DetailValue style={{ fontSize: 12, color: theme.colors.mutedForeground, wordBreak: 'break-all' }}>
                                         {selectedLog.user_agent}
                                     </DetailValue>
                                 </DetailSection>
