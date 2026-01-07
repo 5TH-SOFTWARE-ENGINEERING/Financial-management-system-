@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import {
-  Bell,CheckCircle,XCircle,AlertCircle,Info,Calendar,Trash2,CheckSquare,
-  Settings,RefreshCw,FileText,Loader2,Eye,EyeOff,Lock} from 'lucide-react';
+  Bell, CheckCircle, XCircle, AlertCircle, Info, Calendar, Trash2, CheckSquare,
+  Settings, RefreshCw, FileText, Loader2, Eye, EyeOff, Lock
+} from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { formatDate } from '@/lib/utils';
@@ -13,6 +14,7 @@ import apiClient from '@/lib/api';
 import { toast } from 'sonner';
 import Layout from '@/components/layout';
 import { theme } from '@/components/common/theme';
+import useNotificationStore, { Notification } from '@/store/notificationStore';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = '#111827';
@@ -45,6 +47,7 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
+  padding-bottom: ${theme.spacing.xxl};
 `;
 
 const ContentContainer = styled.div`
@@ -59,11 +62,24 @@ const ContentContainer = styled.div`
 const HeaderContainer = styled.div`
   background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
   color: #ffffff;
-  padding: ${theme.spacing.xl} ${theme.spacing.lg};
+  padding: ${theme.spacing.xl} ${theme.spacing.xl};
   margin-bottom: ${theme.spacing.xl};
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  border-radius: ${theme.borderRadius.lg || '12px'};
-  border-bottom: 3px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 30px rgba(0, 170, 0, 0.15);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
 `;
 
 const HeaderContent = styled.div`
@@ -72,22 +88,65 @@ const HeaderContent = styled.div`
   justify-content: space-between;
   flex-wrap: wrap;
   gap: ${theme.spacing.lg};
+  position: relative;
+  z-index: 1;
   
-  h1 {
-    font-size: clamp(28px, 4vw, 40px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
-    color: #ffffff;
-    letter-spacing: -0.5px;
+  .title-area {
+    h1 {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 800;
+      margin: 0 0 ${theme.spacing.xs};
+      color: #ffffff;
+      letter-spacing: -1.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    p {
+      font-size: ${theme.typography.fontSizes.md || '16px'};
+      font-weight: 500;
+      opacity: 0.9;
+      margin: 0;
+      color: rgba(255, 255, 255, 0.9);
+      line-height: 1.5;
+    }
   }
-  
-  p {
-    font-size: ${theme.typography.fontSizes.md || '15px'};
-    font-weight: ${theme.typography.fontWeights.medium};
-    opacity: 0.95;
-    margin: 0;
-    color: rgba(255, 255, 255, 0.98);
-    line-height: 1.5;
+`;
+
+const LiveIndicator = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 6px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-left: 12px;
+  height: fit-content;
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #4ade80;
+    animation: pulse 2s infinite;
+  }
+
+  span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: white;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+    70% { transform: scale(1.2); opacity: 0.8; box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+    100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
   }
 `;
 
@@ -171,18 +230,44 @@ const StatsGrid = styled.div`
   margin-bottom: ${theme.spacing.xl};
 `;
 
-const StatCard = styled.div`
+const StatCard = styled.div<{ $delay: string }>`
   background: ${theme.colors.background};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.lg || '12px'};
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 24px;
   padding: ${theme.spacing.xl};
-  box-shadow: ${CardShadow};
-  transition: all ${theme.transitions.default};
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  animation: slideIn 0.5s ease-out forwards;
+  animation-delay: ${props => props.$delay};
+  opacity: 0;
+
+  @keyframes slideIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
   
   &:hover {
-    transform: translateY(-3px);
-    box-shadow: ${CardShadowHover};
-    border-color: ${PRIMARY_COLOR};
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 170, 0, 0.08);
+    border-color: ${PRIMARY_COLOR}40;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, ${PRIMARY_COLOR}40, transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  &:hover::after {
+    opacity: 1;
   }
 `;
 
@@ -190,6 +275,8 @@ const StatContent = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
+  z-index: 1;
 `;
 
 const StatInfo = styled.div`
@@ -197,35 +284,38 @@ const StatInfo = styled.div`
 `;
 
 const StatLabel = styled.p`
-  font-size: ${theme.typography.fontSizes.xs || '12px'};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-size: 11px;
+  font-weight: 700;
   color: ${TEXT_COLOR_MUTED};
-  margin-bottom: ${theme.spacing.xs};
+  margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 1.5px;
+  opacity: 0.8;
 `;
 
 const StatValue = styled.p<{ $color?: string }>`
-  font-size: ${theme.typography.fontSizes.xxl || '32px'};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: 36px;
+  font-weight: 800;
   color: ${props => props.$color || TEXT_COLOR_DARK};
-  line-height: 1.2;
+  line-height: 1;
+  letter-spacing: -1px;
 `;
 
 const StatIcon = styled.div<{ $bgColor: string; $iconColor: string }>`
-  width: 56px;
-  height: 56px;
-  border-radius: ${theme.borderRadius.md};
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
   background: ${props => props.$bgColor};
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.02);
   
   svg {
     color: ${props => props.$iconColor};
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
   }
 `;
 
@@ -235,40 +325,53 @@ const FiltersContainer = styled.div`
   gap: ${theme.spacing.lg};
   flex-wrap: wrap;
   margin-bottom: ${theme.spacing.xl};
-  padding: ${theme.spacing.md} 0;
+  padding: ${theme.spacing.md} ${theme.spacing.sm};
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.03);
 `;
 
 const FilterSelect = styled.select`
-  padding: ${theme.spacing.sm} ${theme.spacing.lg};
-  padding-right: ${theme.spacing.xl};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
-  font-size: ${theme.typography.fontSizes.sm || '14px'};
-  font-weight: ${theme.typography.fontWeights.medium};
+  padding: 12px 20px;
+  padding-right: 40px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  background: white;
+  font-size: 14px;
+  font-weight: 600;
   color: ${TEXT_COLOR_DARK};
   cursor: pointer;
-  transition: all ${theme.transitions.default};
-  min-width: 180px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 200px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
   
   &:focus {
     outline: none;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px rgba(0, 170, 0, 0.1);
+    box-shadow: 0 0 0 4px rgba(0, 170, 0, 0.1);
+    transform: translateY(-1px);
   }
   
   &:hover {
-    border-color: ${PRIMARY_COLOR};
+    border-color: ${PRIMARY_COLOR}80;
+    background-color: #fafafa;
   }
 `;
 
 const FilterCount = styled.span`
-  font-size: ${theme.typography.fontSizes.sm || '14px'};
-  font-weight: ${theme.typography.fontWeights.medium};
-  color: ${TEXT_COLOR_MUTED};
-  padding: ${theme.spacing.xs} ${theme.spacing.md};
-  background: ${theme.colors.backgroundSecondary};
-  border-radius: ${theme.borderRadius.md};
+  font-size: 13px;
+  font-weight: 600;
+  color: ${PRIMARY_COLOR};
+  padding: 6px 14px;
+  background: ${PRIMARY_COLOR}10;
+  border-radius: 12px;
+  border: 1px solid ${PRIMARY_COLOR}20;
 `;
 
 const NotificationsList = styled.div`
@@ -277,13 +380,13 @@ const NotificationsList = styled.div`
   gap: ${theme.spacing.lg};
 `;
 
-const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string }>`
+const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string; $priority: string }>`
   background: ${props => props.$isRead
-    ? 'rgba(255, 255, 255, 0.7)'
-    : 'rgba(255, 255, 255, 0.95)'};
-  backdrop-filter: blur(10px);
-  border: 1px solid ${props => props.$isRead ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.1)'};
-  border-left: 4px solid ${props => {
+    ? 'rgba(255, 255, 255, 0.4)'
+    : 'rgba(255, 255, 255, 0.85)'};
+  backdrop-filter: blur(12px);
+  border: 1px solid ${props => props.$isRead ? 'rgba(0, 0, 0, 0.03)' : 'rgba(0, 0, 0, 0.08)'};
+  border-left: 6px solid ${props => {
     const colors: Record<string, string> = {
       success: '#10b981',
       error: '#ef4444',
@@ -292,17 +395,31 @@ const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string }>`
     };
     return props.$isRead ? colors[props.$displayType] + '40' : colors[props.$displayType];
   }};
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: ${props => props.$isRead ? '0 2px 8px rgba(0,0,0,0.02)' : '0 4px 12px rgba(0,0,0,0.05)'};
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: ${props => props.$isRead
+    ? '0 4px 12px rgba(0,0,0,0.01)'
+    : '0 8px 30px rgba(0,0,0,0.04)'};
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   cursor: pointer;
   position: relative;
   overflow: hidden;
   
+  ${props => props.$priority === 'urgent' && !props.$isRead && `
+    animation: pulseBorder 2s infinite;
+    @keyframes pulseBorder {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); }
+      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+  `}
+  
   &:hover {
-    transform: translateY(-2px) translateX(4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+    transform: translateX(8px);
+    background: ${props => props.$isRead
+    ? 'rgba(255, 255, 255, 0.6)'
+    : 'rgba(255, 255, 255, 0.95)'};
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.06);
     border-color: ${props => {
     const colors: Record<string, string> = {
       success: '#10b981',
@@ -310,7 +427,7 @@ const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string }>`
       warning: '#f59e0b',
       info: '#3b82f6'
     };
-    return colors[props.$displayType] + '80';
+    return colors[props.$displayType] + '60';
   }};
   }
 
@@ -321,20 +438,33 @@ const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string }>`
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent);
     transform: translateX(-100%);
-    transition: transform 0.6s;
+    transition: transform 0.8s;
   }
 
   &:hover::before {
     transform: translateX(100%);
   }
+
+  ${props => !props.$isRead && `
+    &::after {
+      content: '';
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 8px;
+      height: 8px;
+      background: ${PRIMARY_COLOR};
+      border-radius: 50%;
+    }
+  `}
 `;
 
 const NotificationContent = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: ${theme.spacing.lg};
+  gap: 20px;
 `;
 
 const NotificationIcon = styled.div<{ $displayType: string }>`
@@ -487,31 +617,47 @@ const IconButton = styled.button`
 `;
 
 const EmptyState = styled.div`
-  background: ${theme.colors.background};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.xxl} ${theme.spacing.xl};
+  background: white;
+  border-radius: 32px;
+  padding: 80px 40px;
   text-align: center;
-  box-shadow: ${CardShadow};
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  max-width: 600px;
+  margin: 40px auto;
   
-  svg {
-    color: ${TEXT_COLOR_MUTED};
-    width: 48px;
-    height: 48px;
-    margin: 0 auto ${theme.spacing.md};
-    opacity: 0.5;
+  .icon-container {
+    width: 100px;
+    height: 100px;
+    background: ${PRIMARY_COLOR}08;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 32px;
+    
+    svg {
+      color: ${PRIMARY_COLOR};
+      width: 48px;
+      height: 48px;
+      opacity: 0.6;
+    }
   }
   
   h3 {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-size: 24px;
+    font-weight: 800;
     color: ${TEXT_COLOR_DARK};
-    margin-bottom: ${theme.spacing.sm};
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
   }
   
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: 16px;
+    line-height: 1.6;
+    max-width: 300px;
+    margin: 0 auto;
   }
 `;
 
@@ -767,35 +913,32 @@ const ModalFooter = styled.div`
   }
 `;
 
-interface Notification {
-  id: number;
-  user_id: number;
-  title: string;
-  message: string;
-  type: string; // Backend notification type (approval_request, expense_created, etc.)
-  priority: string; // low, medium, high, urgent
-  is_read: boolean;
-  is_email_sent?: boolean;
-  action_url?: string | null;
-  created_at: string;
-  read_at?: string | null;
-  expires_at?: string | null;
-  // Computed display type for UI
-  display_type?: 'success' | 'error' | 'warning' | 'info';
-  // Optional user info for admin/finance admin views
-  user_name?: string;
-  user_email?: string;
-}
+
 
 export default function NotificationsPage() {
   const router = useRouter();
   const { user: storeUser, isAuthenticated, isLoading } = useUserStore();
   const { user: authUser } = useAuth();
   const user = storeUser || authUser;
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // Use the new notification store
+  const {
+    notifications,
+    unreadCount,
+    isLoading: storeLoading,
+    error: storeError,
+    lastSynced,
+    accessibleUserIds,
+    isInitialized,
+    fetchNotifications: fetchNotificationsFromStore,
+    markAsRead: markAsReadInStore,
+    markAllAsRead: markAllAsReadInStore,
+    deleteNotification: deleteNotificationFromStore,
+    setAccessibleUserIds,
+    setNotifications
+  } = useNotificationStore();
+
   const [filterType, setFilterType] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [notificationToDelete, setNotificationToDelete] = useState<Notification | null>(null);
@@ -804,15 +947,12 @@ export default function NotificationsPage() {
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [userCache, setUserCache] = useState<Map<number, { name: string; email: string }>>(new Map());
-  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
-  const [isAccessibleUserIdsReady, setIsAccessibleUserIdsReady] = useState(false);
 
   // Initialize accessible user IDs based on role
   useEffect(() => {
     const initializeAccessibleUsers = async () => {
       if (!user) {
         setAccessibleUserIds(null);
-        setIsAccessibleUserIdsReady(false);
         return;
       }
 
@@ -825,7 +965,6 @@ export default function NotificationsPage() {
       if (isAdmin) {
         // Admin sees all
         setAccessibleUserIds(null);
-        setIsAccessibleUserIdsReady(true);
         return;
       }
 
@@ -848,11 +987,9 @@ export default function NotificationsPage() {
             .filter((id): id is number => id !== null);
 
           setAccessibleUserIds([userId, ...validSubordinateIds]);
-          setIsAccessibleUserIdsReady(true);
         } catch (err) {
           console.error('Failed to fetch subordinates for Finance Admin:', err);
           setAccessibleUserIds([userId]);
-          setIsAccessibleUserIdsReady(true);
         }
       } else if (isAccountant && userId && normalizedManagerId) {
         // Accountant: Own + Employees of their Finance Admin manager (for sales)
@@ -869,19 +1006,15 @@ export default function NotificationsPage() {
             .filter((id): id is number => id !== null);
 
           setAccessibleUserIds([userId, ...employeeIds]);
-          setIsAccessibleUserIdsReady(true);
         } catch (err) {
           setAccessibleUserIds([userId]);
-          setIsAccessibleUserIdsReady(true);
         }
       } else if (isEmployee && userId && normalizedManagerId) {
         // Employee: Own + manager (for items created by finance admin)
         setAccessibleUserIds([userId, normalizedManagerId]);
-        setIsAccessibleUserIdsReady(true);
       } else {
         // Others: only see own
         setAccessibleUserIds(userId ? [userId] : null);
-        setIsAccessibleUserIdsReady(true);
       }
     };
 
@@ -964,7 +1097,7 @@ export default function NotificationsPage() {
       setUserCache(newCache);
 
       // Update notifications with user info
-      setNotifications(prevNotifications =>
+      setNotifications((prevNotifications: Notification[]) =>
         prevNotifications.map(notif => {
           const userInfo = newCache.get(notif.user_id);
           return userInfo ? {
@@ -981,253 +1114,25 @@ export default function NotificationsPage() {
 
   const fetchNotifications = useCallback(async (showLoading: boolean = true) => {
     // Wait for accessibleUserIds to be ready (unless admin)
-    if (!isAccessibleUserIdsReady) {
+    if (!isInitialized) {
       return;
     }
 
-    if (showLoading) {
-      setLoading(true);
-    }
-    setError(null);
+    await fetchNotificationsFromStore(showLoading);
+  }, [fetchNotificationsFromStore, isInitialized]);
 
-    try {
-      const response = await apiClient.getNotifications();
-      // Handle both direct array response and wrapped response
-      const notificationsData = Array.isArray(response?.data)
-        ? response.data
-        : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data ? (response.data as { data: unknown[] }).data : []);
 
-      // Get current user info for filtering
-      const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
-      const userRole = user?.role?.toLowerCase() || '';
-      const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-
-      // Filter notifications based on accessibleUserIds
-      const filteredNotificationsData = (notificationsData || []).filter((notif: unknown) => {
-        const notification = notif as { user_id?: number };
-        const notifUserId = notification.user_id;
-
-        // Admin sees all
-        if (isAdmin) {
-          return true;
-        }
-
-        // If accessibleUserIds is null, it means we're still loading or it's an admin
-        // For safety, if we're not admin and accessibleUserIds is null, only show own notifications
-        if (accessibleUserIds === null) {
-          return notifUserId === currentUserId;
-        }
-
-        // If notification has no user_id, skip it for non-admin roles
-        if (notifUserId === undefined || notifUserId === null) {
-          return false;
-        }
-
-        // Check if notification's user_id is in accessibleUserIds
-        if (accessibleUserIds.length > 0) {
-          return accessibleUserIds.includes(notifUserId);
-        }
-
-        // Fallback: only show own notifications
-        return notifUserId === currentUserId;
-      });
-
-      const apiNotifications = (filteredNotificationsData || []).map((notif: unknown) => {
-        const notification = notif as {
-          id?: number;
-          user_id?: number;
-          message?: string;
-          type?: string;
-          priority?: string;
-          created_at?: string;
-          read_at?: string | null;
-          expires_at?: string | null;
-          is_read?: boolean;
-          is_email_sent?: boolean;
-          title?: string;
-          action_url?: string | null;
-        };
-        const notificationType = notification.type || 'system_alert';
-        const notificationUserId = notification.user_id || 0;
-
-        // Check cache for user info
-        const cachedUserInfo = userCache.get(notificationUserId);
-
-        return {
-          id: notification.id || 0,
-          user_id: notificationUserId,
-          type: notificationType,
-          priority: notification.priority || 'medium',
-          title: notification.title || 'Notification',
-          message: notification.message || '',
-          is_read: notification.is_read || false,
-          is_email_sent: notification.is_email_sent || false,
-          created_at: notification.created_at || new Date().toISOString(),
-          read_at: notification.read_at || null,
-          expires_at: notification.expires_at || null,
-          action_url: notification.action_url || null,
-          display_type: mapNotificationType(notificationType, notification.title, notification.message),
-          user_name: cachedUserInfo?.name,
-          user_email: cachedUserInfo?.email,
-        };
-      });
-
-      // Sort by created_at (newest first)
-      apiNotifications.sort((a: Notification, b: Notification) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
-      setNotifications(apiNotifications);
-
-      // Fetch user info for notifications from other users (async, doesn't block UI)
-      // Call this after setting notifications, but don't wait for it
-      if (user) {
-        const userRole = user.role?.toLowerCase() || '';
-        const isAdminOrFinanceAdmin = ['admin', 'super_admin', 'finance_admin', 'manager'].includes(userRole);
-
-        if (isAdminOrFinanceAdmin) {
-          // Get unique user IDs from notifications that are not the current user
-          const currentUserId = Number(user.id);
-          const uniqueUserIds = [...new Set(apiNotifications
-            .map(n => n.user_id)
-            .filter(id => id && id !== currentUserId && !userCache.has(id))
-          )];
-
-          if (uniqueUserIds.length > 0) {
-            // Fetch user information asynchronously (fire and forget)
-            Promise.all(uniqueUserIds.map(async (userId) => {
-              try {
-                const userResponse = await apiClient.getUser(userId);
-                const userData = userResponse.data as { full_name?: string; email?: string; username?: string };
-                return {
-                  id: userId,
-                  name: userData.full_name || userData.username || 'Unknown User',
-                  email: userData.email || ''
-                };
-              } catch (err) {
-                return {
-                  id: userId,
-                  name: `User #${userId}`,
-                  email: ''
-                };
-              }
-            })).then(userInfos => {
-              setUserCache(prev => {
-                const newCache = new Map(prev);
-                userInfos.forEach(userInfo => {
-                  newCache.set(userInfo.id, { name: userInfo.name, email: userInfo.email });
-                });
-
-                // Update notifications with user info after cache is updated
-                setNotifications(prevNotifications =>
-                  prevNotifications.map(notif => {
-                    const userInfo = newCache.get(notif.user_id);
-                    return userInfo ? {
-                      ...notif,
-                      user_name: userInfo.name,
-                      user_email: userInfo.email
-                    } : notif;
-                  })
-                );
-
-                return newCache;
-              });
-            }).catch(err => {
-              console.error('Failed to fetch user information for notifications:', err);
-            });
-          }
-        }
-      }
-    } catch (err: unknown) {
-      const error = err as ErrorWithDetails;
-      const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to load notifications';
-      setError(errorMessage);
-      console.error('Failed to fetch notifications:', err);
-
-      // Only show toast on initial load or manual refresh, not on background updates
-      if (showLoading) {
-        toast.error(errorMessage);
-      }
-    } finally {
-      if (showLoading) {
-        setLoading(false);
-      }
-    }
-  }, [user, accessibleUserIds, isAccessibleUserIdsReady]);
-
-  const mapNotificationType = (type: string, title?: string, message?: string): 'success' | 'error' | 'warning' | 'info' => {
-    const normalized = type?.toLowerCase() || 'system_alert';
-    const titleLower = (title || '').toLowerCase();
-    const messageLower = (message || '').toLowerCase();
-
-    // Success types - positive outcomes
-    if (
-      normalized === 'approval_decision' ||
-      normalized === 'expense_approved' ||
-      normalized === 'revenue_approved' ||
-      normalized === 'sale_posted' ||
-      normalized === 'forecast_created' ||
-      normalized === 'ml_training_complete' ||
-      normalized === 'inventory_created' ||
-      normalized.includes('approved') ||
-      normalized.includes('completed') ||
-      normalized.includes('confirmed') ||
-      normalized.includes('posted') ||
-      normalized.includes('success') ||
-      (normalized === 'system_alert' && (titleLower.includes('welcome') || titleLower.includes('user created') || messageLower.includes('welcome'))) ||
-      (normalized === 'approval_decision' && (titleLower.includes('approved') || messageLower.includes('approved')))
-    ) {
-      return 'success';
-    }
-
-    // Error types - negative outcomes
-    if (
-      normalized === 'budget_exceeded' ||
-      normalized === 'expense_rejected' ||
-      normalized === 'revenue_rejected' ||
-      normalized.includes('rejected') ||
-      normalized.includes('error') ||
-      normalized.includes('failed') ||
-      normalized.includes('cancelled') ||
-      normalized.includes('denied') ||
-      normalized.includes('alert') ||
-      (normalized === 'approval_decision' && (titleLower.includes('rejected') || messageLower.includes('rejected')))
-    ) {
-      return 'error';
-    }
-
-    // Warning types - pending or high attention items
-    if (
-      normalized === 'approval_request' ||
-      normalized === 'deadline_reminder' ||
-      normalized === 'inventory_low' ||
-      normalized === 'expense_created' ||
-      normalized === 'revenue_created' ||
-      normalized === 'sale_created' ||
-      normalized.includes('pending') ||
-      normalized.includes('reminder') ||
-      normalized.includes('required') ||
-      normalized.includes('warning') ||
-      (normalized === 'system_alert' && (titleLower.includes('approval required') || messageLower.includes('approval required'))) ||
-      (normalized === 'system_alert' && (titleLower.includes('pending approval') || messageLower.includes('pending approval')))
-    ) {
-      return 'warning';
-    }
-
-    // Info types - general updates
-    return 'info';
-  };
 
   useEffect(() => {
-    if (isAuthenticated && user && isAccessibleUserIdsReady) {
+    if (isAuthenticated && user && isInitialized) {
       fetchNotifications(true);
-      // Set up real-time updates every 30 seconds (reduced frequency to avoid excessive requests)
+      // Set up real-time updates every 15 seconds for a more responsive feel
       const interval = setInterval(() => {
         fetchNotifications(false); // Don't show loading on background refresh
-      }, 30000);
+      }, 15000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, user, fetchNotifications, isAccessibleUserIdsReady]);
+  }, [isAuthenticated, user, fetchNotifications, isInitialized]);
 
   // Update user cache when user changes
   useEffect(() => {
@@ -1269,24 +1174,11 @@ export default function NotificationsPage() {
     setProcessingIds(prev => new Set(prev).add(notificationId));
 
     try {
-      await apiClient.markNotificationAsRead(notificationId);
-
-      setNotifications(prev =>
-        prev.map(notification =>
-          notification.id === notificationId
-            ? { ...notification, is_read: true }
-            : notification
-        )
-      );
-
-      // Don't show toast for individual mark as read to avoid spam
-      // toast.success('Notification marked as read');
+      await markAsReadInStore(notificationId);
     } catch (err: unknown) {
       const error = err as ErrorWithDetails;
       const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to mark notification as read';
       toast.error(errorMessage);
-      // Refresh on error to ensure consistency
-      await fetchNotifications();
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -1302,18 +1194,12 @@ export default function NotificationsPage() {
     setProcessingIds(prev => new Set(prev).add(-1));
 
     try {
-      await apiClient.markAllNotificationsAsRead();
-
-      setNotifications(prev =>
-        prev.map(notification => ({ ...notification, is_read: true }))
-      );
-
+      await markAllAsReadInStore();
       toast.success('All notifications marked as read');
     } catch (err: unknown) {
       const error = err as ErrorWithDetails;
       const errorMessage = error.response?.data?.detail || (error as { message?: string }).message || 'Failed to mark all notifications as read';
       toast.error(errorMessage);
-      await fetchNotifications();
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -1386,11 +1272,7 @@ export default function NotificationsPage() {
       setProcessingIds(prev => new Set(prev).add(notificationId));
 
       try {
-        await apiClient.deleteNotification(notificationId);
-
-        setNotifications(prev =>
-          prev.filter(notification => notification.id !== notificationId)
-        );
+        await deleteNotificationFromStore(notificationId);
 
         toast.success('Notification deleted successfully');
         closeDeleteModal();
@@ -1429,7 +1311,7 @@ export default function NotificationsPage() {
     return notification.display_type === filterType;
   });
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCountVal = unreadCount;
 
   // Calculate stats
   const today = new Date();
@@ -1455,6 +1337,9 @@ export default function NotificationsPage() {
       </LoadingContainer>
     );
   }
+
+  const error = storeError;
+  const loading = storeLoading;
 
   const getNotificationIcon = (displayType?: string, notificationType?: string, title?: string, message?: string) => {
     // Use notification type for more specific icons
@@ -1548,15 +1433,24 @@ export default function NotificationsPage() {
         <ContentContainer>
           <HeaderContainer>
             <HeaderContent>
-              <div>
-                <h1>Notifications</h1>
+              <div className="title-area">
+                <h1>
+                  Notifications
+                  <LiveIndicator>
+                    <div className="dot" />
+                    <span>Live</span>
+                  </LiveIndicator>
+                </h1>
                 <p>
                   {isAdmin
-                    ? 'Viewing all notifications across the system'
+                    ? 'Global system monitoring'
                     : isFinanceAdminOrManager
-                      ? 'Viewing your notifications and your team\'s notifications'
-                      : 'Stay updated with your important alerts and updates'
+                      ? 'Team activity and approval requests'
+                      : 'Personal alerts and updates'
                   }
+                  <span style={{ opacity: 0.6, fontSize: '12px', marginLeft: '12px' }}>
+                    Synced {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
                 </p>
               </div>
               <HeaderActions>
@@ -1571,7 +1465,7 @@ export default function NotificationsPage() {
                   <RefreshCw style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                   Refresh
                 </ActionButton>
-                {unreadCount > 0 && (
+                {unreadCountVal > 0 && (
                   <ActionButton
                     $variant="primary"
                     onClick={markAllAsRead}
@@ -1612,7 +1506,7 @@ export default function NotificationsPage() {
           ) : (
             <>
               <StatsGrid>
-                <StatCard>
+                <StatCard $delay="0s">
                   <StatContent>
                     <StatInfo>
                       <StatLabel>Total</StatLabel>
@@ -1624,11 +1518,11 @@ export default function NotificationsPage() {
                   </StatContent>
                 </StatCard>
 
-                <StatCard>
+                <StatCard $delay="0.1s">
                   <StatContent>
                     <StatInfo>
                       <StatLabel>Unread</StatLabel>
-                      <StatValue $color="#f59e0b">{unreadCount}</StatValue>
+                      <StatValue $color="#f59e0b">{unreadCountVal}</StatValue>
                     </StatInfo>
                     <StatIcon $bgColor="#fef3c7" $iconColor="#f59e0b">
                       <AlertCircle />
@@ -1636,7 +1530,7 @@ export default function NotificationsPage() {
                   </StatContent>
                 </StatCard>
 
-                <StatCard>
+                <StatCard $delay="0.2s">
                   <StatContent>
                     <StatInfo>
                       <StatLabel>Today</StatLabel>
@@ -1648,7 +1542,7 @@ export default function NotificationsPage() {
                   </StatContent>
                 </StatCard>
 
-                <StatCard>
+                <StatCard $delay="0.3s">
                   <StatContent>
                     <StatInfo>
                       <StatLabel>This Week</StatLabel>
@@ -1686,6 +1580,7 @@ export default function NotificationsPage() {
                       key={notification.id}
                       $isRead={notification.is_read}
                       $displayType={notification.display_type || 'info'}
+                      $priority={notification.priority}
                       onClick={() => {
                         // Mark as read when clicked
                         if (!notification.is_read) {
@@ -1780,12 +1675,14 @@ export default function NotificationsPage() {
                   ))
                 ) : (
                   <EmptyState>
-                    <Bell />
-                    <h3>No notifications</h3>
+                    <div className="icon-container">
+                      <Bell />
+                    </div>
+                    <h3>All caught up!</h3>
                     <p>
                       {filterType === 'unread'
-                        ? 'No unread notifications'
-                        : 'No notifications match your filter'
+                        ? 'You have no unread notifications at the moment.'
+                        : 'No notifications found matching your search criteria.'
                       }
                     </p>
                   </EmptyState>

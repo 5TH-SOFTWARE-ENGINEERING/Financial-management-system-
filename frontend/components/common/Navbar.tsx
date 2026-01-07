@@ -17,6 +17,7 @@ import apiClient from '@/lib/api';
 import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { debounce } from '@/lib/utils';
+import useNotificationStore, { type Notification } from '@/store/notificationStore';
 
 const PRIMARY_ACCENT = '#06b6d4';
 const PRIMARY_HOVER = '#0891b2';
@@ -1037,40 +1038,38 @@ const LoadingNotifications = styled.div`
   }
 `;
 
-interface Notification {
-  id: number;
-  message: string;
-  type: string;
-  priority?: string;
-  is_read: boolean;
-  created_at: string;
-  title?: string;
-  action_url?: string;
-  display_type?: 'success' | 'error' | 'warning' | 'info';
-  user_id?: number;
-}
 
 export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [language, setLanguage] = useState('EN');
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  // Use the new notification store
+  const {
+    notifications,
+    unreadCount,
+    isLoading: loadingNotifications,
+    fetchNotifications: fetchNotificationsFromStore,
+    markAsRead: markAsReadInStore,
+    markAllAsRead: markAllAsReadInStore,
+    setAccessibleUserIds,
+    accessibleUserIds
+  } = useNotificationStore();
+
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isOnline, setIsOnline] = useState(true);
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const [notificationsExpanded, setNotificationsExpanded] = useState(false);
-  const [accessibleUserIds, setAccessibleUserIds] = useState<number[] | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationPanelRef = useRef<HTMLDivElement>(null);
   const notificationBadgeRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const previousUnreadCountRef = useRef<number>(0);
   const lastNotificationIdsRef = useRef<Set<number>>(new Set());
-  const { user, logout } = useAuth();
+  const isInitialLoadRef = useRef(true);
+  const { user, logout, isAuthenticated } = useAuth();
   const { user: storeUser } = useUserStore();
   const router = useRouter();
   const pathname = usePathname();
@@ -1148,7 +1147,7 @@ export default function Navbar() {
     };
 
     initializeAccessibleUsers();
-  }, [user]);
+  }, [user, setAccessibleUserIds]);
 
   // Online/Offline detection
   useEffect(() => {
@@ -1241,345 +1240,63 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handler);
   }, [isNotificationPanelOpen, searchFocused]);
 
+  // Store-based polling and toast synchronization
   useEffect(() => {
-    let retryCount = 0;
-    const MAX_RETRIES = 3;
-    let intervalId: NodeJS.Timeout | null = null;
+    if (!isAuthenticated) return;
 
-    const loadUnreadCount = async () => {
-      if (!isOnline) return;
+    // Initial fetch
+    fetchNotificationsFromStore();
 
-      try {
-        const response = await apiClient.getUnreadCount();
-        const newCount = response.data?.unread_count || 0;
-        const oldCount = previousUnreadCountRef.current;
+    // Set up polling (every 30 seconds for Navbar unread count)
+    const intervalId = setInterval(() => {
+      fetchNotificationsFromStore();
+    }, 30000);
 
-        // Also trigger a check for pending approvals on the backend
-        // This will create notifications for users with pending approvals
-        try {
-          await apiClient.request({
-            method: 'POST',
-            url: '/notifications/check-pending-approvals'
-          });
-          // Silently handle - this is just a trigger
-        } catch (e) {
-          // Silently fail - this is just a trigger, not critical
-        }
+    return () => clearInterval(intervalId);
+  }, [isAuthenticated, fetchNotificationsFromStore]);
 
-        if (newCount > oldCount) {
-          try {
-            const notifResponse = await apiClient.getNotifications(true);
-            // Handle both direct array response and wrapped response
-            const notificationsData = Array.isArray(notifResponse?.data)
-              ? notifResponse.data
-              : (notifResponse?.data && typeof notifResponse.data === 'object' && notifResponse.data !== null && 'data' in notifResponse.data
-                ? (notifResponse.data as { data: unknown[] }).data
-                : []);
+  // Toast synchronization effect
+  useEffect(() => {
+    if (notifications.length === 0) return;
 
-            // Use Map to deduplicate by ID
-            const notifsMap = new Map<number, Notification>();
-
-            // Get current user ID for filtering
-            const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
-            const userRole = user?.role?.toLowerCase() || '';
-            const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-
-            (notificationsData || []).forEach((notif: unknown) => {
-              const notification = notif as {
-                id?: number;
-                message?: string;
-                type?: string;
-                priority?: string;
-                is_read?: boolean;
-                created_at?: string;
-                title?: string;
-                action_url?: string;
-                user_id?: number;
-              };
-
-              const notifId = notification.id || 0;
-              const notifUserId = notification.user_id;
-
-              // Role-based filtering: Finance Admin/Manager should only see their own and subordinates' notifications
-              // Backend already filters, but we add frontend validation for extra security
-              // IMPORTANT: Finance Admins should NOT see notifications from other Finance Admins or their subordinates
-              if (!isAdmin && currentUserId && notifUserId !== undefined && notifUserId !== null) {
-                // For non-admin users, check if notification belongs to accessible users
-                if (accessibleUserIds === null) {
-                  // If accessibleUserIds is null, it means we're still loading or it's an admin
-                  // For safety, if we're not admin and accessibleUserIds is null, only show own notifications
-                  if (notifUserId !== currentUserId) {
-                    return;
-                  }
-                } else if (accessibleUserIds.length > 0) {
-                  // Strict check: notification user_id MUST be in the accessible user IDs list
-                  // This ensures Finance Admins only see notifications from themselves and their own subordinates
-                  if (!accessibleUserIds.includes(notifUserId)) {
-                    // Notification doesn't belong to current user or their subordinates - skip it
-                    return;
-                  }
-                } else {
-                  // No accessible users (empty array) - only show own notifications
-                  if (notifUserId !== currentUserId) {
-                    return;
-                  }
-                }
-              }
-
-              // Only add if we haven't seen this ID yet (deduplicate)
-              if (notifId > 0 && !notifsMap.has(notifId)) {
-                notifsMap.set(notifId, {
-                  id: notifId,
-                  message: notification.message || '',
-                  type: notification.type || 'system_alert',
-                  priority: notification.priority || 'medium',
-                  is_read: notification.is_read || false,
-                  created_at: notification.created_at || new Date().toISOString(),
-                  title: notification.title,
-                  action_url: notification.action_url,
-                  user_id: notifUserId,
-                } as Notification);
-              }
-            });
-
-            const latestNotifs = Array.from(notifsMap.values());
-            const newNotifs = latestNotifs.filter((n) => !lastNotificationIdsRef.current.has(n.id));
-
-            newNotifs.forEach((notification: Notification) => {
-              lastNotificationIdsRef.current.add(notification.id);
-
-              // Determine toast type based on notification type, title, and message (context-aware)
-              const notifType = notification.type?.toLowerCase() || '';
-              const titleLower = (notification.title || '').toLowerCase();
-              const messageLower = (notification.message || '').toLowerCase();
-              let toastType: 'success' | 'error' | 'warning' | 'info' = 'info';
-
-              // Success types - positive outcomes
-              if (
-                notifType === 'approval_decision' ||
-                notifType === 'expense_approved' ||
-                notifType === 'revenue_approved' ||
-                notifType === 'sale_posted' ||
-                notifType === 'forecast_created' ||
-                notifType === 'ml_training_complete' ||
-                notifType === 'inventory_created' ||
-                notifType.includes('approved') ||
-                notifType.includes('completed') ||
-                notifType.includes('confirmed') ||
-                notifType.includes('posted') ||
-                // Check title/message for user creation (uses SYSTEM_ALERT but indicates success)
-                (notifType === 'system_alert' && (titleLower.includes('welcome') || titleLower.includes('user created') || messageLower.includes('welcome'))) ||
-                // Check for approved in approval_decision
-                (notifType === 'approval_decision' && (titleLower.includes('approved') || messageLower.includes('approved')))
-              ) {
-                toastType = 'success';
-              }
-              // Error types - negative outcomes
-              else if (
-                notifType === 'budget_exceeded' ||
-                notifType === 'expense_rejected' ||
-                notifType === 'revenue_rejected' ||
-                notifType.includes('rejected') ||
-                notifType.includes('error') ||
-                notifType.includes('failed') ||
-                notifType.includes('cancelled') ||
-                notifType.includes('denied') ||
-                // Check for rejection in approval_decision type
-                (notifType === 'approval_decision' && (titleLower.includes('rejected') || messageLower.includes('rejected')))
-              ) {
-                toastType = 'error';
-              }
-              // Warning types - need attention
-              else if (
-                notifType === 'approval_request' ||
-                notifType === 'deadline_reminder' ||
-                notifType === 'inventory_low' ||
-                notifType === 'expense_created' ||
-                notifType === 'revenue_created' ||
-                notifType === 'sale_created' ||
-                notifType.includes('pending') ||
-                notifType.includes('reminder') ||
-                notifType.includes('required') ||
-                // Check for approval requests in title/message
-                (notifType === 'system_alert' && (titleLower.includes('approval required') || messageLower.includes('approval required'))) ||
-                // Pending approvals notification
-                (notifType === 'system_alert' && (titleLower.includes('pending approval') || messageLower.includes('pending approval')))
-              ) {
-                toastType = 'warning';
-              }
-
-              const toastOptions = {
-                description: notification.message,
-                duration: 5000,
-                action: {
-                  label: 'View',
-                  onClick: () => {
-                    setIsNotificationPanelOpen(true);
-                    if (notification.action_url) {
-                      const url = notification.action_url.startsWith('/')
-                        ? notification.action_url
-                        : `/${notification.action_url}`;
-                      router.push(url);
-                    }
-                    toast.dismiss(toastId);
-                  }
-                }
-              };
-
-              const toastId = toastType === 'success'
-                ? toast.success(notification.title || notification.message, toastOptions)
-                : toastType === 'error'
-                  ? toast.error(notification.title || notification.message, toastOptions)
-                  : toastType === 'warning'
-                    ? toast.warning(notification.title || notification.message, toastOptions)
-                    : toast.info(notification.title || notification.message, toastOptions);
-            });
-            if (latestNotifs.length > 0) {
-              lastNotificationIdsRef.current = new Set(latestNotifs.map((n) => n.id));
-            }
-          } catch {
-            if (newCount > oldCount) {
-              const toastId = toast.info('You have new notifications', {
-                description: `${newCount - oldCount} new notification${newCount - oldCount > 1 ? 's' : ''}`,
-                duration: 4000,
-                action: {
-                  label: 'View',
-                  onClick: () => {
-                    setIsNotificationPanelOpen(true);
-                    toast.dismiss(toastId);
-                  }
-                }
-              });
-            }
-          }
-        }
-        previousUnreadCountRef.current = newCount;
-        setUnreadCount(newCount);
-        retryCount = 0;
-      } catch (err: unknown) {
-        const errorDetails = err as { code?: string; message?: string; response?: unknown };
-        const isNetworkError = errorDetails.code === 'ERR_NETWORK' ||
-          errorDetails.message === 'Network Error' ||
-          errorDetails.message?.includes('ERR_CONNECTION_REFUSED') ||
-          !errorDetails.response;
-
-        if (!isNetworkError) {
-          console.error('Failed to load unread count:', err);
-        }
-        if (isNetworkError && retryCount >= MAX_RETRIES) {
-          setUnreadCount(0);
-          if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = setInterval(loadUnreadCount, 60000);
-          }
-        }
-        retryCount++;
-      }
-    };
-
-    if (user && isOnline) {
-      const initializeNotifications = async () => {
-        try {
-          const notifResponse = await apiClient.getNotifications(true);
-          // Handle both direct array response and wrapped response
-          const notificationsData = Array.isArray(notifResponse?.data)
-            ? notifResponse.data
-            : (notifResponse?.data && typeof notifResponse.data === 'object' && notifResponse.data !== null && 'data' in notifResponse.data
-              ? (notifResponse.data as { data: unknown[] }).data
-              : []);
-
-          // Use Map to deduplicate by ID
-          const initialNotifsMap = new Map<number, Notification>();
-
-          // Get current user ID for filtering
-          const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
-          const userRole = user?.role?.toLowerCase() || '';
-          const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-
-          (notificationsData || []).forEach((notif: unknown) => {
-            const notification = notif as {
-              id?: number;
-              message?: string;
-              type?: string;
-              priority?: string;
-              is_read?: boolean;
-              created_at?: string;
-              title?: string;
-              action_url?: string;
-              user_id?: number;
-            };
-
-            const notifId = notification.id || 0;
-            const notifUserId = notification.user_id;
-
-            // Role-based filtering: Finance Admin/Manager should only see their own and subordinates' notifications
-            // Backend already filters, but we add frontend validation for extra security
-            // IMPORTANT: Finance Admins should NOT see notifications from other Finance Admins or their subordinates
-            if (!isAdmin && currentUserId && notifUserId !== undefined && notifUserId !== null) {
-              // For non-admin users, check if notification belongs to accessible users
-              if (accessibleUserIds === null) {
-                // If accessibleUserIds is null, it means we're still loading or it's an admin
-                // For safety, if we're not admin and accessibleUserIds is null, only show own notifications
-                if (notifUserId !== currentUserId) {
-                  return;
-                }
-              } else if (accessibleUserIds.length > 0) {
-                // Strict check: notification user_id MUST be in the accessible user IDs list
-                // This ensures Finance Admins only see notifications from themselves and their own subordinates
-                if (!accessibleUserIds.includes(notifUserId)) {
-                  // Notification doesn't belong to current user or their subordinates - skip it
-                  return;
-                }
-              } else {
-                // No accessible users (empty array) - only show own notifications
-                if (notifUserId !== currentUserId) {
-                  return;
-                }
-              }
-            }
-
-            // Only add if we haven't seen this ID yet (deduplicate)
-            if (notifId > 0 && !initialNotifsMap.has(notifId)) {
-              initialNotifsMap.set(notifId, {
-                id: notifId,
-                message: notification.message || '',
-                type: notification.type || 'system_alert',
-                priority: notification.priority || 'medium',
-                is_read: notification.is_read || false,
-                created_at: notification.created_at || new Date().toISOString(),
-                title: notification.title,
-                action_url: notification.action_url,
-                user_id: notifUserId,
-              } as Notification);
-            }
-          });
-
-          const initialNotifs = Array.from(initialNotifsMap.values());
-
-          if (initialNotifs.length > 0) {
-            lastNotificationIdsRef.current = new Set(initialNotifs.map((n) => n.id));
-            previousUnreadCountRef.current = initialNotifs.filter(n => !n.is_read).length;
-          } else {
-            previousUnreadCountRef.current = 0;
-          }
-        } catch {
-          previousUnreadCountRef.current = 0;
-          lastNotificationIdsRef.current = new Set();
-        }
-      };
-      const initAndStart = async () => {
-        await initializeNotifications();
-        loadUnreadCount();
-        intervalId = setInterval(loadUnreadCount, 20000); // Poll every 20 seconds
-      };
-
-      initAndStart();
-
-      return () => {
-        if (intervalId) clearInterval(intervalId);
-      };
+    // On initial load, just populate the seen IDs but don't show toasts
+    if (isInitialLoadRef.current) {
+      notifications.forEach(n => lastNotificationIdsRef.current.add(n.id));
+      isInitialLoadRef.current = false;
+      previousUnreadCountRef.current = unreadCount;
+      return;
     }
-  }, [user, router, isOnline, accessibleUserIds]);
+
+    // Check for new notifications to toast
+    const newNotifications = notifications.filter(n => !n.is_read && !lastNotificationIdsRef.current.has(n.id));
+
+    if (newNotifications.length > 0) {
+      newNotifications.forEach(notification => {
+        lastNotificationIdsRef.current.add(notification.id);
+
+        const toastType = notification.display_type || 'info';
+        const toastFn = (toast as any)[toastType] || toast.info;
+
+        toastFn(notification.title || 'New Notification', {
+          description: notification.message,
+          action: notification.action_url ? {
+            label: 'View',
+            onClick: () => {
+              if (notification.action_url) {
+                const url = notification.action_url.startsWith('/')
+                  ? notification.action_url
+                  : `/${notification.action_url}`;
+                router.push(url);
+                markAsReadInStore(notification.id);
+              }
+            }
+          } : undefined
+        });
+      });
+    }
+
+    previousUnreadCountRef.current = unreadCount;
+  }, [notifications, unreadCount, markAsReadInStore, router]);
 
   useEffect(() => {
     const savedLanguage = localStorage.getItem('language') || 'EN';
@@ -1631,114 +1348,8 @@ export default function Navbar() {
     };
   }, [navigateToSearch]);
 
-  useEffect(() => {
-    const loadNotifications = async () => {
-      if (isNotificationPanelOpen && user && isOnline) {
-        setLoadingNotifications(true);
-        try {
-          const response = await apiClient.getNotifications(false);
-          // Handle both direct array response and wrapped response
-          const notificationsData = Array.isArray(response?.data)
-            ? response.data
-            : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data
-              ? (response.data as { data: unknown[] }).data
-              : []);
-
-          const notifsMap = new Map<number, Notification>();
-
-          // Get current user ID for filtering
-          const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : null;
-          const userRole = user?.role?.toLowerCase() || '';
-          const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-
-          // Process and deduplicate notifications by ID
-          (notificationsData || []).forEach((notif: unknown) => {
-            const notification = notif as {
-              id?: number;
-              message?: string;
-              type?: string;
-              priority?: string;
-              is_read?: boolean;
-              created_at?: string;
-              title?: string;
-              action_url?: string;
-              user_id?: number;
-            };
-
-            const notifId = notification.id || 0;
-            const notifUserId = notification.user_id;
-
-            // Role-based filtering: Finance Admin/Manager should only see their own and subordinates' notifications
-            // Backend already filters, but we add frontend validation for extra security
-            // IMPORTANT: Finance Admins should NOT see notifications from other Finance Admins or their subordinates
-            if (!isAdmin && currentUserId && notifUserId !== undefined && notifUserId !== null) {
-              // For non-admin users, check if notification belongs to accessible users
-              if (accessibleUserIds === null) {
-                // If accessibleUserIds is null, it means we're still loading or it's an admin
-                // For safety, if we're not admin and accessibleUserIds is null, only show own notifications
-                if (notifUserId !== currentUserId) {
-                  return;
-                }
-              } else if (accessibleUserIds.length > 0) {
-                // Strict check: notification user_id MUST be in the accessible user IDs list
-                // This ensures Finance Admins only see notifications from themselves and their own subordinates
-                if (!accessibleUserIds.includes(notifUserId)) {
-                  // Notification doesn't belong to current user or their subordinates - skip it
-                  return;
-                }
-              } else {
-                // No accessible users (empty array) - only show own notifications
-                if (notifUserId !== currentUserId) {
-                  return;
-                }
-              }
-            }
-
-            // Only add if we haven't seen this ID yet (deduplicate)
-            if (notifId > 0 && !notifsMap.has(notifId)) {
-              notifsMap.set(notifId, {
-                id: notifId,
-                message: notification.message || '',
-                type: notification.type || 'system_alert',
-                priority: notification.priority || 'medium',
-                is_read: notification.is_read || false,
-                created_at: notification.created_at || new Date().toISOString(),
-                title: notification.title,
-                action_url: notification.action_url,
-                user_id: notifUserId,
-              } as Notification);
-            }
-          });
-
-          // Convert map values to array and sort by created_at (newest first)
-          const uniqueNotifs = Array.from(notifsMap.values()).sort((a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-
-          // Update last seen notification IDs
-          lastNotificationIdsRef.current = new Set(uniqueNotifs.map(n => n.id));
-
-          setNotifications(uniqueNotifs);
-          const unreadCountFromList = uniqueNotifs.filter((n) => !n.is_read).length;
-          setUnreadCount(unreadCountFromList);
-        } catch (err: unknown) {
-          console.error('Failed to load notifications:', err);
-          setNotifications([]);
-        } finally {
-          setLoadingNotifications(false);
-        }
-      }
-    };
-
-    loadNotifications();
-    let intervalId: NodeJS.Timeout | null = null;
-    if (isNotificationPanelOpen && user && isOnline) {
-      intervalId = setInterval(loadNotifications, 10000);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [isNotificationPanelOpen, user, isOnline, accessibleUserIds]);
+  // The notification store now handles background fetching and synchronization.
+  // We no longer need an independent effect for the notification panel.
 
   const handleAddClick = () => {
     if (pathname?.includes('/expenses')) {
@@ -1765,10 +1376,14 @@ export default function Navbar() {
   };
 
   const handleNotificationsClick = () => {
-    setIsNotificationPanelOpen(!isNotificationPanelOpen);
+    const nextState = !isNotificationPanelOpen;
+    setIsNotificationPanelOpen(nextState);
     setIsDropdownOpen(false);
-    if (isNotificationPanelOpen) {
+    if (!nextState) {
       setNotificationsExpanded(false);
+    } else {
+      // Trigger a fresh fetch when opening the panel
+      fetchNotificationsFromStore(true);
     }
   };
 
@@ -1794,11 +1409,7 @@ export default function Navbar() {
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.is_read) {
       try {
-        await apiClient.markNotificationAsRead(notification.id);
-        setNotifications(prev => prev.map(n =>
-          n.id === notification.id ? { ...n, is_read: true } : n
-        ));
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        await markAsReadInStore(notification.id);
       } catch (err) {
         console.error('Failed to mark notification as read:', err);
       }
