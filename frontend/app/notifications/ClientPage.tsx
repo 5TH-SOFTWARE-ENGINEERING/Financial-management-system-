@@ -31,16 +31,13 @@ type ErrorWithDetails = {
   };
 };
 
-const CardShadow = `
-  0 2px 4px -1px rgba(0, 0, 0, 0.06),
-  0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
-`;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
-`;
+const CardShadow = (props: any) => props.theme.mode === 'dark'
+  ? '0 4px 16px rgba(0, 0, 0, 0.4)'
+  : `0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03), inset 0 0 0 1px rgba(0, 0, 0, 0.02)`;
+
+const CardShadowHover = (props: any) => props.theme.mode === 'dark'
+  ? '0 12px 28px rgba(0, 0, 0, 0.5)'
+  : `0 8px 12px -2px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04), inset 0 0 0 1px rgba(0, 0, 0, 0.03)`;
 
 const PageContainer = styled.div`
   display: flex;
@@ -235,7 +232,7 @@ const StatCard = styled.div<{ $delay: string }>`
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: 24px;
   padding: ${props => props.theme.spacing.xl};
-  box-shadow: ${props => props.theme.shadows.sm};
+  box-shadow: ${CardShadow};
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
@@ -250,7 +247,7 @@ const StatCard = styled.div<{ $delay: string }>`
   
   &:hover {
     transform: translateY(-8px);
-    box-shadow: ${props => props.theme.shadows.md};
+    box-shadow: ${CardShadowHover};
     border-color: color-mix(in srgb, ${PRIMARY_COLOR}, transparent 75%);
   }
 
@@ -382,24 +379,26 @@ const NotificationsList = styled.div`
 
 const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string; $priority: string }>`
   background: ${props => props.$isRead
-    ? 'rgba(255, 255, 255, 0.4)'
-    : 'rgba(255, 255, 255, 0.85)'};
+    ? (props.theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.6)' : 'rgba(255, 255, 255, 0.4)')
+    : (props.theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.85)')};
   backdrop-filter: blur(12px);
-  border: 1px solid ${props => props.$isRead ? 'rgba(0, 0, 0, 0.03)' : 'rgba(0, 0, 0, 0.08)'};
+  border: 1px solid ${props => props.$isRead
+    ? (props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)')
+    : (props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)')};
   border-left: 6px solid ${props => {
     const colors: Record<string, string> = {
-      success: '#10b981',
-      error: '#ef4444',
-      warning: '#f59e0b',
-      info: '#3b82f6'
+      success: props.theme.mode === 'dark' ? '#10b981' : '#10b981',
+      error: props.theme.mode === 'dark' ? '#f87171' : '#ef4444',
+      warning: props.theme.mode === 'dark' ? '#fbbf24' : '#f59e0b',
+      info: props.theme.mode === 'dark' ? '#60a5fa' : '#3b82f6'
     };
     return props.$isRead ? colors[props.$displayType] + '40' : colors[props.$displayType];
   }};
   border-radius: 20px;
   padding: 24px;
   box-shadow: ${props => props.$isRead
-    ? '0 4px 12px rgba(0,0,0,0.01)'
-    : '0 8px 30px rgba(0,0,0,0.04)'};
+    ? (props.theme.mode === 'dark' ? '0 4px 12px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.01)')
+    : (props.theme.mode === 'dark' ? '0 8px 30px rgba(0,0,0,0.3)' : '0 8px 30px rgba(0,0,0,0.04)')};
   transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   cursor: pointer;
   position: relative;
@@ -417,15 +416,15 @@ const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string; $p
   &:hover {
     transform: translateX(8px);
     background: ${props => props.$isRead
-    ? 'rgba(255, 255, 255, 0.6)'
-    : 'rgba(255, 255, 255, 0.95)'};
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.06);
+    ? (props.theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.75)' : 'rgba(255, 255, 255, 0.6)')
+    : (props.theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)')};
+    box-shadow: ${props => props.theme.mode === 'dark' ? '0 15px 45px rgba(0, 0, 0, 0.4)' : '0 15px 45px rgba(0, 0, 0, 0.06)'};
     border-color: ${props => {
     const colors: Record<string, string> = {
-      success: '#10b981',
-      error: '#ef4444',
-      warning: '#f59e0b',
-      info: '#3b82f6'
+      success: props.theme.mode === 'dark' ? '#10b981' : '#10b981',
+      error: props.theme.mode === 'dark' ? '#f87171' : '#ef4444',
+      warning: props.theme.mode === 'dark' ? '#fbbf24' : '#f59e0b',
+      info: props.theme.mode === 'dark' ? '#60a5fa' : '#3b82f6'
     };
     return colors[props.$displayType] + '60';
   }};
@@ -438,7 +437,7 @@ const NotificationCard = styled.div<{ $isRead: boolean; $displayType: string; $p
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    background: linear-gradient(120deg, transparent, ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.3)'}, transparent);
     transform: translateX(-100%);
     transition: transform 0.8s;
   }
@@ -621,7 +620,7 @@ const EmptyState = styled.div`
   border-radius: 32px;
   padding: 80px 40px;
   text-align: center;
-  box-shadow: ${props => props.theme.shadows.sm};
+  box-shadow: ${CardShadow};
   border: 1px solid ${props => props.theme.colors.border};
   max-width: 600px;
   margin: 40px auto;
