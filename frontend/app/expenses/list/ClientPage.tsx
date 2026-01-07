@@ -58,13 +58,13 @@ const ContentContainer = styled.div`
 `;
 
 const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, ${props => `color-mix(in srgb, ${props.theme.colors.primary}, black 20%)`} 100%);
+  color: ${props => props.theme.colors.primaryForeground};
   padding: ${props => props.theme.spacing.lg};
   margin-bottom: ${props => props.theme.spacing.lg};
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-radius: ${props => props.theme.borderRadius.md};
-  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 3px solid ${props => `color-mix(in srgb, ${props.theme.colors.primaryForeground}, transparent 90%)`};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -79,7 +79,7 @@ const HeaderContent = styled.div`
     font-size: clamp(24px, 3vw, 36px);
     font-weight: ${props => props.theme.typography.fontWeights.bold};
     margin: 0 0 ${props => props.theme.spacing.xs};
-    color: #ffffff;
+    color: ${props => props.theme.colors.primaryForeground};
   }
   
   p {
@@ -87,20 +87,20 @@ const HeaderContent = styled.div`
     font-weight: ${props => props.theme.typography.fontWeights.medium};
     opacity: 0.9;
     margin: 0;
-    color: rgba(255, 255, 255, 0.95);
+    color: ${props => `color-mix(in srgb, ${props.theme.colors.primaryForeground}, transparent 5%)`};
   }
 `;
 
 const AddButton = styled(Button)`
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
+  background: ${props => `color-mix(in srgb, ${props.theme.colors.primaryForeground}, transparent 85%)`};
+  border: 1px solid ${props => `color-mix(in srgb, ${props.theme.colors.primaryForeground}, transparent 70%)`};
+  color: ${props => props.theme.colors.primaryForeground};
   backdrop-filter: blur(8px);
   transition: all ${props => props.theme.transitions.default};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.5);
+    background: ${props => `color-mix(in srgb, ${props.theme.colors.primaryForeground}, transparent 75%)`};
+    border-color: ${props => `color-mix(in srgb, ${props.theme.colors.primaryForeground}, transparent 50%)`};
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }

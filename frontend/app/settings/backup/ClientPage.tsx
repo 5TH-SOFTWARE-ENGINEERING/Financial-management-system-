@@ -199,7 +199,7 @@ const SwitchInput = styled.input`
   height: 0;
   
   &:checked + span {
-    background-color: #3b82f6;
+    background-color: ${props => props.theme.colors.primary};
   }
   
   &:checked + span:before {
@@ -323,14 +323,27 @@ const ModalText = styled.p`
 `;
 
 const Message = styled.div<{ type: 'error' | 'success' | 'warning' }>`
-  background-color: ${props =>
-    props.type === 'error' ? (props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.2)' : '#fee2e2') :
-      props.type === 'warning' ? (props.theme.mode === 'dark' ? 'rgba(217, 119, 6, 0.2)' : '#fef3c7') :
-        (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#dcfce7')};
-  color: ${props =>
-    props.type === 'error' ? (props.theme.mode === 'dark' ? '#fca5a5' : '#b91c1c') :
-      props.type === 'warning' ? (props.theme.mode === 'dark' ? '#fcd34d' : '#92400e') :
-        (props.theme.mode === 'dark' ? '#86efac' : '#166534')};
+  background-color: ${props => {
+    switch (props.type) {
+      case 'error':
+        return `color-mix(in srgb, ${props.theme.colors.error}, transparent 90%)`;
+      case 'warning':
+        return `color-mix(in srgb, ${props.theme.colors.warning}, transparent 90%)`;
+      default:
+        // Use primary color for success as a fallback since theme.success is not defined
+        return `color-mix(in srgb, ${props.theme.colors.primary}, transparent 90%)`;
+    }
+  }};
+  color: ${props => {
+    switch (props.type) {
+      case 'error':
+        return props.theme.colors.error;
+      case 'warning':
+        return props.theme.colors.warning;
+      default:
+        return props.theme.colors.primary;
+    }
+  }};
   padding: 0.75rem;
   border-radius: 0.25rem;
   margin-bottom: 1.25rem;
@@ -338,10 +351,16 @@ const Message = styled.div<{ type: 'error' | 'success' | 'warning' }>`
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  border: 1px solid ${props =>
-    props.type === 'error' ? (props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.5)' : 'transparent') :
-      props.type === 'warning' ? (props.theme.mode === 'dark' ? 'rgba(217, 119, 6, 0.5)' : 'transparent') :
-        (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : 'transparent')};
+  border: 1px solid ${props => {
+    switch (props.type) {
+      case 'error':
+        return `color-mix(in srgb, ${props.theme.colors.error}, transparent 70%)`;
+      case 'warning':
+        return `color-mix(in srgb, ${props.theme.colors.warning}, transparent 70%)`;
+      default:
+        return `color-mix(in srgb, ${props.theme.colors.primary}, transparent 70%)`;
+    }
+  }};
 `;
 
 const ModalOverlay = styled.div`
@@ -350,11 +369,12 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.5)'};
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 `;
 
 const ModalContent = styled.div`
@@ -410,8 +430,8 @@ const PasswordInput = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${props => `color-mix(in srgb, ${props.theme.colors.primary}, transparent 90%)`};
   }
   
   &:disabled {
@@ -421,13 +441,13 @@ const PasswordInput = styled.input`
 `;
 
 const PasswordError = styled.div`
-  color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
+  color: ${props => props.theme.colors.error};
   font-size: 0.75rem;
   margin-top: 0.25rem;
   padding: 0.5rem;
-  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.2)' : '#fee2e2'};
+  background-color: ${props => `color-mix(in srgb, ${props.theme.colors.error}, transparent 90%)`};
   border-radius: 0.25rem;
-  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.5)' : 'transparent'};
+  border: 1px solid ${props => `color-mix(in srgb, ${props.theme.colors.error}, transparent 70%)`};
 `;
 
 interface Backup {
