@@ -2,13 +2,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { keyframes, css, ThemeProvider } from 'styled-components';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
-import { theme as globalTheme } from '@/components/common/theme';
+import { theme as globalTheme, darkTheme } from '@/components/common/theme';
 
 // === THEME ===
 // Overriding local theme to match Global Brand (Green)
@@ -194,7 +194,7 @@ const Subtitle = styled.p`
 
 const FeatureSection = styled.section`
   padding: 5rem 1.5rem;
-  background-color: ${props => props.theme.colors.textDark};
+  background-color: #0d0e12; // Slightly different dark color for section separation
   position: relative;
   z-index: 1;
   
@@ -447,236 +447,240 @@ export default function Home() {
   );
 
   return (
-    <Wrapper>
-      <Header />
+    <ThemeProvider theme={darkTheme}>
+      <div className="dark">
+        <Wrapper>
+          <Header />
 
-      <HeroSection>
-        <GradientBackground />
+          <HeroSection>
+            <GradientBackground />
 
-        <div style={{ zIndex: 10 }}>
-          <Title>
-            Enterprise Financial Management Platform
-          </Title>
-          <Subtitle>
-            Transform your financial operations with intelligent automation, real-time analytics, and enterprise-grade security.
-            Manage revenue, control expenses, optimize budgets, and ensure compliance—all in one powerful platform designed for modern finance teams.
-          </Subtitle>
-          <div>
-            <Link href="/auth/login">
-              <Button
-                size="lg"
-                className="cursor-pointer transition-all duration-300 text-zinc-100 dark:text-zinc-100 
-                hover:scale-105 hover:shadow-[0_0_20px_rgba(0,170,0,0.5)]"
-                style={{
-                  fontSize: '1.1rem',
-                  padding: '1rem 2.5rem',
-                  fontWeight: 600,
-                  background: theme.colors.gradientPrimary,
-                  border: 'none',
-                  color: 'white',
-                  boxShadow: '0 4px 15px rgba(0, 170, 0, 0.4)'
-                }}
-              >
-                Start Now
-              </Button>
-            </Link>
-            <p
-              style={{
-                marginTop: '1rem',
-                fontSize: '0.9rem',
-                color: '#6ee7b7' // lighter green-grey
-              }}
-            >
-              Unlock all features instantly. No payment details required
-            </p>
-          </div>
-        </div>
-      </HeroSection>
-
-      <FeatureSection>
-        <div
-          style={{ textAlign: 'center', marginBottom: '1rem' }}
-        >
-          <h2 style={{
-            fontSize: '2.5rem',
-            fontWeight: 700,
-            marginBottom: '0.5rem',
-            background: theme.colors.gradientText,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            Powerful Features for Modern Finance Teams
-          </h2>
-          <p style={{ fontSize: '1.1rem', color: '#9ca3af', maxWidth: '700px', margin: '0 auto' }}>
-            Everything you need to manage finances, control costs, and drive business growth
-          </p>
-        </div>
-
-        <ParallelFeaturesContainer>
-          {filteredFeatures
-            .filter(f => ['inventory', 'reporting', 'approval'].includes(f.id))
-            .map((feature) => (
-              <Card
-                key={feature.id}
-                onClick={() => setOpenModal(feature.id)}
-                style={{ minHeight: '280px', display: 'flex', flexDirection: 'column' }}
-              >
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '0.75rem', lineHeight: '1.3', transition: 'color 0.3s' }}>
-                  {feature.title}
-                </h3>
-                <p style={{ color: '#d1d5db', fontSize: '0.95rem', lineHeight: '1.6', flex: 1 }}>{feature.description}</p>
-              </Card>
-            ))}
-        </ParallelFeaturesContainer>
-
-        <RegularFeaturesGrid>
-          {filteredFeatures
-            .filter(f => !['inventory', 'reporting', 'approval'].includes(f.id))
-            .map((feature) => (
-              <Card
-                key={feature.id}
-                onClick={() => setOpenModal(feature.id)}
-              >
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem', transition: 'color 0.3s' }}>
-                  {feature.title}
-                </h3>
-                <p style={{ color: '#d1d5db' }}>{feature.description}</p>
-              </Card>
-            ))}
-        </RegularFeaturesGrid>
-      </FeatureSection>
-
-      <TeamSection>
-        <h2
-          style={{
-            fontSize: '2.5rem',
-            fontWeight: 700,
-            marginBottom: '0.5rem',
-            background: theme.colors.gradientText,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}
-        >
-          Trusted by Finance Professionals Worldwide
-        </h2>
-        <p
-          style={{
-            fontSize: '1.1rem',
-            color: '#9ca3af',
-            marginBottom: '2rem',
-            maxWidth: '600px',
-            margin: '0 auto 2rem auto'
-          }}
-        >
-          Built by a global team of finance experts, accountants, and software engineers dedicated to transforming how businesses manage their finances.
-        </p>
-        <TeamImage
-          src="/images/team1.png"
-          alt="Team"
-          width={800}
-          height={400}
-          style={{ objectFit: 'cover', marginBottom: '1rem' }}
-        />
-        <p
-          style={{
-            fontSize: '1rem',
-            color: '#d1d5db',
-            maxWidth: '700px',
-            margin: '0 auto',
-            lineHeight: '1.6'
-          }}
-        >
-          Our platform powers financial operations for businesses of all sizes—from startups to Fortune 500 companies.
-          We combine deep financial expertise with cutting-edge technology to deliver solutions that drive real business value.
-        </p>
-      </TeamSection>
-
-      <Footer />
-
-      {openModal && (
-        <ModalOverlay onClick={() => setOpenModal(null)}>
-          <ModalCard onClick={(e) => e.stopPropagation()}>
-            <CloseButton onClick={() => setOpenModal(null)}>×</CloseButton>
-            <h2 style={{
-              fontSize: '2rem',
-              marginBottom: '1rem',
-              background: theme.colors.gradientText,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              fontWeight: 700
-            }}>
-              {modals[openModal as keyof typeof modals].title}
-            </h2>
-            <p style={{
-              marginBottom: '1.5rem',
-              fontSize: '1.1rem',
-              lineHeight: '1.7',
-              color: '#d1d5db'
-            }}>
-              {modals[openModal as keyof typeof modals].description}
-            </p>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h3 style={{
-                fontSize: '1.2rem',
-                fontWeight: 600,
-                marginBottom: '1rem',
-                color: 'white'
-              }}>
-                Key Capabilities:
-              </h3>
-              <ul style={{
-                listStyle: 'none',
-                padding: 0,
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '0.75rem'
-              }}>
-                {modals[openModal as keyof typeof modals].features.map((f) => (
-                  <li key={f} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.5rem',
-                    background: 'rgba(0, 170, 0, 0.1)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(0, 170, 0, 0.2)'
-                  }}>
-                    <span style={{ color: '#10b981', fontSize: '1.2rem' }}>✓</span>
-                    <span style={{ color: '#e5e7eb' }}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={() => setOpenModal(null)}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: 'white'
-                }}
-              >
-                Close
-              </Button>
-              <Link href="/auth/login">
-                <Button
+            <div style={{ zIndex: 10 }}>
+              <Title>
+                Enterprise Financial Management Platform
+              </Title>
+              <Subtitle>
+                Transform your financial operations with intelligent automation, real-time analytics, and enterprise-grade security.
+                Manage revenue, control expenses, optimize budgets, and ensure compliance—all in one powerful platform designed for modern finance teams.
+              </Subtitle>
+              <div>
+                <Link href="/auth/login">
+                  <Button
+                    size="lg"
+                    className="cursor-pointer transition-all duration-300 text-zinc-100 dark:text-zinc-100 
+                    hover:scale-105 hover:shadow-[0_0_20px_rgba(0,170,0,0.5)]"
+                    style={{
+                      fontSize: '1.1rem',
+                      padding: '1rem 2.5rem',
+                      fontWeight: 600,
+                      background: theme.colors.gradientPrimary,
+                      border: 'none',
+                      color: 'white',
+                      boxShadow: '0 4px 15px rgba(0, 170, 0, 0.4)'
+                    }}
+                  >
+                    Start Now
+                  </Button>
+                </Link>
+                <p
                   style={{
-                    background: theme.colors.gradientPrimary,
-                    border: 'none',
-                    color: 'white'
+                    marginTop: '1rem',
+                    fontSize: '0.9rem',
+                    color: '#6ee7b7' // lighter green-grey
                   }}
                 >
-                  Try It Now
-                </Button>
-              </Link>
+                  Unlock all features instantly. No payment details required
+                </p>
+              </div>
             </div>
-          </ModalCard>
-        </ModalOverlay>
-      )}
-    </Wrapper>
+          </HeroSection>
+
+          <FeatureSection>
+            <div
+              style={{ textAlign: 'center', marginBottom: '1rem' }}
+            >
+              <h2 style={{
+                fontSize: '2.5rem',
+                fontWeight: 700,
+                marginBottom: '0.5rem',
+                background: theme.colors.gradientText,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                Powerful Features for Modern Finance Teams
+              </h2>
+              <p style={{ fontSize: '1.1rem', color: '#9ca3af', maxWidth: '700px', margin: '0 auto' }}>
+                Everything you need to manage finances, control costs, and drive business growth
+              </p>
+            </div>
+
+            <ParallelFeaturesContainer>
+              {filteredFeatures
+                .filter(f => ['inventory', 'reporting', 'approval'].includes(f.id))
+                .map((feature) => (
+                  <Card
+                    key={feature.id}
+                    onClick={() => setOpenModal(feature.id)}
+                    style={{ minHeight: '280px', display: 'flex', flexDirection: 'column' }}
+                  >
+                    <h3 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '0.75rem', lineHeight: '1.3', transition: 'color 0.3s' }}>
+                      {feature.title}
+                    </h3>
+                    <p style={{ color: '#d1d5db', fontSize: '0.95rem', lineHeight: '1.6', flex: 1 }}>{feature.description}</p>
+                  </Card>
+                ))}
+            </ParallelFeaturesContainer>
+
+            <RegularFeaturesGrid>
+              {filteredFeatures
+                .filter(f => !['inventory', 'reporting', 'approval'].includes(f.id))
+                .map((feature) => (
+                  <Card
+                    key={feature.id}
+                    onClick={() => setOpenModal(feature.id)}
+                  >
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem', transition: 'color 0.3s' }}>
+                      {feature.title}
+                    </h3>
+                    <p style={{ color: '#d1d5db' }}>{feature.description}</p>
+                  </Card>
+                ))}
+            </RegularFeaturesGrid>
+          </FeatureSection>
+
+          <TeamSection>
+            <h2
+              style={{
+                fontSize: '2.5rem',
+                fontWeight: 700,
+                marginBottom: '0.5rem',
+                background: theme.colors.gradientText,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}
+            >
+              Trusted by Finance Professionals Worldwide
+            </h2>
+            <p
+              style={{
+                fontSize: '1.1rem',
+                color: '#9ca3af',
+                marginBottom: '2rem',
+                maxWidth: '600px',
+                margin: '0 auto 2rem auto'
+              }}
+            >
+              Built by a global team of finance experts, accountants, and software engineers dedicated to transforming how businesses manage their finances.
+            </p>
+            <TeamImage
+              src="/images/team1.png"
+              alt="Team"
+              width={800}
+              height={400}
+              style={{ objectFit: 'cover', marginBottom: '1rem' }}
+            />
+            <p
+              style={{
+                fontSize: '1rem',
+                color: '#d1d5db',
+                maxWidth: '700px',
+                margin: '0 auto',
+                lineHeight: '1.6'
+              }}
+            >
+              Our platform powers financial operations for businesses of all sizes—from startups to Fortune 500 companies.
+              We combine deep financial expertise with cutting-edge technology to deliver solutions that drive real business value.
+            </p>
+          </TeamSection>
+
+          <Footer />
+
+          {openModal && (
+            <ModalOverlay onClick={() => setOpenModal(null)}>
+              <ModalCard onClick={(e) => e.stopPropagation()}>
+                <CloseButton onClick={() => setOpenModal(null)}>×</CloseButton>
+                <h2 style={{
+                  fontSize: '2rem',
+                  marginBottom: '1rem',
+                  background: theme.colors.gradientText,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  fontWeight: 700
+                }}>
+                  {modals[openModal as keyof typeof modals].title}
+                </h2>
+                <p style={{
+                  marginBottom: '1.5rem',
+                  fontSize: '1.1rem',
+                  lineHeight: '1.7',
+                  color: '#d1d5db'
+                }}>
+                  {modals[openModal as keyof typeof modals].description}
+                </p>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h3 style={{
+                    fontSize: '1.2rem',
+                    fontWeight: 600,
+                    marginBottom: '1rem',
+                    color: 'white'
+                  }}>
+                    Key Capabilities:
+                  </h3>
+                  <ul style={{
+                    listStyle: 'none',
+                    padding: 0,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                    gap: '0.75rem'
+                  }}>
+                    {modals[openModal as keyof typeof modals].features.map((f) => (
+                      <li key={f} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem',
+                        background: 'rgba(0, 170, 0, 0.1)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(0, 170, 0, 0.2)'
+                      }}>
+                        <span style={{ color: '#10b981', fontSize: '1.2rem' }}>✓</span>
+                        <span style={{ color: '#e5e7eb' }}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                  <Button
+                    onClick={() => setOpenModal(null)}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: 'white'
+                    }}
+                  >
+                    Close
+                  </Button>
+                  <Link href="/auth/login">
+                    <Button
+                      style={{
+                        background: theme.colors.gradientPrimary,
+                        border: 'none',
+                        color: 'white'
+                      }}
+                    >
+                      Try It Now
+                    </Button>
+                  </Link>
+                </div>
+              </ModalCard>
+            </ModalOverlay>
+          )}
+        </Wrapper>
+      </div>
+    </ThemeProvider>
   );
 }
 
