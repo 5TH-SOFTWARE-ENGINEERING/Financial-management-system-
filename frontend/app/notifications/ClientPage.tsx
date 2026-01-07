@@ -692,7 +692,7 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.5)'};
   display: ${props => props.$isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
@@ -703,7 +703,7 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
 const ModalContainer = styled.div`
   background: ${props => props.theme.colors.background};
   border-radius: ${props => props.theme.borderRadius.lg || '16px'};
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+  box-shadow: ${props => props.theme.mode === 'dark' ? '0 24px 64px rgba(0, 0, 0, 0.5)' : '0 24px 64px rgba(0, 0, 0, 0.25)'};
   width: 90%;
   max-width: 640px;
   max-height: 90vh;
