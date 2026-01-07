@@ -277,7 +277,7 @@ const CheckboxLabel = styled.label`
   font-size: ${theme.typography.fontSizes.sm};
   cursor: pointer;
   user-select: none;
-  
+
   &:hover {
     color: ${theme.colors.text};
   }
@@ -363,7 +363,7 @@ const LoadingText = styled.div`
 `;
 const ForgotPassword = styled.a`
   text-align: right;
-  color: ${theme.colors.primary};
+  color:blue;
   font-size: ${theme.typography.fontSizes.sm};
   font-weight: ${theme.typography.fontWeights.medium};
   cursor: pointer;
@@ -371,7 +371,7 @@ const ForgotPassword = styled.a`
   transition: all ${theme.transitions.default};
   
   &:hover {
-    color: ${theme.colors.primaryHover};
+    color: blue;
     text-decoration: underline;
   }
 `;
