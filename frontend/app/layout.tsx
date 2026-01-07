@@ -1,19 +1,22 @@
 //app/layout
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
-import { theme } from '@/components/common/theme';
+import { lightTheme, darkTheme } from '@/components/common/theme';
 import StyledComponentsRegistry from '@/lib/registry';
 import { AuthProvider } from '@/lib/rbac/auth-context';
 import { Toaster } from '@/components/ui/sonner';
+import { useThemeStore } from '@/store/useThemeStore';
+import ThemeSync from '@/components/common/ThemeSync';
 
 // Use system fonts instead of Google Fonts to avoid download warnings
-// This provides better performance and no external dependencies
 const GlobalStyle = createGlobalStyle`
   body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
   }
 `;
 
@@ -38,12 +41,28 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const themePreference = useThemeStore((state) => state.themePreference);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Determine effective theme for styled-components ThemeProvider
+  let currentTheme = lightTheme;
+  if (mounted) {
+    const isDark = themePreference === 'dark' ||
+      (themePreference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    currentTheme = isDark ? darkTheme : lightTheme;
+  }
+
   return (
     <html lang="en">
       <body>
         <GlobalStyle />
+        <ThemeSync />
         <StyledComponentsRegistry>
-          <ThemeProvider theme={theme}>
+          <ThemeProvider theme={currentTheme}>
             <AuthProvider>
               <LayoutContainer>
                 <MainContent>

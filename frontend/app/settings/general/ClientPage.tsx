@@ -6,12 +6,14 @@ import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { Save, Globe, Bell, Moon, Sun, Monitor, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { theme, darkTheme, lightTheme } from '@/components/common/theme';
 import { toast } from 'sonner';
-import { theme } from '@/components/common/theme';
+import { useThemeStore } from '@/store/useThemeStore';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary;
+const TEXT_COLOR = (props: any) => props.theme.colors.text;
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary;
 const TEXT_COLOR_DARK = '#111827';
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -40,19 +42,19 @@ const Header = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: ${theme.typography.fontSizes.xxl};
-  font-weight: ${theme.typography.fontWeights.bold};
-  color: ${TEXT_COLOR_DARK};
+  font-size: ${props => props.theme.typography.fontSizes.xxl};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  color: ${TEXT_COLOR};
   margin: 0;
 `;
 
 const Card = styled.div`
-  background-color: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background-color: ${props => props.theme.colors.background};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: ${CardShadow};
-  margin-bottom: ${theme.spacing.lg};
-  transition: box-shadow ${theme.transitions.default};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  transition: all ${props => props.theme.transitions.default};
 
   &:hover {
     box-shadow: ${CardShadowHover};
@@ -60,21 +62,21 @@ const Card = styled.div`
 `;
 
 const CardHeader = styled.div`
-  padding: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid ${theme.colors.border};
+  border-bottom: 1px solid ${props => props.theme.colors.border};
 `;
 
 const CardTitle = styled.h3`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   margin: 0;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   
   svg {
     width: 20px;
@@ -117,7 +119,7 @@ const Select = styled.select`
   border-radius: ${theme.borderRadius.md};
   font-size: ${theme.typography.fontSizes.md};
   background-color: ${theme.colors.background};
-  color: ${TEXT_COLOR_DARK};
+  color: ${TEXT_COLOR};
   transition: all ${theme.transitions.default};
   cursor: pointer;
   
@@ -340,143 +342,6 @@ const saveSettings = (settings: GeneralSettings, userId?: number | string): void
   }
 };
 
-const applyTheme = (theme: 'light' | 'dark' | 'system'): void => {
-  if (typeof window === 'undefined') return;
-
-  const html = document.documentElement;
-  const body = document.body;
-
-  // Determine the actual theme to apply
-  let actualTheme: 'light' | 'dark' = 'light';
-
-  if (theme === 'dark') {
-    actualTheme = 'dark';
-  } else if (theme === 'light') {
-    actualTheme = 'light';
-  } else {
-    // System theme - check system preference
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    actualTheme = prefersDark ? 'dark' : 'light';
-  }
-
-  // Remove existing theme classes
-  html.classList.remove('dark', 'light');
-  html.removeAttribute('data-theme');
-
-  // Apply theme classes and attributes - only add 'dark' class, not 'light'
-  if (actualTheme === 'dark') {
-    html.classList.add('dark');
-  } else {
-    html.classList.remove('dark');
-  }
-  html.setAttribute('data-theme', actualTheme);
-  html.style.colorScheme = actualTheme;
-
-  // Apply CSS custom properties for dark mode support
-  if (actualTheme === 'dark') {
-    // Dark mode colors
-    html.style.setProperty('--background', '#0f172a');
-    html.style.setProperty('--foreground', '#f1f5f9');
-    html.style.setProperty('--muted', '#1e293b');
-    html.style.setProperty('--muted-foreground', '#94a3b8');
-    html.style.setProperty('--border', '#334155');
-    html.style.setProperty('--card', '#1e293b');
-
-    // Apply dark mode to body and html
-    if (body) {
-      body.style.backgroundColor = '#0f172a';
-      body.style.color = '#f1f5f9';
-      body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
-    }
-    html.style.backgroundColor = '#0f172a';
-    html.style.color = '#f1f5f9';
-  } else {
-    // Light mode colors (default)
-    html.style.setProperty('--background', '#ffffff');
-    html.style.setProperty('--foreground', '#111827');
-    html.style.setProperty('--muted', '#f3f4f6');
-    html.style.setProperty('--muted-foreground', '#6b7280');
-    html.style.setProperty('--border', '#e5e7eb');
-    html.style.setProperty('--card', '#ffffff');
-
-    // Apply light mode to body and html
-    if (body) {
-      body.style.backgroundColor = '#ffffff';
-      body.style.color = '#111827';
-      body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
-    }
-    html.style.backgroundColor = '#ffffff';
-    html.style.color = '#111827';
-  }
-
-  // Inject or update global dark mode styles
-  let styleElement = document.getElementById('theme-dark-mode-styles');
-  if (!styleElement) {
-    styleElement = document.createElement('style');
-    styleElement.id = 'theme-dark-mode-styles';
-    document.head.appendChild(styleElement);
-  }
-
-  if (actualTheme === 'dark') {
-    styleElement.textContent = `
-      html.dark,
-      html.dark body,
-      html.dark * {
-        color-scheme: dark;
-      }
-      
-      html.dark,
-      html.dark body {
-        background-color: #0f172a !important;
-        color: #f1f5f9 !important;
-      }
-      
-      html.dark {
-        --background: #0f172a !important;
-        --foreground: #f1f5f9 !important;
-        --muted: #1e293b !important;
-        --muted-foreground: #94a3b8 !important;
-        --border: #334155 !important;
-        --card: #1e293b !important;
-      }
-    `;
-  } else {
-    styleElement.textContent = `
-      html:not(.dark),
-      html:not(.dark) body,
-      html:not(.dark) * {
-        color-scheme: light;
-      }
-      
-      html:not(.dark),
-      html:not(.dark) body {
-        background-color: #ffffff !important;
-        color: #111827 !important;
-      }
-      
-      html:not(.dark) {
-        --background: #ffffff !important;
-        --foreground: #111827 !important;
-        --muted: #f3f4f6 !important;
-        --muted-foreground: #6b7280 !important;
-        --border: #e5e7eb !important;
-        --card: #ffffff !important;
-      }
-    `;
-  }
-
-  // Store in localStorage for persistence across page reloads
-  try {
-    localStorage.setItem('app-theme', theme);
-    localStorage.setItem('app-theme-applied', actualTheme);
-  } catch (error) {
-    console.error('Failed to save theme to localStorage:', error);
-  }
-
-  // Force re-render by dispatching a resize event (helps with styled-components)
-  window.dispatchEvent(new Event('themechange'));
-};
-
 const applyCompactView = (enabled: boolean): void => {
   if (typeof window === 'undefined') return;
   if (enabled) {
@@ -490,6 +355,10 @@ export default function GeneralSettingsPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const themePreference = useThemeStore(state => state.themePreference);
+  const setThemePreference = useThemeStore(state => state.setThemePreference);
+
   const [settings, setSettings] = useState<GeneralSettings>(() => loadSettings(user?.id));
 
   // Load settings when user changes
@@ -498,51 +367,22 @@ export default function GeneralSettingsPage() {
       const loadedSettings = loadSettings(user.id);
       setSettings(loadedSettings);
 
-      // Apply theme immediately on load
+      // Update global theme store if local storage for this user has a preference
+      if (loadedSettings.theme !== themePreference) {
+        setThemePreference(loadedSettings.theme);
+      }
+
+      // Apply compact view immediately on load
       setTimeout(() => {
-        applyTheme(loadedSettings.theme);
         applyCompactView(loadedSettings.compactView);
       }, 0);
     }
   }, [user?.id]);
 
-  // Apply theme on initial mount - prioritize stored theme
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // Check if theme is stored globally first (for immediate application)
-    const globalTheme = localStorage.getItem('app-theme');
-    const themeToApply = (globalTheme as 'light' | 'dark' | 'system') || settings.theme;
-
-    // Apply theme immediately on mount - use requestAnimationFrame for smooth transition
-    requestAnimationFrame(() => {
-      applyTheme(themeToApply);
-      // Also update state if different
-      if (themeToApply !== settings.theme && globalTheme) {
-        setSettings(prev => ({ ...prev, theme: themeToApply }));
-      }
-    });
-  }, [settings.theme]); // Run once on mount
-
-  // Apply theme when it changes
-  useEffect(() => {
-    applyTheme(settings.theme);
-  }, [settings.theme]);
-
   // Apply compact view when it changes
   useEffect(() => {
     applyCompactView(settings.compactView);
   }, [settings.compactView]);
-
-  // Listen for system theme changes if using system theme
-  useEffect(() => {
-    if (settings.theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = () => applyTheme('system');
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-  }, [settings.theme]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -555,10 +395,10 @@ export default function GeneralSettingsPage() {
   };
 
   const handleThemeChange = (theme: 'light' | 'dark' | 'system') => {
-    // Apply theme immediately - this must happen synchronously for instant feedback
-    applyTheme(theme);
+    // Apply theme immediately via global store
+    setThemePreference(theme);
 
-    // Update state immediately
+    // Update local state
     const newSettings = { ...settings, theme };
     setSettings(newSettings);
 
@@ -566,12 +406,6 @@ export default function GeneralSettingsPage() {
     try {
       saveSettings(newSettings, user?.id);
 
-      // Dispatch event for other components
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('settingsUpdated', { detail: newSettings }));
-      }
-
-      // Show feedback
       const themeNames = {
         light: 'Light',
         dark: 'Dark',
@@ -592,14 +426,8 @@ export default function GeneralSettingsPage() {
       // Save to localStorage
       saveSettings(settings, user?.id);
 
-      // Apply all settings immediately
-      applyTheme(settings.theme);
+      // Apply compact view immediately
       applyCompactView(settings.compactView);
-
-      // Store settings in a global location for access by other components
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('settingsUpdated', { detail: settings }));
-      }
 
       setSuccess('Settings saved successfully!');
       toast.success('Settings saved successfully!');
