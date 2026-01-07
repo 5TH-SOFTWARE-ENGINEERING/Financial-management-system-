@@ -221,16 +221,31 @@ const StatGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: ${props => props.theme.spacing.lg};
-  margin-bottom: ${props => props.theme.spacing.xl};
+  margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
-const StatCard = styled.div`
+const FinancialGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.xl};
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StatCard = styled.div<{ $highlight?: boolean }>`
   border-radius: 20px;
-  padding: 24px;
+  padding: ${props => props.$highlight ? '32px' : '24px'};
   background: ${props => props.theme.colors.card};
-  border: 1px solid ${props => props.theme.colors.border};
+  border: 1px solid ${props => props.$highlight ? `color-mix(in srgb, ${props.theme.colors.primary}, transparent 80%)` : props.theme.colors.border};
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: ${props => props.theme.shadows.sm};
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: ${props => props.$highlight ? '160px' : 'auto'};
 
   &:hover {
     transform: translateY(-5px);
@@ -248,17 +263,17 @@ const StatLabel = styled.p`
   letter-spacing: 0.08em;
 `;
 
-const StatValue = styled.p`
+const StatValue = styled.p<{ $large?: boolean }>`
   margin: 8px 0 4px 0;
-  font-size: 32px;
+  font-size: ${props => props.$large ? '40px' : '32px'};
   font-weight: 800;
   color: ${props => props.theme.colors.text};
   letter-spacing: -0.02em;
 `;
 
-const StatSubtext = styled.p`
+const StatSubtext = styled.p<{ $fontSize?: string }>`
   margin: 0;
-  font-size: 13px;
+  font-size: ${props => props.$fontSize || '13px'};
   font-weight: 500;
   color: ${props => props.theme.colors.mutedForeground};
 `;
@@ -682,33 +697,35 @@ const SettingsPage: React.FC = () => {
                       </div>
                       <StatSubtext>Awaiting administrative review</StatSubtext>
                     </StatCard>
-
-                    <StatCard>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <StatLabel>Monthly Revenue</StatLabel>
-                          <StatValue style={{ color: theme.colors.primary }}>{formatCurrency(systemStats?.financials?.total_revenue)}</StatValue>
-                        </div>
-                        <IconWrapper $iconType="globe" $size={24} $active={true}>
-                          <Globe size={24} />
-                        </IconWrapper>
-                      </div>
-                      <StatSubtext>Net profit: {formatCurrency(systemStats?.financials?.net_profit)}</StatSubtext>
-                    </StatCard>
-
-                    <StatCard>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <StatLabel>Operational Costs</StatLabel>
-                          <StatValue style={{ color: theme.colors.error || '#ef4444' }}>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
-                        </div>
-                        <IconWrapper $iconType="alert-triangle" $size={24} $active={true}>
-                          <AlertTriangle size={24} />
-                        </IconWrapper>
-                      </div>
-                      <StatSubtext>Expenditure tracking active</StatSubtext>
-                    </StatCard>
                   </StatGrid>
+
+                  <FinancialGrid>
+                    <StatCard $highlight={true}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                        <div style={{ flex: 1 }}>
+                          <StatLabel>Monthly Revenue</StatLabel>
+                          <StatValue $large={true} style={{ color: theme.colors.primary }}>{formatCurrency(systemStats?.financials?.total_revenue)}</StatValue>
+                        </div>
+                        <IconWrapper $iconType="globe" $size={32} $active={true}>
+                          <Globe size={32} />
+                        </IconWrapper>
+                      </div>
+                      <StatSubtext $fontSize="14px">Net profit: {formatCurrency(systemStats?.financials?.net_profit)}</StatSubtext>
+                    </StatCard>
+
+                    <StatCard $highlight={true}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                        <div style={{ flex: 1 }}>
+                          <StatLabel>Operational Costs</StatLabel>
+                          <StatValue $large={true} style={{ color: theme.colors.error || '#ef4444' }}>{formatCurrency(systemStats?.financials?.total_expenses)}</StatValue>
+                        </div>
+                        <IconWrapper $iconType="alert-triangle" $size={32} $active={true}>
+                          <AlertTriangle size={32} />
+                        </IconWrapper>
+                      </div>
+                      <StatSubtext $fontSize="14px">Expenditure tracking active</StatSubtext>
+                    </StatCard>
+                  </FinancialGrid>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
                     <div>
