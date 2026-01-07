@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
+import { useAuthorization } from '@/lib/rbac/use-authorization';
 import { Save, Globe, Bell, Moon, Sun, Monitor, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { theme, darkTheme, lightTheme } from '@/components/common/theme';
@@ -347,6 +348,7 @@ const applyCompactView = (enabled: boolean): void => {
 
 export default function GeneralSettingsPage() {
   const { user } = useAuth();
+  const { isAdmin } = useAuthorization();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -456,72 +458,74 @@ export default function GeneralSettingsPage() {
           </SuccessBanner>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Globe />
-              Regional Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormGroup>
-              <Label htmlFor="language">Language</Label>
-              <Select
-                id="language"
-                name="language"
-                value={settings.language}
-                onChange={handleInputChange}
-              >
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-                <option value="de">German</option>
-                <option value="it">Italian</option>
-                <option value="pt">Portuguese</option>
-                <option value="zh">Chinese</option>
-                <option value="ja">Japanese</option>
-              </Select>
-              <HelperText>The language used throughout the application.</HelperText>
-            </FormGroup>
+        {isAdmin() && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Globe />
+                Regional Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormGroup>
+                <Label htmlFor="language">Language</Label>
+                <Select
+                  id="language"
+                  name="language"
+                  value={settings.language}
+                  onChange={handleInputChange}
+                >
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="it">Italian</option>
+                  <option value="pt">Portuguese</option>
+                  <option value="zh">Chinese</option>
+                  <option value="ja">Japanese</option>
+                </Select>
+                <HelperText>The language used throughout the application.</HelperText>
+              </FormGroup>
 
-            <FormGroup>
-              <Label htmlFor="timezone">Timezone</Label>
-              <Select
-                id="timezone"
-                name="timezone"
-                value={settings.timezone}
-                onChange={handleInputChange}
-              >
-                <option value="UTC">UTC (Coordinated Universal Time)</option>
-                <option value="America/New_York">EST (Eastern Standard Time)</option>
-                <option value="America/Chicago">CST (Central Standard Time)</option>
-                <option value="America/Los_Angeles">PST (Pacific Standard Time)</option>
-                <option value="Europe/London">GMT (Greenwich Mean Time)</option>
-                <option value="Europe/Paris">CET (Central European Time)</option>
-                <option value="Asia/Dubai">GST (Gulf Standard Time)</option>
-                <option value="Asia/Tokyo">JST (Japan Standard Time)</option>
-                <option value="Asia/Shanghai">CST (China Standard Time)</option>
-              </Select>
-              <HelperText>Affects how dates and times are displayed throughout the application.</HelperText>
-            </FormGroup>
+              <FormGroup>
+                <Label htmlFor="timezone">Timezone</Label>
+                <Select
+                  id="timezone"
+                  name="timezone"
+                  value={settings.timezone}
+                  onChange={handleInputChange}
+                >
+                  <option value="UTC">UTC (Coordinated Universal Time)</option>
+                  <option value="America/New_York">EST (Eastern Standard Time)</option>
+                  <option value="America/Chicago">CST (Central Standard Time)</option>
+                  <option value="America/Los_Angeles">PST (Pacific Standard Time)</option>
+                  <option value="Europe/London">GMT (Greenwich Mean Time)</option>
+                  <option value="Europe/Paris">CET (Central European Time)</option>
+                  <option value="Asia/Dubai">GST (Gulf Standard Time)</option>
+                  <option value="Asia/Tokyo">JST (Japan Standard Time)</option>
+                  <option value="Asia/Shanghai">CST (China Standard Time)</option>
+                </Select>
+                <HelperText>Affects how dates and times are displayed throughout the application.</HelperText>
+              </FormGroup>
 
-            <FormGroup>
-              <Label htmlFor="dateFormat">Date Format</Label>
-              <Select
-                id="dateFormat"
-                name="dateFormat"
-                value={settings.dateFormat}
-                onChange={handleInputChange}
-              >
-                <option value="MM/DD/YYYY">MM/DD/YYYY (US Format)</option>
-                <option value="DD/MM/YYYY">DD/MM/YYYY (European Format)</option>
-                <option value="YYYY-MM-DD">YYYY-MM-DD (ISO Format)</option>
-                <option value="DD MMM YYYY">DD MMM YYYY (e.g., 01 Jan 2024)</option>
-              </Select>
-              <HelperText>The format in which dates will be displayed throughout the application.</HelperText>
-            </FormGroup>
-          </CardContent>
-        </Card>
+              <FormGroup>
+                <Label htmlFor="dateFormat">Date Format</Label>
+                <Select
+                  id="dateFormat"
+                  name="dateFormat"
+                  value={settings.dateFormat}
+                  onChange={handleInputChange}
+                >
+                  <option value="MM/DD/YYYY">MM/DD/YYYY (US Format)</option>
+                  <option value="DD/MM/YYYY">DD/MM/YYYY (European Format)</option>
+                  <option value="YYYY-MM-DD">YYYY-MM-DD (ISO Format)</option>
+                  <option value="DD MMM YYYY">DD MMM YYYY (e.g., 01 Jan 2024)</option>
+                </Select>
+                <HelperText>The format in which dates will be displayed throughout the application.</HelperText>
+              </FormGroup>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -613,33 +617,35 @@ export default function GeneralSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Preferences
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormGroup>
-              <SwitchContainer>
-                <div>
-                  <Label htmlFor="autoSave">Auto-save</Label>
-                  <HelperText>Automatically save changes when editing forms and documents</HelperText>
-                </div>
-                <Switch>
-                  <SwitchInput
-                    type="checkbox"
-                    id="autoSave"
-                    name="autoSave"
-                    checked={settings.autoSave}
-                    onChange={handleSwitchChange}
-                  />
-                  <SwitchSlider />
-                </Switch>
-              </SwitchContainer>
-            </FormGroup>
-          </CardContent>
-        </Card>
+        {isAdmin() && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Preferences
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormGroup>
+                <SwitchContainer>
+                  <div>
+                    <Label htmlFor="autoSave">Auto-save</Label>
+                    <HelperText>Automatically save changes when editing forms and documents</HelperText>
+                  </div>
+                  <Switch>
+                    <SwitchInput
+                      type="checkbox"
+                      id="autoSave"
+                      name="autoSave"
+                      checked={settings.autoSave}
+                      onChange={handleSwitchChange}
+                    />
+                    <SwitchSlider />
+                  </Switch>
+                </SwitchContainer>
+              </FormGroup>
+            </CardContent>
+          </Card>
+        )}
 
         <ActionButtons>
           <Button

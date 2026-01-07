@@ -353,6 +353,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_INVENTORY,
         ComponentId.SIDEBAR_SALES,
         ComponentId.INVENTORY_SALES,
+        ComponentId.SIDEBAR_SETTINGS,
     ],
 
     [UserType.EMPLOYEE]: [
@@ -374,6 +375,7 @@ export const USER_TYPE_COMPONENT_MAP: Record<UserType, ComponentId[]> = {
         ComponentId.SIDEBAR_EXPENSE,
         ComponentId.SIDEBAR_FORECAST,
         ComponentId.INVENTORY_SALES,
+        ComponentId.SIDEBAR_SETTINGS,
     ],
 };
 

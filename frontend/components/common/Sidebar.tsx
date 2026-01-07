@@ -1073,7 +1073,7 @@ const Sidebar: React.FC = () => {
                     </ComponentGate>
 
                     <ComponentGate componentId={ComponentId.SIDEBAR_SETTINGS}>
-                        {(isAdmin || isFinanceAdmin) ? (
+                        {(isAdmin || isFinanceAdmin || isAccountant || isEmployee) ? (
                             <>
                                 <DropdownHeader
                                     onClick={() => toggleSection('settings')}
@@ -1093,15 +1093,15 @@ const Sidebar: React.FC = () => {
                                 </DropdownHeader>
                                 {isOpen('settings') && (
                                     <SubMenu $collapsed={collapsed}>
+                                        <NavItem href="/settings/general" $active={pathname === '/settings' || pathname === '/settings/general'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/settings' || pathname === '/settings/general'} $collapsed={collapsed} $size={16} $iconType="settings">
+                                                <Settings />
+                                            </NavIcon>
+                                            {!collapsed && 'General'}
+                                        </NavItem>
+
                                         {isAdmin && (
                                             <>
-                                                <NavItem href="/settings/general" $active={pathname === '/settings' || pathname === '/settings/general'} $collapsed={collapsed}>
-                                                    <NavIcon $active={pathname === '/settings' || pathname === '/settings/general'} $collapsed={collapsed} $size={16} $iconType="settings">
-                                                        <Settings />
-                                                    </NavIcon>
-                                                    {!collapsed && 'General'}
-                                                </NavItem>
-
                                                 <NavItem href="/settings/notifications" $active={pathname === '/settings/notifications'} $collapsed={collapsed}>
                                                     <NavIcon $active={pathname === '/settings/notifications'} $collapsed={collapsed} $size={16} $iconType="bell">
                                                         <Bell />
@@ -1130,24 +1130,28 @@ const Sidebar: React.FC = () => {
                                                 </NavItem>
                                             </>
                                         )}
-                                        <NavItem href="/settings/passwordmanagement" $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed}>
-                                            <NavIcon $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed} $size={16} $iconType="lockKeyhole">
-                                                <LockKeyhole />
-                                            </NavIcon>
-                                            {!collapsed && 'Password Management'}
-                                        </NavItem>
-                                        <NavItem href="/settings/history" $active={pathname === '/settings/history'} $collapsed={collapsed}>
-                                            <NavIcon $active={pathname === '/settings/history'} $collapsed={collapsed} $size={16} $iconType="history">
-                                                <History />
-                                            </NavIcon>
-                                            {!collapsed && 'History'}
-                                        </NavItem>
-                                        <NavItem href="/settings/security" $active={pathname === '/settings/security'} $collapsed={collapsed}>
-                                            <NavIcon $active={pathname === '/settings/security'} $collapsed={collapsed} $size={16} $iconType="shield">
-                                                <Shield />
-                                            </NavIcon>
-                                            {!collapsed && 'Security Control'}
-                                        </NavItem>
+                                        {(isAdmin || isFinanceAdmin) && (
+                                            <>
+                                                <NavItem href="/settings/passwordmanagement" $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed}>
+                                                    <NavIcon $active={pathname === '/settings/passwordmanagement'} $collapsed={collapsed} $size={16} $iconType="lockKeyhole">
+                                                        <LockKeyhole />
+                                                    </NavIcon>
+                                                    {!collapsed && 'Password Management'}
+                                                </NavItem>
+                                                <NavItem href="/settings/history" $active={pathname === '/settings/history'} $collapsed={collapsed}>
+                                                    <NavIcon $active={pathname === '/settings/history'} $collapsed={collapsed} $size={16} $iconType="history">
+                                                        <History />
+                                                    </NavIcon>
+                                                    {!collapsed && 'History'}
+                                                </NavItem>
+                                                <NavItem href="/settings/security" $active={pathname === '/settings/security'} $collapsed={collapsed}>
+                                                    <NavIcon $active={pathname === '/settings/security'} $collapsed={collapsed} $size={16} $iconType="shield">
+                                                        <Shield />
+                                                    </NavIcon>
+                                                    {!collapsed && 'Security Control'}
+                                                </NavItem>
+                                            </>
+                                        )}
                                     </SubMenu>
                                 )}
                             </>
