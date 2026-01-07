@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useForm, Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ExpenseSchema } from '@/lib/validation';
@@ -16,18 +16,28 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 // ──────────────────────────────────────────
+// Theme-aware Constants
+// ──────────────────────────────────────────
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
+const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
+const BACKGROUND_PAGE = (props: any) => props.theme.colors.backgroundSecondary || '#f5f6fa';
+const BACKGROUND_CARD = (props: any) => props.theme.colors.background || '#ffffff';
+
+// ──────────────────────────────────────────
 // Styled Components
 // ──────────────────────────────────────────
 const LayoutWrapper = styled.div`
   display: flex;
-  background: #f5f6fa;
+  background: ${BACKGROUND_PAGE};
   min-height: 100vh;
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
+  background: ${BACKGROUND_CARD};
+  border-right: 1px solid ${BORDER_COLOR};
   position: fixed;
   left: 0;
   top: 0;
@@ -44,26 +54,28 @@ const ContentArea = styled.div`
   padding-left: 250px;
   display: flex;
   flex-direction: column;
+  background: ${BACKGROUND_PAGE};
 `;
 
 const InnerContent = styled.div`
-  padding: 32px;
+  padding: ${props => props.theme.spacing.xl};
   width: 100%;
   max-width: 700px;
   margin: 0 auto;
+  color: ${TEXT_COLOR_DARK};
 `;
 
 const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted-foreground);
+  color: ${TEXT_COLOR_MUTED};
   font-size: 14px;
   margin-bottom: 16px;
   transition: 0.2s;
 
   &:hover {
-    color: var(--foreground);
+    color: ${TEXT_COLOR_DARK};
   }
 `;
 
@@ -74,19 +86,20 @@ const Title = styled.h1`
   display: flex;
   align-items: center;
   gap: 12px;
+  color: ${TEXT_COLOR_DARK};
 `;
 
 const Subtitle = styled.p`
-  color: var(--muted-foreground);
+  color: ${TEXT_COLOR_MUTED};
   margin-bottom: 24px;
 `;
 
 const FormCard = styled.form`
-  background: #fff;
+  background: ${BACKGROUND_CARD};
   padding: 28px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid ${BORDER_COLOR};
+  box-shadow: ${props => props.theme.mode === 'dark' ? '0 4px 20px rgba(0,0,0,0.4)' : '0 1px 4px rgba(0,0,0,0.08)'};
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -104,7 +117,7 @@ const FormGroup = styled.div`
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
+  color: ${props => props.theme.mode === 'dark' ? '#f87171' : '#dc2626'};
   font-size: 14px;
   margin-top: 4px;
 `;
@@ -116,46 +129,53 @@ const MessageBox = styled.div<{ type: 'error' | 'success' }>`
   display: flex;
   gap: 10px;
   align-items: center;
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  background: ${(p) => (p.type === 'error'
+    ? (p.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : '#fee2e2')
+    : (p.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#d1fae5'))};
+  border: 1px solid ${(p) => (p.type === 'error'
+    ? (p.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.3)' : '#fecaca')
+    : (p.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.3)' : '#a7f3d0'))};
+  color: ${(p) => (p.type === 'error'
+    ? (p.theme.mode === 'dark' ? '#fca5a5' : '#991b1b')
+    : (p.theme.mode === 'dark' ? '#6ee7b7' : '#065f46'))};
 `;
 
 const StyledInput = styled.input`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${BORDER_COLOR};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.textDark};
+  background: ${BACKGROUND_CARD};
+  color: ${TEXT_COLOR_DARK};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
   margin: 0;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: ${props => props.theme.colors.background};
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
+    background: ${BACKGROUND_CARD};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : '#d1d5db'};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f9fafb'};
+    color: ${TEXT_COLOR_MUTED};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${BORDER_COLOR};
   }
 
   &[type="number"] {
@@ -181,12 +201,12 @@ const StyledTextarea = styled.textarea`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${BORDER_COLOR};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.textDark};
+  background: ${BACKGROUND_CARD};
+  color: ${TEXT_COLOR_DARK};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -195,25 +215,26 @@ const StyledTextarea = styled.textarea`
   min-height: 100px;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: ${props => props.theme.colors.background};
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
+    background: ${BACKGROUND_CARD};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : '#d1d5db'};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f9fafb'};
+    color: ${TEXT_COLOR_MUTED};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${BORDER_COLOR};
   }
 `;
 
@@ -221,12 +242,12 @@ const StyledSelect = styled.select`
   width: 100%;
   max-width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${BORDER_COLOR};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.textDark};
+  background: ${BACKGROUND_CARD};
+  color: ${TEXT_COLOR_DARK};
   transition: all 0.2s ease-in-out;
   outline: none;
   box-sizing: border-box;
@@ -234,21 +255,21 @@ const StyledSelect = styled.select`
   cursor: pointer;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: ${props => props.theme.colors.background};
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
+    background: ${BACKGROUND_CARD};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : '#d1d5db'};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f9fafb'};
+    color: ${TEXT_COLOR_MUTED};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${BORDER_COLOR};
   }
 `;
 
@@ -307,6 +328,7 @@ const Spinner = styled(Loader2)`
 `;
 
 export default function EditExpensePage() {
+  const theme = useTheme();
   const router = useRouter();
   const params = useParams();
   const expenseId = params?.id ? parseInt(params.id as string, 10) : null;
@@ -315,41 +337,41 @@ export default function EditExpensePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-type ExpenseFormValues = z.infer<typeof ExpenseSchema>;
+  type ExpenseFormValues = z.infer<typeof ExpenseSchema>;
 
-interface ApiExpense {
-  id: number;
-  title: string;
-  description?: string | null;
-  category: string;
-  amount: number;
-  vendor?: string | null;
-  date?: string;
-  is_recurring?: boolean;
-  recurring_frequency?: string | null;
-  attachment_url?: string | null;
-}
+  interface ApiExpense {
+    id: number;
+    title: string;
+    description?: string | null;
+    category: string;
+    amount: number;
+    vendor?: string | null;
+    date?: string;
+    is_recurring?: boolean;
+    recurring_frequency?: string | null;
+    attachment_url?: string | null;
+  }
 
-const formResolver = zodResolver(ExpenseSchema) as unknown as Resolver<
-  ExpenseFormValues,
-  unknown,
-  ExpenseFormValues
->;
+  const formResolver = zodResolver(ExpenseSchema) as unknown as Resolver<
+    ExpenseFormValues,
+    unknown,
+    ExpenseFormValues
+  >;
 
-const {
-  register,
-  handleSubmit,
-  formState: { errors },
-  reset,
-  watch,
-} = useForm<ExpenseFormValues>({
-  resolver: formResolver,
-  defaultValues: {
-    isRecurring: false,
-  },
-});
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    watch,
+  } = useForm<ExpenseFormValues>({
+    resolver: formResolver,
+    defaultValues: {
+      isRecurring: false,
+    },
+  });
 
-const isRecurring = watch('isRecurring');
+  const isRecurring = watch('isRecurring');
 
   const loadExpense = useCallback(async () => {
     if (!expenseId) return;
@@ -360,7 +382,7 @@ const isRecurring = watch('isRecurring');
     try {
       const response = await apiClient.getExpense(expenseId);
       const expense = response.data as unknown as ApiExpense;
-      
+
       if (!expense) {
         setError('Expense not found');
         return;
@@ -368,7 +390,7 @@ const isRecurring = watch('isRecurring');
 
       // Format date for input field (YYYY-MM-DD)
       const expenseDate = expense.date ? new Date(expense.date).toISOString().split('T')[0] : '';
-      
+
       const recurringFrequency = (['monthly', 'quarterly', 'yearly'].includes(expense.recurring_frequency || '')
         ? expense.recurring_frequency
         : undefined) as ExpenseFormValues['recurringFrequency'];
@@ -412,7 +434,7 @@ const isRecurring = watch('isRecurring');
     try {
       // Format date for API
       const expenseDate = new Date(data.date).toISOString();
-      
+
       const expenseData = {
         title: data.title,
         description: data.description,
@@ -428,7 +450,7 @@ const isRecurring = watch('isRecurring');
       await apiClient.updateExpense(expenseId, expenseData);
       setSuccess('Expense updated successfully!');
       toast.success('Expense updated successfully!');
-      
+
       // Redirect after 2 seconds
       setTimeout(() => {
         router.push('/expenses/list');
@@ -455,7 +477,7 @@ const isRecurring = watch('isRecurring');
         <ContentArea>
           <Navbar />
           <LoadingContainer>
-            <Spinner size={32} />
+            <Spinner size={32} style={{ color: PRIMARY_COLOR({ theme }) }} />
             <p>Loading expense...</p>
           </LoadingContainer>
         </ContentArea>
@@ -477,7 +499,7 @@ const isRecurring = watch('isRecurring');
           </BackLink>
 
           <Title>
-            <DollarSign className="h-8 w-8 text-primary" />
+            <DollarSign className="h-8 w-8" style={{ color: PRIMARY_COLOR({ theme }) }} />
             Edit Expense
           </Title>
           <Subtitle>Update expense information</Subtitle>
@@ -528,16 +550,16 @@ const isRecurring = watch('isRecurring');
                   {...register('category')}
                   disabled={submitting}
                 >
-                <option value="">Select a category</option>
-                <option value="salary">Salary</option>
-                <option value="rent">Rent</option>
-                <option value="utilities">Utilities</option>
-                <option value="marketing">Marketing</option>
-                <option value="equipment">Equipment</option>
-                <option value="travel">Travel</option>
-                <option value="supplies">Supplies</option>
-                <option value="insurance">Insurance</option>
-                <option value="taxes">Taxes</option>
+                  <option value="">Select a category</option>
+                  <option value="salary">Salary</option>
+                  <option value="rent">Rent</option>
+                  <option value="utilities">Utilities</option>
+                  <option value="marketing">Marketing</option>
+                  <option value="equipment">Equipment</option>
+                  <option value="travel">Travel</option>
+                  <option value="supplies">Supplies</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="taxes">Taxes</option>
                   <option value="other">Other</option>
                 </StyledSelect>
                 {errors.category && <FieldError>{errors.category.message}</FieldError>}
@@ -599,9 +621,9 @@ const isRecurring = watch('isRecurring');
                   {...register('recurringFrequency')}
                   disabled={submitting}
                 >
-                <option value="">Select frequency</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
+                  <option value="">Select frequency</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
                   <option value="yearly">Yearly</option>
                 </StyledSelect>
                 {errors.recurringFrequency && <FieldError>{errors.recurringFrequency.message}</FieldError>}

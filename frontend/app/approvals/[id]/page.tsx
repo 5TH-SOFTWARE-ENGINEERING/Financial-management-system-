@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   ArrowLeft,
   CheckCircle,
@@ -22,14 +22,17 @@ import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { useUserStore } from '@/store/userStore';
-import { theme } from '@/components/common/theme';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
+const BG_SECONDARY = (props: any) => props.theme.colors.backgroundSecondary;
+const BACKGROUND_COLOR = (props: any) => props.theme.colors.background;
+const CARD_SHADOW = (props: any) => props.theme.mode === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03), inset 0 0 0 1px rgba(0, 0, 0, 0.02)';
 
 const PageContainer = styled.div`
   display: flex;
@@ -38,17 +41,17 @@ const PageContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm} ${props => props.theme.spacing.sm};
 `;
 
 const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   color: ${TEXT_COLOR_MUTED};
   text-decoration: none;
-  margin-bottom: ${theme.spacing.md};
-  transition: color ${theme.transitions.default};
+  margin-bottom: ${props => props.theme.spacing.md};
+  transition: color ${props => props.theme.transitions.default};
 
   &:hover {
     color: ${TEXT_COLOR_DARK};
@@ -56,14 +59,14 @@ const BackLink = styled(Link)`
 `;
 
 const HeaderSection = styled.div`
-  margin-bottom: ${theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
 const HeaderContent = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   flex-wrap: wrap;
 `;
 
@@ -72,14 +75,14 @@ const HeaderText = styled.div`
   
   h1 {
     font-size: clamp(24px, 3vw, 36px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.xs};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.xs};
     color: ${TEXT_COLOR_DARK};
   }
 
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
     margin: 0;
   }
 `;
@@ -87,54 +90,52 @@ const HeaderText = styled.div`
 const ActionButtons = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   flex-wrap: wrap;
 `;
 
 const Card = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.lg};
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06),
-    0 1px 2px -1px rgba(0, 0, 0, 0.03),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.02);
-  margin-bottom: ${theme.spacing.lg};
+  background: ${BACKGROUND_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  padding: ${props => props.theme.spacing.lg};
+  box-shadow: ${CARD_SHADOW};
+  margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
 const CardTitle = styled.h2`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
-  margin: 0 0 ${theme.spacing.md};
+  margin: 0 0 ${props => props.theme.spacing.md};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const StatusBadge = styled.span<{ $status: string }>`
   display: inline-flex;
   align-items: center;
-  padding: ${theme.spacing.xs} ${theme.spacing.md};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.md};
   border-radius: 999px;
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background-color: ${props => {
-    switch(props.$status) {
-      case 'approved': return 'rgba(16, 185, 129, 0.12)';
-      case 'rejected': return 'rgba(239, 68, 68, 0.12)';
-      case 'cancelled': return 'rgba(107, 114, 128, 0.12)';
-      default: return 'rgba(251, 191, 36, 0.12)';
+    switch (props.$status) {
+      case 'approved': return props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)';
+      case 'rejected': return props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.12)';
+      case 'cancelled': return props.theme.mode === 'dark' ? 'rgba(148, 163, 184, 0.2)' : 'rgba(107, 114, 128, 0.12)';
+      default: return props.theme.mode === 'dark' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(251, 191, 36, 0.12)';
     }
   }};
   color: ${props => {
-    switch(props.$status) {
-      case 'approved': return '#065f46';
-      case 'rejected': return '#991b1b';
-      case 'cancelled': return '#374151';
-      default: return '#b45309';
+    switch (props.$status) {
+      case 'approved': return props.theme.mode === 'dark' ? '#34d399' : '#065f46';
+      case 'rejected': return props.theme.mode === 'dark' ? '#f87171' : '#991b1b';
+      case 'cancelled': return props.theme.mode === 'dark' ? '#94a3b8' : '#374151';
+      default: return props.theme.mode === 'dark' ? '#fbbf24' : '#b45309';
     }
   }};
 `;
@@ -142,7 +143,7 @@ const StatusBadge = styled.span<{ $status: string }>`
 const InfoGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 
   @media (min-width: 768px) {
     grid-template-columns: 1fr 1fr;
@@ -152,7 +153,7 @@ const InfoGrid = styled.div`
 const InfoItem = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const IconWrapper = styled.div`
@@ -165,14 +166,14 @@ const InfoContent = styled.div`
   flex: 1;
   
   p:first-child {
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     color: ${TEXT_COLOR_MUTED};
-    margin: 0 0 ${theme.spacing.xs};
+    margin: 0 0 ${props => props.theme.spacing.xs};
   }
 
   p:last-child {
-    font-size: ${theme.typography.fontSizes.sm};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
     margin: 0;
     word-break: break-word;
@@ -180,15 +181,15 @@ const InfoContent = styled.div`
 `;
 
 const Description = styled.div`
-  padding: ${theme.spacing.lg};
-  background: ${theme.colors.backgroundSecondary};
-  border-radius: ${theme.borderRadius.md};
-  margin-top: ${theme.spacing.md};
+  padding: ${props => props.theme.spacing.lg};
+  background: ${BG_SECONDARY};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-top: ${props => props.theme.spacing.md};
   border-left: 3px solid ${PRIMARY_COLOR};
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   
   &:hover {
-    background: ${theme.colors.background};
+    background: ${BACKGROUND_COLOR};
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
   
@@ -196,7 +197,7 @@ const Description = styled.div`
     margin: 0;
     color: ${TEXT_COLOR_DARK};
     line-height: 1.7;
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     word-wrap: break-word;
     overflow-wrap: break-word;
     white-space: pre-wrap;
@@ -213,25 +214,25 @@ const Description = styled.div`
   
   /* Responsive adjustments */
   @media (max-width: 768px) {
-    padding: ${theme.spacing.md};
+    padding: ${props => props.theme.spacing.md};
     
     p {
-      font-size: ${theme.typography.fontSizes.xs};
+      font-size: ${props => props.theme.typography.fontSizes.xs};
       line-height: 1.6;
     }
   }
 `;
 
 const ErrorBanner = styled.div`
-  padding: ${theme.spacing.md};
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: ${theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  background-color: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.3)'};
+  border-radius: ${props => props.theme.borderRadius.md};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  color: #dc2626;
-  margin-bottom: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.mode === 'dark' ? '#f87171' : '#dc2626'};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const LoadingContainer = styled.div`
@@ -240,18 +241,18 @@ const LoadingContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   
   p {
     color: ${TEXT_COLOR_MUTED};
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
   }
 `;
 
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${theme.colors.border};
+  border: 3px solid ${BORDER_COLOR};
   border-top-color: ${PRIMARY_COLOR};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -264,55 +265,55 @@ const Spinner = styled.div`
 const CommentList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const CommentItem = styled.div`
-  padding: ${theme.spacing.md};
-  background: ${theme.colors.backgroundSecondary};
-  border-radius: ${theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  background: ${BG_SECONDARY};
+  border-radius: ${props => props.theme.borderRadius.md};
 `;
 
 const CommentHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: ${theme.spacing.xs};
+  margin-bottom: ${props => props.theme.spacing.xs};
 `;
 
 const CommentAuthor = styled.span`
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 `;
 
 const CommentDate = styled.span`
   color: ${TEXT_COLOR_MUTED};
-  font-size: ${theme.typography.fontSizes.xs};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
 `;
 
 const CommentText = styled.p`
   margin: 0;
   color: ${TEXT_COLOR_DARK};
   line-height: 1.6;
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 `;
 
 const CommentForm = styled.form`
   display: flex;
-  gap: ${theme.spacing.sm};
-  margin-top: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.sm};
+  margin-top: ${props => props.theme.spacing.md};
 `;
 
 const CommentInput = styled.textarea`
   flex: 1;
-  padding: ${theme.spacing.sm} ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_COLOR};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
   resize: vertical;
   min-height: 80px;
@@ -320,7 +321,7 @@ const CommentInput = styled.textarea`
   &:focus {
     outline: none;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.2)' : 'rgba(0, 170, 0, 0.15)'};
   }
 `;
 
@@ -336,71 +337,71 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  padding: ${theme.spacing.xl};
+  background: ${BACKGROUND_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  padding: ${props => props.theme.spacing.xl};
   max-width: 500px;
   width: 90%;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 `;
 
 const ModalTitle = styled.h3`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
-  margin: 0 0 ${theme.spacing.lg};
+  margin: 0 0 ${props => props.theme.spacing.lg};
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.md};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_COLOR};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
   resize: vertical;
   min-height: 120px;
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   
   &:focus {
     outline: none;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.2)' : 'rgba(0, 170, 0, 0.15)'};
   }
 `;
 
 const ModalActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   justify-content: flex-end;
 `;
 
 const Label = styled.label`
   display: block;
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   color: ${TEXT_COLOR_DARK};
-  margin-bottom: ${theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.sm};
 `;
 
 const PasswordInput = styled.input`
   width: 100%;
-  padding: ${theme.spacing.md};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
-  background: ${theme.colors.background};
+  padding: ${props => props.theme.spacing.md};
+  border: 1px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: ${BACKGROUND_COLOR};
   color: ${TEXT_COLOR_DARK};
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
 
   &:focus {
     outline: none;
     border-color: ${PRIMARY_COLOR};
-    box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.2)' : 'rgba(0, 170, 0, 0.15)'};
   }
 
   &::placeholder {
@@ -410,26 +411,26 @@ const PasswordInput = styled.input`
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const ErrorText = styled.p`
-  color: #dc2626;
-  font-size: ${theme.typography.fontSizes.sm};
-  margin: ${theme.spacing.xs} 0 0 0;
+  color: ${props => props.theme.mode === 'dark' ? '#f87171' : '#dc2626'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  margin: ${props => props.theme.spacing.xs} 0 0 0;
 `;
 
 const WarningBox = styled.div`
-  padding: ${theme.spacing.md};
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: ${theme.borderRadius.md};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.3)'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   
   p {
     margin: 0;
-    color: #dc2626;
-    font-size: ${theme.typography.fontSizes.sm};
+    color: ${props => props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626'};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     line-height: 1.5;
   }
 `;
@@ -460,6 +461,7 @@ interface Comment {
 }
 
 export default function ApprovalDetailPage() {
+  const theme = useTheme();
   const router = useRouter();
   const params = useParams();
   const approvalId = params?.id ? parseInt(params.id as string, 10) : null;
@@ -703,7 +705,7 @@ export default function ApprovalDetailPage() {
             <ArrowLeft size={16} />
             Back to Approvals
           </BackLink>
-          
+
           <HeaderContent>
             <HeaderText>
               <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md, flexWrap: 'wrap' }}>
@@ -720,7 +722,7 @@ export default function ApprovalDetailPage() {
                 <Button
                   onClick={handleApprove}
                   disabled={processing}
-                  style={{ backgroundColor: PRIMARY_COLOR, color: '#fff' }}
+                  style={{ backgroundColor: PRIMARY_COLOR({ theme }), color: '#fff' }}
                 >
                   {processing ? (
                     <>
@@ -852,11 +854,17 @@ export default function ApprovalDetailPage() {
           )}
 
           {approval.rejection_reason && (
-            <div style={{ marginTop: theme.spacing.md, padding: theme.spacing.md, background: 'rgba(239, 68, 68, 0.1)', borderRadius: theme.borderRadius.md }}>
-              <p style={{ margin: 0, fontWeight: theme.typography.fontWeights.medium, color: '#991b1b', marginBottom: theme.spacing.xs }}>
+            <div style={{
+              marginTop: theme.spacing.md,
+              padding: theme.spacing.md,
+              background: theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+              borderRadius: theme.borderRadius.md,
+              border: `1px solid ${theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)'}`
+            }}>
+              <p style={{ margin: 0, fontWeight: theme.typography.fontWeights.medium, color: theme.mode === 'dark' ? '#f87171' : '#991b1b', marginBottom: theme.spacing.xs }}>
                 Rejection Reason:
               </p>
-              <p style={{ margin: 0, color: TEXT_COLOR_DARK }}>{approval.rejection_reason}</p>
+              <p style={{ margin: 0, color: TEXT_COLOR_DARK({ theme }) }}>{approval.rejection_reason}</p>
             </div>
           )}
 
@@ -908,7 +916,7 @@ export default function ApprovalDetailPage() {
             <Button
               type="submit"
               disabled={!commentText.trim() || submittingComment}
-              style={{ backgroundColor: PRIMARY_COLOR, color: '#fff' }}
+              style={{ backgroundColor: PRIMARY_COLOR({ theme }), color: '#fff' }}
             >
               {submittingComment ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -929,10 +937,10 @@ export default function ApprovalDetailPage() {
           }}>
             <ModalContent onClick={(e) => e.stopPropagation()}>
               <ModalTitle>
-                <XCircle size={20} style={{ color: '#ef4444', marginRight: theme.spacing.sm }} />
+                <XCircle size={20} style={{ color: theme.mode === 'dark' ? '#f87171' : '#ef4444', marginRight: theme.spacing.sm }} />
                 Reject Approval
               </ModalTitle>
-              
+
               <WarningBox>
                 <p>
                   You are about to reject this approval request. This action cannot be undone.

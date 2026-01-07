@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RevenueSchema, type RevenueInput } from '@/lib/validation';
@@ -23,23 +23,35 @@ type RevenueApiResponse = Partial<RevenueInput> & {
 };
 
 // ──────────────────────────────────────────
+// Theme-aware Constants
+// ──────────────────────────────────────────
+const BACKGROUND_PAGE = (props: any) => props.theme.colors.backgroundSecondary || '#f5f6fa';
+const BACKGROUND_CARD = (props: any) => props.theme.colors.background || '#ffffff';
+const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark || '#000000';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666666';
+const BORDER_COLOR = (props: any) => props.theme.colors.border || '#e5e7eb';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#3b82f6';
+
+// ──────────────────────────────────────────
 // Styled Components Layout
 // ──────────────────────────────────────────
 const LayoutWrapper = styled.div`
   display: flex;
-  background: #f5f6fa;
+  background: ${BACKGROUND_PAGE};
   min-height: 100vh;
+  transition: background ${props => props.theme.transitions.default};
 `;
 
 const SidebarWrapper = styled.div`
   width: 250px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
+  background: ${props => props.theme.colors.card};
+  border-right: 1px solid ${BORDER_COLOR};
   position: fixed;
   left: 0;
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  z-index: 100;
 
   @media (max-width: 768px) {
     width: auto;
@@ -54,112 +66,118 @@ const ContentArea = styled.div`
 `;
 
 const InnerContent = styled.div`
-  padding: 32px;
+  padding: ${props => props.theme.spacing.xl};
   width: 100%;
   max-width: 700px;
   margin: 0 auto;
+  color: ${TEXT_COLOR_DARK};
 `;
 
 const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: var(--muted-foreground);
-  font-size: 14px;
-  margin-bottom: 16px;
-  transition: 0.2s;
+  gap: ${props => props.theme.spacing.sm};
+  color: ${TEXT_COLOR_MUTED};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  margin-bottom: ${props => props.theme.spacing.md};
+  transition: color ${props => props.theme.transitions.default};
 
   &:hover {
-    color: var(--foreground);
+    color: ${TEXT_COLOR_DARK};
   }
 `;
 
 const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 8px;
+  font-size: clamp(24px, 3.5vw, 32px);
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  margin-bottom: ${props => props.theme.spacing.xs};
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${props => props.theme.spacing.md};
+  color: ${TEXT_COLOR_DARK};
 `;
 
 const Subtitle = styled.p`
-  color: var(--muted-foreground);
-  margin-bottom: 24px;
+  color: ${TEXT_COLOR_MUTED};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  font-size: ${props => props.theme.typography.fontSizes.md};
 `;
 
 const FormCard = styled.form`
-  background: #fff;
-  padding: 28px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background: ${BACKGROUND_CARD};
+  padding: ${props => props.theme.spacing.xl};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  box-shadow: ${props => props.theme.mode === 'dark' ? '0 4px 12px rgba(0,0,0,0.3)' : '0 1px 4px rgba(0,0,0,0.08)'};
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: ${props => props.theme.spacing.lg};
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${props => props.theme.spacing.xs};
   width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  margin: 0;
+  margin-bottom: 0;
 `;
 
 const FieldError = styled.p`
-  color: #dc2626;
-  font-size: 14px;
-  margin-top: 4px;
+  color: ${props => props.theme.mode === 'dark' ? '#f87171' : '#dc2626'};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  margin-top: ${props => props.theme.spacing.xs};
 `;
 
 const MessageBox = styled.div<{ type: 'error' | 'success' }>`
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  padding: ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
-  gap: 10px;
+  gap: ${props => props.theme.spacing.sm};
   align-items: center;
 
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  background: ${(p) => {
+    if (p.type === 'error') return p.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : '#fee2e2';
+    return p.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#d1fae5';
+  }};
+  border: 1px solid ${(p) => {
+    if (p.type === 'error') return p.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.4)' : '#fecaca';
+    return p.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.4)' : '#a7f3d0';
+  }};
+  color: ${(p) => {
+    if (p.type === 'error') return p.theme.mode === 'dark' ? '#f87171' : '#991b1b';
+    return p.theme.mode === 'dark' ? '#34d399' : '#065f46';
+  }};
 `;
 
 const StyledInput = styled.input`
   width: 100%;
-  max-width: 100%;
-  padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: ${props => props.theme.spacing.md};
+  border: 1.5px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
   background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.textDark};
-  transition: all 0.2s ease-in-out;
+  color: ${TEXT_COLOR_DARK};
+  transition: all ${props => props.theme.transitions.default};
   outline: none;
   box-sizing: border-box;
-  margin: 0;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: ${props => props.theme.colors.background};
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.mode === 'dark' ? '#4b5563' : '#d1d5db'};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.mode === 'dark' ? '#6b7280' : '#9ca3af'};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
+    background-color: ${props => props.theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -187,37 +205,34 @@ const StyledInput = styled.input`
 
 const StyledTextarea = styled.textarea`
   width: 100%;
-  max-width: 100%;
-  padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: ${props => props.theme.spacing.md};
+  border: 1.5px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
   background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.textDark};
-  transition: all 0.2s ease-in-out;
+  color: ${TEXT_COLOR_DARK};
+  transition: all ${props => props.theme.transitions.default};
   outline: none;
   box-sizing: border-box;
-  margin: 0;
   resize: vertical;
   min-height: 100px;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: ${props => props.theme.colors.background};
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.mode === 'dark' ? '#4b5563' : '#d1d5db'};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.mode === 'dark' ? '#6b7280' : '#9ca3af'};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
+    background-color: ${props => props.theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -227,32 +242,29 @@ const StyledTextarea = styled.textarea`
 
 const StyledSelect = styled.select`
   width: 100%;
-  max-width: 100%;
-  padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: ${props => props.theme.spacing.md};
+  border: 1.5px solid ${BORDER_COLOR};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   font-family: inherit;
   background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.textDark};
-  transition: all 0.2s ease-in-out;
+  color: ${TEXT_COLOR_DARK};
+  transition: all ${props => props.theme.transitions.default};
   outline: none;
   box-sizing: border-box;
-  margin: 0;
   cursor: pointer;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: ${props => props.theme.colors.background};
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.mode === 'dark' ? '#4b5563' : '#d1d5db'};
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
+    background-color: ${props => props.theme.colors.backgroundSecondary};
     color: #6b7280;
     cursor: not-allowed;
     opacity: 0.7;
@@ -262,21 +274,21 @@ const StyledSelect = styled.select`
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  padding-top: 12px;
-  margin-top: 8px;
+  gap: ${props => props.theme.spacing.md};
+  justify-content: flex-end;
+  padding-top: ${props => props.theme.spacing.md};
+  margin-top: ${props => props.theme.spacing.sm};
 `;
 
 const GridRow = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 28px;
+  gap: ${props => props.theme.spacing.lg};
   width: 100%;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: 28px;
+    gap: ${props => props.theme.spacing.lg};
   }
 `;
 
@@ -293,16 +305,17 @@ const CheckboxWrapper = styled.div`
 `;
 
 const LoadingContainer = styled.div`
-  padding: 32px;
+  padding: ${props => props.theme.spacing.xl};
   text-align: center;
   
   p {
-    color: var(--muted-foreground);
-    margin-top: 16px;
+    color: ${TEXT_COLOR_MUTED};
+    margin-top: ${props => props.theme.spacing.md};
   }
 `;
 
 export default function EditRevenuePage() {
+  const theme = useTheme();
   const router = useRouter();
   const params = useParams();
   const revenueId = params?.id ? parseInt(params.id as string, 10) : null;
@@ -344,14 +357,14 @@ export default function EditRevenuePage() {
     try {
       const response = await apiClient.getRevenue(revenueId);
       const revenue = response.data as RevenueApiResponse;
-      
+
       if (!revenue) {
         setError('Revenue entry not found');
         return;
       }
 
       const revenueDate = revenue.date ? new Date(revenue.date).toISOString().split('T')[0] : '';
-      
+
       reset({
         title: revenue.title || '',
         description: revenue.description || '',
@@ -388,7 +401,7 @@ export default function EditRevenuePage() {
     try {
       // Format date for API
       const revenueDate = new Date(data.date).toISOString();
-      
+
       const revenueData = {
         title: data.title,
         description: data.description || null,
@@ -404,7 +417,7 @@ export default function EditRevenuePage() {
       await apiClient.updateRevenue(revenueId, revenueData);
       setSuccess('Revenue entry updated successfully!');
       toast.success('Revenue entry updated successfully!');
-      
+
       // Redirect after 2 seconds
       setTimeout(() => {
         router.push('/revenue/list');
@@ -427,7 +440,7 @@ export default function EditRevenuePage() {
         <ContentArea>
           <Navbar />
           <LoadingContainer>
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto" style={{ color: PRIMARY_COLOR({ theme }) }} />
             <p>Loading revenue entry...</p>
           </LoadingContainer>
         </ContentArea>
@@ -450,7 +463,7 @@ export default function EditRevenuePage() {
           </BackLink>
 
           <Title>
-            <DollarSign className="h-8 w-8 text-primary" />
+            <DollarSign className="h-8 w-8" style={{ color: PRIMARY_COLOR({ theme }) }} />
             Edit Revenue Entry
           </Title>
           <Subtitle>Update revenue entry information</Subtitle>
