@@ -89,8 +89,8 @@ const GradientBackground = styled.div`
   pointer-events: none;
   z-index: 0;
   /* Updated to Green/Emerald gradients */
-  background: radial-gradient(circle at 30% 50%, rgba(0, 170, 0, 0.15) 0%, transparent 50%),
-              radial-gradient(circle at 70% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
+  background: radial-gradient(circle at 30% 50%, rgba(12, 14, 12, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 50%, rgba(8, 10, 9, 0.15) 0%, transparent 50%),
               linear-gradient(135deg, rgb(9, 10, 10) 0%, rgb(12, 11, 11) 100%);
   
   &::before {
@@ -104,13 +104,13 @@ const GradientBackground = styled.div`
     background: conic-gradient(
       from 0deg,
       transparent 0deg,
-      rgba(0, 170, 0, 0.2) 45deg,
+      rgba(16, 17, 16, 0.2) 45deg,
       transparent 90deg,
-      rgba(16, 185, 129, 0.2) 135deg,
+      rgba(13, 15, 14, 0.2) 135deg,
       transparent 180deg,
-      rgba(0, 170, 0, 0.2) 225deg,
+      rgba(72, 74, 72, 0.2) 225deg,
       transparent 270deg,
-      rgba(16, 185, 129, 0.2) 315deg,
+      rgba(86, 85, 85, 0.2) 315deg,
       transparent 360deg
     );
     animation: ${spiralRotatePrimary} 30s linear infinite;
