@@ -24,18 +24,20 @@ import {
 import { useAuth } from '@/lib/rbac/auth-context';
 import { auditService, type AuditLogFilters } from '@/lib/services/audit-service';
 import { type AuditLog } from '@/lib/api';
-import { theme } from '@/components/common/theme';
 import { UserType } from '@/lib/rbac/models';
 
-const TEXT_PRIMARY = '#111827';
-const TEXT_SECONDARY = theme.colors.textSecondary || '#6B7280';
+const TEXT_PRIMARY = (props: any) => props.theme.colors.text;
+const TEXT_SECONDARY = (props: any) => props.theme.colors.mutedForeground;
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+const CARD_BG = (props: any) => props.theme.colors.card;
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
 
 // Styled Components
 const LayoutContainer = styled.div`
     display: flex;
     min-height: 100vh;
-    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    background: ${props => props.theme.colors.background};
+    color: ${props => props.theme.colors.text};
 `;
 
 const MainContent = styled.main`
@@ -59,7 +61,7 @@ const PageHeader = styled.div`
     align-items: flex-start;
     margin-bottom: 32px;
     padding-bottom: 24px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid ${BORDER_COLOR};
 `;
 
 const TitleSection = styled.div`
@@ -102,11 +104,11 @@ const RefreshButton = styled.button`
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 14px color-mix(in srgb, #667eea, transparent 60%);
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        box-shadow: 0 6px 20px color-mix(in srgb, #667eea, transparent 50%);
     }
 
     &:active {
@@ -124,13 +126,13 @@ const RefreshButton = styled.button`
 `;
 
 const FilterCard = styled.div`
-    background: rgba(255, 255, 255, 0.8);
+    background: color-mix(in srgb, ${CARD_BG}, transparent 20%);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid ${BORDER_COLOR};
     border-radius: 16px;
     padding: 24px 28px;
     margin-bottom: 28px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+    box-shadow: ${props => props.theme.shadows.sm};
 `;
 
 const FilterGrid = styled.div`
@@ -164,9 +166,9 @@ const InputGroup = styled.div`
     input, select {
         width: 100%;
         padding: 12px 14px 12px 42px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid ${BORDER_COLOR};
         border-radius: 10px;
-        background-color: #ffffff;
+        background-color: ${props => props.theme.colors.background};
         color: ${TEXT_PRIMARY};
         font-size: 14px;
         font-weight: 500;
@@ -175,11 +177,11 @@ const InputGroup = styled.div`
 
         &:focus {
             border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+            box-shadow: 0 0 0 3px color-mix(in srgb, #667eea, transparent 88%);
         }
         
         &::placeholder {
-            color: #94a3b8;
+            color: ${props => props.theme.colors.mutedForeground};
         }
     }
     
@@ -205,12 +207,12 @@ const InputGroup = styled.div`
 `;
 
 const TableCard = styled.div`
-    background: rgba(255, 255, 255, 0.95);
+    background: ${CARD_BG};
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid ${BORDER_COLOR};
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.02);
+    box-shadow: ${props => props.theme.shadows.md};
 `;
 
 const Table = styled.table`
@@ -219,21 +221,21 @@ const Table = styled.table`
     text-align: left;
 
     thead {
-        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-        border-bottom: 1px solid #e2e8f0;
+        background: color-mix(in srgb, ${props => props.theme.colors.backgroundSecondary}, transparent 30%);
+        border-bottom: 1px solid ${BORDER_COLOR};
     }
 
     th {
         padding: 16px 20px;
         font-size: 11px;
         font-weight: 700;
-        color: #64748b;
+        color: ${TEXT_SECONDARY};
         text-transform: uppercase;
         letter-spacing: 0.08em;
     }
 
     tbody tr {
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid ${BORDER_COLOR};
         transition: all 0.2s ease;
 
         &:last-child {
@@ -241,7 +243,7 @@ const Table = styled.table`
         }
 
         &:hover {
-            background: linear-gradient(90deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+            background: color-mix(in srgb, ${props => props.theme.colors.primary}, transparent 95%);
         }
     }
 
@@ -278,7 +280,7 @@ const UserInfo = styled.div`
     }
     .email {
         font-size: 12px;
-        color: #94a3b8;
+        color: ${TEXT_SECONDARY};
     }
 `;
 
@@ -287,10 +289,10 @@ const DetailsCell = styled.button`
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    color: #64748b;
+    color: ${TEXT_SECONDARY};
     padding: 6px 12px;
     border-radius: 8px;
-    background: #f8fafc;
+    background: ${props => props.theme.colors.backgroundSecondary};
     border: none;
     transition: all 0.2s ease;
     font-size: 14px;
@@ -342,8 +344,8 @@ const ModalHeader = styled.div`
     align-items: center;
     justify-content: space-between;
     padding: 20px 24px;
-    border-bottom: 1px solid #e2e8f0;
-    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    border-bottom: 1px solid ${BORDER_COLOR};
+    background: ${props => props.theme.colors.backgroundSecondary};
 `;
 
 const ModalTitle = styled.h2`
@@ -364,8 +366,8 @@ const ModalClose = styled.button`
     height: 36px;
     border: none;
     border-radius: 10px;
-    background: #f1f5f9;
-    color: #64748b;
+    background: ${props => props.theme.colors.background};
+    color: ${TEXT_SECONDARY};
     cursor: pointer;
     transition: all 0.2s;
 
@@ -394,7 +396,7 @@ const DetailLabel = styled.div`
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #64748b;
+    color: ${TEXT_SECONDARY};
     margin-bottom: 8px;
 `;
 
@@ -410,7 +412,7 @@ const MetaGrid = styled.div`
     gap: 16px;
     margin-bottom: 24px;
     padding: 16px;
-    background: #f8fafc;
+    background: ${props => props.theme.colors.backgroundSecondary};
     border-radius: 12px;
 
     @media (max-width: 600px) {
@@ -432,7 +434,7 @@ const MetaItem = styled.div`
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #94a3b8;
+        color: ${TEXT_SECONDARY};
     }
 
     .value {

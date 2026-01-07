@@ -321,6 +321,7 @@ const CheckboxItem = styled.div`
     font-size: 14px;
     cursor: pointer;
     flex: 1;
+    color: ${props => props.theme.colors.text};
   }
 `;
 
