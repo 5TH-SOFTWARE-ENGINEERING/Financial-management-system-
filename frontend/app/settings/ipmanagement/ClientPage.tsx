@@ -1,8 +1,7 @@
-
 'use client'
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { keyframes, css, useTheme } from 'styled-components';
 import {
     ShieldAlert,
     Search,
@@ -16,7 +15,6 @@ import {
     Network,
     RefreshCw,
     XCircle,
-    Filter,
     Info
 } from 'lucide-react';
 
@@ -42,21 +40,14 @@ import {
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { theme } from '@/components/common/theme';
+
 
 const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark || '#000';
-const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+
 // Animations
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
-`;
-
-const pulse = keyframes`
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
 `;
 
 // Styled Components
@@ -65,7 +56,7 @@ const PageWrapper = styled.div`
     max-width: 100%;
     margin: 20px auto;
     min-height: 100vh;
-    background-color: ${props => props.theme.colors.backgroundSecondary || '#f0f2f5'};
+    background-color: ${props => props.theme.colors.backgroundSecondary};
     animation: ${fadeIn} 0.5s ease-out;
 `;
 
@@ -102,7 +93,7 @@ const TitleGroup = styled.div`
     }
     
     p {
-        color: #65676b;
+        color: ${props => props.theme.colors.mutedForeground};
         font-size: 0.95rem;
         margin-top: 4px;
         line-height: 1.4;
@@ -116,9 +107,10 @@ const ActionButtons = styled.div`
 `;
 
 const Card = styled.div`
-    background: ${props => props.theme.colors.background};
+    background: ${props => props.theme.colors.card};
     border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05);
+    box-shadow: ${props => props.theme.shadows.sm};
+    border: 1px solid ${props => props.theme.colors.border};
     margin: 0 auto;
     max-width: 1200px; 
 `;
@@ -143,7 +135,7 @@ const SearchContainer = styled.div`
             left: 12px;
             top: 50%;
             transform: translateY(-50%);
-            color: #65676b;
+            color: ${props => props.theme.colors.mutedForeground};
             width: 16px;
             height: 16px;
         }
@@ -153,16 +145,21 @@ const SearchContainer = styled.div`
             height: 36px;
             font-size: 0.95rem;
             border-radius: 20px;
-            border: 1px solid #ccd0d5; // Facebook gray border
-            background: #f0f2f5;
+            border: 1px solid ${props => props.theme.colors.border};
+            background: ${props => props.theme.colors.backgroundSecondary};
+            color: ${props => props.theme.colors.text};
             transition: all 0.2s ease;
             width: 100%;
             
             &:focus {
                 background: ${props => props.theme.colors.background};
                 border-color: ${props => props.theme.colors.primary};
-                box-shadow: 0 0 0 2px rgba(0, 170, 0, 0.1);
+                box-shadow: 0 0 0 2px ${props => `color-mix(in srgb, ${props.theme.colors.primary}, transparent 90%)`};
                 outline: none;
+            }
+
+            &::placeholder {
+                color: ${props => props.theme.colors.mutedForeground};
             }
         }
     }
@@ -170,7 +167,7 @@ const SearchContainer = styled.div`
     .stats {
         margin-left: auto;
         font-size: 0.9rem;
-        color: #65676b;
+        color: ${props => props.theme.colors.mutedForeground};
         font-weight: 500;
     }
 `;
@@ -184,7 +181,7 @@ const StyledTableContainer = styled.div`
     }
     
     th {
-        background: ${props => props.theme.colors.backgroundSecondary}; // Header bg
+        background: ${props => props.theme.colors.backgroundSecondary};
         color: ${props => props.theme.colors.textSecondary};
         font-weight: 600;
         font-size: 0.8rem;
@@ -218,21 +215,21 @@ const IPBadge = styled.span<{ $status: 'allowed' | 'blocked' }>`
     display: inline-flex;
     align-items: center;
     padding: 4px 10px;
-    border-radius: 4px; // Square tag style
+    border-radius: 4px;
     font-weight: 600;
     font-size: 0.8rem;
     line-height: 1;
     
     ${props => props.$status === 'allowed' ? css`
-        background: #e7f3ff;
-        color: #1877f2; // FB Blue-ish
+        background: ${props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : '#e7f3ff'};
+        color: ${props.theme.mode === 'dark' ? '#60a5fa' : '#1877f2'};
     ` : css`
-        background: #fde8e8;
-        color: #c00;
+        background: ${props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fde8e8'};
+        color: ${props.theme.mode === 'dark' ? '#fca5a5' : '#c00'};
     `}
 `;
 
-const InfoBox = styled(Card)` // Reusing Card style
+const InfoBox = styled(Card)`
     padding: ${props => props.theme.spacing.lg};
     display: flex;
     gap: ${props => props.theme.spacing.md};
@@ -296,7 +293,7 @@ const EmptyState = styled.div`
     svg {
         width: 60px;
         height: 60px;
-        color: ${props => props.theme.colors.textSecondary};
+        color: ${props => props.theme.colors.mutedForeground};
         margin-bottom: ${props => props.theme.spacing.md};
     }
     
@@ -319,18 +316,19 @@ const EmptyState = styled.div`
 const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   inset: 0;
-  background: rgba(255, 255, 255, 0.8); // Light overlay like Meta
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(255, 255, 255, 0.8)'};
   display: ${props => props.$isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   z-index: 10000;
+  backdrop-filter: blur(4px);
   animation: ${fadeIn} 0.2s ease-out;
 `;
 
 const ModalContent = styled.div`
-  background: ${props => props.theme.colors.background};
+  background: ${props => props.theme.colors.card};
   border-radius: 8px;
-  box-shadow: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1); // Meta shadow
+  box-shadow: ${props => props.theme.shadows.md};
   padding: 0;
   max-width: 500px;
   width: 100%;
@@ -338,7 +336,7 @@ const ModalContent = styled.div`
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  border: 1px solid #ddd;
+  border: 1px solid ${props => props.theme.colors.border};
 `;
 
 const ModalHeader = styled.div`
@@ -346,8 +344,8 @@ const ModalHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #dfe3e8;
-  background: ${props => props.theme.colors.background};
+  border-bottom: 1px solid ${props => props.theme.colors.border};
+  background: ${props => props.theme.colors.card};
 `;
 
 const ModalTitle = styled.h3`
@@ -361,7 +359,7 @@ const ModalTitle = styled.h3`
 `;
 
 const ModalCloseButton = styled.button`
-    background: ${props => props.theme.colors.backgroundSecondary}; // Light circle-ish
+    background: ${props => props.theme.colors.backgroundSecondary};
     border: none;
     cursor: pointer;
     color: ${props => props.theme.colors.textSecondary};
@@ -375,6 +373,7 @@ const ModalCloseButton = styled.button`
     
     &:hover {
       background: ${props => props.theme.colors.border};
+      color: ${props => props.theme.colors.textDark};
     }
 `;
 
@@ -383,8 +382,8 @@ const ModalFooter = styled.div`
     justify-content: flex-end;
     gap: 12px;
     padding: 16px 20px;
-    border-top: 1px solid #dfe3e8;
-    background: ${props => props.theme.colors.background};
+    border-top: 1px solid ${props => props.theme.colors.border};
+    background: ${props => props.theme.colors.card};
 `;
 
 const ModalBody = styled.div`
@@ -392,7 +391,7 @@ const ModalBody = styled.div`
     display: flex;
     flex-direction: column;
     gap: 16px;
-    background: ${props => props.theme.colors.backgroundSecondary}; // Slight contrast for form body
+    background: ${props => props.theme.colors.backgroundSecondary};
 `;
 
 interface IPRestriction {
@@ -407,6 +406,7 @@ interface IPRestriction {
 export default function IPManagementPage() {
     const { user, isLoading: authLoading } = useAuth();
     const router = useRouter();
+    const theme = useTheme();
 
     const [ipRestrictions, setIpRestrictions] = useState<IPRestriction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -577,8 +577,8 @@ export default function IPManagementPage() {
                     </Button>
 
                     <Button
-                        size="default" // Standard size
-                        style={{ background: theme.colors.primary, color: 'white', fontWeight: 600, borderRadius: '6px' }}
+                        size="default"
+                        style={{ background: theme.colors.primary, color: theme.colors.primaryForeground || 'white', fontWeight: 600, borderRadius: '6px' }}
                         onClick={() => {
                             setIpForm({ ip_address: '', description: '', status: 'allowed' });
                             setIsAddDialogOpen(true);
@@ -625,7 +625,8 @@ export default function IPManagementPage() {
                                             style={ipForm.status === 'allowed' ? {
                                                 background: theme.colors.primary,
                                                 fontSize: '1rem',
-                                                padding: '24px'
+                                                padding: '24px',
+                                                color: 'white'
                                             } : { padding: '24px' }}
                                             onClick={() => setIpForm({ ...ipForm, status: 'allowed' })}
                                         >
@@ -837,7 +838,8 @@ export default function IPManagementPage() {
                                     style={ipForm.status === 'allowed' ? {
                                         background: theme.colors.primary,
                                         fontSize: '1rem',
-                                        padding: '24px'
+                                        padding: '24px',
+                                        color: 'white'
                                     } : { padding: '24px' }}
                                     onClick={() => setIpForm({ ...ipForm, status: 'allowed' })}
                                 >
@@ -884,8 +886,8 @@ export default function IPManagementPage() {
             {/* Delete Modal */}
             <ModalOverlay $isOpen={isDeleteDialogOpen} onClick={() => setIsDeleteDialogOpen(false)}>
                 <ModalContent style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
-                    <ModalHeader className="bg-red-50 border-red-100">
-                        <ModalTitle className="text-red-700">
+                    <ModalHeader style={{ background: theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fef2f2', borderColor: theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.4)' : '#fee2e2' }}>
+                        <ModalTitle style={{ color: theme.colors.error || '#b91c1c' }}>
                             <ShieldAlert className="mr-2" size={20} />
                             Remove Rule?
                         </ModalTitle>
@@ -895,12 +897,12 @@ export default function IPManagementPage() {
                     </ModalHeader>
                     <ModalBody>
                         <p style={{ color: theme.colors.textSecondary, fontSize: '1rem', lineHeight: 1.6 }}>
-                            You are about to remove the access rule for <span className="font-mono font-bold text-foreground bg-slate-100 px-2 py-1 rounded">{selectedIP?.ip_address}</span>.
+                            You are about to remove the access rule for <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: theme.colors.textDark, background: theme.colors.background, padding: '2px 6px', borderRadius: '4px' }}>{selectedIP?.ip_address}</span>.
                             <br /><br />
                             This will revert traffic from this address to default system rules.
                         </p>
                     </ModalBody>
-                    <ModalFooter className="bg-red-50 border-red-100">
+                    <ModalFooter style={{ background: theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#fef2f2', borderColor: theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.4)' : '#fee2e2' }}>
                         <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)} className="hover:bg-red-100 hover:text-red-700">No, Keep it</Button>
                         <Button variant="destructive" onClick={handleDeleteIP} disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
