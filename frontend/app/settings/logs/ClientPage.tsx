@@ -36,6 +36,8 @@ const PageContainer = styled.div`
   max-width: 1600px;
   margin: 0 auto;
   animation: ${fadeIn} 0.4s ease-out;
+  min-height: 100vh;
+  background-color: ${props => props.theme.colors.background};
 `;
 
 const HeaderContainer = styled.div`

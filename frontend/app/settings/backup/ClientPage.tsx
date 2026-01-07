@@ -111,6 +111,8 @@ const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
+  min-height: 100vh;
+  background-color: ${props => props.theme.colors.background};
 `;
 
 const Header = styled.div`

@@ -9,24 +9,27 @@ import { Shield, Key, User, Search, Save, AlertCircle, CheckCircle, Eye, EyeOff 
 import { Button } from '@/components/ui/button';
 import styled from 'styled-components';
 
+
 const Container = styled.div`
   max-width: 600px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+  background-color: ${props => props.theme.colors.background};
 `;
 
 const Card = styled.div`
-  background: ${props => props.theme.colors.background};
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  border: 1px solid #dddfe2;
+  background: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  box-shadow: ${props => props.theme.shadows.sm};
+  border: 1px solid ${props => props.theme.colors.border};
   overflow: hidden;
 `;
 
 const CardHeader = styled.div`
   padding: 1.5rem;
-  border-bottom: 1px solid #dddfe2;
-  background-color: #f0f2f5;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
+  background-color: ${props => props.theme.colors.backgroundSecondary};
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -35,7 +38,7 @@ const CardHeader = styled.div`
 const CardTitle = styled.h1`
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1c1e21;
+  color: ${props => props.theme.colors.text};
   margin: 0;
 `;
 
@@ -51,7 +54,7 @@ const Label = styled.label`
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #4b4f56;
+  color: ${props => props.theme.colors.textSecondary};
   margin-bottom: 0.5rem;
 `;
 
@@ -64,27 +67,28 @@ const InputWrapper = styled.div`
 const InputIcon = styled.div`
   position: absolute;
   left: 12px;
-  color: #8d949e;
+  color: ${props => props.theme.colors.textSecondary};
 `;
 
 const Input = styled.input`
   width: 100%;
   padding: 10px 48px 10px 40px;
-  border: 1px solid #dddfe2;
-  border-radius: 6px;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
   font-size: 1rem;
-  background-color: #f5f6f7;
+  background-color: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text};
   transition: all 0.2s;
 
   &:focus {
     outline: none;
-    border-color: #1877f2;
-    background-color: white;
-    box-shadow: 0 0 0 2px #e7f3ff;
+    border-color: ${props => props.theme.colors.primary};
+    background-color: ${props => props.theme.colors.background};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}20;
   }
 
   &::placeholder {
-    color: #8d949e;
+    color: ${props => props.theme.colors.textSecondary};
   }
 `;
 
@@ -93,7 +97,7 @@ const TogglePasswordButton = styled.button`
   right: 12px;
   background: none;
   border: none;
-  color: #8d949e;
+  color: ${props => props.theme.colors.textSecondary};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -101,28 +105,38 @@ const TogglePasswordButton = styled.button`
   border-radius: 4px;
 
   &:hover {
-    color: #1c1e21;
-    background-color: rgba(0, 0, 0, 0.05);
+    color: ${props => props.theme.colors.text};
+    background-color: ${props => props.theme.colors.backgroundSecondary};
   }
 `;
 
 const HelperText = styled.p`
   font-size: 0.75rem;
-  color: #65676b;
+  color: ${props => props.theme.colors.textSecondary};
   margin-top: 0.5rem;
 `;
 
 const StatusMessage = styled.div<{ type: 'success' | 'error' }>`
   padding: 1rem;
-  border-radius: 6px;
+  border-radius: ${props => props.theme.borderRadius.md};
   margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-size: 0.875rem;
-  background-color: ${props => props.type === 'success' ? '#e7f3ff' : '#ffebe8'};
-  color: ${props => props.type === 'success' ? '#1877f2' : '#f02849'};
-  border: 1px solid ${props => props.type === 'success' ? '#1877f2' : '#f02849'};
+  background-color: ${props => props.type === 'success'
+    ? (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#e7f3ff')
+    : (props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#ffebe8')};
+  color: ${props => props.type === 'success'
+    ? (props.theme.mode === 'dark' ? '#86efac' : '#1877f2')
+    : (props.theme.mode === 'dark' ? '#fca5a5' : '#f02849')};
+  border: 1px solid ${props => props.type === 'success'
+    ? (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : '#1877f2')
+    : (props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : '#f02849')};
+`;
+
+const ShieldIcon = styled(Shield)`
+  color: ${props => props.theme.colors.primary};
 `;
 
 export default function ResetPasswordPage() {
@@ -186,7 +200,7 @@ export default function ResetPasswordPage() {
       <Container>
         <Card>
           <CardHeader>
-            <Shield size={24} color="#1877f2" />
+            <ShieldIcon size={24} />
             <CardTitle>Administrative Password Reset</CardTitle>
           </CardHeader>
           <CardContent>
@@ -266,11 +280,10 @@ export default function ResetPasswordPage() {
               <Button
                 type="submit"
                 disabled={isLoading || !formData.usernameOrEmail || !formData.newPassword || !formData.confirmPassword}
+                variant="default"
                 style={{
                   width: '100%',
                   marginTop: '1rem',
-                  backgroundColor: '#1877f2',
-                  color: 'white',
                   height: '44px',
                   fontSize: '1rem',
                   fontWeight: '600'

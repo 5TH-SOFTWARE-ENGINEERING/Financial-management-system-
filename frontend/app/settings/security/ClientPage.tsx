@@ -106,6 +106,8 @@ const Container = styled.div`
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem;
+  min-height: 100vh;
+  background-color: ${props => props.theme.colors.background};
 `;
 
 const Header = styled.div`
@@ -370,8 +372,8 @@ const VerificationHistoryStatus = styled.span<{ $success: boolean }>`
 `;
 
 const Message = styled.div<{ type: 'error' | 'success' }>`
-  background-color: ${props => props.type === 'error' ? '#fee2e2' : '#dcfce7'};
-  color: ${props => props.type === 'error' ? '#b91c1c' : '#166534'};
+  background-color: ${props => props.type === 'error' ? (props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2') : (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#dcfce7')};
+  color: ${props => props.type === 'error' ? (props.theme.mode === 'dark' ? '#fca5a5' : '#b91c1c') : (props.theme.mode === 'dark' ? '#86efac' : '#166534')};
   padding: 0.75rem;
   border-radius: 0.25rem;
   margin-bottom: 1.25rem;
@@ -379,6 +381,7 @@ const Message = styled.div<{ type: 'error' | 'success' }>`
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
+  border: 1px solid ${props => props.type === 'error' ? (props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : 'transparent') : (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : 'transparent')};
 `;
 
 const ModalOverlay = styled.div`
@@ -467,8 +470,56 @@ const StatusBadge = styled.span<{ $enabled: boolean }>`
   border-radius: 0.375rem;
   font-size: 0.75rem;
   font-weight: 500;
-  background-color: ${props => props.$enabled ? '#dcfce7' : '#fee2e2'};
-  color: ${props => props.$enabled ? '#166534' : '#b91c1c'};
+  background-color: ${props => props.$enabled ? (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.2)' : '#dcfce7') : (props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.2)' : '#fee2e2')};
+  color: ${props => props.$enabled ? (props.theme.mode === 'dark' ? '#86efac' : '#166534') : (props.theme.mode === 'dark' ? '#fca5a5' : '#b91c1c')};
+  border: 1px solid ${props => props.$enabled ? (props.theme.mode === 'dark' ? 'rgba(22, 163, 74, 0.5)' : 'transparent') : (props.theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.5)' : 'transparent')};
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  background-color: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text}; // Ensure text is visible in dark mode
+  transition: border-color 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+  }
+`;
+
+const IpRestrictionContainer = styled.div`
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: ${props => props.theme.colors.backgroundSecondary};
+  border-radius: 0.375rem;
+  border: 1px solid ${props => props.theme.colors.border};
+`;
+
+const IpItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 0.25rem;
+`;
+
+const IpText = styled.span`
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: ${props => props.theme.colors.text};
+`;
+
+const EmptyIpMessage = styled.div`
+  padding: 1rem;
+  text-align: center;
+  color: ${props => props.theme.colors.textSecondary};
+  font-size: 0.875rem;
 `;
 
 interface VerificationHistoryEntry {
@@ -1143,26 +1194,18 @@ export default function SecuritySettingsPage() {
 
             <FormGroup>
               <Label htmlFor="requirePasswordChange">Password Expiry</Label>
-              <select
+              <StyledSelect
                 id="requirePasswordChange"
                 name="requirePasswordChange"
                 value={securitySettings.requirePasswordChange}
                 onChange={handleSecuritySettingChange}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem 0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '0.25rem',
-                  fontSize: '0.875rem',
-                  backgroundColor: 'white'
-                }}
               >
                 <option value={30}>Every 30 days</option>
                 <option value={60}>Every 60 days</option>
                 <option value={90}>Every 90 days</option>
                 <option value={180}>Every 180 days</option>
                 <option value={0}>Never</option>
-              </select>
+              </StyledSelect>
               <HelperText>How often you&apos;ll be required to change your password</HelperText>
             </FormGroup>
 
@@ -1230,7 +1273,7 @@ export default function SecuritySettingsPage() {
                   </SwitchContainer>
 
                   {ipRestrictionEnabled && (
-                    <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.375rem', border: '1px solid #e5e7eb' }}>
+                    <IpRestrictionContainer>
                       <Label>Allowed IP Addresses</Label>
                       <HelperText style={{ marginBottom: '0.75rem' }}>
                         Only these IP addresses will be allowed to log in. You can use CIDR notation (e.g., 192.168.1.0/24).
@@ -1262,27 +1305,16 @@ export default function SecuritySettingsPage() {
                       )}
 
                       {allowedIPs.length === 0 ? (
-                        <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
+                        <EmptyIpMessage>
                           No IP addresses added yet. Add at least one IP address to enable IP restriction.
-                        </div>
+                        </EmptyIpMessage>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                           {allowedIPs.map((ip, index) => (
-                            <div
-                              key={index}
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                padding: '0.75rem',
-                                backgroundColor: 'white',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '0.25rem'
-                              }}
-                            >
-                              <span style={{ fontFamily: 'monospace', fontSize: '0.875rem', color: '#111827' }}>
+                            <IpItem key={index}>
+                              <IpText>
                                 {ip}
-                              </span>
+                              </IpText>
                               <Button
                                 variant="default"
                                 onClick={() => handleRemoveIP(ip)}
@@ -1296,11 +1328,11 @@ export default function SecuritySettingsPage() {
                               >
                                 Remove
                               </Button>
-                            </div>
+                            </IpItem>
                           ))}
                         </div>
                       )}
-                    </div>
+                    </IpRestrictionContainer>
                   )}
                 </FormGroup>
               </>
