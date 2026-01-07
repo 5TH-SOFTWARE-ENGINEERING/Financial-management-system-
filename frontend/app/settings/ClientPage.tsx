@@ -127,7 +127,7 @@ const PageWrapper = styled.div`
   background-color: ${props => props.theme.colors.background};
   color: ${props => props.theme.colors.text};
   min-height: 100vh;
-  width: 100%;
+  width: 102%;
   padding: 40px;
   box-sizing: border-box;
 `;
