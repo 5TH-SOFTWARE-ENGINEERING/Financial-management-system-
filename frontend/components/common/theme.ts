@@ -14,6 +14,8 @@ export interface Theme {
     card: string;
     muted: string;
     mutedForeground: string;
+    warning: string;
+    primaryForeground: string;
   };
   borderRadius: {
     sm: string;
@@ -105,6 +107,8 @@ export const lightTheme: Theme = {
     card: "var(--card, #fff)",
     muted: "var(--muted, #f3f4f6)",
     mutedForeground: "var(--muted-foreground, #6b7280)",
+    warning: "var(--warning, #f59e0b)",
+    primaryForeground: "var(--primary-foreground, #fff)",
   },
   shadows: {
     sm: "var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1))",
@@ -127,6 +131,8 @@ export const darkTheme: Theme = {
     card: "var(--card, #1e293b)",
     muted: "var(--muted, #1e293b)",
     mutedForeground: "var(--muted-foreground, #94a3b8)",
+    warning: "var(--warning, #fbbf24)",
+    primaryForeground: "var(--primary-foreground, #fff)",
   },
   shadows: {
     sm: "var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.3))",

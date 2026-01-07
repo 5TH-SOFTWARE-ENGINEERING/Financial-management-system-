@@ -7,30 +7,12 @@ import styled from 'styled-components';
 import { useUserStore } from '@/store/userStore';
 import Link from 'next/link';
 import Layout from '@/components/layout';
-import { theme } from '@/components/common/theme';
-
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const WARNING_COLOR = '#f59e0b';
-const WARNING_BG = '#fef3c7';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
-
-const CardShadow = `
-  0 2px 4px -1px rgba(0, 0, 0, 0.06),
-  0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
-`;
-const CardShadowHover = `
-  0 8px 12px -2px rgba(0, 0, 0, 0.08),
-  0 4px 6px -2px rgba(0, 0, 0, 0.04),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.03)
-`;
-
 const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
   min-height: calc(100vh - 100px);
+  background: ${props => props.theme.colors.background};
 `;
 
 const ContentContainer = styled.div`
@@ -38,7 +20,7 @@ const ContentContainer = styled.div`
   width: 100%;
   max-width: 980px;
   margin: 0 auto;
-  padding: ${theme.spacing.xl} ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.xl} ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,30 +39,30 @@ const IconContainer = styled.div`
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: ${WARNING_BG};
-  margin-bottom: ${theme.spacing.lg};
+  background: ${props => `color-mix(in srgb, ${props.theme.colors.warning}, transparent 90%)`};
+  margin-bottom: ${props => props.theme.spacing.lg};
   
   svg {
     width: 40px;
     height: 40px;
-    color: ${WARNING_COLOR};
+    color: ${props => props.theme.colors.warning};
   }
 `;
 
 const Title = styled.h1`
   font-size: clamp(28px, 4vw, 42px);
-  font-weight: ${theme.typography.fontWeights.bold};
-  color: ${TEXT_COLOR_DARK};
-  margin: 0 0 ${theme.spacing.md};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  color: ${props => props.theme.colors.text};
+  margin: 0 0 ${props => props.theme.spacing.md};
 `;
 
 const Subtitle = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: ${theme.spacing.sm};
-  color: ${TEXT_COLOR_MUTED};
-  margin-bottom: ${theme.spacing.xl};
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.colors.mutedForeground};
+  margin-bottom: ${props => props.theme.spacing.xl};
   
   svg {
     width: 20px;
@@ -89,23 +71,23 @@ const Subtitle = styled.div`
   }
   
   p {
-    font-size: ${theme.typography.fontSizes.lg};
+    font-size: ${props => props.theme.typography.fontSizes.lg};
     margin: 0;
   }
 `;
 
 const InfoCard = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  box-shadow: ${CardShadow};
-  padding: ${theme.spacing.xl};
-  margin-bottom: ${theme.spacing.xl};
+  background: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
+  box-shadow: ${props => props.theme.shadows.md};
+  padding: ${props => props.theme.spacing.xl};
+  margin-bottom: ${props => props.theme.spacing.xl};
   text-align: left;
 `;
 
 const InfoSection = styled.div`
-  margin-bottom: ${theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
   
   &:last-child {
     margin-bottom: 0;
@@ -113,54 +95,54 @@ const InfoSection = styled.div`
 `;
 
 const SectionTitle = styled.h2`
-  font-size: ${theme.typography.fontSizes.md};
-  font-weight: ${theme.typography.fontWeights.bold};
-  color: ${TEXT_COLOR_DARK};
-  margin: 0 0 ${theme.spacing.sm};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  color: ${props => props.theme.colors.text};
+  margin: 0 0 ${props => props.theme.spacing.sm};
 `;
 
 const SectionText = styled.p`
-  font-size: ${theme.typography.fontSizes.md};
-  color: ${TEXT_COLOR_MUTED};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  color: ${props => props.theme.colors.mutedForeground};
   line-height: 1.6;
   margin: 0;
 `;
 
 const Divider = styled.div`
   height: 1px;
-  background: ${theme.colors.border};
-  margin: ${theme.spacing.lg} 0;
+  background: ${props => props.theme.colors.border};
+  margin: ${props => props.theme.spacing.lg} 0;
 `;
 
 const UserInfo = styled.div`
-  margin-top: ${theme.spacing.md};
+  margin-top: ${props => props.theme.spacing.md};
 `;
 
 const UserLabel = styled.p`
-  font-size: ${theme.typography.fontSizes.sm};
-  color: ${TEXT_COLOR_MUTED};
-  margin: 0 0 ${theme.spacing.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  color: ${props => props.theme.colors.mutedForeground};
+  margin: 0 0 ${props => props.theme.spacing.sm};
 `;
 
 const UserDetails = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const UserName = styled.span`
-  font-size: ${theme.typography.fontSizes.md};
-  font-weight: ${theme.typography.fontWeights.medium};
-  color: ${TEXT_COLOR_DARK};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  color: ${props => props.theme.colors.text};
 `;
 
 const RoleBadge = styled.span`
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   border-radius: 9999px;
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
+  background: ${props => `color-mix(in srgb, ${props.theme.colors.primary}, transparent 90%)`};
+  color: ${props => props.theme.colors.primary};
   text-transform: capitalize;
 `;
 
@@ -171,10 +153,10 @@ const List = styled.ul`
   padding: 0;
   
   li {
-    font-size: ${theme.typography.fontSizes.sm};
-    color: ${TEXT_COLOR_MUTED};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
+    color: ${props => props.theme.colors.mutedForeground};
     line-height: 1.8;
-    margin-bottom: ${theme.spacing.xs};
+    margin-bottom: ${props => props.theme.spacing.xs};
     
     &:last-child {
       margin-bottom: 0;
@@ -185,7 +167,7 @@ const List = styled.ul`
 const ButtonGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   justify-content: center;
   align-items: center;
   
@@ -198,38 +180,38 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'outline' | 'seconda
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: ${theme.spacing.sm};
-  padding: ${theme.spacing.md} ${theme.spacing.xl};
-  font-size: ${theme.typography.fontSizes.md};
-  font-weight: ${theme.typography.fontWeights.medium};
-  border-radius: ${theme.borderRadius.md};
+  gap: ${props => props.theme.spacing.sm};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.xl};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
+  border-radius: ${props => props.theme.borderRadius.md};
   border: ${props => {
-    if (props.$variant === 'outline') return `1px solid ${theme.colors.border}`;
-    if (props.$variant === 'secondary') return `1px solid ${theme.colors.border}`;
+    if (props.$variant === 'outline') return `1px solid ${props.theme.colors.border}`;
+    if (props.$variant === 'secondary') return `1px solid ${props.theme.colors.border}`;
     return 'none';
   }};
   background: ${props => {
-    if (props.$variant === 'primary') return PRIMARY_COLOR;
-    if (props.$variant === 'secondary') return theme.colors.backgroundSecondary;
+    if (props.$variant === 'primary') return props.theme.colors.primary;
+    if (props.$variant === 'secondary') return props.theme.colors.backgroundSecondary;
     return 'transparent';
   }};
   color: ${props => {
-    if (props.$variant === 'primary') return '#ffffff';
-    return TEXT_COLOR_DARK;
+    if (props.$variant === 'primary') return props.theme.colors.primaryForeground;
+    return props.theme.colors.text;
   }};
   cursor: pointer;
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
   text-decoration: none;
   min-width: 160px;
   
   &:hover {
     transform: translateY(-2px);
-    box-shadow: ${props => props.$variant === 'primary' ? `0 4px 12px rgba(0, 170, 0, 0.3)` : CardShadowHover};
+    box-shadow: ${props => props.theme.shadows.md};
     background: ${props => {
-      if (props.$variant === 'primary') return '#008800';
-      if (props.$variant === 'secondary') return theme.colors.backgroundSecondary;
-      return theme.colors.backgroundSecondary;
-    }};
+    if (props.$variant === 'primary') return `color-mix(in srgb, ${props.theme.colors.primary}, black 10%)`;
+    if (props.$variant === 'secondary') return props.theme.colors.backgroundSecondary;
+    return props.theme.colors.backgroundSecondary;
+  }};
   }
   
   &:active {
@@ -244,9 +226,9 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'outline' | 'seconda
 `;
 
 const FooterText = styled.div`
-  margin-top: ${theme.spacing.xl};
-  font-size: ${theme.typography.fontSizes.sm};
-  color: ${TEXT_COLOR_MUTED};
+  margin-top: ${props => props.theme.spacing.xl};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  color: ${props => props.theme.colors.mutedForeground};
   
   p {
     margin: 0;
@@ -288,7 +270,7 @@ export default function UnauthorizedPage() {
               <InfoSection>
                 <SectionTitle>What happened?</SectionTitle>
                 <SectionText>
-                  You tried to access a page or resource that requires specific permissions. 
+                  You tried to access a page or resource that requires specific permissions.
                   Your current role may not have the necessary access rights.
                 </SectionText>
               </InfoSection>
@@ -339,7 +321,7 @@ export default function UnauthorizedPage() {
             {isAuthenticated && (
               <FooterText>
                 <p>
-                  If you believe this is an error, please contact your system administrator 
+                  If you believe this is an error, please contact your system administrator
                   or submit a support request.
                 </p>
               </FooterText>
