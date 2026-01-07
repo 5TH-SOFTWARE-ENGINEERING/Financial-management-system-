@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import {
   Brain, Play, CheckCircle, XCircle, AlertCircle, Loader2,
   TrendingUp, TrendingDown, Package, Info, RefreshCw, Clock,
@@ -8,20 +8,19 @@ import {
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
-import { theme } from '@/components/common/theme';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
 const PRIMARY_LIGHT = (props: any) => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : '#e8f5e9';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
 const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
-const CardShadow = `
+const CardShadow = (props: any) => `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),
   0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px rgba(0, 0, 0, 0.02)
+  inset 0 0 0 1px ${props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'}
 `;
 
 const PageContainer = styled.div`
@@ -37,43 +36,43 @@ const ContentContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${theme.spacing.sm} ${theme.spacing.sm} ${theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm};
 `;
 
 const HeaderContainer = styled.div`
-  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #008800 100%);
+  background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, color-mix(in srgb, ${PRIMARY_COLOR}, #000 20%) 100%);
   color: #ffffff;
-  padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
-  border-radius: ${theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.md};
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   
   h1 {
     font-size: clamp(28px, 3.5vw, 42px);
-    font-weight: ${theme.typography.fontWeights.bold};
-    margin: 0 0 ${theme.spacing.sm} 0;
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
+    margin: 0 0 ${props => props.theme.spacing.sm} 0;
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.md};
+    gap: ${props => props.theme.spacing.md};
   }
   
   p {
     margin: 0;
     opacity: 0.9;
-    font-size: ${theme.typography.fontSizes.md};
+    font-size: ${props => props.theme.typography.fontSizes.md};
   }
 `;
 
 const TrainingControls = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: ${CardShadow};
-  padding: ${theme.spacing.xl};
-  margin-bottom: ${theme.spacing.xl};
+  padding: ${props => props.theme.spacing.xl};
+  margin-bottom: ${props => props.theme.spacing.xl};
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   align-items: end;
 `;
 
@@ -83,8 +82,8 @@ const FormGroup = styled.div`
   gap: 8px;
   
   label {
-    font-size: ${theme.typography.fontSizes.sm};
-    font-weight: ${theme.typography.fontWeights.medium};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
+    font-weight: ${props => props.theme.typography.fontWeights.medium};
     color: ${TEXT_COLOR_DARK};
   }
 `;
@@ -92,7 +91,7 @@ const FormGroup = styled.div`
 const StyledInput = styled.input`
   width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${props => props.theme.colors.border};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -103,8 +102,8 @@ const StyledInput = styled.input`
   box-sizing: border-box;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: ${PRIMARY_COLOR};
+    box-shadow: 0 0 0 3px color-mix(in srgb, ${PRIMARY_COLOR}, transparent 90%);
   }
 
   &[type="date"] {
@@ -115,17 +114,17 @@ const StyledInput = styled.input`
 const ModelsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.xl};
+  gap: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.xl};
 `;
 
 const ModelCard = styled.div<{ $status?: 'trained' | 'training' | 'error' | 'pending' }>`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: ${CardShadow};
-  padding: ${theme.spacing.lg};
-  transition: all ${theme.transitions.default};
+  padding: ${props => props.theme.spacing.lg};
+  transition: all ${props => props.theme.transitions.default};
   position: relative;
   
   border-left: 4px solid ${props => {
@@ -133,13 +132,14 @@ const ModelCard = styled.div<{ $status?: 'trained' | 'training' | 'error' | 'pen
       case 'trained': return '#10b981';
       case 'training': return '#3b82f6';
       case 'error': return '#ef4444';
-      default: return '#9ca3af';
+      default: return props.theme.colors.mutedForeground;
     }
   }};
   
   &:hover {
     box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
+    border-color: ${PRIMARY_COLOR};
   }
 `;
 
@@ -147,25 +147,33 @@ const ModelHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   
   h3 {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-size: ${props => props.theme.typography.fontSizes.lg};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
     color: ${TEXT_COLOR_DARK};
     margin: 0;
     display: flex;
     align-items: center;
-    gap: ${theme.spacing.sm};
+    gap: ${props => props.theme.spacing.sm};
   }
 `;
 
 const StatusBadge = styled.span<{ $status?: 'trained' | 'training' | 'error' | 'pending' }>`
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  border-radius: ${theme.borderRadius.sm};
-  font-size: ${theme.typography.fontSizes.xs};
-  font-weight: ${theme.typography.fontWeights.medium};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   background: ${props => {
+    if (props.theme.mode === 'dark') {
+      switch (props.$status) {
+        case 'trained': return 'rgba(16, 185, 129, 0.1)';
+        case 'training': return 'rgba(59, 130, 246, 0.1)';
+        case 'error': return 'rgba(239, 68, 68, 0.1)';
+        default: return 'rgba(148, 163, 184, 0.1)';
+      }
+    }
     switch (props.$status) {
       case 'trained': return '#d1fae5';
       case 'training': return '#dbeafe';
@@ -175,166 +183,177 @@ const StatusBadge = styled.span<{ $status?: 'trained' | 'training' | 'error' | '
   }};
   color: ${props => {
     switch (props.$status) {
-      case 'trained': return '#065f46';
-      case 'training': return '#1e40af';
-      case 'error': return '#991b1b';
-      default: return '#6b7280';
+      case 'trained': return props.theme.mode === 'dark' ? '#34d399' : '#065f46';
+      case 'training': return props.theme.mode === 'dark' ? '#60a5fa' : '#1e40af';
+      case 'error': return props.theme.mode === 'dark' ? '#f87171' : '#991b1b';
+      default: return props.theme.mode === 'dark' ? '#94a3b8' : '#6b7280';
     }
   }};
   display: flex;
   align-items: center;
   gap: 6px;
   text-transform: capitalize;
+  border: 1px solid ${props => {
+    if (props.theme.mode === 'dark') {
+      switch (props.$status) {
+        case 'trained': return 'rgba(16, 185, 129, 0.2)';
+        case 'training': return 'rgba(59, 130, 246, 0.2)';
+        case 'error': return 'rgba(239, 68, 68, 0.2)';
+        default: return 'rgba(148, 163, 184, 0.2)';
+      }
+    }
+    return 'transparent';
+  }};
 `;
 
 const ModelDescription = styled.p`
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_MUTED};
-  margin: 0 0 ${theme.spacing.md} 0;
+  margin: 0 0 ${props => props.theme.spacing.md} 0;
   line-height: 1.5;
 `;
 
 const ModelMetrics = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: ${theme.spacing.sm};
-  padding: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.sm};
+  padding: ${props => props.theme.spacing.md};
   background: ${PRIMARY_LIGHT};
-  border-radius: ${theme.borderRadius.sm};
-  margin-bottom: ${theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const MetricItem = styled.div`
   text-align: center;
   
   .label {
-    font-size: ${theme.typography.fontSizes.xs};
+    font-size: ${props => props.theme.typography.fontSizes.xs};
     color: ${TEXT_COLOR_MUTED};
-    margin-bottom: ${theme.spacing.xs};
+    margin-bottom: ${props => props.theme.spacing.xs};
   }
   
   .value {
-    font-size: ${theme.typography.fontSizes.md};
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-size: ${props => props.theme.typography.fontSizes.md};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
     color: ${TEXT_COLOR_DARK};
   }
 `;
 
 const ModelActions = styled.div`
   display: flex;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   justify-content: flex-end;
-  padding-top: ${theme.spacing.md};
-  border-top: 1px solid ${theme.colors.border};
+  padding-top: ${props => props.theme.spacing.md};
+  border-top: 1px solid ${props => props.theme.colors.border};
 `;
 
 const InfoBox = styled.div`
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.xl};
+  background: ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff'};
+  border: 1px solid ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : '#bfdbfe'};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.xl};
   
   display: flex;
-  gap: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
   align-items: flex-start;
   
   p {
     margin: 0;
-    color: #1e40af;
-    font-size: ${theme.typography.fontSizes.sm};
+    color: ${props => props.theme.mode === 'dark' ? '#93c5fd' : '#1e40af'};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     line-height: 1.6;
   }
 `;
 
 const SectionTitle = styled.h2`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
-  margin: 0 0 ${theme.spacing.lg} 0;
+  margin: 0 0 ${props => props.theme.spacing.lg} 0;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const StatusCard = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: ${CardShadow};
-  padding: ${theme.spacing.lg};
-  margin-bottom: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
 const StatusGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: ${theme.spacing.md};
-  margin-top: ${theme.spacing.md};
+  gap: ${props => props.theme.spacing.md};
+  margin-top: ${props => props.theme.spacing.md};
 `;
 
 const StatusItem = styled.div`
-  padding: ${theme.spacing.md};
-  background: ${theme.colors.backgroundSecondary};
-  border-radius: ${theme.borderRadius.sm};
-  border: 1px solid #e5e7eb;
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  border: 1px solid ${props => props.theme.colors.border};
   
   .label {
-    font-size: ${theme.typography.fontSizes.xs};
+    font-size: ${props => props.theme.typography.fontSizes.xs};
     color: ${TEXT_COLOR_MUTED};
-    margin-bottom: ${theme.spacing.xs};
+    margin-bottom: ${props => props.theme.spacing.xs};
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
   
   .value {
-    font-size: ${theme.typography.fontSizes.lg};
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-size: ${props => props.theme.typography.fontSizes.lg};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
     color: ${TEXT_COLOR_DARK};
   }
   
   .subvalue {
-    font-size: ${theme.typography.fontSizes.sm};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
     color: ${TEXT_COLOR_MUTED};
-    margin-top: ${theme.spacing.xs};
+    margin-top: ${props => props.theme.spacing.xs};
   }
 `;
 
 const TrainedModelCard = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
+  background: ${props => props.theme.colors.background};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
   box-shadow: ${CardShadow};
-  padding: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
   
   .model-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: ${theme.spacing.sm};
+    margin-bottom: ${props => props.theme.spacing.sm};
   }
   
   .model-name {
-    font-weight: ${theme.typography.fontWeights.bold};
+    font-weight: ${props => props.theme.typography.fontWeights.bold};
     color: ${TEXT_COLOR_DARK};
   }
   
   .model-metrics {
     display: flex;
-    gap: ${theme.spacing.md};
-    margin-top: ${theme.spacing.sm};
-    padding-top: ${theme.spacing.sm};
-    border-top: 1px solid ${theme.colors.border};
-    font-size: ${theme.typography.fontSizes.sm};
+    gap: ${props => props.theme.spacing.md};
+    margin-top: ${props => props.theme.spacing.sm};
+    padding-top: ${props => props.theme.spacing.sm};
+    border-top: 1px solid ${props => props.theme.colors.border};
+    font-size: ${props => props.theme.typography.fontSizes.sm};
   }
 `;
 
 const ActionButtonGroup = styled.div`
   display: flex;
-  gap: ${theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
   flex-wrap: wrap;
-  margin-top: ${theme.spacing.md};
+  margin-top: ${props => props.theme.spacing.md};
 `;
 
 interface ModelInfo {
@@ -414,6 +433,8 @@ interface ApiError {
 }
 
 const MLTrainingPage: React.FC = () => {
+  const theme = useTheme();
+
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setFullYear(date.getFullYear() - 2);
@@ -816,7 +837,11 @@ const MLTrainingPage: React.FC = () => {
           </HeaderContainer>
 
           <InfoBox>
-            <Info size={20} style={{ color: '#1e40af', marginTop: '2px', flexShrink: 0 }} />
+            <Info size={20} style={{
+              color: theme.mode === 'dark' ? '#93c5fd' : '#1e40af',
+              marginTop: '2px',
+              flexShrink: 0
+            }} />
             <div>
               <p>
                 <strong>Training Period:</strong> Select the date range for historical data used to train models.
@@ -854,7 +879,10 @@ const MLTrainingPage: React.FC = () => {
             >
               {trainingAll ? (
                 <>
-                  <Loader2 size={16} style={{ marginRight: theme.spacing.sm, animation: 'spin 1s linear infinite' }} />
+                  <Loader2 size={16} style={{
+                    marginRight: theme.spacing.sm,
+                    animation: 'spin 1s linear infinite'
+                  }} />
                   Training All Models...
                 </>
               ) : (
@@ -892,7 +920,9 @@ const MLTrainingPage: React.FC = () => {
                 <StatusGrid>
                   <StatusItem>
                     <div className="label">Status</div>
-                    <div className="value" style={{ color: autoLearnStatus.enabled ? PRIMARY_COLOR : '#ef4444' }}>
+                    <div className="value" style={{
+                      color: autoLearnStatus.enabled ? PRIMARY_COLOR({ theme }) : (theme.mode === 'dark' ? '#f87171' : '#ef4444')
+                    }}>
                       {autoLearnStatus.enabled ? 'Enabled' : 'Disabled'}
                     </div>
                   </StatusItem>
@@ -926,7 +956,9 @@ const MLTrainingPage: React.FC = () => {
                       return (
                         <StatusItem key={metric}>
                           <div className="label">{metric.charAt(0).toUpperCase() + metric.slice(1)}</div>
-                          <div className="value" style={{ color: status ? PRIMARY_COLOR : TEXT_COLOR_MUTED }}>
+                          <div className="value" style={{
+                            color: status ? PRIMARY_COLOR({ theme }) : TEXT_COLOR_MUTED({ theme })
+                          }}>
                             {status ? 'Ready' : 'Waiting'}
                           </div>
                           <div className="subvalue">
@@ -941,7 +973,10 @@ const MLTrainingPage: React.FC = () => {
                           >
                             {triggeringAutoLearn === metric ? (
                               <>
-                                <Loader2 size={12} style={{ marginRight: theme.spacing.xs, animation: 'spin 1s linear infinite' }} />
+                                <Loader2 size={12} style={{
+                                  marginRight: theme.spacing.xs,
+                                  animation: 'spin 1s linear infinite'
+                                }} />
                                 Training...
                               </>
                             ) : (
@@ -993,14 +1028,14 @@ const MLTrainingPage: React.FC = () => {
                     </div>
                   )}
                   {model.trained_at && (
-                    <div style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED, marginTop: theme.spacing.xs }}>
+                    <div style={{ fontSize: theme.typography.fontSizes.xs, color: TEXT_COLOR_MUTED({ theme }), marginTop: theme.spacing.xs }}>
                       Trained: {model.trained_at ? new Date(model.trained_at).toLocaleString() : 'N/A'}
                     </div>
                   )}
                 </TrainedModelCard>
               ))
             ) : (
-              <div style={{ padding: theme.spacing.md, textAlign: 'center', color: TEXT_COLOR_MUTED }}>
+              <div style={{ padding: theme.spacing.md, textAlign: 'center', color: TEXT_COLOR_MUTED({ theme }) }}>
                 No trained models found. Train models to see them here.
               </div>
             )}
@@ -1017,7 +1052,9 @@ const MLTrainingPage: React.FC = () => {
               <StatusGrid>
                 <StatusItem>
                   <div className="label">Scheduler</div>
-                  <div className="value" style={{ color: schedulerStatus.scheduler_running ? PRIMARY_COLOR : '#ef4444' }}>
+                  <div className="value" style={{
+                    color: schedulerStatus.scheduler_running ? PRIMARY_COLOR({ theme }) : (theme.mode === 'dark' ? '#f87171' : '#ef4444')
+                  }}>
                     {schedulerStatus.scheduler_running ? 'Running' : 'Stopped'}
                   </div>
                 </StatusItem>
@@ -1037,13 +1074,14 @@ const MLTrainingPage: React.FC = () => {
                   {Object.entries(schedulerStatus.scheduled_jobs || {}).map(([jobId, job]: [string, any]) => (
                     <div key={jobId} style={{
                       padding: theme.spacing.sm,
-                      background: '#f9fafb',
+                      background: theme.colors.backgroundSecondary,
                       borderRadius: theme.borderRadius.sm,
                       marginBottom: theme.spacing.xs,
-                      fontSize: theme.typography.fontSizes.sm
+                      fontSize: theme.typography.fontSizes.sm,
+                      border: `1px solid ${theme.colors.border}`
                     }}>
                       <strong>{job.name}</strong>
-                      <div style={{ color: TEXT_COLOR_MUTED, marginTop: theme.spacing.xs }}>
+                      <div style={{ color: TEXT_COLOR_MUTED({ theme }), marginTop: theme.spacing.xs }}>
                         Next run: {job.next_run_time ? new Date(job.next_run_time).toLocaleString() : 'Not scheduled'}
                       </div>
                     </div>
@@ -1108,12 +1146,12 @@ const MLTrainingPage: React.FC = () => {
                 {model.error && (
                   <div style={{
                     padding: theme.spacing.md,
-                    background: '#fee2e2',
-                    border: '1px solid #fecaca',
+                    background: theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#fee2e2',
+                    border: `1px solid ${theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fecaca'}`,
                     borderRadius: theme.borderRadius.sm,
                     marginBottom: theme.spacing.md,
                     fontSize: theme.typography.fontSizes.sm,
-                    color: '#991b1b',
+                    color: theme.mode === 'dark' ? '#f87171' : '#991b1b',
                     lineHeight: '1.5'
                   }}>
                     <div style={{ fontWeight: theme.typography.fontWeights.medium, marginBottom: theme.spacing.xs }}>
