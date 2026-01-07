@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { theme } from '@/components/common/theme';
 import PermissionManager from '../../../permissions/PermissionManager';
 import { Resource, Action, UserType } from '@/lib/rbac/models';
 import { PermissionGate } from '@/lib/rbac/permission-gate';
@@ -18,7 +17,7 @@ const Container = styled.div`
 const Title = styled.h1`
   font-size: 24px;
   margin-bottom: 24px;
-  color: #333;
+  color: ${props => props.theme.colors.text};
 `;
 
 const ButtonGroup = styled.div`
@@ -28,20 +27,27 @@ const ButtonGroup = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  box-shadow: ${props => props.theme.shadows.sm};
+  border: 1px solid ${props => props.theme.colors.border};
   padding: 24px;
   margin-bottom: 24px;
 `;
 
 const Message = styled.div`
   padding: 16px;
-  background-color: ${theme.colors.background};
-  border: 1px solid ${theme.colors.border};
-  border-radius: ${theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.background};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
   margin-bottom: 24px;
-  color: ${theme.colors.textSecondary};
+  color: ${props => props.theme.colors.mutedForeground};
+`;
+
+const EmployeeMessage = styled.div`
+  padding: 24px;
+  text-align: center;
+  color: ${props => props.theme.colors.mutedForeground};
 `;
 
 const PermissionManagementPage: React.FC = () => {
@@ -127,9 +133,9 @@ const PermissionManagementPage: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="employee">
-              <div style={{ padding: '24px', textAlign: 'center', color: theme.colors.textSecondary }}>
+              <EmployeeMessage>
                 <p>Employees have limited permissions and cannot manage other users.</p>
-              </div>
+              </EmployeeMessage>
             </TabsContent>
           </Tabs>
         </Card>

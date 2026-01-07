@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import styled, { css } from 'styled-components';
-import { theme } from '@/components/common/theme';
 import { Resource, Action } from '@/lib/rbac/models';
 import { PermissionGate } from '@/lib/rbac/permission-gate';
 import { Button } from '@/components/ui/button';
@@ -35,10 +34,14 @@ import { toast } from 'sonner';
 // --- Styled Components (Premium Theme) ---
 
 const glassBackground = css`
-  background: rgba(255, 255, 255, 0.7);
+  background: ${props => props.theme.mode === 'dark'
+    ? 'rgba(30, 41, 59, 0.7)'
+    : 'rgba(255, 255, 255, 0.7)'};
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid ${props => props.theme.mode === 'dark'
+    ? 'rgba(255, 255, 255, 0.1)'
+    : 'rgba(255, 255, 255, 0.3)'};
 `;
 
 const Container = styled.div`
@@ -46,8 +49,7 @@ const Container = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   min-height: 100vh;
-  background: radial-gradient(circle at top right, rgba(var(--primary-rgb), 0.05), transparent),
-              radial-gradient(circle at bottom left, rgba(var(--secondary-rgb), 0.05), transparent);
+  background: ${props => props.theme.colors.background};
 `;
 
 const Header = styled.div`
@@ -67,26 +69,28 @@ const TitleSection = styled.div`
   h1 {
     font-size: 2.25rem;
     font-weight: 800;
-    color: #1a1a1a;
+    color: ${props => props.theme.colors.text};
     margin-bottom: 0.5rem;
     letter-spacing: -0.025em;
   }
   
   p {
-    color: #666;
+    color: ${props => props.theme.colors.mutedForeground};
     font-size: 1rem;
   }
 `;
 
 const StyledCard = styled.div`
-  ${glassBackground}
+  background: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.border};
   border-radius: 1.25rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  box-shadow: ${props => props.theme.shadows.md};
   overflow: hidden;
   transition: all 0.3s ease;
 
   &:hover {
-    box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: ${props => props.theme.shadows.md}; 
+    transform: translateY(-2px);
   }
 `;
 
@@ -95,7 +99,7 @@ const Toolbar = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid ${props => props.theme.colors.border};
   gap: 1rem;
 
   @media (max-width: 640px) {
@@ -114,20 +118,27 @@ const SearchWrapper = styled.div`
     left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #94a3b8;
+    color: ${props => props.theme.colors.mutedForeground};
     pointer-events: none;
   }
 
   input {
     padding-left: 2.75rem;
-    background: rgba(248, 250, 252, 0.8);
-    border-color: rgba(226, 232, 240, 0.8);
+    background: ${props => props.theme.colors.background};
+    border-color: ${props => props.theme.colors.border};
+    color: ${props => props.theme.colors.text};
     height: 2.75rem;
     font-size: 0.95rem;
 
     &:focus {
-      background: #fff;
-      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      background: ${props => props.theme.colors.background};
+      box-shadow: 0 0 0 2px ${props => props.theme.colors.primary};
+      border-color: ${props => props.theme.colors.primary};
+    }
+    
+    &::placeholder {
+      color: ${props => props.theme.colors.mutedForeground};
+      opacity: 0.7;
     }
   }
 `;
@@ -139,8 +150,12 @@ const Badge = styled.span<{ variant?: 'primary' | 'secondary' }>`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: ${props => props.variant === 'primary' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(148, 163, 184, 0.1)'};
-  color: ${props => props.variant === 'primary' ? '#2563eb' : '#475569'};
+  background: ${props => props.variant === 'primary'
+    ? `color-mix(in srgb, ${props.theme.colors.primary}, transparent 90%)`
+    : `color-mix(in srgb, ${props.theme.colors.mutedForeground}, transparent 90%)`};
+  color: ${props => props.variant === 'primary'
+    ? props.theme.colors.primary
+    : props.theme.colors.mutedForeground};
 `;
 
 const ActionButton = styled(Button)`
@@ -158,10 +173,10 @@ const Message = styled.div`
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  background: #fef2f2;
-  border: 1px solid #fee2e2;
+  background: ${props => `color-mix(in srgb, ${props.theme.colors.error}, transparent 90%)`};
+  border: 1px solid ${props => `color-mix(in srgb, ${props.theme.colors.error}, transparent 80%)`};
   border-radius: 0.75rem;
-  color: #991b1b;
+  color: ${props => props.theme.colors.error};
   margin-bottom: 2rem;
   font-weight: 500;
 `;
@@ -342,48 +357,48 @@ const RolesPage: React.FC = () => {
           </Toolbar>
 
           <Table>
-            <TableHeader className="bg-slate-50/50">
+            <TableHeader style={{ background: 'rgba(0,0,0,0.02)' }}>
               <TableRow>
-                <TableHead className="font-bold py-4">Role Name</TableHead>
-                <TableHead className="font-bold">Description</TableHead>
-                <TableHead className="font-bold">Users</TableHead>
-                <TableHead className="font-bold text-center">Permissions</TableHead>
-                <TableHead className="font-bold">Created</TableHead>
-                <TableHead className="font-bold text-right pr-6">Actions</TableHead>
+                <TableHead style={{ fontWeight: 'bold', padding: '1rem' }}>Role Name</TableHead>
+                <TableHead style={{ fontWeight: 'bold' }}>Description</TableHead>
+                <TableHead style={{ fontWeight: 'bold' }}>Users</TableHead>
+                <TableHead style={{ fontWeight: 'bold', textAlign: 'center' }}>Permissions</TableHead>
+                <TableHead style={{ fontWeight: 'bold' }}>Created</TableHead>
+                <TableHead style={{ fontWeight: 'bold', textAlign: 'right', paddingRight: '1.5rem' }}>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRoles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={6} style={{ height: '8rem', textAlign: 'center', color: 'var(--muted-foreground)' }}>
                     No roles found matching your criteria.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredRoles.map(role => (
-                  <TableRow key={role.id} className="hover:bg-slate-50/30 transition-colors">
-                    <TableCell className="font-semibold text-slate-900 border-l-4 border-l-transparent hover:border-l-primary py-4">
-                      <div className="flex items-center gap-2">
-                        <Lock size={14} className="text-slate-400" />
+                  <TableRow key={role.id} style={{ cursor: 'default' }}>
+                    <TableCell style={{ fontWeight: 600, padding: '1rem', borderLeft: '4px solid transparent' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Lock size={14} style={{ opacity: 0.5 }} />
                         {formatRoleName(role.name)}
                       </div>
                     </TableCell>
-                    <TableCell className="text-slate-600 italic">
+                    <TableCell style={{ fontStyle: 'italic', opacity: 0.8 }}>
                       {role.description}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1.5 font-medium">
-                        <Users size={14} className="text-slate-500" />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontWeight: 500 }}>
+                        <Users size={14} style={{ opacity: 0.6 }} />
                         {role.userCount}
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell style={{ textAlign: 'center' }}>
                       <Badge variant="primary">{role.permissionCount} Perms</Badge>
                     </TableCell>
-                    <TableCell className="text-slate-500 text-sm">
+                    <TableCell style={{ fontSize: '0.875rem', opacity: 0.7 }}>
                       {role.createdAt}
                     </TableCell>
-                    <TableCell className="text-right pr-6">
+                    <TableCell style={{ textAlign: 'right', paddingRight: '1.5rem' }}>
                       <ActionButton
                         size="sm"
                         variant="ghost"
