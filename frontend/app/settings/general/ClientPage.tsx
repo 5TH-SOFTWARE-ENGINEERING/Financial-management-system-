@@ -13,7 +13,7 @@ import { useThemeStore } from '@/store/useThemeStore';
 const PRIMARY_COLOR = (props: any) => props.theme.colors.primary;
 const TEXT_COLOR = (props: any) => props.theme.colors.text;
 const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary;
-const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 
 const CardShadow = `
   0 2px 4px -1px rgba(0, 0, 0, 0.06),

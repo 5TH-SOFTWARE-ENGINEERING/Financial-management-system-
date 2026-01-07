@@ -43,7 +43,7 @@ type ErrorWithDetails = {
 };
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = '#111827';
+const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
 
 const PageContainer = styled.div`

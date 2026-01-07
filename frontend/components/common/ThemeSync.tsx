@@ -37,6 +37,7 @@ export default function ThemeSync() {
                 html.style.setProperty('--background-secondary', '#1e293b');
                 html.style.setProperty('--primary', '#00AA00');
                 html.style.setProperty('--text', '#f1f5f9');
+                html.style.setProperty('--text-dark', '#f8fafc');
                 html.style.setProperty('--text-secondary', '#94a3b8');
                 html.style.setProperty('--border', '#334155');
                 html.style.setProperty('--error', '#f87171');
@@ -50,6 +51,7 @@ export default function ThemeSync() {
                 html.style.setProperty('--background-secondary', '#f5f5f5');
                 html.style.setProperty('--primary', '#00AA00');
                 html.style.setProperty('--text', '#333');
+                html.style.setProperty('--text-dark', '#111827');
                 html.style.setProperty('--text-secondary', '#666');
                 html.style.setProperty('--border', '#ddd');
                 html.style.setProperty('--error', '#ef4444');

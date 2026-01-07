@@ -7,6 +7,7 @@ export interface Theme {
     backgroundSecondary: string;
     primary: string;
     text: string;
+    textDark: string;
     textSecondary: string;
     border: string;
     error: string;
@@ -97,6 +98,7 @@ export const lightTheme: Theme = {
     backgroundSecondary: "var(--background-secondary, #f5f5f5)",
     primary: "var(--primary, #00AA00)",
     text: "var(--text, #333)",
+    textDark: "var(--text-dark, #111827)",
     textSecondary: "var(--text-secondary, #666)",
     border: "var(--border, #ddd)",
     error: "var(--error, #ef4444)",
@@ -118,6 +120,7 @@ export const darkTheme: Theme = {
     backgroundSecondary: "var(--background-secondary, #1e293b)",
     primary: "var(--primary, #00AA00)",
     text: "var(--text, #f1f5f9)",
+    textDark: "var(--text-dark, #f8fafc)",
     textSecondary: "var(--text-secondary, #94a3b8)",
     border: "var(--border, #334155)",
     error: "var(--error, #f87171)",
