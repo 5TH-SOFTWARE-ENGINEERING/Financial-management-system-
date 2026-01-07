@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
+import { UserType } from '@/lib/rbac/models';
 import { Save, Globe, Bell, Moon, Sun, Monitor, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { theme, darkTheme, lightTheme } from '@/components/common/theme';
@@ -348,7 +349,7 @@ const applyCompactView = (enabled: boolean): void => {
 
 export default function GeneralSettingsPage() {
   const { user } = useAuth();
-  const { isAdmin } = useAuthorization();
+  const { hasUserType } = useAuthorization();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -458,7 +459,7 @@ export default function GeneralSettingsPage() {
           </SuccessBanner>
         )}
 
-        {isAdmin() && (
+        {hasUserType(UserType.ADMIN) && (
           <Card>
             <CardHeader>
               <CardTitle>
@@ -617,7 +618,7 @@ export default function GeneralSettingsPage() {
           </CardContent>
         </Card>
 
-        {isAdmin() && (
+        {hasUserType(UserType.ADMIN) && (
           <Card>
             <CardHeader>
               <CardTitle>
