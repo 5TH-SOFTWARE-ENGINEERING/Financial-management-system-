@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useAuth } from '@/lib/rbac/auth-context';
 import { UserType } from '@/lib/rbac/models';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
@@ -10,7 +10,7 @@ import { Camera, Mail, User as UserIcon, Users, Building, Phone, Briefcase, Cale
 import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/api';
 import { useUserStore } from '@/store/userStore';
-import { theme } from '@/components/common/theme';
+
 
 // Type definitions for error handling
 type ErrorWithDetails = {
@@ -38,29 +38,37 @@ interface ApiUser {
   profile_image_url?: string;
 }
 
-const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
+
+const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
 const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
+const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
+const BORDER_COLOR = (props: any) => props.theme.colors.border;
+const BACKGROUND_CARD = (props: any) => props.theme.colors.background || '#ffffff';
+const BACKGROUND_SECONDARY = (props: any) => props.theme.colors.backgroundSecondary || '#f5f6fa';
+
+const CardShadow = (props: any) => props.theme.mode === 'dark'
+  ? '0 4px 20px rgba(0,0,0,0.4)'
+  : `0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03)`;
 
 // Styled components
 const Container = styled.div`
   max-width: 1200px;
   margin: 20px auto;
-  padding: ${theme.spacing.md};
+  padding: ${props => props.theme.spacing.md};
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${theme.spacing.xl};
-  padding-bottom: ${theme.spacing.md};
-  border-bottom: 1px solid ${theme.colors.border};
+  margin-bottom: ${props => props.theme.spacing.xl};
+  padding-bottom: ${props => props.theme.spacing.md};
+  border-bottom: 1px solid ${BORDER_COLOR};
 `;
 
 const Title = styled.h1`
   font-size: clamp(24px, 3vw, 32px);
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   margin: 0;
 `;
@@ -68,7 +76,7 @@ const Title = styled.h1`
 const ProfileGrid = styled.div`
   display: grid;
   grid-template-columns: 280px 1fr;
-  gap: ${theme.spacing.xl};
+  gap: ${props => props.theme.spacing.xl};
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -76,21 +84,21 @@ const ProfileGrid = styled.div`
 `;
 
 const ProfileSidebar = styled.div`
-  background-color: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  background-color: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  box-shadow: ${CardShadow};
 `;
 
 const ProfileImage = styled.div`
   width: 100%;
   height: 180px;
-  background-color: ${theme.colors.backgroundSecondary};
+  background-color: ${BACKGROUND_SECONDARY};
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  border-radius: ${theme.borderRadius.md} ${theme.borderRadius.md} 0 0;
+  border-radius: ${props => props.theme.borderRadius.md} ${props => props.theme.borderRadius.md} 0 0;
 `;
 
 const Avatar = styled.div<{ $bgColor: string }>`
@@ -103,15 +111,15 @@ const Avatar = styled.div<{ $bgColor: string }>`
   justify-content: center;
   color: white;
   font-size: 2rem;
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
 `;
 
 const UploadButton = styled.button`
   position: absolute;
-  bottom: ${theme.spacing.md};
-  right: ${theme.spacing.md};
-  background-color: ${theme.colors.background};
-  border: 1px solid ${theme.colors.border};
+  bottom: ${props => props.theme.spacing.md};
+  right: ${props => props.theme.spacing.md};
+  background-color: ${BACKGROUND_CARD};
+  border: 1px solid ${BORDER_COLOR};
   border-radius: 50%;
   width: 2rem;
   height: 2rem;
@@ -120,37 +128,37 @@ const UploadButton = styled.button`
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  transition: all ${theme.transitions.default};
+  transition: all ${props => props.theme.transitions.default};
 
   &:hover {
-    background-color: ${theme.colors.backgroundSecondary};
+    background-color: ${BACKGROUND_SECONDARY};
     transform: scale(1.05);
   }
 `;
 
 const ProfileInfo = styled.div`
-  padding: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
 `;
 
 const ProfileName = styled.h2`
-  font-size: ${theme.typography.fontSizes.lg};
-  font-weight: ${theme.typography.fontWeights.bold};
-  margin: 0 0 ${theme.spacing.xs} 0;
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  margin: 0 0 ${props => props.theme.spacing.xs} 0;
   color: ${TEXT_COLOR_DARK};
 `;
 
 const ProfileRole = styled.p`
-  font-size: ${theme.typography.fontSizes.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_MUTED};
-  margin: 0 0 ${theme.spacing.lg} 0;
+  margin: 0 0 ${props => props.theme.spacing.lg} 0;
 `;
 
 const ProfileDetail = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  margin-bottom: ${theme.spacing.md};
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.md};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
   color: ${TEXT_COLOR_MUTED};
 
   svg {
@@ -160,36 +168,36 @@ const ProfileDetail = styled.div`
 `;
 
 const Card = styled.div`
-  background-color: ${theme.colors.background};
-  border-radius: ${theme.borderRadius.md};
-  border: 1px solid ${theme.colors.border};
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
-  margin-bottom: ${theme.spacing.lg};
+  background-color: ${BACKGROUND_CARD};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${BORDER_COLOR};
+  box-shadow: ${CardShadow};
+  margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
 const CardHeader = styled.div`
-  padding: ${theme.spacing.md} ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid ${theme.colors.border};
+  border-bottom: 1px solid ${BORDER_COLOR};
 `;
 
 const CardTitle = styled.h3`
-  font-size: ${theme.typography.fontSizes.md};
-  font-weight: ${theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
   color: ${TEXT_COLOR_DARK};
   margin: 0;
 `;
 
 const CardContent = styled.div`
-  padding: ${theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg};
 `;
 
 const FormGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: ${theme.spacing.xl};
+  gap: ${props => props.theme.spacing.xl};
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -204,13 +212,13 @@ const FormGroup = styled.div`
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: ${theme.spacing.xs};
+  gap: ${props => props.theme.spacing.xs};
 `;
 
 const Label = styled.label`
   display: block;
-  font-size: ${theme.typography.fontSizes.sm};
-  font-weight: ${theme.typography.fontWeights.medium};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.medium};
   color: ${TEXT_COLOR_DARK};
   margin: 0;
 `;
@@ -220,13 +228,13 @@ const StyledInput = styled.input`
   max-width: 100%;
   min-width: 0;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${BORDER_COLOR};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.textDark};
-  transition: all 0.2s ease-in-out;
+  background: ${BACKGROUND_CARD};
+  color: ${TEXT_COLOR_DARK};
+  transition: all ${props => props.theme.transitions.default};
   outline: none;
   box-sizing: border-box;
   margin: 0;
@@ -234,23 +242,24 @@ const StyledInput = styled.input`
   &:focus {
     border-color: ${PRIMARY_COLOR};
     box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
-    background: ${props => props.theme.colors.background};
+    background: ${BACKGROUND_CARD};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : '#d1d5db'};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${BACKGROUND_SECONDARY};
+    color: ${TEXT_COLOR_MUTED};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${BORDER_COLOR};
   }
 `;
 
@@ -259,13 +268,13 @@ const StyledTextArea = styled.textarea`
   max-width: 100%;
   min-width: 0;
   padding: 10px 14px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid ${BORDER_COLOR};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.textDark};
-  transition: all 0.2s ease-in-out;
+  background: ${BACKGROUND_CARD};
+  color: ${TEXT_COLOR_DARK};
+  transition: all ${props => props.theme.transitions.default};
   outline: none;
   box-sizing: border-box;
   margin: 0;
@@ -274,23 +283,24 @@ const StyledTextArea = styled.textarea`
   &:focus {
     border-color: ${PRIMARY_COLOR};
     box-shadow: 0 0 0 3px ${PRIMARY_COLOR}15;
-    background: ${props => props.theme.colors.background};
+    background: ${BACKGROUND_CARD};
   }
 
   &:hover:not(:disabled) {
-    border-color: #d1d5db;
+    border-color: ${props => props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : '#d1d5db'};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${TEXT_COLOR_MUTED};
+    opacity: 0.6;
   }
 
   &:disabled {
-    background-color: ${theme.colors.backgroundSecondary};
-    color: #6b7280;
+    background-color: ${BACKGROUND_SECONDARY};
+    color: ${TEXT_COLOR_MUTED};
     cursor: not-allowed;
     opacity: 0.7;
-    border-color: #e5e7eb;
+    border-color: ${BORDER_COLOR};
   }
 `;
 
@@ -301,16 +311,22 @@ const ActionButtons = styled.div`
 `;
 
 const Message = styled.div<{ type: 'error' | 'success' }>`
-  background-color: ${props => props.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'};
-  border: 1px solid ${props => props.type === 'error' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'};
-  color: ${props => props.type === 'error' ? '#dc2626' : '#059669'};
-  padding: ${theme.spacing.md};
-  border-radius: ${theme.borderRadius.md};
-  margin-bottom: ${theme.spacing.lg};
+  background-color: ${props => props.type === 'error'
+    ? (props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)')
+    : (props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')};
+  border: 1px solid ${props => props.type === 'error'
+    ? (props.theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.3)')
+    : (props.theme.mode === 'dark' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(16, 185, 129, 0.3)')};
+  color: ${props => props.type === 'error'
+    ? (props.theme.mode === 'dark' ? '#fca5a5' : '#dc2626')
+    : (props.theme.mode === 'dark' ? '#6ee7b7' : '#059669')};
+  padding: ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.sm};
-  font-size: ${theme.typography.fontSizes.sm};
+  gap: ${props => props.theme.spacing.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 `;
 
 // Enhanced user data interface
@@ -647,7 +663,7 @@ export default function ProfilePage() {
               {isEditing && userData.profileImageUrl && (
                 <UploadButton
                   onClick={handleRemoveImage}
-                  style={{ right: 'auto', left: theme.spacing.md, backgroundColor: '#fee2e2', color: '#dc2626' }}
+                  style={{ right: 'auto', left: '16px', backgroundColor: '#fee2e2', color: '#dc2626' }}
                   title="Remove Photo"
                 >
                   <X size={16} />
