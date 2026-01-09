@@ -1024,8 +1024,8 @@ class ApiClient {
   }
 
   // Notifications
-  async getNotifications(unreadOnly?: boolean): Promise<ApiResponse<unknown[]>> {
-    return this.get('/notifications', { params: { unread_only: unreadOnly } });
+  async getNotifications(unreadOnly?: boolean, limit: number = 100, skip: number = 0): Promise<ApiResponse<unknown[]>> {
+    return this.get('/notifications', { params: { unread_only: unreadOnly, limit, skip } });
   }
 
   async getNotification(notificationId: number): Promise<ApiResponse<unknown>> {
