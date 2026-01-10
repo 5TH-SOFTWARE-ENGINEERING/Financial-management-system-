@@ -236,10 +236,46 @@ def retrain_all_models():
             f"{error_count} errors"
         )
         
+        # Notify admins about completion
+        try:
+            from .notification_service import NotificationService
+            from ..models.notification import NotificationType, NotificationPriority
+            
+            message = f"Scheduled ML training completed. {success_count} models trained successfully."
+            if error_count > 0:
+                message += f" {error_count} errors occurred."
+            
+            NotificationService.notify_by_role(
+                db=db,
+                roles=[UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN],
+                title="ML Model Training Completed",
+                message=message,
+                notification_type=NotificationType.SYSTEM_ALERT,
+                priority=NotificationPriority.MEDIUM if error_count == 0 else NotificationPriority.HIGH,
+                action_url="/ml-training"
+            )
+        except Exception as notif_err:
+             logger.error(f"Failed to send ML completion notification: {notif_err}")
+
         return results
         
     except Exception as e:
         logger.error(f"Scheduled model retraining failed: {str(e)}", exc_info=True)
+        # Notify about failure
+        try:
+            from .notification_service import NotificationService
+            from ..models.notification import NotificationType, NotificationPriority
+            NotificationService.notify_by_role(
+                db=db,
+                roles=[UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN],
+                title="ML Model Training Failed",
+                message=f"Scheduled training failed: {str(e)}",
+                notification_type=NotificationType.SYSTEM_ALERT,
+                priority=NotificationPriority.HIGH,
+                action_url="/ml-training"
+            )
+        except:
+            pass
         return None
     finally:
         db.close()
@@ -276,6 +312,36 @@ def retrain_all_models_auto_learn():
             results[metric] = {"error": str(e)}
     
     logger.info("Scheduled auto-learn retraining completed")
+    
+    # Notify admins
+    try:
+        from .notification_service import NotificationService
+        from ..models.notification import NotificationType, NotificationPriority
+        from ..core.database import SessionLocal
+        
+        db = SessionLocal()
+        try:
+            success_count = len([r for r in results.values() if "best_model" in r])
+            error_count = len([r for r in results.values() if "error" in r])
+            
+            message = f"Auto-learn training completed. {success_count} metrics optimized."
+            if error_count > 0:
+                message += f" {error_count} errors."
+                
+            NotificationService.notify_by_role(
+                db=db,
+                roles=[UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN],
+                title="Auto-Learn Training Completed",
+                message=message,
+                notification_type=NotificationType.SYSTEM_ALERT,
+                priority=NotificationPriority.MEDIUM,
+                action_url="/ml-training"
+            )
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Failed to send auto-learn notification: {e}")
+
     return results
 
 
@@ -331,6 +397,23 @@ def retrain_metric_models(metric: str, use_auto_learn: bool = True):
                     }
                 
                 logger.info(f"[OK] {metric}: {len(results)} models trained")
+                
+                # Notify about specific metric training
+                try:
+                    from .notification_service import NotificationService
+                    from ..models.notification import NotificationType
+                    
+                    NotificationService.notify_by_role(
+                        db=db,
+                        roles=[UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN],
+                        title=f"{metric.capitalize()} Models Retrained",
+                        message=f"All models for {metric} have been successfully retrained.",
+                        notification_type=NotificationType.SYSTEM_ALERT,
+                        action_url="/ml-training"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send metric notification: {e}")
+                
                 return results
             finally:
                 db.close()

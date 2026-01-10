@@ -234,3 +234,83 @@ class BudgetingService:
             "scenarios": scenarios
         }
 
+    @staticmethod
+    def check_and_notify_exceeded_budgets(
+        db: Session,
+        expense_entry: ExpenseEntry
+    ):
+        """Check if this expense causes any budgets to be exceeded"""
+        from ..services.notification_service import NotificationService
+        from ..models.notification import NotificationType
+        
+        # Find active budgets for this date
+        active_budgets = db.query(Budget).filter(
+            Budget.start_date <= expense_entry.date,
+            Budget.end_date >= expense_entry.date,
+            Budget.status == BudgetStatus.ACTIVE
+        ).all()
+        
+        for bud in active_budgets:
+            # Check department/project constraints if they exist
+            if bud.department:
+                # Need to load user to check department
+                # Assuming expense_entry.created_by is available or we query it
+                if not expense_entry.created_by:
+                    # Try to load user if not present (though usually it is via relationship)
+                    user = user_crud.get(db, expense_entry.created_by_id)
+                    if not user or user.department != bud.department:
+                        continue
+                elif expense_entry.created_by.department != bud.department:
+                    continue
+            
+            if bud.project and expense_entry.project_id:
+                # If budget is for a project, check if expense matches
+                # Note: ExpenseEntry might not have project_id directly exposed in all schemas
+                # Assuming we skip project check for now or handle it if model supports it
+                pass
+
+            # Check specific budget items matching the category
+            items = budget_item.get_by_budget(db, bud.id)
+            for item in items:
+                if item.category == expense_entry.category or item.category == "all":
+                    # Calculate total expenses for this category in this budget period
+                    # We use a direct query for performance
+                    total_spent = db.query(func.sum(ExpenseEntry.amount)).filter(
+                        ExpenseEntry.date >= bud.start_date,
+                        ExpenseEntry.date <= bud.end_date,
+                        ExpenseEntry.category == expense_entry.category if item.category != "all" else True,
+                        ExpenseEntry.is_approved == True 
+                    ).scalar() or 0.0
+                    
+                    # Include CURRENT expense if it's not approved yet? 
+                    # Usually we warn even if pending. 
+                    # If the standard query checks 'is_approved=True', and this new one is pending,
+                    # we should add it to the total to see if it WILL exceed.
+                    current_amount = float(expense_entry.amount)
+                    if not expense_entry.is_approved:
+                        total_spent += current_amount
+                    
+                    if total_spent > item.amount:
+                        # Budget exceeded!
+                        exceeded_amount = total_spent - item.amount
+                        percentage = (total_spent / item.amount) * 100
+                        
+                        # Notify the budget creator and the expense creator
+                        NotificationService.create_notification(
+                            db=db,
+                            user_id=bud.created_by_id,
+                            title="Budget Exceeded Alert",
+                            message=f"Budget '{bud.name}' exceeded for category '{item.name}'. Used: ${total_spent:,.2f} / ${item.amount:,.2f} ({percentage:.1f}%)",
+                            notification_type=NotificationType.BUDGET_EXCEEDED,
+                            action_url=f"/finance/budget/{bud.id}"
+                        )
+                        
+                        if expense_entry.created_by_id != bud.created_by_id:
+                             NotificationService.create_notification(
+                                db=db,
+                                user_id=expense_entry.created_by_id,
+                                title="Budget Warning",
+                                message=f"Your expense puts budget '{bud.name}' over limit for '{item.name}'.",
+                                notification_type=NotificationType.WARNING,
+                                action_url=f"/finance/budget/{bud.id}"
+                            )

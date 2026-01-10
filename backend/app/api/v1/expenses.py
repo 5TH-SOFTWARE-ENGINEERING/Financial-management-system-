@@ -201,6 +201,17 @@ def create_expense_entry(
         except Exception as e:
             # Don't fail the request if auto-learning fails
             logger.warning(f"Auto-learning trigger failed for expense: {str(e)}")
+
+        # Check for budget limits (background)
+        try:
+            from ...services.budgeting import BudgetingService
+            background_tasks.add_task(
+                BudgetingService.check_and_notify_exceeded_budgets,
+                db=db,
+                expense_entry=expense
+            )
+        except Exception as e:
+            logger.warning(f"Budget check failed: {str(e)}")
         
         # Log expense entry creation
         try:
@@ -260,6 +271,18 @@ def update_expense_entry(
                 background_tasks.add_task(trigger_auto_learn_background, "expense")
         except Exception as e:
             logger.warning(f"Auto-learning trigger failed for expense update: {str(e)}")
+            
+        # Check for budget limits on update (background)
+        try:
+            from ...services.budgeting import BudgetingService
+            background_tasks.add_task(
+                BudgetingService.check_and_notify_exceeded_budgets,
+                db=db,
+                expense_entry=entry
+            )
+        except Exception as e:
+            logger.warning(f"Budget check failed: {str(e)}")
+
         if entry is None:
             raise HTTPException(status_code=404, detail="Expense entry not found")
         

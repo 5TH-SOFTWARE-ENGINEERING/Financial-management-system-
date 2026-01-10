@@ -56,30 +56,48 @@ class NotificationService:
     ):
         """Notify relevant users when an expense is created"""
         try:
+            # Check for existing notification to avoid duplicates
+            from ..models.notification import Notification
+            
             # Notify the creator
-            NotificationService.create_notification(
-                db=db,
-                user_id=created_by_id,
-                title="Expense Created",
-                message=f"Your expense '{expense_title}' (${amount:,.2f}) has been created successfully.",
-                notification_type=NotificationType.SYSTEM_ALERT,
-                priority=NotificationPriority.LOW,
-                action_url=f"/expenses/{expense_id}"
-            )
+            existing_creator_notif = db.query(Notification).filter(
+                Notification.user_id == created_by_id,
+                Notification.type == NotificationType.SYSTEM_ALERT,
+                Notification.action_url == f"/expenses/{expense_id}"
+            ).first()
+
+            if not existing_creator_notif:
+                NotificationService.create_notification(
+                    db=db,
+                    user_id=created_by_id,
+                    title="Expense Created",
+                    message=f"Your expense '{expense_title}' (${amount:,.2f}) has been created successfully.",
+                    notification_type=NotificationType.SYSTEM_ALERT,
+                    priority=NotificationPriority.LOW,
+                    action_url=f"/expenses/{expense_id}"
+                )
             
             # If requires approval, notify approvers
             if requires_approval:
                 approvers = NotificationService._get_approvers(db, created_by_id)
                 for approver in approvers:
-                    NotificationService.create_notification(
-                        db=db,
-                        user_id=approver.id,
-                        title="Expense Approval Required",
-                        message=f"New expense '{expense_title}' (${amount:,.2f}) requires your approval.",
-                        notification_type=NotificationType.APPROVAL_REQUEST,
-                        priority=NotificationPriority.HIGH,
-                        action_url=f"/approvals?expense_id={expense_id}"
-                    )
+                    # Check for existing approval notification
+                    existing_approval_notif = db.query(Notification).filter(
+                        Notification.user_id == approver.id,
+                        Notification.type == NotificationType.APPROVAL_REQUEST,
+                        Notification.action_url == f"/approvals?expense_id={expense_id}"
+                    ).first()
+
+                    if not existing_approval_notif:
+                        NotificationService.create_notification(
+                            db=db,
+                            user_id=approver.id,
+                            title="Expense Approval Required",
+                            message=f"New expense '{expense_title}' (${amount:,.2f}) requires your approval.",
+                            notification_type=NotificationType.APPROVAL_REQUEST,
+                            priority=NotificationPriority.HIGH,
+                            action_url=f"/approvals?expense_id={expense_id}"
+                        )
         except Exception as e:
             logger.error(f"Failed to send expense creation notifications: {str(e)}", exc_info=True)
     
@@ -138,30 +156,48 @@ class NotificationService:
     ):
         """Notify relevant users when revenue is created"""
         try:
+            # Check for existing notification to avoid duplicates
+            from ..models.notification import Notification
+            
             # Notify the creator
-            NotificationService.create_notification(
-                db=db,
-                user_id=created_by_id,
-                title="Revenue Created",
-                message=f"Your revenue entry '{revenue_title}' (${amount:,.2f}) has been created successfully.",
-                notification_type=NotificationType.SYSTEM_ALERT,
-                priority=NotificationPriority.LOW,
-                action_url=f"/revenue/{revenue_id}"
-            )
+            existing_creator_notif = db.query(Notification).filter(
+                Notification.user_id == created_by_id,
+                Notification.type == NotificationType.SYSTEM_ALERT,
+                Notification.action_url == f"/revenue/{revenue_id}"
+            ).first()
+
+            if not existing_creator_notif:
+                NotificationService.create_notification(
+                    db=db,
+                    user_id=created_by_id,
+                    title="Revenue Created",
+                    message=f"Your revenue entry '{revenue_title}' (${amount:,.2f}) has been created successfully.",
+                    notification_type=NotificationType.SYSTEM_ALERT,
+                    priority=NotificationPriority.LOW,
+                    action_url=f"/revenue/{revenue_id}"
+                )
             
             # If requires approval, notify approvers
             if requires_approval:
                 approvers = NotificationService._get_approvers(db, created_by_id)
                 for approver in approvers:
-                    NotificationService.create_notification(
-                        db=db,
-                        user_id=approver.id,
-                        title="Revenue Approval Required",
-                        message=f"New revenue entry '{revenue_title}' (${amount:,.2f}) requires your approval.",
-                        notification_type=NotificationType.APPROVAL_REQUEST,
-                        priority=NotificationPriority.HIGH,
-                        action_url=f"/approvals?revenue_id={revenue_id}"
-                    )
+                    # Check for existing approval notification
+                    existing_approval_notif = db.query(Notification).filter(
+                        Notification.user_id == approver.id,
+                        Notification.type == NotificationType.APPROVAL_REQUEST,
+                        Notification.action_url == f"/approvals?revenue_id={revenue_id}"
+                    ).first()
+
+                    if not existing_approval_notif:
+                        NotificationService.create_notification(
+                            db=db,
+                            user_id=approver.id,
+                            title="Revenue Approval Required",
+                            message=f"New revenue entry '{revenue_title}' (${amount:,.2f}) requires your approval.",
+                            notification_type=NotificationType.APPROVAL_REQUEST,
+                            priority=NotificationPriority.HIGH,
+                            action_url=f"/approvals?revenue_id={revenue_id}"
+                        )
         except Exception as e:
             logger.error(f"Failed to send revenue creation notifications: {str(e)}", exc_info=True)
     
@@ -490,15 +526,45 @@ class NotificationService:
         """Notify approvers about pending approvals"""
         try:
             if pending_count > 0:
-                NotificationService.create_notification(
-                    db=db,
-                    user_id=approver_id,
-                    title="Pending Approvals",
-                    message=f"You have {pending_count} pending approval{'s' if pending_count > 1 else ''} requiring your attention.",
-                    notification_type=NotificationType.APPROVAL_REQUEST,
-                    priority=NotificationPriority.HIGH,
-                    action_url="/approvals"
-                )
+                # Check for existing unread notification to avoid duplicates
+                from ..models.notification import Notification
+                
+                # Get ALL existing unread notifications of this type
+                existing_notifications = db.query(Notification).filter(
+                    Notification.user_id == approver_id,
+                    Notification.type == NotificationType.APPROVAL_REQUEST,
+                    Notification.is_read == False,
+                    Notification.title == "Pending Approvals"
+                ).order_by(Notification.created_at.desc()).all()
+                
+                message = f"You have {pending_count} pending approval{'s' if pending_count > 1 else ''} requiring your attention."
+                
+                if existing_notifications:
+                    # Keep the most recent one
+                    latest = existing_notifications[0]
+                    
+                    # Delete any duplicates (older ones)
+                    if len(existing_notifications) > 1:
+                        for duplicate in existing_notifications[1:]:
+                            db.delete(duplicate)
+                    
+                    # Update existing notification
+                    if latest.message != message:
+                        latest.message = message
+                        latest.created_at = datetime.utcnow() # Bump timestamp
+                        db.add(latest)
+                    
+                    db.commit()
+                else:
+                    NotificationService.create_notification(
+                        db=db,
+                        user_id=approver_id,
+                        title="Pending Approvals",
+                        message=message,
+                        notification_type=NotificationType.APPROVAL_REQUEST,
+                        priority=NotificationPriority.HIGH,
+                        action_url="/approvals"
+                    )
         except Exception as e:
             logger.error(f"Failed to send pending approvals notification: {str(e)}", exc_info=True)
     
