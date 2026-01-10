@@ -8,6 +8,8 @@ import logging
 
 from ..crud.notification import notification as notification_crud
 from ..crud.user import user as user_crud
+from ..crud.expense import expense as expense_crud
+from ..crud.revenue import revenue as revenue_crud
 from ..models.notification import NotificationType, NotificationPriority
 from ..models.user import User, UserRole
 from ..schemas.notification import NotificationCreate
@@ -110,11 +112,26 @@ class NotificationService:
     ):
         """Notify when an expense is updated"""
         try:
+            # Get the expense to find the owner
+            expense = expense_crud.get(db, id=expense_id)
+            if not expense:
+                return
+
+            notify_user_id = expense.created_by_id
+            
+            # If the updater is the owner, maybe skip or send confirmation? 
+            # Usually we don't notify ourselves of our own updates via Alert Center.
+            if notify_user_id == updated_by_id:
+                return
+
+            updater = user_crud.get(db, id=updated_by_id)
+            updater_name = updater.full_name or updater.username if updater else "An admin"
+
             NotificationService.create_notification(
                 db=db,
-                user_id=updated_by_id,
+                user_id=notify_user_id,
                 title="Expense Updated",
-                message=f"Expense '{expense_title}' has been updated successfully.",
+                message=f"Your expense '{expense_title}' has been updated by {updater_name}.",
                 notification_type=NotificationType.SYSTEM_ALERT,
                 priority=NotificationPriority.LOW,
                 action_url=f"/expenses/{expense_id}"
@@ -210,11 +227,25 @@ class NotificationService:
     ):
         """Notify when revenue is updated"""
         try:
+            # Get the revenue to find the owner
+            revenue = revenue_crud.get(db, id=revenue_id)
+            if not revenue:
+                return
+
+            notify_user_id = revenue.created_by_id
+            
+            # Don't notify self
+            if notify_user_id == updated_by_id:
+                return
+
+            updater = user_crud.get(db, id=updated_by_id)
+            updater_name = updater.full_name or updater.username if updater else "An admin"
+
             NotificationService.create_notification(
                 db=db,
-                user_id=updated_by_id,
+                user_id=notify_user_id,
                 title="Revenue Updated",
-                message=f"Revenue entry '{revenue_title}' has been updated successfully.",
+                message=f"Your revenue entry '{revenue_title}' has been updated by {updater_name}.",
                 notification_type=NotificationType.SYSTEM_ALERT,
                 priority=NotificationPriority.LOW,
                 action_url=f"/revenue/{revenue_id}"
@@ -222,28 +253,7 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Failed to send revenue update notification: {str(e)}", exc_info=True)
     
-    @staticmethod
-    def notify_sale_created(
-        db: Session,
-        sale_id: int,
-        item_name: str,
-        quantity: int,
-        total_amount: float,
-        created_by_id: int
-    ):
-        """Notify when a sale is created"""
-        try:
-            NotificationService.create_notification(
-                db=db,
-                user_id=created_by_id,
-                title="Sale Created",
-                message=f"Sale for {quantity}x {item_name} (${total_amount:,.2f}) has been created.",
-                notification_type=NotificationType.SYSTEM_ALERT,
-                priority=NotificationPriority.MEDIUM,
-                action_url=f"/sales/{sale_id}"
-            )
-        except Exception as e:
-            logger.error(f"Failed to send sale creation notification: {str(e)}", exc_info=True)
+    # Removed duplicate notify_sale_created method
     
     @staticmethod
     def notify_sale_posted(
@@ -386,14 +396,18 @@ class NotificationService:
                 notify_ids.append(creator.manager_id)
             
             # Plus any global admins (limited to avoid spam)
-            admins = db.query(User).filter(
-                User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-                User.is_active == True,
-                User.id != created_by_id,
-                User.id.notin_(notify_ids)
-            ).limit(5).all()
+            # SKIP if the creator is already an Admin or Super Admin
+            is_admin_creator = creator.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
             
-            notify_ids.extend([admin.id for admin in admins])
+            if not is_admin_creator:
+                admins = db.query(User).filter(
+                    User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                    User.is_active == True,
+                    User.id != created_by_id,
+                    User.id.notin_(notify_ids)
+                ).limit(5).all()
+                
+                notify_ids.extend([admin.id for admin in admins])
             
             for target_id in list(set(notify_ids)):
                 NotificationService.create_notification(
@@ -458,9 +472,22 @@ class NotificationService:
             notify_ids = []
             if creator and creator.manager_id:
                 notify_ids.append(creator.manager_id)
+                
+                # ALSO Notify Accountants under the SAME Manager (Team-based notification)
+                # Instead of notifying ALL accountants, only notify those in the same "team"
+                team_accountants = db.query(User).filter(
+                    User.role == UserRole.ACCOUNTANT,
+                    User.manager_id == creator.manager_id,
+                    User.is_active == True,
+                    User.id != created_by_id
+                ).all()
+                notify_ids.extend([acc.id for acc in team_accountants])
             
             # If no direct manager, notify global admins
-            if not notify_ids:
+            # SKIP if the creator is already an Admin or Super Admin
+            is_admin_creator = creator.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
+            
+            if not notify_ids and not is_admin_creator:
                 admins = db.query(User).filter(
                     User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
                     User.is_active == True,
@@ -468,7 +495,12 @@ class NotificationService:
                 ).limit(5).all()
                 notify_ids.extend([admin.id for admin in admins])
             
-            for target_id in list(set(notify_ids)):
+            # Remove duplicates (e.g. if manager IS an accountant, or admin fallback)
+            unique_ids = set(notify_ids)
+            if created_by_id in unique_ids:
+                unique_ids.remove(created_by_id)
+
+            for target_id in list(unique_ids):
                 NotificationService.create_notification(
                     db=db,
                     user_id=target_id,
@@ -821,16 +853,19 @@ class NotificationService:
                     approvers.append(manager)
             
             # 2. Secondary Approvers: Global Admins (limited)
-            # Only include global admins if they are not the manager
-            admins = db.query(User).filter(
-                User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-                User.is_active == True,
-                User.id != requester_id
-            ).limit(3).all()
-            approvers.extend(admins)
+            # SKIP if the requester is already an Admin or Super Admin to avoid noise
+            is_admin_requester = requester.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
             
-            # 3. Fallback: If no manager and no admins, include a few Finance Admins
-            if not approvers:
+            if not is_admin_requester:
+                admins = db.query(User).filter(
+                    User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                    User.is_active == True,
+                    User.id != requester_id
+                ).limit(3).all()
+                approvers.extend(admins)
+            
+            # 3. Fallback: If no manager and no admins (and not an admin themselves), include a few Finance Admins
+            if not approvers and not is_admin_requester:
                 finance_admins = db.query(User).filter(
                     User.role == UserRole.FINANCE_ADMIN,
                     User.is_active == True,
