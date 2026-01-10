@@ -389,12 +389,21 @@ class NotificationService:
                 action_url=f"/inventory/manage?item_id={item_id}"
             )
             
-            # Notify the creator's manager and relevant admins only
+            # Notify the manager (the Finance Admin) and global admins if necessary
             creator = user_crud.get(db, id=created_by_id)
             notify_ids = []
             if creator and creator.manager_id:
                 notify_ids.append(creator.manager_id)
             
+            # DOWNWARD NOTIFICATION: If Creator is a FINANCE_ADMIN, notify their employees/subordinates
+            # This ensures employees know about new inventory added by their boss
+            if creator.role == UserRole.FINANCE_ADMIN:
+                subordinates = db.query(User).filter(
+                    User.manager_id == created_by_id,
+                    User.is_active == True
+                ).all()
+                notify_ids.extend([sub.id for sub in subordinates])
+
             # Plus any global admins (limited to avoid spam)
             # SKIP if the creator is already an Admin or Super Admin
             is_admin_creator = creator.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
@@ -482,6 +491,14 @@ class NotificationService:
                     User.id != created_by_id
                 ).all()
                 notify_ids.extend([acc.id for acc in team_accountants])
+            
+            # DOWNWARD NOTIFICATION: If Creator is a FINANCE_ADMIN, notify their employees/subordinates
+            if creator.role == UserRole.FINANCE_ADMIN:
+                subordinates = db.query(User).filter(
+                    User.manager_id == created_by_id,
+                    User.is_active == True
+                ).all()
+                notify_ids.extend([sub.id for sub in subordinates])
             
             # If no direct manager, notify global admins
             # SKIP if the creator is already an Admin or Super Admin
