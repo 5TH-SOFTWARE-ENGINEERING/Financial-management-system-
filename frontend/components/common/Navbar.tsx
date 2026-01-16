@@ -653,7 +653,7 @@ const NotificationPanel = styled.div<{ $isOpen: boolean }>`
   top: calc(100% + 12px);
   right: 0;
   width: 420px;
-  max-height: 800px;
+  max-height: 500px; // 500px is the maximum height of the notification panel amare
   background: ${props => props.theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.85)'};
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -1767,7 +1767,7 @@ export default function Navbar() {
                     </EmptyNotifications>
                   ) : (
                     <NotificationList>
-                      {(notificationsExpanded ? notifications.slice(0, 10) : notifications.slice(0, 5))
+                      {(notificationsExpanded ? notifications.slice(0, 20) : notifications.slice(0, 5))
                         .map((notification) => {
                           // Determine type for styling
                           const notifType = notification.display_type ||
