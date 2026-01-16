@@ -209,6 +209,26 @@ class NotificationService:
                     send_email=True, # Critical notification
                     background_tasks=background_tasks
                 )
+
+        # Notify subordinates if creator is a Finance Admin or Manager
+        if creator and creator.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            subordinates = user_crud.get_hierarchy(db, creator.id)
+            subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            for sub_id in subordinate_ids:
+                if sub_id != created_by_id:
+                    NotificationService.create_notification(
+                        db=db,
+                        user_id=sub_id,
+                        title="New Expense Record",
+                        message=f"A new expense '{expense_title}' (${amount:,.2f}) has been recorded by {creator.full_name or creator.username}.",
+                        notification_type=NotificationType.SYSTEM_ALERT,
+                        priority=NotificationPriority.LOW,
+                        action_url=f"/expenses/{expense_id}",
+                        background_tasks=background_tasks
+                    )
     
     @staticmethod
     def notify_expense_updated(
@@ -309,6 +329,26 @@ class NotificationService:
                     send_email=True,
                     background_tasks=background_tasks
                 )
+
+        # Notify subordinates if creator is a Finance Admin or Manager
+        if creator and creator.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            subordinates = user_crud.get_hierarchy(db, creator.id)
+            subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            for sub_id in subordinate_ids:
+                if sub_id != created_by_id:
+                    NotificationService.create_notification(
+                        db=db,
+                        user_id=sub_id,
+                        title="New Revenue Record",
+                        message=f"A new revenue entry '{revenue_title}' (${amount:,.2f}) has been recorded by {creator.full_name or creator.username}.",
+                        notification_type=NotificationType.SYSTEM_ALERT,
+                        priority=NotificationPriority.LOW,
+                        action_url=f"/revenue/{revenue_id}",
+                        background_tasks=background_tasks
+                    )
     
     @staticmethod
     def notify_revenue_updated(
@@ -420,7 +460,7 @@ class NotificationService:
         created_by_id: int,
         background_tasks: Optional[BackgroundTasks] = None
     ):
-        """Notify when a forecast is created"""
+        # Notify the creator
         NotificationService.create_notification(
             db=db,
             user_id=created_by_id,
@@ -431,6 +471,27 @@ class NotificationService:
             action_url=f"/forecast/{forecast_id}",
             background_tasks=background_tasks
         )
+
+        # Notify subordinates if creator is a Finance Admin or Manager
+        creator = user_crud.get(db, id=created_by_id)
+        if creator and creator.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            subordinates = user_crud.get_hierarchy(db, creator.id)
+            subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            for sub_id in subordinate_ids:
+                if sub_id != created_by_id:
+                    NotificationService.create_notification(
+                        db=db,
+                        user_id=sub_id,
+                        title="New Forecast Record",
+                        message=f"A new forecast '{forecast_name}' has been created by {creator.full_name or creator.username}.",
+                        notification_type=NotificationType.SYSTEM_ALERT,
+                        priority=NotificationPriority.LOW,
+                        action_url=f"/forecast/{forecast_id}",
+                        background_tasks=background_tasks
+                    )
     
     @staticmethod
     def notify_ml_training_completed(
@@ -520,12 +581,20 @@ class NotificationService:
         if creator and creator.manager_id:
             notify_ids.append(creator.manager_id)
         
-        # NOTE: Finance Admin subordinates are NOT notified of every creation 
-        # to avoid "unnecessary notifications" for the team.
+        # Notify subordinates if creator is a Finance Admin or Manager
+        if creator and creator.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            subordinates = user_crud.get_hierarchy(db, creator.id)
+            # Notify accountants and employees under them
+            subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE,]
+            ]
+            notify_ids.extend(subordinate_ids)
 
         is_admin_creator = creator.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
         if not is_admin_creator:
-            # If no stakeholders identified yet, notify a few admins for awareness
+            # If no specific stakeholders identified (manager or subordinates), 
+            # notify a few admins for general awareness
             if not notify_ids:
                 admins = db.query(User).filter(
                     User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
@@ -625,11 +694,18 @@ class NotificationService:
             ).all()
             notify_ids.extend([acc.id for acc in team_accountants])
         
-        # Removed redundant subordinate notification for Finance Admins
+        # Notify subordinates if creator is a Finance Admin or Manager
+        if creator and creator.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
+            subordinates = user_crud.get_hierarchy(db, creator.id)
+            subordinate_ids = [
+                sub.id for sub in subordinates 
+                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
+            ]
+            notify_ids.extend(subordinate_ids)
         
         is_admin_creator = creator and creator.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
         if not is_admin_creator:
-            # If no stakeholders found, notify a few admins
+            # If no specific stakeholders identified, notify a few admins
             if not notify_ids:
                 admins = db.query(User).filter(
                     User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
