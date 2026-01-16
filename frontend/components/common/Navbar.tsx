@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import styled, { keyframes, css, useTheme } from 'styled-components';
 import {
   Search, Plus, Bell, FileSpreadsheet, Globe, User, Users, LogOut, Settings, HelpCircle,
-  Clock, ChevronDown, ChevronUp, AlertCircle, XCircle, CheckCircle, Info
+  Clock, ChevronDown, ChevronUp, AlertCircle, XCircle, CheckCircle, Info, Sun, Moon, Monitor, Check
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuth } from '@/lib/rbac/auth-context';
@@ -18,6 +18,7 @@ import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { debounce } from '@/lib/utils';
 import useNotificationStore, { type Notification } from '@/store/notificationStore';
+import { useThemeStore } from '@/store/useThemeStore';
 
 const PRIMARY_ACCENT = '#06b6d4';
 const PRIMARY_HOVER = '#0891b2';
@@ -1085,6 +1086,8 @@ export default function Navbar() {
     accessibleUserIds
   } = useNotificationStore();
 
+  const { themePreference, setThemePreference } = useThemeStore();
+
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isOnline, setIsOnline] = useState(true);
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
@@ -1922,6 +1925,31 @@ export default function Navbar() {
               <span>Role & Permission Management</span>
             </DropdownItem>
           </ComponentGate>
+
+          <div style={{ padding: '8px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderTop: '1px solid var(--border)', marginTop: '4px', background: 'var(--background-secondary)' }}>
+            Appearance
+          </div>
+          <DropdownItem onClick={() => setThemePreference('light')}>
+            <DropdownIcon $iconType="sun">
+              <Sun size={16} color={themePreference === 'light' ? PRIMARY_ACCENT : undefined} />
+            </DropdownIcon>
+            <span style={{ color: themePreference === 'light' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'light' ? 600 : 400 }}>Light Mode</span>
+            {themePreference === 'light' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
+          </DropdownItem>
+          <DropdownItem onClick={() => setThemePreference('dark')}>
+            <DropdownIcon $iconType="moon">
+              <Moon size={16} color={themePreference === 'dark' ? PRIMARY_ACCENT : undefined} />
+            </DropdownIcon>
+            <span style={{ color: themePreference === 'dark' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'dark' ? 600 : 400 }}>Dark Mode</span>
+            {themePreference === 'dark' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
+          </DropdownItem>
+          <DropdownItem onClick={() => setThemePreference('system')}>
+            <DropdownIcon $iconType="monitor">
+              <Monitor size={16} color={themePreference === 'system' ? PRIMARY_ACCENT : undefined} />
+            </DropdownIcon>
+            <span style={{ color: themePreference === 'system' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'system' ? 600 : 400 }}>System Default</span>
+            {themePreference === 'system' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
+          </DropdownItem>
           <SignOutItem
             data-signout="true"
             onMouseDown={handleSignOutMouseDown}

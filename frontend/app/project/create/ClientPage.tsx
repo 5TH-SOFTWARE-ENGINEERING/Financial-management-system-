@@ -17,13 +17,15 @@ import { ArrowLeft, FolderKanban, Loader2, CheckCircle, AlertCircle } from 'luci
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
+import { useThemeStore } from '@/store/useThemeStore';
 
 // ──────────────────────────────────────────
 // Styled Components Layout
 // ──────────────────────────────────────────
 const LayoutWrapper = styled.div`
   display: flex;
-  background: #f5f6fa;
+  background: var(--background);
+  color: var(--text);
   min-height: 100vh;
 `;
 
@@ -85,11 +87,11 @@ const Subtitle = styled.p`
 `;
 
 const FormCard = styled.form`
-  background: #fff;
+  background: var(--card);
   padding: 28px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -115,9 +117,9 @@ const MessageBox = styled.div<{ type: 'error' | 'success' }>`
   gap: 10px;
   align-items: center;
 
-  background: ${(p) => (p.type === 'error' ? '#fee2e2' : '#d1fae5')};
-  border: 1px solid ${(p) => (p.type === 'error' ? '#fecaca' : '#a7f3d0')};
-  color: ${(p) => (p.type === 'error' ? '#991b1b' : '#065f46')};
+  background: ${(p) => (p.type === 'error' ? 'color-mix(in srgb, var(--error), transparent 90%)' : 'color-mix(in srgb, var(--primary), transparent 90%)')};
+  border: 1px solid ${(p) => (p.type === 'error' ? 'color-mix(in srgb, var(--error), transparent 70%)' : 'color-mix(in srgb, var(--primary), transparent 70%)')};
+  color: ${(p) => (p.type === 'error' ? 'var(--error)' : 'var(--primary)')};
 `;
 
 const ButtonRow = styled.div`
@@ -141,16 +143,16 @@ const GridRow = styled.div`
 const Select = styled.select`
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--card);
   font-size: 14px;
-  color: var(--foreground);
+  color: var(--text);
   
   &:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary), transparent 90%);
   }
   
   &:disabled {
@@ -162,13 +164,14 @@ const Select = styled.select`
 const UsersList = styled.div`
   max-height: 192px;
   overflow-y: auto;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+  background: var(--background);
 `;
 
 const CheckboxItem = styled.div`
@@ -192,6 +195,7 @@ const CheckboxItem = styled.div`
 export default function CreateProjectPage() {
   const router = useRouter();
   const { allUsers } = useUserStore();
+  const { themePreference, setThemePreference } = useThemeStore();
   const [departments, setDepartments] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,7 +243,7 @@ export default function CreateProjectPage() {
       // Format dates for API
       const startDate = new Date(data.startDate).toISOString();
       const endDate = data.endDate ? new Date(data.endDate).toISOString() : null;
-      
+
       const projectData = {
         name: data.name,
         description: data.description || null,
@@ -256,7 +260,7 @@ export default function CreateProjectPage() {
       toast.success('Project created successfully!');
       reset();
       setSelectedUsers([]);
-      
+
       // Redirect after 2 seconds
       setTimeout(() => {
         router.push('/project/list');
@@ -275,8 +279,8 @@ export default function CreateProjectPage() {
   };
 
   const toggleUser = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
