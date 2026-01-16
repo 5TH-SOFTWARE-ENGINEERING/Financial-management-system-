@@ -54,13 +54,13 @@ class AnalyticsService:
         date_map = defaultdict(lambda: {"revenue": 0, "expense": 0})
 
         # Get all revenue entries in range - ONLY APPROVED entries
-        if user_role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        if user_role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             all_revenue = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
             all_expenses = expense_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
             # Filter to only include approved entries
             all_revenue = [r for r in all_revenue if r.is_approved == True]
             all_expenses = [e for e in all_expenses if e.is_approved == True]
-        elif user_role == UserRole.MANAGER:
+        elif user_role == UserRole.MANAGER or user_role == UserRole.FINANCE_ADMIN:
             subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, user_id)] + [user_id]
             all_revenue_all = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
             all_expenses_all = expense_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
@@ -186,12 +186,12 @@ class AnalyticsService:
         prev_start_date = start_date - timedelta(days=period_days)
 
         # Get current period data
-        if user_role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        if user_role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             current_revenue = revenue_crud.get_total_by_period(db, start_date, end_date)
             current_expenses = expense_crud.get_total_by_period(db, start_date, end_date)
             prev_revenue = revenue_crud.get_total_by_period(db, prev_start_date, prev_end_date)
             prev_expenses = expense_crud.get_total_by_period(db, prev_start_date, prev_end_date)
-        elif user_role == UserRole.MANAGER:
+        elif user_role == UserRole.MANAGER or user_role == UserRole.FINANCE_ADMIN:
             subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, user_id)] + [user_id]
             all_revenue_curr = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
             all_expenses_curr = expense_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
@@ -300,10 +300,10 @@ class AnalyticsService:
             point_start = start_date + timedelta(days=i * interval_days)
             point_end = min(point_start + timedelta(days=interval_days), end_date)
 
-            if user_role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+            if user_role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
                 revenue = revenue_crud.get_total_by_period(db, point_start, point_end)
                 expenses = expense_crud.get_total_by_period(db, point_start, point_end)
-            elif user_role == UserRole.MANAGER:
+            elif user_role == UserRole.MANAGER or user_role == UserRole.FINANCE_ADMIN:
                 subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, user_id)] + [user_id]
                 all_rev = revenue_crud.get_by_date_range(db, point_start, point_end, 0, 10000)
                 all_exp = expense_crud.get_by_date_range(db, point_start, point_end, 0, 10000)
@@ -382,10 +382,10 @@ class AnalyticsService:
         user_role: Optional[UserRole] = None
     ) -> Dict:
         """Get detailed category breakdown"""
-        if user_role in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN]:
+        if user_role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             revenue_summary = revenue_crud.get_summary_by_category(db, start_date, end_date)
             expense_summary = expense_crud.get_summary_by_category(db, start_date, end_date)
-        elif user_role == UserRole.MANAGER:
+        elif user_role == UserRole.MANAGER or user_role == UserRole.FINANCE_ADMIN:
             subordinate_ids = [sub.id for sub in user_crud.get_hierarchy(db, user_id)] + [user_id]
             all_revenue = revenue_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
             all_expenses = expense_crud.get_by_date_range(db, start_date, end_date, 0, 10000)
