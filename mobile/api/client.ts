@@ -4,9 +4,9 @@ import { Platform } from 'react-native';
 
 // Use 10.0.2.2 for Android Emulator, localhost for iOS/Web
 const BASE_URL = Platform.select({
-    android: 'http://10.0.2.2:8000',
-    ios: 'http://localhost:8000',
-    default: 'http://localhost:8000',
+    android: 'http://192.168.137.238:8000',
+    ios: 'http://192.168.137.238:8000',
+    default: 'http://192.168.137.238:8000',
 });
 
 const client = axios.create({

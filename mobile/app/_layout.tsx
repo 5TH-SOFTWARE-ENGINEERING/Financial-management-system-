@@ -19,11 +19,13 @@ export default function RootLayout() {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inTabsGroup = segments[0] === '(tabs)';
+    const inProtectedGroup = inTabsGroup || segments[0] === 'expenses' || segments[0] === 'projects';
 
-    if (isAuthenticated && inAuthGroup) {
-      // If user is signed in and trying to access auth pages, redirect to tabs
+    if (isAuthenticated && (inAuthGroup || !inProtectedGroup)) {
+      // If user is signed in and trying to access auth pages or landing, redirect to tabs
       router.replace('/(tabs)');
-    } else if (!isAuthenticated && !inAuthGroup) {
+    } else if (!isAuthenticated && inProtectedGroup) {
       // If user is not signed in and trying to access protected pages, redirect to login
       router.replace('/(auth)/login');
     }
@@ -40,6 +42,7 @@ export default function RootLayout() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="expenses/create" options={{ presentation: 'modal', title: 'Add Expense', headerShown: true }} />
