@@ -38,7 +38,7 @@ export default function ProjectsScreen() {
         switch (status?.toLowerCase()) {
             case 'active': return colors.primary;
             case 'completed': return colors.primary; // or a check color
-            case 'on_hold': return colors.error;
+            case 'on_hold': return colors.warning;
             default: return colors.muted;
         }
     }
