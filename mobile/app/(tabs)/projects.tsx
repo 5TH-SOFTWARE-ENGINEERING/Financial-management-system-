@@ -34,13 +34,8 @@ export default function ProjectsScreen() {
         fetchProjects();
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status?.toLowerCase()) {
-            case 'active': return colors.primary;
-            case 'completed': return colors.primary; // or a check color
-            case 'on_hold': return colors.warning;
-            default: return colors.muted;
-        }
+    const getStatusColor = (isActive: boolean) => {
+        return isActive ? '#10b981' : colors.muted;
     }
 
     const renderItem = ({ item }: { item: any }) => (
@@ -50,8 +45,10 @@ export default function ProjectsScreen() {
                     <Folder size={20} color={colors.primary} style={{ marginRight: 8 }} />
                     <Text style={[styles.itemTitle, { color: colors.text }]}>{item.name}</Text>
                 </View>
-                <View style={[styles.badge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-                    <Text style={[styles.badgeText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
+                <View style={[styles.badge, { backgroundColor: getStatusColor(item.is_active) + '20' }]}>
+                    <Text style={[styles.badgeText, { color: getStatusColor(item.is_active) }]}>
+                        {item.is_active ? 'Active' : 'Inactive'}
+                    </Text>
                 </View>
             </View>
 
@@ -60,10 +57,17 @@ export default function ProjectsScreen() {
             </Text>
 
             <View style={styles.footer}>
-                <Calendar size={14} color={colors.muted} style={{ marginRight: 4 }} />
-                <Text style={[styles.date, { color: colors.muted }]}>
-                    Due: {item.end_date ? new Date(item.end_date).toLocaleDateString() : 'N/A'}
-                </Text>
+                <View style={styles.footerItem}>
+                    <Calendar size={14} color={colors.muted} style={{ marginRight: 4 }} />
+                    <Text style={[styles.date, { color: colors.muted }]}>
+                        {item.end_date ? new Date(item.end_date).toLocaleDateString() : 'No end date'}
+                    </Text>
+                </View>
+                {item.budget && (
+                    <Text style={[styles.budget, { color: colors.primary }]}>
+                        ${item.budget.toLocaleString()}
+                    </Text>
+                )}
             </View>
         </View>
     );
@@ -142,9 +146,18 @@ const styles = StyleSheet.create({
     footer: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    footerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     date: {
         fontSize: 12,
+    },
+    budget: {
+        fontSize: 14,
+        fontWeight: 'bold',
     },
     emptyText: {
         textAlign: 'center',

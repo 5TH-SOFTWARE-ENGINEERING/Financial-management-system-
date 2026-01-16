@@ -53,7 +53,7 @@ export default function NotificationsScreen() {
         try {
             // Optimistic update
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-            await client.put(`/notifications/${id}`, { is_read: true });
+            await client.post(`/notifications/${id}/mark-read`);
         } catch (error) {
             console.error('Error marking as read:', error);
         }
@@ -62,8 +62,7 @@ export default function NotificationsScreen() {
     const markAllAsRead = async () => {
         try {
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-            // Assuming there is a bulk endpoint or just looping (inefficient but works for small sets)
-            // await client.post('/notifications/mark-all-read'); 
+            await client.post('/notifications/mark-all-read');
         } catch (error) {
             console.error('Error marking all as read:', error)
         }

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/store/authStore';
 import { LogOut } from 'lucide-react-native';
@@ -9,7 +9,7 @@ export default function ProfileScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={styles.content}>
+            <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.profileHeader}>
                     <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
                         <Text style={styles.avatarText}>
@@ -22,6 +22,24 @@ export default function ProfileScreen() {
                     <Text style={[styles.email, { color: colors.muted }]}>
                         {user?.email || 'email@example.com'}
                     </Text>
+                    <View style={[styles.roleBadge, { backgroundColor: colors.primary + '15' }]}>
+                        <Text style={[styles.roleText, { color: colors.primary }]}>
+                            {user?.role || 'User'}
+                        </Text>
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { color: colors.muted }]}>Account Settings</Text>
+                    <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Text style={[styles.menuText, { color: colors.text }]}>Edit Profile</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Text style={[styles.menuText, { color: colors.text }]}>Security & Password</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Text style={[styles.menuText, { color: colors.text }]}>Notification Preferences</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
@@ -31,7 +49,7 @@ export default function ProfileScreen() {
                     <LogOut size={20} color={colors.error} />
                     <Text style={[styles.logoutText, { color: colors.error }]}>Log Out</Text>
                 </TouchableOpacity>
-            </View>
+            </ScrollView>
         </View>
     );
 }
@@ -43,44 +61,84 @@ const styles = StyleSheet.create({
         justifyContent: 'center', // Center mainly for this simple view
     },
     content: {
-        alignItems: 'center',
+        padding: 20,
+        paddingBottom: 40,
     },
     profileHeader: {
         alignItems: 'center',
-        marginBottom: 40,
+        marginBottom: 32,
     },
     avatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
     },
     avatarText: {
-        fontSize: 32,
+        fontSize: 40,
         fontWeight: 'bold',
         color: '#fff',
     },
     name: {
-        fontSize: 24,
+        fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 4,
     },
     email: {
         fontSize: 16,
+        marginBottom: 12,
+    },
+    roleBadge: {
+        paddingHorizontal: 16,
+        paddingVertical: 4,
+        borderRadius: 20,
+    },
+    roleText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
+    section: {
+        width: '100%',
+        marginBottom: 32,
+    },
+    sectionTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        marginBottom: 12,
+        marginLeft: 4,
+    },
+    menuItem: {
+        width: '100%',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 8,
+    },
+    menuText: {
+        fontSize: 16,
+        fontWeight: '500',
     },
     logoutButton: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 8,
-        paddingVertical: 12,
-        paddingHorizontal: 24,
+        paddingVertical: 16,
+        width: '100%',
         borderRadius: 12,
         borderWidth: 1,
     },
     logoutText: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: 'bold',
     },
 });

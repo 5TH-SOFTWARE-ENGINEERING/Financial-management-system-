@@ -79,17 +79,28 @@ export default function CreateExpenseScreen() {
 
                 <View style={styles.inputGroup}>
                     <Text style={[styles.label, { color: colors.text }]}>Category</Text>
-                    <View style={[styles.inputContainer, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                        <Tag size={20} color={colors.muted} />
-                        <TextInput
-                            style={[styles.input, { color: colors.text }]}
-                            placeholder="e.g. OPERATIONAL, TAX, MARKETING"
-                            placeholderTextColor={colors.muted}
-                            value={category}
-                            onChangeText={setCategory}
-                            autoCapitalize="characters"
-                        />
-                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryList}>
+                        {['salary', 'rent', 'utilities', 'marketing', 'equipment', 'travel', 'supplies', 'insurance', 'taxes', 'other'].map((cat) => (
+                            <TouchableOpacity
+                                key={cat}
+                                style={[
+                                    styles.categoryChip,
+                                    {
+                                        backgroundColor: category === cat ? colors.primary : colors.secondary,
+                                        borderColor: category === cat ? colors.primary : colors.border
+                                    }
+                                ]}
+                                onPress={() => setCategory(cat)}
+                            >
+                                <Text style={[
+                                    styles.categoryChipText,
+                                    { color: category === cat ? '#fff' : colors.text }
+                                ]}>
+                                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -161,5 +172,20 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    categoryList: {
+        flexDirection: 'row',
+        marginTop: 4,
+    },
+    categoryChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        marginRight: 8,
+    },
+    categoryChipText: {
+        fontSize: 14,
+        fontWeight: '500',
     },
 });

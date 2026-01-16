@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, DollarSign, Bell, User, Briefcase } from 'lucide-react-native';
+import { Home, DollarSign, Bell, User, Briefcase, BarChart2 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Platform } from 'react-native';
 
@@ -47,6 +47,13 @@ export default function TabLayout() {
         options={{
           title: 'Updates',
           tabBarIcon: ({ color, size }) => <Bell size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Reports',
+          tabBarIcon: ({ color, size }) => <BarChart2 size={size} color={color} />,
         }}
       />
       <Tabs.Screen

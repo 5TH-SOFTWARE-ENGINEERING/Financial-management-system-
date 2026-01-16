@@ -41,9 +41,14 @@ export default function ExpensesScreen() {
             </View>
             <View style={styles.itemDetails}>
                 <Text style={[styles.itemTitle, { color: colors.text }]}>{item.title}</Text>
-                <Text style={[styles.itemDate, { color: colors.muted }]}>
-                    {new Date(item.date).toLocaleDateString()}
-                </Text>
+                <View style={styles.itemMeta}>
+                    <Text style={[styles.itemCategory, { color: colors.primary, backgroundColor: colors.primary + '10' }]}>
+                        {item.category}
+                    </Text>
+                    <Text style={[styles.itemDate, { color: colors.muted }]}>
+                        {new Date(item.date).toLocaleDateString()}
+                    </Text>
+                </View>
             </View>
             <Text style={[styles.itemAmount, { color: colors.text }]}>
                 ${item.amount.toFixed(2)}
@@ -107,6 +112,19 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         marginBottom: 4,
+    },
+    itemMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    itemCategory: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        textTransform: 'uppercase',
     },
     itemDate: {
         fontSize: 12,

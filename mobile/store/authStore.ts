@@ -6,7 +6,8 @@ import { Platform } from 'react-native';
 interface User {
     id: number;
     email: string;
-    full_name?: string;
+    username: string;
+    full_name: string;
     role?: string;
     // Add other user fields as needed
 }
@@ -71,7 +72,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     register: async (data) => {
         set({ isLoading: true, error: null });
         try {
-            await client.post('/auth/register', data);
+            // Backend expects username as well. If not provided, use email prefix.
+            const registrationData = {
+                ...data,
+                username: data.username || data.email.split('@')[0],
+                role: 'employee' // Map mobile USER to backend employee
+            };
+            await client.post('/auth/register', registrationData);
             set({ isLoading: false });
             // Optionally login automatically or require separate login
         } catch (error: any) {
