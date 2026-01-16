@@ -1109,12 +1109,12 @@ const Sidebar: React.FC = () => {
                                                     {!collapsed && 'Notifications'}
                                                 </NavItem>
 
-                                                <NavItem href="/settings/logs" $active={pathname === '/settings/logs'} $collapsed={collapsed}>
+                                                {/* <NavItem href="/settings/logs" $active={pathname === '/settings/logs'} $collapsed={collapsed}>
                                                     <NavIcon $active={pathname === '/settings/logs'} $collapsed={collapsed} $size={16} $iconType="list">
                                                         <List />
                                                     </NavIcon>
                                                     {!collapsed && 'Audit Logs'}
-                                                </NavItem>
+                                                </NavItem> */}
                                                 <NavItem href="/settings/ipmanagement" $active={pathname === '/settings/ipmanagement'} $collapsed={collapsed}>
                                                     <NavIcon $active={pathname === '/settings/ipmanagement'} $collapsed={collapsed} $size={16} $iconType="network">
                                                         <Network />
