@@ -1089,6 +1089,7 @@ export default function Navbar() {
   const { themePreference, setThemePreference } = useThemeStore();
 
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const [notificationsExpanded, setNotificationsExpanded] = useState(false);
@@ -1926,30 +1927,63 @@ export default function Navbar() {
             </DropdownItem>
           </ComponentGate>
 
-          <div style={{ padding: '8px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderTop: '1px solid var(--border)', marginTop: '4px', background: 'var(--background-secondary)' }}>
-            Appearance
+          <div
+            onClick={() => setIsAppearanceOpen(!isAppearanceOpen)}
+            style={{
+              padding: '10px 16px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: 'var(--text-secondary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              borderTop: '1px solid var(--border)',
+              marginTop: '4px',
+              background: 'var(--background-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              transition: 'all 0.2s'
+            }}
+          >
+            <span>Appearance</span>
+            <ChevronDown
+              size={14}
+              style={{
+                transform: isAppearanceOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            />
           </div>
-          <DropdownItem onClick={() => setThemePreference('light')}>
-            <DropdownIcon $iconType="sun">
-              <Sun size={16} color={themePreference === 'light' ? PRIMARY_ACCENT : undefined} />
-            </DropdownIcon>
-            <span style={{ color: themePreference === 'light' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'light' ? 600 : 400 }}>Light Mode</span>
-            {themePreference === 'light' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
-          </DropdownItem>
-          <DropdownItem onClick={() => setThemePreference('dark')}>
-            <DropdownIcon $iconType="moon">
-              <Moon size={16} color={themePreference === 'dark' ? PRIMARY_ACCENT : undefined} />
-            </DropdownIcon>
-            <span style={{ color: themePreference === 'dark' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'dark' ? 600 : 400 }}>Dark Mode</span>
-            {themePreference === 'dark' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
-          </DropdownItem>
-          <DropdownItem onClick={() => setThemePreference('system')}>
-            <DropdownIcon $iconType="monitor">
-              <Monitor size={16} color={themePreference === 'system' ? PRIMARY_ACCENT : undefined} />
-            </DropdownIcon>
-            <span style={{ color: themePreference === 'system' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'system' ? 600 : 400 }}>System Default</span>
-            {themePreference === 'system' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
-          </DropdownItem>
+
+          <div style={{
+            maxHeight: isAppearanceOpen ? '200px' : '0',
+            overflow: 'hidden',
+            transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s',
+            opacity: isAppearanceOpen ? 1 : 0
+          }}>
+            <DropdownItem onClick={() => setThemePreference('light')}>
+              <DropdownIcon $iconType="sun">
+                <Sun size={16} color={themePreference === 'light' ? PRIMARY_ACCENT : undefined} />
+              </DropdownIcon>
+              <span style={{ color: themePreference === 'light' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'light' ? 600 : 400 }}>Light Mode</span>
+              {themePreference === 'light' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
+            </DropdownItem>
+            <DropdownItem onClick={() => setThemePreference('dark')}>
+              <DropdownIcon $iconType="moon">
+                <Moon size={16} color={themePreference === 'dark' ? PRIMARY_ACCENT : undefined} />
+              </DropdownIcon>
+              <span style={{ color: themePreference === 'dark' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'dark' ? 600 : 400 }}>Dark Mode</span>
+              {themePreference === 'dark' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
+            </DropdownItem>
+            <DropdownItem onClick={() => setThemePreference('system')}>
+              <DropdownIcon $iconType="monitor">
+                <Monitor size={16} color={themePreference === 'system' ? PRIMARY_ACCENT : undefined} />
+              </DropdownIcon>
+              <span style={{ color: themePreference === 'system' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'system' ? 600 : 400 }}>System Default</span>
+              {themePreference === 'system' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
+            </DropdownItem>
+          </div>
           <SignOutItem
             data-signout="true"
             onMouseDown={handleSignOutMouseDown}
