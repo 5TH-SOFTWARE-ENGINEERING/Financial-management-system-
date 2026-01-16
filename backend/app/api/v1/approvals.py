@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional 
 from pydantic import BaseModel # type: ignore[import-untyped]
@@ -162,6 +162,7 @@ def update_approval(
 @router.post("/{approval_id}/approve")
 def approve_approval(
     approval_id: int,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_min_role(UserRole.MANAGER)),
     db: Session = Depends(get_db)
 ):
@@ -202,7 +203,8 @@ def approve_approval(
             approval_title=approved_approval.title,
             decision="approved",
             approver_id=current_user.id,
-            requester_id=approved_approval.requester_id
+            requester_id=approved_approval.requester_id,
+            background_tasks=background_tasks
         )
     except Exception as e:
         logger.warning(f"Notification failed for approval: {str(e)}")
@@ -218,6 +220,7 @@ class RejectApprovalRequest(BaseModel):
 def reject_approval(
     approval_id: int,
     reject_request: RejectApprovalRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_min_role(UserRole.MANAGER)),
     db: Session = Depends(get_db)
 ):
@@ -276,7 +279,8 @@ def reject_approval(
             decision="rejected",
             approver_id=current_user.id,
             requester_id=rejected_approval.requester_id,
-            rejection_reason=reject_request.rejection_reason
+            rejection_reason=reject_request.rejection_reason,
+            background_tasks=background_tasks
         )
     except Exception as e:
         logger.warning(f"Notification failed for approval rejection: {str(e)}")

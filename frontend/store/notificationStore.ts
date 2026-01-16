@@ -114,10 +114,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     setAccessibleUserIds: (ids) => set({ accessibleUserIds: ids, isInitialized: true }),
 
     fetchNotifications: async (showLoading = false) => {
+        if (get().isLoading) return;
         if (showLoading) set({ isLoading: true });
 
         try {
-            const response = await apiClient.getNotifications(false, 1000);
+            const response = await apiClient.getNotifications(false, 100); // Reduce limit for performance
             const notificationsData = Array.isArray(response?.data)
                 ? response.data
                 : (response?.data && typeof response.data === 'object' && response.data !== null && 'data' in response.data
@@ -126,21 +127,30 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
             const { accessibleUserIds } = get();
 
-            const mappedNotifications = (notificationsData || []).map((notif: any) => ({
-                id: notif.id || 0,
-                user_id: notif.user_id || 0,
-                type: notif.type || 'system_alert',
-                priority: notif.priority || 'medium',
-                title: notif.title || 'Notification',
-                message: notif.message || '',
-                is_read: notif.is_read || false,
-                is_email_sent: notif.is_email_sent || false,
-                created_at: notif.created_at || new Date().toISOString(),
-                read_at: notif.read_at || null,
-                expires_at: notif.expires_at || null,
-                action_url: notif.action_url || null,
-                display_type: mapNotificationType(notif.type, notif.title, notif.message),
-            })).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            // Use a Map to deduplicate by ID immediately
+            const deduplicatedMap = new Map();
+            (notificationsData || []).forEach((notif: any) => {
+                if (notif.id) {
+                    deduplicatedMap.set(notif.id, {
+                        id: notif.id,
+                        user_id: notif.user_id || 0,
+                        type: notif.type || 'system_alert',
+                        priority: notif.priority || 'medium',
+                        title: notif.title || 'Notification',
+                        message: notif.message || '',
+                        is_read: notif.is_read || false,
+                        is_email_sent: notif.is_email_sent || false,
+                        created_at: notif.created_at || new Date().toISOString(),
+                        read_at: notif.read_at || null,
+                        expires_at: notif.expires_at || null,
+                        action_url: notif.action_url || null,
+                        display_type: mapNotificationType(notif.type, notif.title, notif.message),
+                    });
+                }
+            });
+
+            const mappedNotifications = Array.from(deduplicatedMap.values())
+                .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
             // Client-side filtering if IDs are provided
             const filteredNotifications = accessibleUserIds
@@ -151,7 +161,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                 notifications: filteredNotifications,
                 unreadCount: filteredNotifications.filter(n => !n.is_read).length,
                 lastSynced: new Date(),
-                error: null
+                error: null,
+                isInitialized: true
             });
         } catch (err: any) {
             set({ error: err.message || 'Failed to fetch notifications' });
@@ -164,10 +175,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         try {
             const response = await apiClient.getUnreadCount();
             const count = (response as any)?.unread_count ?? (response as any)?.data?.unread_count ?? 0;
-            if (count !== get().unreadCount) {
+            const currentCount = get().unreadCount;
+
+            // Only trigger full fetch if count actually increased or hasn't been initialized
+            if (count > currentCount || !get().isInitialized) {
                 set({ unreadCount: count });
-                // If count changed, it's worth fetching full notifications too
-                get().fetchNotifications(false);
+                await get().fetchNotifications(false);
+            } else if (count !== currentCount) {
+                // If it decreased (e.g. read elsewhere), just update count to keep UI synced
+                set({ unreadCount: count });
             }
         } catch (err) {
             console.warn('Failed to fetch unread count:', err);

@@ -296,21 +296,23 @@ class BudgetingService:
                         percentage = (total_spent / item.amount) * 100
                         
                         # Notify the budget creator and the expense creator
-                        NotificationService.create_notification(
+                        NotificationService.notify_budget_exceeded(
                             db=db,
+                            budget_id=bud.id,
                             user_id=bud.created_by_id,
-                            title="Budget Exceeded Alert",
-                            message=f"Budget '{bud.name}' exceeded for category '{item.name}'. Used: ${total_spent:,.2f} / ${item.amount:,.2f} ({percentage:.1f}%)",
-                            notification_type=NotificationType.BUDGET_EXCEEDED,
-                            action_url=f"/finance/budget/{bud.id}"
+                            budget_name=bud.name,
+                            category_name=item.name,
+                            spent_amount=total_spent,
+                            budget_amount=item.amount
                         )
                         
                         if expense_entry.created_by_id != bud.created_by_id:
-                             NotificationService.create_notification(
+                             NotificationService.notify_budget_exceeded(
                                 db=db,
+                                budget_id=bud.id,
                                 user_id=expense_entry.created_by_id,
-                                title="Budget Warning",
-                                message=f"Your expense puts budget '{bud.name}' over limit for '{item.name}'.",
-                                notification_type=NotificationType.WARNING,
-                                action_url=f"/finance/budget/{bud.id}"
+                                budget_name=bud.name,
+                                category_name=item.name,
+                                spent_amount=total_spent,
+                                budget_amount=item.amount
                             )

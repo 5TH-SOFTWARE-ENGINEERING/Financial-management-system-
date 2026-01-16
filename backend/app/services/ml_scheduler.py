@@ -245,14 +245,10 @@ def retrain_all_models():
             if error_count > 0:
                 message += f" {error_count} errors occurred."
             
-            NotificationService.notify_by_role(
+            NotificationService.notify_ml_training_completed(
                 db=db,
-                roles=[UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN],
-                title="ML Model Training Completed",
-                message=message,
-                notification_type=NotificationType.SYSTEM_ALERT,
-                priority=NotificationPriority.MEDIUM if error_count == 0 else NotificationPriority.HIGH,
-                action_url="/ml-training"
+                success_count=success_count,
+                error_count=error_count
             )
         except Exception as notif_err:
              logger.error(f"Failed to send ML completion notification: {notif_err}")
@@ -328,14 +324,10 @@ def retrain_all_models_auto_learn():
             if error_count > 0:
                 message += f" {error_count} errors."
                 
-            NotificationService.notify_by_role(
+            NotificationService.notify_ml_training_completed(
                 db=db,
-                roles=[UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.FINANCE_ADMIN],
-                title="Auto-Learn Training Completed",
-                message=message,
-                notification_type=NotificationType.SYSTEM_ALERT,
-                priority=NotificationPriority.MEDIUM,
-                action_url="/ml-training"
+                success_count=success_count,
+                error_count=error_count
             )
         finally:
             db.close()

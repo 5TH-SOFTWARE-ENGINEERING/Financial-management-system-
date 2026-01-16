@@ -6,7 +6,7 @@ Role-based access control:
 - Accountant: Can view items (name, selling_price, stock) and sales
 - Employee: Can view items (name, selling_price, stock) and make sales
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from fastapi import Request # type: ignore[import-untyped]
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
@@ -94,6 +94,7 @@ def _filter_item_by_role(item: dict, user_role: UserRole) -> dict:
 def create_inventory_item(
     item_data: InventoryItemCreate,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -125,7 +126,8 @@ def create_inventory_item(
             item_id=item.id,
             item_name=item.item_name,
             quantity=item.quantity,
-            created_by_id=current_user.id
+            created_by_id=current_user.id,
+            background_tasks=background_tasks
         )
     except Exception as e:
         logger.warning(f"Notification failed for inventory creation: {str(e)}")
@@ -325,6 +327,7 @@ def update_inventory_item(
     item_id: int,
     item_update: InventoryItemUpdate,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -366,7 +369,8 @@ def update_inventory_item(
             item_id=updated_item.id,
             item_name=updated_item.item_name,
             updated_by_id=current_user.id,
-            changes=changes if changes else None
+            changes=changes if changes else None,
+            background_tasks=background_tasks
         )
         
         # Check for low stock after update
@@ -400,7 +404,8 @@ def update_inventory_item(
                     item_name=updated_item.item_name,
                     current_quantity=updated_item.quantity,
                     min_quantity=10,
-                    user_ids=recipient_ids
+                    user_ids=recipient_ids,
+                    background_tasks=background_tasks
                 )
     except Exception as e:
         logger.warning(f"Notification failed for inventory update: {str(e)}")

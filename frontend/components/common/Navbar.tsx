@@ -651,7 +651,7 @@ const NotificationPanel = styled.div<{ $isOpen: boolean }>`
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
-  width: 750px;
+  width: 420px;
   max-height: 800px;
   background: ${props => props.theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.85)'};
   backdrop-filter: blur(24px) saturate(180%);
@@ -707,6 +707,23 @@ const NotificationPanelHeader = styled.div`
     box-shadow: 0 4px 8px ${PRIMARY_ACCENT}30;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  .mark-all-read {
+    font-size: 12px;
+    font-weight: 600;
+    color: ${PRIMARY_ACCENT};
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+
+    &:hover {
+      background: ${PRIMARY_ACCENT}10;
+      transform: translateY(-1px);
+    }
   }
 `;
 
@@ -1257,9 +1274,11 @@ export default function Navbar() {
     // Initial fetch
     fetchNotificationsFromStore();
 
-    // Set up polling (every 30 seconds for Navbar unread count)
+    // Set up polling (every 30 seconds for Navbar unread count - optimization)
     const intervalId = setInterval(() => {
-      fetchNotificationsFromStore();
+      // Use fetchUnreadCount instead of fetchNotifications to save bandwidth
+      // The store will trigger fetchNotifications automatically if count increases
+      useNotificationStore.getState().fetchUnreadCount();
     }, 30000);
 
     return () => clearInterval(intervalId);
@@ -1710,9 +1729,22 @@ export default function Navbar() {
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <NotificationPanelHeader>
-                  <h3>Notifications</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <h3>Notifications</h3>
+                    {unreadCount > 0 && (
+                      <div className="unread-badge">{unreadCount}</div>
+                    )}
+                  </div>
                   {unreadCount > 0 && (
-                    <div className="unread-badge">{unreadCount} New</div>
+                    <button
+                      className="mark-all-read"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAllAsReadInStore();
+                      }}
+                    >
+                      Mark all as read
+                    </button>
                   )}
                 </NotificationPanelHeader>
                 <NotificationPanelBody data-notification-body>
@@ -1731,10 +1763,7 @@ export default function Navbar() {
                     </EmptyNotifications>
                   ) : (
                     <NotificationList>
-                      {(notificationsExpanded ? notifications : notifications.slice(0, 3))
-                        .filter((notification, index, self) =>
-                          index === self.findIndex(n => n.id === notification.id)
-                        )
+                      {(notificationsExpanded ? notifications.slice(0, 10) : notifications.slice(0, 5))
                         .map((notification) => {
                           // Determine type for styling
                           const notifType = notification.display_type ||

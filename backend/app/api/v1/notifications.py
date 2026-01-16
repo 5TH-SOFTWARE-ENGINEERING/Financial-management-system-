@@ -53,65 +53,10 @@ def read_notifications(
         
         query = db.query(Notification)
         
-        # Admin/Super Admin can see all notifications
-        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-            pass # No base filter needed
-            
-        # Finance Admin/Manager: Own + Subordinates (Accountants/Employees only)
-        elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
-            subordinates = user_crud.get_hierarchy(db, current_user.id)
-            accessible_user_ids = [current_user.id] + [
-                sub.id for sub in subordinates 
-                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
-            ]
-            query = query.filter(Notification.user_id.in_(accessible_user_ids))
-            
-        # Accountant: Own + Sales made by Employees of their manager
-        elif current_user.role == UserRole.ACCOUNTANT:
-            # Find manager and their other subordinates
-            manager_id = current_user.manager_id
-            sales_user_ids = []
-            if manager_id:
-                subordinates = user_crud.get_hierarchy(db, manager_id)
-                # Only include employees (potential sales staff)
-                sales_user_ids = [sub.id for sub in subordinates if sub.role == UserRole.EMPLOYEE]
-            
-            # Filter: Own OR (Other's sales)
-            query = query.filter(
-                or_(
-                    Notification.user_id == current_user.id,
-                    and_(
-                        Notification.user_id.in_(sales_user_ids),
-                        Notification.type.in_([NotificationType.SALE_CREATED, NotificationType.SALE_POSTED])
-                    )
-                )
-            )
-            
-        # Employee: Own + Items created by Finance Admin (manager)
-        elif current_user.role == UserRole.EMPLOYEE:
-            manager_id = current_user.manager_id
-            # Item creation types they should see from manager
-            manager_item_types = [
-                NotificationType.EXPENSE_CREATED,
-                NotificationType.REVENUE_CREATED,
-                NotificationType.INVENTORY_UPDATED,
-                NotificationType.SALE_CREATED,
-                NotificationType.FORECAST_CREATED
-            ]
-            
-            query = query.filter(
-                or_(
-                    Notification.user_id == current_user.id,
-                    and_(
-                        Notification.user_id == manager_id,
-                        Notification.type.in_(manager_item_types)
-                    )
-                )
-            )
-        
-        # Others: Only see their own
-        else:
-            query = query.filter(Notification.user_id == current_user.id)
+        # Baseline: Users only see their own notifications.
+        # Role-based broadcasting is handled at creation time by NotificationService.
+        # This prevents duplication where a manager sees both their own alert and their subordinate's success message.
+        query = db.query(Notification).filter(Notification.user_id == current_user.id)
             
         # Apply shared filters
         if unread_only:
@@ -170,63 +115,11 @@ def get_unread_count(
         from ...models.notification import NotificationType
         from sqlalchemy import or_
         
-        query = db.query(Notification).filter(Notification.is_read == False)
-        
-        # Admin/Super Admin
-        if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
-            pass
-            
-        # Finance Admin/Manager
-        elif current_user.role in [UserRole.FINANCE_ADMIN, UserRole.MANAGER]:
-            subordinates = user_crud.get_hierarchy(db, current_user.id)
-            accessible_user_ids = [current_user.id] + [
-                sub.id for sub in subordinates 
-                if sub.role in [UserRole.ACCOUNTANT, UserRole.EMPLOYEE]
-            ]
-            query = query.filter(Notification.user_id.in_(accessible_user_ids))
-            
-        # Accountant
-        elif current_user.role == UserRole.ACCOUNTANT:
-            manager_id = current_user.manager_id
-            sales_user_ids = []
-            if manager_id:
-                subordinates = user_crud.get_hierarchy(db, manager_id)
-                sales_user_ids = [sub.id for sub in subordinates if sub.role == UserRole.EMPLOYEE]
-            
-            query = query.filter(
-                or_(
-                    Notification.user_id == current_user.id,
-                    and_(
-                        Notification.user_id.in_(sales_user_ids),
-                        Notification.type.in_([NotificationType.SALE_CREATED, NotificationType.SALE_POSTED])
-                    )
-                )
-            )
-            
-        # Employee
-        elif current_user.role == UserRole.EMPLOYEE:
-            manager_id = current_user.manager_id
-            manager_item_types = [
-                NotificationType.EXPENSE_CREATED,
-                NotificationType.REVENUE_CREATED,
-                NotificationType.INVENTORY_UPDATED,
-                NotificationType.SALE_CREATED,
-                NotificationType.FORECAST_CREATED
-            ]
-            
-            query = query.filter(
-                or_(
-                    Notification.user_id == current_user.id,
-                    and_(
-                        Notification.user_id == manager_id,
-                        Notification.type.in_(manager_item_types)
-                    )
-                )
-            )
-            
-        # Others
-        else:
-            query = query.filter(Notification.user_id == current_user.id)
+        # Only count notifications directly assigned to the current user
+        query = db.query(Notification).filter(
+            Notification.user_id == current_user.id,
+            Notification.is_read == False
+        )
             
         count = query.count()
         return {"unread_count": count}

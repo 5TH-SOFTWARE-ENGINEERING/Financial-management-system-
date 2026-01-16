@@ -1,6 +1,6 @@
 # app/api/v1/users.py
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile # type: ignore[import-untyped]
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from pydantic import BaseModel # type: ignore[import-untyped]
 import logging
@@ -597,6 +597,7 @@ def read_user(
 @router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def create_user(
     user_in: UserCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_min_role(UserRole.ADMIN))
 ):
@@ -627,7 +628,22 @@ def create_user(
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     try:
-        return user_crud.create(db=db, obj_in=user_in)
+        user = user_crud.create(db=db, obj_in=user_in)
+        
+        # Send welcome notification (email-heavy)
+        try:
+            from ...services.notification_service import NotificationService
+            NotificationService.notify_user_created(
+                db=db,
+                new_user_id=user.id,
+                new_user_email=user.email,
+                created_by_id=current_user.id,
+                background_tasks=background_tasks
+            )
+        except Exception as e:
+            logger.warning(f"Notification failed for user creation: {str(e)}")
+            
+        return user
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -638,6 +654,7 @@ def create_user(
 @router.post("/subordinates", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def create_subordinate(
     user_in: UserCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_min_role(UserRole.MANAGER))
 ):
@@ -657,7 +674,22 @@ def create_subordinate(
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     try:
-        return user_crud.create(db=db, obj_in=user_in)
+        user = user_crud.create(db=db, obj_in=user_in)
+        
+        # Send welcome notification (email-heavy)
+        try:
+            from ...services.notification_service import NotificationService
+            NotificationService.notify_user_created(
+                db=db,
+                new_user_id=user.id,
+                new_user_email=user.email,
+                created_by_id=current_user.id,
+                background_tasks=background_tasks
+            )
+        except Exception as e:
+            logger.warning(f"Notification failed for subordinate creation: {str(e)}")
+            
+        return user
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -669,6 +701,7 @@ def create_subordinate(
 def update_user(
     user_id: int,
     user_update: UserUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -702,7 +735,8 @@ def update_user(
                     updated_user_email=updated_user.email,
                     updated_by_id=current_user.id,
                     updated_by_name=current_user.full_name or current_user.username,
-                    changes=changes
+                    changes=changes,
+                    background_tasks=background_tasks
                 )
         except Exception as e:
             logger.warning(f"Notification failed for user update: {str(e)}")

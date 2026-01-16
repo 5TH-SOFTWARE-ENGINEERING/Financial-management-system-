@@ -582,6 +582,7 @@ export default function InventoryManagePage() {
   const [activatingDeactivating, setActivatingDeactivating] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const [accessibleUserIds, setAccessibleUserIds] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -888,6 +889,7 @@ export default function InventoryManagePage() {
       return;
     }
 
+    setSaving(true);
     try {
       const itemPayload = {
         item_name: formData.item_name,
@@ -920,6 +922,8 @@ export default function InventoryManagePage() {
         (err instanceof Error ? err.message : 'Failed to save item');
       toast.error(errorMessage);
       console.error('Error saving item:', err);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1548,11 +1552,26 @@ export default function InventoryManagePage() {
                 <Button variant="outline" onClick={() => setShowModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <ButtonIcon $iconType="save" $size={16} $active={true}>
-                    <Save size={16} />
-                  </ButtonIcon>
-                  {editingItem ? 'Update' : 'Create'} Item
+                <Button
+                  onClick={handleSave}
+                  disabled={saving}
+                  style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}
+                >
+                  {saving ? (
+                    <>
+                      <ButtonIcon $iconType="loader2" $size={16} $active={true}>
+                        <Loader2 size={16} className="animate-spin" />
+                      </ButtonIcon>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <ButtonIcon $iconType="save" $size={16} $active={true}>
+                        <Save size={16} />
+                      </ButtonIcon>
+                      {editingItem ? 'Update' : 'Create'} Item
+                    </>
+                  )}
                 </Button>
               </ModalActions>
             </ModalContent>

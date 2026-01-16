@@ -218,14 +218,14 @@ def create_revenue_entry(
         # Send notification (in background, doesn't block response)
         try:
             from ...services.notification_service import NotificationService
-            background_tasks.add_task(
-                NotificationService.notify_revenue_created,
+            NotificationService.notify_revenue_created(
                 db=db,
                 revenue_id=revenue.id,
                 revenue_title=revenue_data.description or f"Revenue #{revenue.id}",
                 amount=revenue_data.amount,
                 created_by_id=current_user.id,
-                requires_approval=not revenue.is_approved
+                requires_approval=not revenue.is_approved,
+                background_tasks=background_tasks
             )
         except Exception as e:
             logger.warning(f"Notification failed for revenue creation: {str(e)}")
@@ -281,12 +281,12 @@ def update_revenue_entry(
     # Send notification (in background, doesn't block response)
     try:
         from ...services.notification_service import NotificationService
-        background_tasks.add_task(
-            NotificationService.notify_revenue_updated,
+        NotificationService.notify_revenue_updated(
             db=db,
             revenue_id=revenue_id,
             revenue_title=entry.description or f"Revenue #{revenue_id}",
-            updated_by_id=current_user.id
+            updated_by_id=current_user.id,
+            background_tasks=background_tasks
         )
     except Exception as e:
         logger.warning(f"Notification failed for revenue update: {str(e)}")
@@ -507,7 +507,8 @@ def approve_revenue_entry(
                 revenue_id=revenue_id,
                 revenue_title=revenue_title,
                 approver_id=current_user.id,
-                requester_id=created_by_id
+                requester_id=created_by_id,
+                background_tasks=background_tasks
             )
         except Exception as e:
             logger.warning(f"Notification failed for revenue approval: {str(e)}")
@@ -611,6 +612,22 @@ def reject_revenue_entry(
     
     # Reject the approval workflow
     approval_crud.reject(db, approval_workflow.id, current_user.id, reject_request.reason)
+    
+    # Send notification about revenue rejection
+    try:
+        from ...services.notification_service import NotificationService
+        revenue_title = entry.description or f"Revenue #{revenue_id}"
+        NotificationService.notify_revenue_rejected(
+            db=db,
+            revenue_id=revenue_id,
+            revenue_title=revenue_title,
+            rejected_by_id=current_user.id,
+            requester_id=entry.created_by_id,
+            rejection_reason=reject_request.reason,
+            background_tasks=background_tasks
+        )
+    except Exception as e:
+        logger.warning(f"Notification failed for revenue rejection: {str(e)}")
     
     # Log revenue entry rejection
     try:

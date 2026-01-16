@@ -180,14 +180,14 @@ def create_expense_entry(
         # Send notification (in background, doesn't block response)
         try:
             from ...services.notification_service import NotificationService
-            background_tasks.add_task(
-                NotificationService.notify_expense_created,
+            NotificationService.notify_expense_created(
                 db=db,
                 expense_id=expense.id,
                 expense_title=expense_data.description or f"Expense #{expense.id}",
                 amount=expense_data.amount,
                 created_by_id=current_user.id,
-                requires_approval=not expense.is_approved
+                requires_approval=not expense.is_approved,
+                background_tasks=background_tasks
             )
         except Exception as e:
             logger.warning(f"Notification failed for expense creation: {str(e)}")
@@ -251,12 +251,12 @@ def update_expense_entry(
         # Send notification (in background, doesn't block response)
         try:
             from ...services.notification_service import NotificationService
-            background_tasks.add_task(
-                NotificationService.notify_expense_updated,
+            NotificationService.notify_expense_updated(
                 db=db,
                 expense_id=expense_id,
                 expense_title=entry.description or f"Expense #{expense_id}",
-                updated_by_id=current_user.id
+                updated_by_id=current_user.id,
+                background_tasks=background_tasks
             )
         except Exception as e:
             logger.warning(f"Notification failed for expense update: {str(e)}")
@@ -512,7 +512,8 @@ def approve_expense_entry(
                 expense_id=expense_id,
                 expense_title=expense_title,
                 approver_id=current_user.id,
-                requester_id=created_by_id
+                requester_id=created_by_id,
+                background_tasks=background_tasks
             )
         except Exception as e:
             logger.warning(f"Notification failed for expense approval: {str(e)}")
@@ -548,6 +549,7 @@ class RejectRequest(BaseModel):
 def reject_expense_entry(
     expense_id: int,
     reject_request: RejectRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_min_role(UserRole.MANAGER)),
     db: Session = Depends(get_db)
 ):
@@ -616,6 +618,22 @@ def reject_expense_entry(
     
     # Reject the approval workflow
     approval_crud.reject(db, approval_workflow.id, current_user.id, reject_request.reason)
+    
+    # Send notification about expense rejection
+    try:
+        from ...services.notification_service import NotificationService
+        expense_title = entry.description or f"Expense #{expense_id}"
+        NotificationService.notify_expense_rejected(
+            db=db,
+            expense_id=expense_id,
+            expense_title=expense_title,
+            rejected_by_id=current_user.id,
+            requester_id=entry.created_by_id,
+            rejection_reason=reject_request.reason,
+            background_tasks=background_tasks
+        )
+    except Exception as e:
+        logger.warning(f"Notification failed for expense rejection: {str(e)}")
     
     # Log expense entry rejection
     try:

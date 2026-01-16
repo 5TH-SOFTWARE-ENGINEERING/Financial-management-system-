@@ -6,7 +6,7 @@ Role-based access control:
 - Accountant: Can view all sales from Finance Admin and Employee, post journal entries, approve sales for revenue recording
 - Finance Admin: Can view all sales and profit information
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query # type: ignore[import-untyped]
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session # type: ignore[import-untyped]
 from typing import List, Optional
 from datetime import datetime
@@ -86,6 +86,7 @@ def _can_create_sale(user_role: UserRole) -> bool:
 @router.post("/", response_model=SaleOut, status_code=status.HTTP_201_CREATED)
 def create_sale(
     sale_data: SaleCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -123,7 +124,8 @@ def create_sale(
                 item_name=item_name,
                 quantity=sale.quantity_sold,
                 total_amount=float(sale.total_sale),
-                created_by_id=current_user.id
+                created_by_id=current_user.id,
+                background_tasks=background_tasks
             )
         except Exception as e:
             logger.warning(f"Notification failed for sale creation: {str(e)}")
@@ -310,6 +312,7 @@ def get_sale(
 def post_sale(
     sale_id: int,
     post_data: SalePostRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -412,7 +415,8 @@ def post_sale(
                 item_name=item_name,
                 total_amount=float(sale.total_sale),
                 posted_by_id=current_user.id,
-                sold_by_id=sale.sold_by_id
+                sold_by_id=sale.sold_by_id,
+                background_tasks=background_tasks
             )
         except Exception as e:
             logger.warning(f"Notification failed for sale posting: {str(e)}")
