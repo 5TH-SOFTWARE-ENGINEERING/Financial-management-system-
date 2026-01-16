@@ -43,6 +43,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="expenses/create" options={{ presentation: 'modal', title: 'Add Expense', headerShown: true }} />
+        <Stack.Screen name="projects/create" options={{ presentation: 'modal', title: 'New Project', headerShown: true }} />
       </Stack>
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </>
