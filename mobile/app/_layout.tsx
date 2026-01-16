@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Slot, useRouter, useSegments, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from '@/store/authStore';
 import { View, ActivityIndicator } from 'react-native';
@@ -39,7 +39,11 @@ export default function RootLayout() {
 
   return (
     <>
-      <Slot />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="expenses/create" options={{ presentation: 'modal', title: 'Add Expense', headerShown: true }} />
+      </Stack>
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </>
   );
