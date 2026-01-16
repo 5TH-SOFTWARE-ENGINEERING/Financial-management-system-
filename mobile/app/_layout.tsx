@@ -1,24 +1,46 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import { useAuthStore } from '@/store/authStore';
+import { View, ActivityIndicator } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const { isAuthenticated, checkAuth, isLoading } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
+  const { colors, isDark } = useTheme();
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (isAuthenticated && inAuthGroup) {
+      // If user is signed in and trying to access auth pages, redirect to tabs
+      router.replace('/(tabs)');
+    } else if (!isAuthenticated && !inAuthGroup) {
+      // If user is not signed in and trying to access protected pages, redirect to login
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, segments, isLoading]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <>
+      <Slot />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </>
   );
 }
