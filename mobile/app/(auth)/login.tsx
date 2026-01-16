@@ -3,11 +3,12 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/hooks/useTheme';
-import { Mail, Lock, LogIn } from 'lucide-react-native';
+import { Mail, Lock, LogIn, Eye, EyeOff } from 'lucide-react-native';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const { login, isLoading, error } = useAuthStore();
     const { colors } = useTheme();
     const router = useRouter();
@@ -56,8 +57,18 @@ export default function LoginScreen() {
                             placeholderTextColor={colors.muted}
                             value={password}
                             onChangeText={setPassword}
-                            secureTextEntry
+                            secureTextEntry={!showPassword}
                         />
+                        <TouchableOpacity
+                            onPress={() => setShowPassword(!showPassword)}
+                            style={styles.eyeIcon}
+                        >
+                            {showPassword ? (
+                                <EyeOff size={20} color={colors.muted} />
+                            ) : (
+                                <Eye size={20} color={colors.muted} />
+                            )}
+                        </TouchableOpacity>
                     </View>
 
                     {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
@@ -134,6 +145,9 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 16,
         height: '100%',
+    },
+    eyeIcon: {
+        padding: 4,
     },
     errorText: {
         fontSize: 14,
