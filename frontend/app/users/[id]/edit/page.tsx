@@ -520,7 +520,7 @@ export default function EditUserPage() {
             <FormGrid>
               <FormGroup>
                 <Label htmlFor="email">
-                  Email <Required>*</Required>
+                  Email <Required></Required>
                 </Label>
                 <Input
                   id="email"
@@ -534,7 +534,7 @@ export default function EditUserPage() {
 
               <FormGroup>
                 <Label htmlFor="username">
-                  Username <Required>*</Required>
+                  Username <Required></Required>
                 </Label>
                 <Input
                   id="username"
@@ -548,7 +548,7 @@ export default function EditUserPage() {
 
               <FormGroup>
                 <Label htmlFor="full_name">
-                  Full Name <Required>*</Required>
+                  Full Name <Required></Required>
                 </Label>
                 <Input
                   id="full_name"
