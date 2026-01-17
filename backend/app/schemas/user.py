@@ -16,6 +16,8 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     role: UserRole = UserRole.EMPLOYEE
     department: Optional[str] = None
+    address: Optional[str] = None
+    bio: Optional[str] = None
     is_active: bool = True
     profile_image_url: Optional[str] = None
 
@@ -75,6 +77,8 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     role: Optional[UserRole] = None
     department: Optional[str] = None
+    address: Optional[str] = None
+    bio: Optional[str] = None
     is_active: Optional[bool] = None
     manager_id: Optional[int] = None
     permissions: Optional[list[dict]] = None  # Custom permissions

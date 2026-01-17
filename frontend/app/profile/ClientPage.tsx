@@ -32,6 +32,8 @@ interface ApiUser {
   role?: string;
   department?: string | null;
   phone?: string | null;
+  address?: string | null;
+  bio?: string | null;
   is_active?: boolean;
   created_at?: string;
   manager_id?: number;
@@ -394,8 +396,8 @@ const mapApiUserToExtended = (apiUser: ApiUser): ExtendedUser => {
     email: apiUser.email || '',
     username: apiUser.username || '',
     phoneNumber: apiUser.phone || '',
-    address: '', // Not in backend schema
-    bio: '', // Not in backend schema
+    address: apiUser.address || '',
+    bio: apiUser.bio || '',
     department: apiUser.department || '',
     position: '', // Not in backend schema
     joinDate: apiUser.created_at ? new Date(apiUser.created_at).toISOString().split('T')[0] : '',
@@ -475,11 +477,15 @@ export default function ProfilePage() {
         email?: string;
         phone?: string | null;
         department?: string | null;
+        address?: string | null;
+        bio?: string | null;
       } = {
         full_name: userData.name,
         email: userData.email,
         phone: userData.phoneNumber || null,
         department: userData.department || null,
+        address: userData.address || null,
+        bio: userData.bio || null,
       };
 
       // Remove undefined/null values
