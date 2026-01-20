@@ -17,7 +17,7 @@ import { ComponentId } from '@/lib/rbac/component-access';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
 const PRIMARY_LIGHT = (props: any) => props.theme.mode === 'dark' ? 'rgba(0, 170, 0, 0.1)' : '#e8f5e9';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
+const TEXT_COLOR_DARK = theme.colors.textDark || '#000000';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
 const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
 
