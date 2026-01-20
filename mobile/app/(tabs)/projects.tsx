@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, TextInput } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useRouter } from 'expo-router';
 import client from '@/api/client';
-import { Plus, Folder, Calendar } from 'lucide-react-native';
+import { Plus, Folder, Calendar, Search, X, Filter } from 'lucide-react-native';
 
 export default function ProjectsScreen() {
     const { colors } = useTheme();
@@ -11,10 +11,12 @@ export default function ProjectsScreen() {
     const [projects, setProjects] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+    const [showFilters, setShowFilters] = useState(false);
 
     const fetchProjects = async () => {
         try {
-            // Fetch projects - adjust endpoint if necessary
             const response = await client.get('/projects/?skip=0&limit=50');
             setProjects(response.data);
         } catch (error) {
@@ -38,8 +40,22 @@ export default function ProjectsScreen() {
         return isActive ? '#10b981' : colors.muted;
     }
 
+    const filteredProjects = useMemo(() => {
+        return projects.filter(item => {
+            const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
+            const matchesStatus = statusFilter === 'all' ||
+                (statusFilter === 'active' && item.is_active) ||
+                (statusFilter === 'inactive' && !item.is_active);
+            return matchesSearch && matchesStatus;
+        });
+    }, [projects, searchQuery, statusFilter]);
+
     const renderItem = ({ item }: { item: any }) => (
-        <View style={[styles.item, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <TouchableOpacity
+            style={[styles.item, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push(`/projects/${item.id}` as any)}
+        >
             <View style={styles.header}>
                 <View style={styles.titleRow}>
                     <Folder size={20} color={colors.primary} style={{ marginRight: 8 }} />
@@ -69,22 +85,77 @@ export default function ProjectsScreen() {
                     </Text>
                 )}
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+                <View style={[styles.searchBar, { backgroundColor: colors.secondary }]}>
+                    <Search size={20} color={colors.muted} />
+                    <TextInput
+                        style={[styles.searchInput, { color: colors.text }]}
+                        placeholder="Search projects..."
+                        placeholderTextColor={colors.muted}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                    {searchQuery !== '' && (
+                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                            <X size={20} color={colors.muted} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+                <TouchableOpacity
+                    style={[styles.filterBtn, { backgroundColor: showFilters ? colors.primary + '20' : 'transparent' }]}
+                    onPress={() => setShowFilters(!showFilters)}
+                >
+                    <Filter size={20} color={showFilters ? colors.primary : colors.muted} />
+                </TouchableOpacity>
+            </View>
+
+            {showFilters && (
+                <View style={[styles.filtersList, { borderBottomColor: colors.border }]}>
+                    <View style={styles.filtersContent}>
+                        {(['all', 'active', 'inactive'] as const).map((filter) => (
+                            <TouchableOpacity
+                                key={filter}
+                                style={[
+                                    styles.statusChip,
+                                    {
+                                        backgroundColor: statusFilter === filter ? colors.primary : colors.secondary,
+                                        borderColor: statusFilter === filter ? colors.primary : colors.border
+                                    }
+                                ]}
+                                onPress={() => setStatusFilter(filter)}
+                            >
+                                <Text style={[
+                                    styles.statusChipText,
+                                    { color: statusFilter === filter ? '#fff' : colors.text }
+                                ]}>
+                                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+            )}
+
             {loading ? (
                 <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
-                    data={projects}
+                    data={filteredProjects}
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id.toString()}
                     contentContainerStyle={styles.list}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     ListEmptyComponent={
-                        <Text style={[styles.emptyText, { color: colors.muted }]}>No projects found.</Text>
+                        <View style={styles.emptyContainer}>
+                            <Text style={[styles.emptyText, { color: colors.muted }]}>
+                                {searchQuery || statusFilter !== 'all' ? "No projects match your search." : "No projects found."}
+                            </Text>
+                        </View>
                     }
                 />
             )}
@@ -103,8 +174,56 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        gap: 12,
+    },
+    searchBar: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        height: 44,
+        borderRadius: 22,
+        gap: 8,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 16,
+        height: '100%',
+    },
+    filterBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    filtersList: {
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+    },
+    filtersContent: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        gap: 8,
+    },
+    statusChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+    },
+    statusChipText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
     list: {
-        padding: 20,
+        padding: 16,
         paddingBottom: 80,
     },
     item: {
@@ -159,10 +278,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: 'bold',
     },
+    emptyContainer: {
+        alignItems: 'center',
+        marginTop: 60,
+    },
     emptyText: {
-        textAlign: 'center',
-        marginTop: 40,
         fontSize: 16,
+        textAlign: 'center',
     },
     fab: {
         position: 'absolute',

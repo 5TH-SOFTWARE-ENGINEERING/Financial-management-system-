@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Switch, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import client from '@/api/client';
-import { Type, FileText } from 'lucide-react-native';
+import { Briefcase, FileText, DollarSign, Calendar } from 'lucide-react-native';
 
 export default function CreateProjectScreen() {
     const { colors } = useTheme();
@@ -12,11 +12,12 @@ export default function CreateProjectScreen() {
 
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [type, setType] = useState('INTERNAL'); // Default or dropdown
+    const [budget, setBudget] = useState('');
+    const [isActive, setIsActive] = useState(true);
 
     const handleSubmit = async () => {
         if (!name) {
-            Alert.alert('Error', 'Please fill in Project Name');
+            Alert.alert('Error', 'Please enter a project name');
             return;
         }
 
@@ -25,11 +26,12 @@ export default function CreateProjectScreen() {
             await client.post('/projects/', {
                 name,
                 description,
-                status: 'ACTIVE',
-                project_type: type,
-                // start_date: new Date().toISOString(),
+                budget: parseFloat(budget) || 0,
+                is_active: isActive,
+                start_date: new Date().toISOString(),
             });
 
+            Alert.alert("Success", "Project created successfully");
             router.back();
         } catch (error: any) {
             console.error('Create project error:', error);
@@ -45,10 +47,10 @@ export default function CreateProjectScreen() {
                 <View style={styles.inputGroup}>
                     <Text style={[styles.label, { color: colors.text }]}>Project Name</Text>
                     <View style={[styles.inputContainer, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                        <FileText size={20} color={colors.muted} />
+                        <Briefcase size={20} color={colors.muted} />
                         <TextInput
                             style={[styles.input, { color: colors.text }]}
-                            placeholder="e.g. Website Redesign"
+                            placeholder="e.g. New Office Expansion"
                             placeholderTextColor={colors.muted}
                             value={name}
                             onChangeText={setName}
@@ -57,11 +59,26 @@ export default function CreateProjectScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                    <Text style={[styles.label, { color: colors.text }]}>Description</Text>
-                    <View style={[styles.inputContainer, { backgroundColor: colors.secondary, borderColor: colors.border, height: 100, alignItems: 'flex-start', paddingTop: 12 }]}>
+                    <Text style={[styles.label, { color: colors.text }]}>Budget (optional)</Text>
+                    <View style={[styles.inputContainer, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                        <DollarSign size={20} color={colors.muted} />
                         <TextInput
-                            style={[styles.input, { color: colors.text, textAlignVertical: 'top' }]}
-                            placeholder="Project details..."
+                            style={[styles.input, { color: colors.text }]}
+                            placeholder="0.00"
+                            placeholderTextColor={colors.muted}
+                            value={budget}
+                            onChangeText={setBudget}
+                            keyboardType="numeric"
+                        />
+                    </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: colors.text }]}>Description</Text>
+                    <View style={[styles.textAreaContainer, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                        <TextInput
+                            style={[styles.textArea, { color: colors.text }]}
+                            placeholder="Describe the project goal..."
                             placeholderTextColor={colors.muted}
                             value={description}
                             onChangeText={setDescription}
@@ -69,6 +86,19 @@ export default function CreateProjectScreen() {
                             numberOfLines={4}
                         />
                     </View>
+                </View>
+
+                <View style={styles.switchGroup}>
+                    <View>
+                        <Text style={[styles.switchLabel, { color: colors.text }]}>Active Status</Text>
+                        <Text style={[styles.switchSublabel, { color: colors.muted }]}>Set whether this project is currently active</Text>
+                    </View>
+                    <Switch
+                        value={isActive}
+                        onValueChange={setIsActive}
+                        trackColor={{ false: colors.border, true: colors.primary }}
+                        thumbColor={Platform.OS === 'ios' ? undefined : '#fff'}
+                    />
                 </View>
 
                 <TouchableOpacity
@@ -116,12 +146,39 @@ const styles = StyleSheet.create({
         height: '100%',
         fontSize: 16,
     },
+    textAreaContainer: {
+        borderRadius: 8,
+        borderWidth: 1,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        minHeight: 100,
+    },
+    textArea: {
+        flex: 1,
+        fontSize: 16,
+        textAlignVertical: 'top',
+    },
+    switchGroup: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 16,
+        marginBottom: 20,
+    },
+    switchLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    switchSublabel: {
+        fontSize: 12,
+    },
     button: {
         height: 50,
-        borderRadius: 8,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 10,
     },
     buttonText: {
         color: '#fff',

@@ -45,7 +45,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             const { access_token } = response.data;
 
-            if (Platform.OS !== 'web') {
+            if (Platform.OS === 'web') {
+                localStorage.setItem('auth_token', access_token);
+            } else {
                 await SecureStore.setItemAsync('auth_token', access_token);
             }
 
@@ -91,7 +93,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     logout: async () => {
         set({ isLoading: true });
         try {
-            if (Platform.OS !== 'web') {
+            if (Platform.OS === 'web') {
+                localStorage.removeItem('auth_token');
+            } else {
                 await SecureStore.deleteItemAsync('auth_token');
             }
             // Optional: Call logout endpoint if exists
@@ -106,7 +110,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isLoading: true });
         try {
             let token = null;
-            if (Platform.OS !== 'web') {
+            if (Platform.OS === 'web') {
+                token = localStorage.getItem('auth_token');
+            } else {
                 token = await SecureStore.getItemAsync('auth_token');
             }
 
@@ -124,7 +130,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     });
                 } catch (err) {
                     // Token invalid or expired
-                    if (Platform.OS !== 'web') {
+                    if (Platform.OS === 'web') {
+                        localStorage.removeItem('auth_token');
+                    } else {
                         await SecureStore.deleteItemAsync('auth_token');
                     }
                     set({ token: null, user: null, isAuthenticated: false, isLoading: false });

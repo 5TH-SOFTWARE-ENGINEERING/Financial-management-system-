@@ -914,92 +914,96 @@ const Sidebar: React.FC = () => {
                         )}
 
                         {/* 2. Accountants (Create, List) */}
-                        <ComponentGate componentId={ComponentId.SIDEBAR_ACCOUNTANTS}>
-                            <>
-                                <DropdownHeader
-                                    onClick={() => toggleSection('accountant')}
-                                    $open={isOpen('accountant')}
-                                    $active={pathname.includes('/accountant')}
-                                    $collapsed={collapsed}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <DropdownIcon $active={pathname.includes('/accountant')} $collapsed={collapsed} $iconType="wallet">
-                                            <Wallet />
-                                        </DropdownIcon>
-                                        {!collapsed && <span style={{ marginLeft: '12px' }}>Accountants</span>}
-                                    </div>
-                                    <ChevronIcon $open={isOpen('accountant')}>
-                                        <ChevronDown />
-                                    </ChevronIcon>
-                                </DropdownHeader>
-                                {isOpen('accountant') && (
-                                    <SubMenu $collapsed={collapsed}>
-                                        {/* Accountant Create Link */}
-                                        <ComponentGate componentId={ComponentId.ACCOUNTANT_CREATE}>
-                                            <NavItem href="/accountants/create" $active={pathname === '/accountant/create'} $collapsed={collapsed}>
-                                                <NavIcon $active={pathname === '/accountant/create'} $collapsed={collapsed} $size={16} $iconType="plus">
-                                                    <UserPlus />
-                                                </NavIcon>
-                                                {!collapsed && 'Add Accountant'}
-                                            </NavItem>
-                                        </ComponentGate>
-                                        {/* Accountant List Link */}
-                                        <ComponentGate componentId={ComponentId.ACCOUNTANT_LIST}>
-                                            <NavItem href="/accountants/list" $active={pathname === '/accountant/list'} $collapsed={collapsed}>
-                                                <NavIcon $active={pathname === '/accountant/list'} $collapsed={collapsed} $size={16} $iconType="list">
-                                                    <List />
-                                                </NavIcon>
-                                                {!collapsed && 'All Accountants'}
-                                            </NavItem>
-                                        </ComponentGate>
-                                    </SubMenu>
-                                )}
-                            </>
-                        </ComponentGate>
+                        {!isAdmin && (
+                            <ComponentGate componentId={ComponentId.SIDEBAR_ACCOUNTANTS}>
+                                <>
+                                    <DropdownHeader
+                                        onClick={() => toggleSection('accountant')}
+                                        $open={isOpen('accountant')}
+                                        $active={pathname.includes('/accountant')}
+                                        $collapsed={collapsed}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            <DropdownIcon $active={pathname.includes('/accountant')} $collapsed={collapsed} $iconType="wallet">
+                                                <Wallet />
+                                            </DropdownIcon>
+                                            {!collapsed && <span style={{ marginLeft: '12px' }}>Accountants</span>}
+                                        </div>
+                                        <ChevronIcon $open={isOpen('accountant')}>
+                                            <ChevronDown />
+                                        </ChevronIcon>
+                                    </DropdownHeader>
+                                    {isOpen('accountant') && (
+                                        <SubMenu $collapsed={collapsed}>
+                                            {/* Accountant Create Link */}
+                                            <ComponentGate componentId={ComponentId.ACCOUNTANT_CREATE}>
+                                                <NavItem href="/accountants/create" $active={pathname === '/accountant/create'} $collapsed={collapsed}>
+                                                    <NavIcon $active={pathname === '/accountant/create'} $collapsed={collapsed} $size={16} $iconType="plus">
+                                                        <UserPlus />
+                                                    </NavIcon>
+                                                    {!collapsed && 'Add Accountant'}
+                                                </NavItem>
+                                            </ComponentGate>
+                                            {/* Accountant List Link */}
+                                            <ComponentGate componentId={ComponentId.ACCOUNTANT_LIST}>
+                                                <NavItem href="/accountants/list" $active={pathname === '/accountant/list'} $collapsed={collapsed}>
+                                                    <NavIcon $active={pathname === '/accountant/list'} $collapsed={collapsed} $size={16} $iconType="list">
+                                                        <List />
+                                                    </NavIcon>
+                                                    {!collapsed && 'All Accountants'}
+                                                </NavItem>
+                                            </ComponentGate>
+                                        </SubMenu>
+                                    )}
+                                </>
+                            </ComponentGate>
+                        )}
 
                         {/* 3. Employees (Create, List) */}
-                        <ComponentGate componentId={ComponentId.SIDEBAR_EMPLOYEES}>
-                            <>
-                                <DropdownHeader
-                                    onClick={() => toggleSection('employee')}
-                                    $open={isOpen('employee')}
-                                    $active={pathname.includes('/employee')}
-                                    $collapsed={collapsed}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <DropdownIcon $active={pathname.includes('/employee')} $collapsed={collapsed} $iconType="users">
-                                            <Users />
-                                        </DropdownIcon>
-                                        {!collapsed && <span style={{ marginLeft: '12px' }}>Employees</span>}
-                                    </div>
-                                    <ChevronIcon $open={isOpen('employee')}>
-                                        <ChevronDown />
-                                    </ChevronIcon>
-                                </DropdownHeader>
-                                {isOpen('employee') && (
-                                    <SubMenu $collapsed={collapsed}>
-                                        {/* Employee Create Link */}
-                                        <ComponentGate componentId={ComponentId.EMPLOYEE_CREATE}>
-                                            <NavItem href="/employees/create" $active={pathname === '/employee/create'} $collapsed={collapsed}>
-                                                <NavIcon $active={pathname === '/employee/create'} $collapsed={collapsed} $size={16} $iconType="plus">
-                                                    <UserPlus />
-                                                </NavIcon>
-                                                {!collapsed && 'Add Employee'}
-                                            </NavItem>
-                                        </ComponentGate>
-                                        {/* Employee List Link */}
-                                        <ComponentGate componentId={ComponentId.EMPLOYEE_LIST}>
-                                            <NavItem href="/employees/list" $active={pathname === '/employee/list'} $collapsed={collapsed}>
-                                                <NavIcon $active={pathname === '/employee/list'} $collapsed={collapsed} $size={16} $iconType="list">
-                                                    <List />
-                                                </NavIcon>
-                                                {!collapsed && 'All Employees'}
-                                            </NavItem>
-                                        </ComponentGate>
-                                    </SubMenu>
-                                )}
-                            </>
-                        </ComponentGate>
+                        {!isAdmin && (
+                            <ComponentGate componentId={ComponentId.SIDEBAR_EMPLOYEES}>
+                                <>
+                                    <DropdownHeader
+                                        onClick={() => toggleSection('employee')}
+                                        $open={isOpen('employee')}
+                                        $active={pathname.includes('/employee')}
+                                        $collapsed={collapsed}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            <DropdownIcon $active={pathname.includes('/employee')} $collapsed={collapsed} $iconType="users">
+                                                <Users />
+                                            </DropdownIcon>
+                                            {!collapsed && <span style={{ marginLeft: '12px' }}>Employees</span>}
+                                        </div>
+                                        <ChevronIcon $open={isOpen('employee')}>
+                                            <ChevronDown />
+                                        </ChevronIcon>
+                                    </DropdownHeader>
+                                    {isOpen('employee') && (
+                                        <SubMenu $collapsed={collapsed}>
+                                            {/* Employee Create Link */}
+                                            <ComponentGate componentId={ComponentId.EMPLOYEE_CREATE}>
+                                                <NavItem href="/employees/create" $active={pathname === '/employee/create'} $collapsed={collapsed}>
+                                                    <NavIcon $active={pathname === '/employee/create'} $collapsed={collapsed} $size={16} $iconType="plus">
+                                                        <UserPlus />
+                                                    </NavIcon>
+                                                    {!collapsed && 'Add Employee'}
+                                                </NavItem>
+                                            </ComponentGate>
+                                            {/* Employee List Link */}
+                                            <ComponentGate componentId={ComponentId.EMPLOYEE_LIST}>
+                                                <NavItem href="/employees/list" $active={pathname === '/employee/list'} $collapsed={collapsed}>
+                                                    <NavIcon $active={pathname === '/employee/list'} $collapsed={collapsed} $size={16} $iconType="list">
+                                                        <List />
+                                                    </NavIcon>
+                                                    {!collapsed && 'All Employees'}
+                                                </NavItem>
+                                            </ComponentGate>
+                                        </SubMenu>
+                                    )}
+                                </>
+                            </ComponentGate>
+                        )}
 
                         {/* Departments */}
                         <ComponentGate componentId={ComponentId.SIDEBAR_DEPARTMENT}>

@@ -227,7 +227,9 @@ app = FastAPI(
 # CORS configuration
 allowed_origins = [
     "http://localhost:3000",
+    "http://localhost:8081",  # Expo web dev server
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:8081",  # Expo web dev server
     "https://project1-e00p.onrender.com",
 ]
 # Allow all in debug to simplify local dev
@@ -385,8 +387,10 @@ app.openapi = custom_openapi
 default_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://localhost:8081",  # Expo web dev server
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
+    "http://127.0.0.1:8081",  # Expo web dev server
 ]
 
 # Determine allowed origins based on settings
@@ -462,8 +466,10 @@ async def add_cors_headers(request: Request, call_next):
     allowed_origins = [
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://localhost:8081",  # Expo web dev server
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
+        "http://127.0.0.1:8081",  # Expo web dev server
     ]
     
     # Handle OPTIONS preflight requests

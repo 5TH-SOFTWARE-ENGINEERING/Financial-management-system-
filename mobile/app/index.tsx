@@ -4,130 +4,180 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    Image,
     Dimensions,
     Animated,
     StatusBar,
+    ScrollView,
+    Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTheme } from '@/hooks/useTheme';
-import { ArrowRight, Shield, TrendingUp, Zap } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { TrendingUp, Shield, Zap, ArrowRight, BarChart3, PieChart, Users, FileText } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
-export default function LandingScreen() {
-    const { colors, isDark } = useTheme();
-    const router = useRouter();
+// Frontend Theme Colors
+const THEME = {
+    bg: '#0b0c10',
+    card: 'rgba(31, 41, 55, 0.7)', // #1f2937 with opacity
+    text: '#f9fafb',
+    textSecondary: '#94a3b8',
+    primary: '#00AA00',
+    primaryGradient: ['#00AA00', '#10b981'] as const,
+    border: 'rgba(0, 170, 0, 0.2)',
+    glow: 'rgba(0, 170, 0, 0.1)',
+};
 
-    // Animation values
+const FeatureCard = ({ icon: Icon, title, description, delay }: any) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(50)).current;
-    const scaleAnim = useRef(new Animated.Value(0.9)).current;
+    const slideAnim = useRef(new Animated.Value(20)).current;
 
     useEffect(() => {
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
-                duration: 1000,
+                duration: 800,
+                delay: delay,
                 useNativeDriver: true,
             }),
-            Animated.spring(slideAnim, {
+            Animated.timing(slideAnim, {
                 toValue: 0,
-                tension: 20,
-                friction: 7,
-                useNativeDriver: true,
-            }),
-            Animated.spring(scaleAnim, {
-                toValue: 1,
-                tension: 20,
-                friction: 7,
+                duration: 800,
+                delay: delay,
                 useNativeDriver: true,
             }),
         ]).start();
     }, []);
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-
-            {/* Hero Section */}
-            <Animated.View
-                style={[
-                    styles.heroContainer,
-                    {
-                        opacity: fadeAnim,
-                        transform: [{ scale: scaleAnim }]
-                    }
-                ]}
-            >
-                <Image
-                    source={require('@/assets/images/landing_hero.png')}
-                    style={styles.heroImage}
-                    resizeMode="contain"
-                />
-            </Animated.View>
-
-            {/* Content Section */}
-            <Animated.View
-                style={[
-                    styles.contentContainer,
-                    {
-                        opacity: fadeAnim,
-                        transform: [{ translateY: slideAnim }]
-                    }
-                ]}
-            >
-                <View style={styles.titleContainer}>
-                    <Text style={[styles.title, { color: colors.text }]}>
-                        Master Your <Text style={{ color: colors.primary }}>Wealth</Text>
-                    </Text>
-                    <Text style={[styles.subtitle, { color: colors.muted }]}>
-                        Professional finance and project management at your fingertips.
-                    </Text>
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], width: '100%', marginBottom: 16 }}>
+            {Platform.OS === 'ios' ? (
+                <BlurView intensity={20} tint="dark" style={styles.cardBlur}>
+                    <CardContent Icon={Icon} title={title} description={description} />
+                </BlurView>
+            ) : (
+                <View style={[styles.cardBlur, { backgroundColor: 'rgba(30, 41, 59, 0.8)' }]}>
+                    <CardContent Icon={Icon} title={title} description={description} />
                 </View>
+            )}
+        </Animated.View>
+    );
+};
 
-                {/* Features Row */}
-                <View style={styles.featuresRow}>
-                    <View style={styles.featureItem}>
-                        <View style={[styles.iconBox, { backgroundColor: colors.primary + '15' }]}>
-                            <TrendingUp size={20} color={colors.primary} />
-                        </View>
-                        <Text style={[styles.featureText, { color: colors.text }]}>Analytics</Text>
-                    </View>
-                    <View style={styles.featureItem}>
-                        <View style={[styles.iconBox, { backgroundColor: '#8b5cf6' + '15' }]}>
-                            <Zap size={20} color="#8b5cf6" />
-                        </View>
-                        <Text style={[styles.featureText, { color: colors.text }]}>Fast</Text>
-                    </View>
-                    <View style={styles.featureItem}>
-                        <View style={[styles.iconBox, { backgroundColor: '#10b981' + '15' }]}>
-                            <Shield size={20} color="#10b981" />
-                        </View>
-                        <Text style={[styles.featureText, { color: colors.text }]}>Secure</Text>
-                    </View>
-                </View>
+const CardContent = ({ Icon, title, description }: any) => (
+    <View style={styles.cardContent}>
+        <View style={styles.iconContainer}>
+            <Icon size={24} color={THEME.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+            <Text style={styles.cardTitle}>{title}</Text>
+            <Text style={styles.cardDesc}>{description}</Text>
+        </View>
+    </View>
+);
 
-                {/* Action Buttons */}
-                <View style={styles.actions}>
+export default function LandingScreen() {
+    const router = useRouter();
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+        }).start();
+    }, []);
+
+    return (
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" />
+
+            {/* Background Gradients */}
+            <LinearGradient
+                colors={['#0f172a', '#0b0c10']}
+                style={StyleSheet.absoluteFill}
+            />
+
+            {/* Ambient Glows */}
+            <View style={[styles.glowMap, { top: -100, left: -50, backgroundColor: 'rgba(0, 170, 0, 0.15)' }]} />
+            <View style={[styles.glowMap, { bottom: -100, right: -50, backgroundColor: 'rgba(16, 185, 129, 0.1)' }]} />
+
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {/* Hero Section */}
+                <Animated.View style={[styles.heroSection, { opacity: fadeAnim }]}>
+                    <View style={styles.badgeContainer}>
+                        <LinearGradient
+                            colors={['rgba(0, 170, 0, 0.1)', 'rgba(0, 170, 0, 0.05)']}
+                            style={styles.badge}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                        >
+                            <Text style={styles.badgeText}>New v2.0 Released</Text>
+                        </LinearGradient>
+                    </View>
+
+                    <Text style={styles.title}>
+                        Enterprise Financial <Text style={{ color: THEME.primary }}>Management</Text> Platform
+                    </Text>
+
+                    <Text style={styles.subtitle}>
+                        Transform your financial operations with intelligent automation, real-time analytics, and enterprise-grade security.
+                    </Text>
+
                     <TouchableOpacity
-                        style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-                        onPress={() => router.push('/(auth)/register')}
-                    >
-                        <Text style={styles.primaryButtonText}>Get Started</Text>
-                        <ArrowRight size={20} color="#fff" style={{ marginLeft: 8 }} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.secondaryButton, { borderColor: colors.border }]}
+                        style={styles.ctaButtonWrapper}
                         onPress={() => router.push('/(auth)/login')}
+                        activeOpacity={0.8}
                     >
-                        <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                            Already have an account? <Text style={{ fontWeight: '700', color: colors.primary }}>Sign In</Text>
-                        </Text>
+                        <LinearGradient
+                            colors={THEME.primaryGradient}
+                            style={styles.ctaButton}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                        >
+                            <Text style={styles.ctaText}>Start Now</Text>
+                            <ArrowRight size={20} color="white" />
+                        </LinearGradient>
                     </TouchableOpacity>
+
+                    <Text style={styles.disclaimer}>
+                        Unlock all features instantly. No payment details required.
+                    </Text>
+                </Animated.View>
+
+                {/* Features Section */}
+                <View style={styles.featuresSection}>
+                    <Text style={styles.sectionTitle}>Powerful Features</Text>
+
+                    <FeatureCard
+                        icon={TrendingUp}
+                        title="Advanced Analytics"
+                        description="Transform raw financial data into actionable insights with real-time analytics."
+                        delay={200}
+                    />
+                    <FeatureCard
+                        icon={Zap}
+                        title="Intelligent Budgeting"
+                        description="Streamline budget planning and allocation across departments."
+                        delay={400}
+                    />
+                    <FeatureCard
+                        icon={Shield}
+                        title="Enterprise Security"
+                        description="Bank-level encryption and comprehensive audit trails."
+                        delay={600}
+                    />
+                    <FeatureCard
+                        icon={BarChart3}
+                        title="Smart Reporting"
+                        description="Generate professional financial reports and balance sheets instantly."
+                        delay={800}
+                    />
                 </View>
-            </Animated.View>
+
+                <View style={{ height: 40 }} />
+            </ScrollView>
         </View>
     );
 }
@@ -135,85 +185,123 @@ export default function LandingScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'space-between',
+        backgroundColor: THEME.bg,
     },
-    heroContainer: {
-        height: height * 0.5,
-        justifyContent: 'center',
+    glowMap: {
+        position: 'absolute',
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        opacity: 0.6,
+        transform: [{ scale: 1.5 }],
+    },
+    scrollContent: {
+        paddingHorizontal: 24,
+        paddingTop: Platform.OS === 'ios' ? 80 : 60,
+    },
+    heroSection: {
         alignItems: 'center',
-        paddingTop: 60,
+        marginBottom: 60,
     },
-    heroImage: {
-        width: width * 0.85,
-        height: width * 0.85,
+    badgeContainer: {
+        marginBottom: 20,
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(0, 170, 0, 0.3)',
     },
-    contentContainer: {
-        flex: 1,
-        paddingHorizontal: 30,
-        justifyContent: 'flex-start',
+    badge: {
+        paddingHorizontal: 16,
+        paddingVertical: 6,
     },
-    titleContainer: {
-        marginBottom: 40,
-    },
-    title: {
-        fontSize: 42,
-        fontWeight: '800',
-        lineHeight: 50,
-        marginBottom: 16,
-    },
-    subtitle: {
-        fontSize: 18,
-        lineHeight: 26,
-        fontWeight: '400',
-    },
-    featuresRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 50,
-    },
-    featureItem: {
-        alignItems: 'center',
-    },
-    iconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    featureText: {
+    badgeText: {
+        color: '#4ade80',
         fontSize: 12,
         fontWeight: '600',
-        opacity: 0.8,
+        letterSpacing: 0.5,
     },
-    actions: {
+    title: {
+        fontSize: 40,
+        fontWeight: '800',
+        color: 'white',
+        textAlign: 'center',
+        lineHeight: 48,
+        marginBottom: 20,
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#9ca3af',
+        textAlign: 'center',
+        lineHeight: 24,
+        marginBottom: 32,
+    },
+    ctaButtonWrapper: {
         width: '100%',
-        gap: 16,
-    },
-    primaryButton: {
-        height: 64,
-        borderRadius: 20,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
+        maxWidth: 280,
+        shadowColor: THEME.primary,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
     },
-    primaryButtonText: {
-        color: '#fff',
+    ctaButton: {
+        paddingVertical: 16,
+        borderRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    ctaText: {
+        color: 'white',
         fontSize: 18,
         fontWeight: '700',
     },
-    secondaryButton: {
-        height: 50,
-        justifyContent: 'center',
-        alignItems: 'center',
+    disclaimer: {
+        marginTop: 16,
+        fontSize: 12,
+        color: '#6ee7b7',
+        textAlign: 'center',
     },
-    secondaryButtonText: {
-        fontSize: 15,
+    featuresSection: {
+        width: '100%',
+    },
+    sectionTitle: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: 'white',
+        marginBottom: 24,
+        textAlign: 'center',
+    },
+    cardBlur: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(0, 170, 0, 0.15)',
+    },
+    cardContent: {
+        padding: 20,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 16,
+    },
+    iconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: 'rgba(0, 170, 0, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    cardTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: 'white',
+        marginBottom: 6,
+    },
+    cardDesc: {
+        fontSize: 14,
+        color: '#9ca3af',
+        lineHeight: 20,
     },
 });
