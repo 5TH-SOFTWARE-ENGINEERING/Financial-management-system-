@@ -25,7 +25,7 @@ import { theme } from '@/components/common/theme';
 import { toast } from 'sonner';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
+const TEXT_COLOR_DARK = theme.colors.textDark || '#111827';
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
 
 const CardShadow = `
@@ -318,7 +318,7 @@ const TypeIcon = styled.div<{ $type: string }>`
   align-items: center;
   justify-content: center;
   background: ${props => {
-    switch(props.$type) {
+    switch (props.$type) {
       case 'revenue': return 'rgba(34, 197, 94, 0.12)';
       case 'expense': return 'rgba(239, 68, 68, 0.12)';
       case 'sale': return 'rgba(245, 158, 11, 0.12)'; // Amber for sales
@@ -326,7 +326,7 @@ const TypeIcon = styled.div<{ $type: string }>`
     }
   }};
   color: ${props => {
-    switch(props.$type) {
+    switch (props.$type) {
       case 'revenue': return '#15803d';
       case 'expense': return '#dc2626';
       case 'sale': return '#b45309'; // Amber for sales
@@ -417,7 +417,7 @@ const StatusBadge = styled.span<{ $status: string }>`
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background-color: ${props => {
-    switch(props.$status) {
+    switch (props.$status) {
       case 'approved': return 'rgba(16, 185, 129, 0.12)';
       case 'rejected': return 'rgba(239, 68, 68, 0.12)';
       case 'cancelled': return 'rgba(107, 114, 128, 0.12)';
@@ -425,7 +425,7 @@ const StatusBadge = styled.span<{ $status: string }>`
     }
   }};
   color: ${props => {
-    switch(props.$status) {
+    switch (props.$status) {
       case 'approved': return '#065f46';
       case 'rejected': return '#991b1b';
       case 'cancelled': return '#374151';
@@ -460,7 +460,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' | 'secondar
   transition: all ${theme.transitions.default};
 
   ${props => {
-    switch(props.$variant) {
+    switch (props.$variant) {
       case 'primary':
         return `
           background: ${PRIMARY_COLOR};
@@ -704,7 +704,7 @@ interface ApprovalItem {
   item_name?: string;
   quantity_sold?: number;
   receipt_number?: string;
-  sold_by_id?: number; 
+  sold_by_id?: number;
 }
 
 type ApiWorkflow = {
@@ -759,7 +759,7 @@ export default function ApprovalsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { canApproveTransactions } = useUserStore();
-  
+
   const canApprove = useCallback(() => {
     if (canApproveTransactions()) return true;
     if (!user) return false;
@@ -778,11 +778,11 @@ export default function ApprovalsPage() {
   const canApproveSales = () => {
     if (!user) return false;
     const role = user.role?.toLowerCase();
-    return role === 'accountant' || 
-           role === 'finance_manager' || 
-           role === 'finance_admin' ||
-           role === 'admin' || 
-           role === 'super_admin';
+    return role === 'accountant' ||
+      role === 'finance_manager' ||
+      role === 'finance_admin' ||
+      role === 'admin' ||
+      role === 'super_admin';
   };
 
   // Check if user can approve a specific sale based on role-based access control
@@ -855,9 +855,9 @@ export default function ApprovalsPage() {
   const canCancelSales = () => {
     if (!user) return false;
     const role = user.role?.toLowerCase();
-    return role === 'finance_manager' || 
-           role === 'admin' || 
-           role === 'super_admin';
+    return role === 'finance_manager' ||
+      role === 'admin' ||
+      role === 'super_admin';
   };
 
   const [loading, setLoading] = useState(true);
@@ -911,7 +911,7 @@ export default function ApprovalsPage() {
         const accountantId = userId;
         const storeUser = useUserStore.getState().user;
         let managerId: number | null = null;
-        
+
         // Try to get managerId from storeUser first
         const managerIdStr = storeUser?.managerId;
         if (managerIdStr) {
@@ -922,23 +922,23 @@ export default function ApprovalsPage() {
             const currentUserRes = await apiClient.getCurrentUser();
             const currentUserData = currentUserRes?.data;
             if (currentUserData?.manager_id !== undefined && currentUserData?.manager_id !== null) {
-              managerId = typeof currentUserData.manager_id === 'string' 
-                ? parseInt(currentUserData.manager_id, 10) 
+              managerId = typeof currentUserData.manager_id === 'string'
+                ? parseInt(currentUserData.manager_id, 10)
                 : Number(currentUserData.manager_id);
             }
           } catch (err) {
             console.warn('Failed to fetch current user profile for manager_id:', err);
           }
         }
-        
+
         if (managerId) {
           try {
             const financeAdminId = managerId;
-            
+
             // Get all subordinates of the Finance Admin (including the Finance Admin themselves)
             const subordinatesRes = await apiClient.getSubordinates(financeAdminId);
             const subordinates = Array.isArray(subordinatesRes?.data) ? subordinatesRes.data as { id?: number | string }[] : [];
-            
+
             // Include the Finance Admin themselves and all their subordinates
             // Accountant can approve sales from Finance Admin's team (but not their own)
             const userIds = [
@@ -947,9 +947,9 @@ export default function ApprovalsPage() {
                 .map((sub) => toNumber(sub.id))
                 .filter((id): id is number => id !== null)
             ];
-            
+
             setAccessibleUserIds(userIds);
-            
+
             if (process.env.NODE_ENV === 'development') {
               console.log('Accountant - Accessible User IDs (from Finance Admin):', {
                 accountantId: accountantId,
@@ -962,7 +962,7 @@ export default function ApprovalsPage() {
             console.error('Failed to fetch Finance Admin subordinates for accountant:', err);
             // Fallback: if we can't get subordinates, at least try to show data from the Finance Admin
             const fallbackUserIds = [managerId];
-            
+
             if (process.env.NODE_ENV === 'development') {
               console.log('Accountant - Using fallback (Finance Admin only):', {
                 accountantId: accountantId,
@@ -995,7 +995,7 @@ export default function ApprovalsPage() {
 
     setLoading(true);
     setError(null);
-    
+
     try {
       // Check if user has permission to view approvals
       if (!canApprove() && user.role !== 'accountant' && user.role !== 'finance_manager') {
@@ -1082,13 +1082,13 @@ export default function ApprovalsPage() {
       // IMPORTANT: Fetch ALL pending sales including those sold by employees
       let pendingSales: ApprovalItem[] = [];
       const userRole = user?.role?.toLowerCase();
-      const canViewSales = userRole === 'accountant' || 
-                          userRole === 'finance_manager' || 
-                          userRole === 'admin' || 
-                          userRole === 'super_admin' ||
-                          userRole === 'manager' ||
-                          userRole === 'finance_admin';
-      
+      const canViewSales = userRole === 'accountant' ||
+        userRole === 'finance_manager' ||
+        userRole === 'admin' ||
+        userRole === 'super_admin' ||
+        userRole === 'manager' ||
+        userRole === 'finance_admin';
+
       if (canViewSales) {
         try {
           // Fetch all pending sales - don't filter by sold_by_id, get ALL pending sales
@@ -1096,20 +1096,20 @@ export default function ApprovalsPage() {
           // IMPORTANT: Backend limit is 1000, so we must use that maximum
           // Enforce limit to prevent 422 errors
           const maxLimit = 1000; // Backend maximum
-          const salesResponse = await apiClient.getSales({ 
-            status: 'pending', 
+          const salesResponse = await apiClient.getSales({
+            status: 'pending',
             limit: maxLimit
           });
           const salesDataRaw = salesResponse?.data;
-          const salesData = Array.isArray(salesDataRaw) 
-            ? (salesDataRaw as ApiSale[]) 
-            : (salesDataRaw && typeof salesDataRaw === 'object' && 'data' in (salesDataRaw as Record<string, unknown>) 
-              ? ((salesDataRaw as { data?: unknown }).data as ApiSale[] | undefined) ?? [] 
+          const salesData = Array.isArray(salesDataRaw)
+            ? (salesDataRaw as ApiSale[])
+            : (salesDataRaw && typeof salesDataRaw === 'object' && 'data' in (salesDataRaw as Record<string, unknown>)
+              ? ((salesDataRaw as { data?: unknown }).data as ApiSale[] | undefined) ?? []
               : []);
-          
+
           // Filter and map pending sales based on role-based access control
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-          
+
           pendingSales = (salesData || [])
             .filter((s) => {
               // Check status - accept 'pending' in various formats
@@ -1118,7 +1118,7 @@ export default function ApprovalsPage() {
               if (!isPending) return false;
 
               const soldById = toNumber(s.sold_by_id);
-              
+
               // Admin and Super Admin: See all pending sales
               if (userRole === 'admin' || userRole === 'super_admin') {
                 return true;
@@ -1145,27 +1145,27 @@ export default function ApprovalsPage() {
             })
             .map((s) => ({
               id: toNumber(s.id) ?? 0,
-                type: 'sale' as const,
-                title: s.item_name || `Sale #${s.id}`,
-                description: s.customer_name ? `Customer: ${s.customer_name}` : `Receipt: ${s.receipt_number || `#${s.id}`}`,
-                amount: s.total_sale,
-                status: 'pending' as const, // Force to 'pending' to ensure buttons show
+              type: 'sale' as const,
+              title: s.item_name || `Sale #${s.id}`,
+              description: s.customer_name ? `Customer: ${s.customer_name}` : `Receipt: ${s.receipt_number || `#${s.id}`}`,
+              amount: s.total_sale,
+              status: 'pending' as const, // Force to 'pending' to ensure buttons show
               requester_id: toNumber(s.sold_by_id) ?? undefined,
               created_at: s.created_at ?? '',
               sale_id: toNumber(s.id) ?? undefined,
-                item_name: s.item_name,
-                quantity_sold: s.quantity_sold,
-                receipt_number: s.receipt_number,
+              item_name: s.item_name,
+              quantity_sold: s.quantity_sold,
+              receipt_number: s.receipt_number,
               sold_by_id: toNumber(s.sold_by_id) ?? undefined, // Keep track of who sold it
             }));
-          
+
           // Log for debugging - show all pending sales including employee sales
           if (process.env.NODE_ENV === 'development') {
             console.log('Pending sales fetched (including employee sales):', {
               totalCount: pendingSales.length,
-              sales: pendingSales.map(s => ({ 
-                id: s.id, 
-                title: s.title, 
+              sales: pendingSales.map(s => ({
+                id: s.id,
+                title: s.title,
                 status: s.status,
                 sold_by_id: s.sold_by_id,
                 amount: s.amount
@@ -1179,20 +1179,20 @@ export default function ApprovalsPage() {
             console.warn('Sales API validation error (likely limit too high). Retrying with lower limit...');
             try {
               // Retry with a lower limit
-              const retryResponse = await apiClient.getSales({ 
-                status: 'pending', 
+              const retryResponse = await apiClient.getSales({
+                status: 'pending',
                 limit: 1000  // Use backend maximum
               });
               const retryDataRaw = retryResponse?.data;
-              const retryData = Array.isArray(retryDataRaw) 
-                ? (retryDataRaw as ApiSale[]) 
-                : (retryDataRaw && typeof retryDataRaw === 'object' && 'data' in (retryDataRaw as Record<string, unknown>) 
-                  ? ((retryDataRaw as { data?: unknown }).data as ApiSale[] | undefined) ?? [] 
+              const retryData = Array.isArray(retryDataRaw)
+                ? (retryDataRaw as ApiSale[])
+                : (retryDataRaw && typeof retryDataRaw === 'object' && 'data' in (retryDataRaw as Record<string, unknown>)
+                  ? ((retryDataRaw as { data?: unknown }).data as ApiSale[] | undefined) ?? []
                   : []);
-              
+
               // Apply same role-based filtering for retry
               const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-              
+
               pendingSales = (retryData || [])
                 .filter((s) => {
                   const saleStatus = (s.status && typeof s.status === 'object' ? s.status.value : s.status)?.toString().toLowerCase();
@@ -1200,7 +1200,7 @@ export default function ApprovalsPage() {
                   if (!isPending) return false;
 
                   const soldById = toNumber(s.sold_by_id);
-                  
+
                   // Admin and Super Admin: See all pending sales
                   if (userRole === 'admin' || userRole === 'super_admin') {
                     return true;
@@ -1253,23 +1253,23 @@ export default function ApprovalsPage() {
 
       // Combine all approvals (workflows + standalone entries without workflows + sales)
       const allApprovals = [...workflows, ...pendingRevenues, ...pendingExpenses, ...pendingSales];
-      
+
       // Normalize status values to lowercase for consistency
       // For sales, ensure status is 'pending' if it was pending
       const normalizedApprovals = allApprovals.map(item => {
         const baseStatus = typeof item.status === 'string' ? item.status : 'pending';
         const normalizedStatus = baseStatus.toLowerCase() as ApprovalItem['status'];
-        
+
         // For sales, if status is 'pending', keep it as 'pending' (don't let it become something else)
         const finalStatus =
           item.type === 'sale' && normalizedStatus === 'pending' ? 'pending' : normalizedStatus;
-        
+
         return {
           ...item,
           status: finalStatus,
         };
       });
-      
+
       // Sort by created date (newest first)
       normalizedApprovals.sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -1301,14 +1301,14 @@ export default function ApprovalsPage() {
         // For other roles, wait for accessibleUserIds to be set
         loadApprovals();
       }
-      
+
       // Auto-refresh every 30 seconds to catch new approvals
       const intervalId = setInterval(() => {
         if (userRole === 'admin' || userRole === 'super_admin' || accessibleUserIds !== null) {
           loadApprovals();
         }
       }, 30000);
-      
+
       return () => clearInterval(intervalId);
     }
   }, [user, accessibleUserIds, loadApprovals]);
@@ -1325,7 +1325,7 @@ export default function ApprovalsPage() {
         toast.error('Only accountants, finance admins, and admins can post sales to ledger');
         return;
       }
-      
+
       // Check role-based access control for this specific sale
       if (!canApproveSpecificSale(item)) {
         toast.error('You do not have permission to approve this sale. You can only approve sales from your subordinates.');
@@ -1366,21 +1366,21 @@ export default function ApprovalsPage() {
         });
         toast.success('Sale posted to ledger successfully');
       }
-      
+
       // Reload approvals after successful approval
       await loadApprovals();
-      
+
       // Clear any previous errors
       setError(null);
     } catch (err: unknown) {
       // Handle different error types
       let errorMessage = 'Failed to approve item';
-      
+
       if (typeof err === 'object' && err !== null && 'response' in err) {
         const typedErr = err as { response?: { status?: number; data?: { detail?: string; message?: string } } };
         const status = typedErr.response?.status;
         const detail = typedErr.response?.data?.detail || typedErr.response?.data?.message;
-        
+
         if (status === 403) {
           errorMessage = detail || 'You do not have permission to approve this item';
         } else if (status === 400) {
@@ -1395,7 +1395,7 @@ export default function ApprovalsPage() {
       } else if ((err as { message?: string }).message) {
         errorMessage = (err as { message?: string }).message as string;
       }
-      
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -1426,19 +1426,19 @@ export default function ApprovalsPage() {
       }
     } else {
       // For other items, require both reason and password
-    if (!reason.trim()) {
-      setRejectPasswordError('Please provide a rejection reason');
-      return;
-    }
+      if (!reason.trim()) {
+        setRejectPasswordError('Please provide a rejection reason');
+        return;
+      }
 
-    if (reason.trim().length < 10) {
-      setRejectPasswordError('Rejection reason must be at least 10 characters long');
-      return;
-    }
+      if (reason.trim().length < 10) {
+        setRejectPasswordError('Rejection reason must be at least 10 characters long');
+        return;
+      }
 
-    if (!password.trim()) {
-      setRejectPasswordError('Password is required');
-      return;
+      if (!password.trim()) {
+        setRejectPasswordError('Password is required');
+        return;
       }
     }
 
@@ -1462,26 +1462,26 @@ export default function ApprovalsPage() {
         await apiClient.cancelSale(item.sale_id);
         toast.success('Sale cancelled successfully');
       }
-      
+
       setShowRejectModal(null);
       setRejectionReason('');
       setRejectPassword('');
       setRejectPasswordError(null);
-      
+
       // Reload approvals after successful rejection
       await loadApprovals();
-      
+
       // Clear any previous errors
       setError(null);
     } catch (err: unknown) {
       // Handle different error types
       let errorMessage = 'Failed to reject item';
-      
+
       if (typeof err === 'object' && err !== null && 'response' in err) {
         const typedErr = err as { response?: { status?: number; data?: { detail?: string; message?: string } } };
         const status = typedErr.response?.status;
         const detail = typedErr.response?.data?.detail || typedErr.response?.data?.message;
-        
+
         if (status === 403) {
           errorMessage = detail || 'You do not have permission to reject this item or the password is incorrect';
         } else if (status === 400) {
@@ -1496,7 +1496,7 @@ export default function ApprovalsPage() {
       } else if ((err as { message?: string }).message) {
         errorMessage = (err as { message?: string }).message as string;
       }
-      
+
       setRejectPasswordError(errorMessage);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -1535,12 +1535,12 @@ export default function ApprovalsPage() {
   };
 
   const filteredApprovals = approvals.filter(item => {
-    const matchesSearch = 
+    const matchesSearch =
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.receipt_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.item_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     // Handle status filter - "posted" should match "approved" for sales, and "approved" should match "posted" for sales
     let matchesStatus = false;
     if (statusFilter === 'all') {
@@ -1552,9 +1552,9 @@ export default function ApprovalsPage() {
     } else {
       matchesStatus = item.status === statusFilter;
     }
-    
+
     const matchesType = typeFilter === 'all' || item.type === typeFilter;
-    
+
     return matchesSearch && matchesStatus && matchesType;
   });
 
@@ -1579,10 +1579,10 @@ export default function ApprovalsPage() {
         <ContentContainer>
           <HeaderContainer>
             <HeaderContent>
-            <div>
+              <div>
                 <h1>Approvals</h1>
                 <p>Manage pending approvals and review history</p>
-            </div>
+              </div>
               <RefreshButton onClick={loadApprovals} disabled={loading}>
                 {loading ? <SpinningIcon size={16} /> : <RefreshCw />}
                 {loading ? 'Loading...' : 'Refresh'}
@@ -1590,10 +1590,10 @@ export default function ApprovalsPage() {
             </HeaderContent>
           </HeaderContainer>
 
-        {error && (
+          {error && (
             <ErrorBanner>
               <AlertCircle />
-            <span>{error}</span>
+              <span>{error}</span>
             </ErrorBanner>
           )}
 
@@ -1602,48 +1602,48 @@ export default function ApprovalsPage() {
               <SearchContainer>
                 <Search />
                 <SearchInput
-                type="text"
-                placeholder="Search approvals..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+                  type="text"
+                  placeholder="Search approvals..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </SearchContainer>
-            
+
               <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="posted">Posted</option>
-              <option value="rejected">Rejected</option>
-              <option value="cancelled">Cancelled</option>
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="posted">Posted</option>
+                <option value="rejected">Rejected</option>
+                <option value="cancelled">Cancelled</option>
               </Select>
-            
+
               <Select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-            >
-              <option value="all">All Types</option>
-              <option value="revenue">Revenue</option>
-              <option value="expense">Expense</option>
-              <option value="workflow">Workflow</option>
-              <option value="sale">Sales</option>
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                <option value="all">All Types</option>
+                <option value="revenue">Revenue</option>
+                <option value="expense">Expense</option>
+                <option value="workflow">Workflow</option>
+                <option value="sale">Sales</option>
               </Select>
             </FiltersGrid>
           </FiltersContainer>
 
           <ApprovalsList>
-          {filteredApprovals.length === 0 ? (
+            {filteredApprovals.length === 0 ? (
               <EmptyState>
                 <Clock />
                 <p>
-                  {approvals.length === 0 
-                    ? 'No pending approvals at this time' 
+                  {approvals.length === 0
+                    ? 'No pending approvals at this time'
                     : searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
-                    ? 'No approvals match your filters'
-                    : 'No approvals found'}
+                      ? 'No approvals match your filters'
+                      : 'No approvals found'}
                 </p>
                 {(searchTerm || statusFilter !== 'all' || typeFilter !== 'all') && approvals.length > 0 && (
                   <p style={{ marginTop: theme.spacing.sm, fontSize: theme.typography.fontSizes.sm, opacity: 0.7 }}>
@@ -1674,7 +1674,7 @@ export default function ApprovalsPage() {
                           {item.status === 'posted' ? 'POSTED' : item.status.toUpperCase()}
                         </StatusBadge>
                       </ApprovalHeader>
-                      
+
                       <ApprovalMeta>
                         <span style={{ textTransform: 'capitalize' }}>{item.type}</span>
                         {item.type === 'sale' && item.item_name && (
@@ -1721,7 +1721,7 @@ export default function ApprovalsPage() {
                         )}
                       </ApprovalMeta>
                     </ApprovalItemLeft>
-                    
+
                     <ApprovalActions>
                       {/* Show approve/reject buttons for pending items if user can approve */}
                       {item.status === 'pending' && (() => {
@@ -1736,42 +1736,42 @@ export default function ApprovalsPage() {
                         // For workflows, use canApprove()
                         return canApprove();
                       })() && (
-                        <>
-                      <ActionButton
-                        $variant="primary"
-                        onClick={() => handleApprove(item)}
-                        disabled={processingId === `${item.type}-${item.id}`}
-                      >
-                        {processingId === `${item.type}-${item.id}` ? (
-                              <>
-                                <SpinningIcon size={16} />
-                                {item.type === 'sale' ? 'Posting...' : 'Approving...'}
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle />
-                                {item.type === 'sale' ? 'Post to Ledger' : 'Approve'}
-                              </>
+                          <>
+                            <ActionButton
+                              $variant="primary"
+                              onClick={() => handleApprove(item)}
+                              disabled={processingId === `${item.type}-${item.id}`}
+                            >
+                              {processingId === `${item.type}-${item.id}` ? (
+                                <>
+                                  <SpinningIcon size={16} />
+                                  {item.type === 'sale' ? 'Posting...' : 'Approving...'}
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle />
+                                  {item.type === 'sale' ? 'Post to Ledger' : 'Approve'}
+                                </>
+                              )}
+                            </ActionButton>
+                            {/* Show reject/cancel button - for sales, only finance managers/admins can cancel */}
+                            {(item.type !== 'sale' || canCancelSales()) && (
+                              <ActionButton
+                                $variant="danger"
+                                onClick={() => {
+                                  setShowRejectModal(`${item.type}-${item.id}`);
+                                  setRejectionReason('');
+                                  setRejectPassword('');
+                                  setRejectPasswordError(null);
+                                }}
+                                disabled={processingId === `${item.type}-${item.id}`}
+                              >
+                                <XCircle />
+                                {item.type === 'sale' ? 'Cancel' : 'Reject'}
+                              </ActionButton>
                             )}
-                          </ActionButton>
-                          {/* Show reject/cancel button - for sales, only finance managers/admins can cancel */}
-                          {(item.type !== 'sale' || canCancelSales()) && (
-                          <ActionButton
-                            $variant="danger"
-                            onClick={() => {
-                              setShowRejectModal(`${item.type}-${item.id}`);
-                              setRejectionReason('');
-                              setRejectPassword('');
-                              setRejectPasswordError(null);
-                            }}
-                            disabled={processingId === `${item.type}-${item.id}`}
-                          >
-                            <XCircle />
-                              {item.type === 'sale' ? 'Cancel' : 'Reject'}
-                          </ActionButton>
-                          )}
-                        </>
-                      )}
+                          </>
+                        )}
                       {/* View button - always show for all items */}
                       <ActionButton
                         $variant="secondary"
@@ -1797,129 +1797,129 @@ export default function ApprovalsPage() {
             )}
           </ApprovalsList>
 
-        {/* Rejection Modal */}
-        {showRejectModal && (() => {
-          const itemToReject = approvals.find(a => `${a.type}-${a.id}` === showRejectModal);
-          if (!itemToReject) return null;
-          
-          return (
-            <ModalOverlay onClick={() => {
-              setShowRejectModal(null);
-              setRejectionReason('');
-              setRejectPassword('');
-              setRejectPasswordError(null);
-            }}>
-              <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalTitle>
-                  <ModalAlertIcon size={20} />
-                  {itemToReject.type === 'sale' ? 'Cancel Sale' : 'Reject Approval'}
-                </ModalTitle>
-                
-                <WarningBox>
-                  <p>
-                    {itemToReject.type === 'sale' 
-                      ? 'You are about to cancel this sale. This action cannot be undone. Please provide a reason for cancellation.'
-                      : 'You are about to reject this approval request. This action cannot be undone. Please enter your own password to verify this action.'}
-                  </p>
-                </WarningBox>
+          {/* Rejection Modal */}
+          {showRejectModal && (() => {
+            const itemToReject = approvals.find(a => `${a.type}-${a.id}` === showRejectModal);
+            if (!itemToReject) return null;
 
-                <FormGroup>
-                  <Label htmlFor="rejection-reason">
-                    {itemToReject.type === 'sale' ? 'Cancellation Reason' : 'Rejection Reason'}
-                  </Label>
-                  <TextArea
-                    id="rejection-reason"
-                    value={rejectionReason}
-                    onChange={(e) => {
-                      setRejectionReason(e.target.value);
-                      setRejectPasswordError(null);
-                    }}
-                    placeholder={itemToReject.type === 'sale' 
-                      ? 'Please provide a reason for cancellation (minimum 10 characters)...'
-                      : 'Please provide a reason for rejection (minimum 10 characters)...'}
-                    rows={4}
-                  />
-                  {rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10 && (
-                    <ErrorText>
-                      {itemToReject.type === 'sale' 
-                        ? 'Cancellation reason must be at least 10 characters long'
-                        : 'Rejection reason must be at least 10 characters long'}
-                    </ErrorText>
+            return (
+              <ModalOverlay onClick={() => {
+                setShowRejectModal(null);
+                setRejectionReason('');
+                setRejectPassword('');
+                setRejectPasswordError(null);
+              }}>
+                <ModalContent onClick={(e) => e.stopPropagation()}>
+                  <ModalTitle>
+                    <ModalAlertIcon size={20} />
+                    {itemToReject.type === 'sale' ? 'Cancel Sale' : 'Reject Approval'}
+                  </ModalTitle>
+
+                  <WarningBox>
+                    <p>
+                      {itemToReject.type === 'sale'
+                        ? 'You are about to cancel this sale. This action cannot be undone. Please provide a reason for cancellation.'
+                        : 'You are about to reject this approval request. This action cannot be undone. Please enter your own password to verify this action.'}
+                    </p>
+                  </WarningBox>
+
+                  <FormGroup>
+                    <Label htmlFor="rejection-reason">
+                      {itemToReject.type === 'sale' ? 'Cancellation Reason' : 'Rejection Reason'}
+                    </Label>
+                    <TextArea
+                      id="rejection-reason"
+                      value={rejectionReason}
+                      onChange={(e) => {
+                        setRejectionReason(e.target.value);
+                        setRejectPasswordError(null);
+                      }}
+                      placeholder={itemToReject.type === 'sale'
+                        ? 'Please provide a reason for cancellation (minimum 10 characters)...'
+                        : 'Please provide a reason for rejection (minimum 10 characters)...'}
+                      rows={4}
+                    />
+                    {rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10 && (
+                      <ErrorText>
+                        {itemToReject.type === 'sale'
+                          ? 'Cancellation reason must be at least 10 characters long'
+                          : 'Rejection reason must be at least 10 characters long'}
+                      </ErrorText>
+                    )}
+                  </FormGroup>
+
+                  {itemToReject.type !== 'sale' && (
+                    <FormGroup>
+                      <Label htmlFor="reject-password">
+                        Enter your own password to confirm rejection:
+                      </Label>
+                      <PasswordInput
+                        id="reject-password"
+                        type="password"
+                        value={rejectPassword}
+                        onChange={(e) => {
+                          setRejectPassword(e.target.value);
+                          setRejectPasswordError(null);
+                        }}
+                        placeholder="Enter your password"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && rejectionReason.trim().length >= 10 && rejectPassword.trim()) {
+                            handleReject(itemToReject, rejectionReason, rejectPassword);
+                          }
+                        }}
+                      />
+                      {rejectPasswordError && (
+                        <ErrorText>{rejectPasswordError}</ErrorText>
+                      )}
+                    </FormGroup>
                   )}
-                </FormGroup>
 
-                {itemToReject.type !== 'sale' && (
-                <FormGroup>
-                  <Label htmlFor="reject-password">
-                    Enter your own password to confirm rejection:
-                  </Label>
-                  <PasswordInput
-                    id="reject-password"
-                    type="password"
-                    value={rejectPassword}
-                    onChange={(e) => {
-                      setRejectPassword(e.target.value);
-                      setRejectPasswordError(null);
-                    }}
-                    placeholder="Enter your password"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && rejectionReason.trim().length >= 10 && rejectPassword.trim()) {
-                        handleReject(itemToReject, rejectionReason, rejectPassword);
-                      }
-                    }}
-                  />
-                  {rejectPasswordError && (
+                  {itemToReject.type === 'sale' && rejectPasswordError && (
                     <ErrorText>{rejectPasswordError}</ErrorText>
                   )}
-                </FormGroup>
-                )}
 
-                {itemToReject.type === 'sale' && rejectPasswordError && (
-                  <ErrorText>{rejectPasswordError}</ErrorText>
-                )}
-
-                <ModalActions>
-                  <ActionButton
-                    $variant="secondary"
-                    onClick={() => {
-                      setShowRejectModal(null);
-                      setRejectionReason('');
-                      setRejectPassword('');
-                      setRejectPasswordError(null);
-                    }}
-                    disabled={processingId === showRejectModal}
-                  >
-                    Cancel
-                  </ActionButton>
-                  <ActionButton
-                    $variant="danger"
-                    onClick={() => {
-                      handleReject(itemToReject, rejectionReason, rejectPassword);
-                    }}
-                    disabled={
-                      !rejectionReason.trim() || 
-                      rejectionReason.trim().length < 10 || 
-                      (itemToReject.type !== 'sale' && !rejectPassword.trim()) || 
-                      processingId === showRejectModal
-                    }
-                  >
-                    {processingId === showRejectModal ? (
-                      <>
-                        <SpinningIcon size={16} />
-                        {itemToReject.type === 'sale' ? 'Cancelling...' : 'Rejecting...'}
-                      </>
-                    ) : (
-                      <>
-                        <XCircle />
-                        {itemToReject.type === 'sale' ? 'Cancel Sale' : 'Reject'}
-                      </>
-                    )}
-                  </ActionButton>
-                </ModalActions>
-              </ModalContent>
-            </ModalOverlay>
-          );
-        })()}
+                  <ModalActions>
+                    <ActionButton
+                      $variant="secondary"
+                      onClick={() => {
+                        setShowRejectModal(null);
+                        setRejectionReason('');
+                        setRejectPassword('');
+                        setRejectPasswordError(null);
+                      }}
+                      disabled={processingId === showRejectModal}
+                    >
+                      Cancel
+                    </ActionButton>
+                    <ActionButton
+                      $variant="danger"
+                      onClick={() => {
+                        handleReject(itemToReject, rejectionReason, rejectPassword);
+                      }}
+                      disabled={
+                        !rejectionReason.trim() ||
+                        rejectionReason.trim().length < 10 ||
+                        (itemToReject.type !== 'sale' && !rejectPassword.trim()) ||
+                        processingId === showRejectModal
+                      }
+                    >
+                      {processingId === showRejectModal ? (
+                        <>
+                          <SpinningIcon size={16} />
+                          {itemToReject.type === 'sale' ? 'Cancelling...' : 'Rejecting...'}
+                        </>
+                      ) : (
+                        <>
+                          <XCircle />
+                          {itemToReject.type === 'sale' ? 'Cancel Sale' : 'Reject'}
+                        </>
+                      )}
+                    </ActionButton>
+                  </ModalActions>
+                </ModalContent>
+              </ModalOverlay>
+            );
+          })()}
         </ContentContainer>
       </PageContainer>
     </Layout>
