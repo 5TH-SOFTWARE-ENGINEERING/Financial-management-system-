@@ -45,7 +45,7 @@ type DisplayUser = StoreUser & {
 import { Button } from '@/components/ui/button';
 
 const PRIMARY_COLOR = theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
+const TEXT_COLOR_DARK = theme.colors.textDark;
 const TEXT_COLOR_MUTED = theme.colors.textSecondary || '#666';
 
 const CardShadow = `
