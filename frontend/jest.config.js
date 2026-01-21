@@ -22,7 +22,6 @@ const customJestConfig = {
     '/.next/',
     '/tests/integration/',
     '/playwright/',
-    '/__tests__/utils/',
     '/__tests__/helpers/',
   ],
   collectCoverageFrom: [

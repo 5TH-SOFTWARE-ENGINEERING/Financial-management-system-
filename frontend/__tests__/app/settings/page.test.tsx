@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@/__tests__/utils/test-utils'
 import SettingsPage from '@/app/settings/page'
 import { AuthProvider } from '@/lib/rbac/auth-context'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -119,26 +119,6 @@ jest.mock('@/lib/api', () => ({
 }))
 
 // --------------------
-// Test wrapper (FIXED)
-// --------------------
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  })
-
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
-    </QueryClientProvider>
-  )
-
-  Wrapper.displayName = 'SettingsPageTestWrapper'
-  return Wrapper
-}
-
-// --------------------
 // Tests
 // --------------------
 describe('SettingsPage', () => {
@@ -167,10 +147,20 @@ describe('SettingsPage', () => {
         console.error(message)
       })
 
-    render(<SettingsPage />, { wrapper: createWrapper() })
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SettingsPage />
+      </QueryClientProvider>
+    )
 
     await waitFor(() => {
-      expect(screen.getByTestId('layout')).toBeInTheDocument()
+      expect(screen.getByText('System Overview')).toBeInTheDocument()
     })
 
     consoleError.mockRestore()

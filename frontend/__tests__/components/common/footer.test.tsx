@@ -2,6 +2,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import Footer from '@/components/common/Footer'
 
+
 // Mock next/link WITH display name
 jest.mock('next/link', () => {
   const Link = ({
@@ -42,10 +43,10 @@ describe('Footer Component', () => {
 
   it('has correct link hrefs', () => {
     render(<Footer />)
-    expect(screen.getByText('About').closest('a')).toHaveAttribute('href', '/about')
-    expect(screen.getByText('Privacy').closest('a')).toHaveAttribute('href', '/privacy')
-    expect(screen.getByText('Terms').closest('a')).toHaveAttribute('href', '/terms')
-    expect(screen.getByText('Contact').closest('a')).toHaveAttribute('href', '/contact')
-    expect(screen.getByText('Support').closest('a')).toHaveAttribute('href', '/support')
+    expect(screen.getByText('About').closest('a')).toHaveAttribute('href', '/service/about')
+    expect(screen.getByText('Privacy').closest('a')).toHaveAttribute('href', '/service/privacy')
+    expect(screen.getByText('Terms').closest('a')).toHaveAttribute('href', '/service/terms')
+    expect(screen.getByText('Contact').closest('a')).toHaveAttribute('href', '/service/contact')
+    expect(screen.getByText('Support').closest('a')).toHaveAttribute('href', '/service/support')
   })
 })

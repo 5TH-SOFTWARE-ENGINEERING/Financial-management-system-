@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@/__tests__/utils/test-utils'
 import SalesAccountingPage from '@/app/sales/accounting/page'
 
 // Generic API mock returning resolved empty data
@@ -25,11 +25,18 @@ const mockStore = {
     accessToken: 'token',
   }),
 }
-jest.mock('@/store/userStore', () => ({
-  __esModule: true,
-  default: () => mockStore.getState(),
-  useUserStore: () => mockStore.getState(),
-}))
+jest.mock('@/store/userStore', () => {
+  const mockStore = {
+    user: { id: '1', role: 'admin', name: 'Admin', email: 'admin@test.com', isActive: true },
+    isAuthenticated: true,
+    accessToken: 'token',
+  }
+  return {
+    __esModule: true,
+    default: () => mockStore,
+    useUserStore: () => mockStore,
+  }
+})
 
 jest.mock('sonner', () => ({
   toast: {

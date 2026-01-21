@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@/__tests__/utils/test-utils'
 import FinanceListPage from '@/app/finance/list/page'
 
 // Mock dependencies
@@ -36,7 +36,7 @@ jest.mock('@/components/layout', () => {
 describe('FinanceListPage', () => {
   it('renders page component', async () => {
     render(<FinanceListPage />)
-    
+
     // Wait for layout to appear after loading completes
     await waitFor(() => {
       expect(screen.getByTestId('layout')).toBeInTheDocument()

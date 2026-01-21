@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@/__tests__/utils/test-utils'
 import BackupPage from '@/app/settings/backup/page'
 
 // Mock dependencies
@@ -45,7 +45,7 @@ jest.mock('@/store/userStore', () => ({
 describe('BackupPage', () => {
   it('renders page component', async () => {
     render(<BackupPage />)
-    
+
     // Wait for content to appear after loading completes
     await waitFor(() => {
       expect(screen.getByText(/Backup Management/i)).toBeInTheDocument()

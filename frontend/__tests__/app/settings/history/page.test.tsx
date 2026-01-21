@@ -1,13 +1,15 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '@/__tests__/utils/test-utils'
 import HistoryPage from '@/app/settings/history/page'
 
 // Mock dependencies
 jest.mock('@/lib/rbac/auth-context', () => ({
+  __esModule: true,
   useAuth: () => ({
     user: { id: '1', role: 'admin' },
     isAuthenticated: true,
   }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 jest.mock('@/lib/api', () => ({

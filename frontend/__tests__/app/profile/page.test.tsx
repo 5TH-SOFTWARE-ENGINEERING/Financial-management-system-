@@ -1,9 +1,10 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@/__tests__/utils/test-utils'
 import ProfilePage from '@/app/profile/page'
 
 // Mock dependencies
 jest.mock('@/lib/rbac/auth-context', () => ({
+  __esModule: true,
   useAuth: () => ({
     user: {
       id: '1',
@@ -13,6 +14,7 @@ jest.mock('@/lib/rbac/auth-context', () => ({
     },
     isAuthenticated: true,
   }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 jest.mock('@/lib/rbac', () => ({
@@ -23,11 +25,20 @@ jest.mock('@/lib/rbac', () => ({
   },
 }))
 
-jest.mock('@/store/userStore', () => ({
-  useUserStore: () => ({
-    user: { id: '1', name: 'Test User', email: 'test@example.com', role: 'admin' },
-  }),
-}))
+jest.mock('@/store/userStore', () => {
+  const mockStore = {
+    user: { id: '1', name: 'Test User', email: 'test@example.com', role: 'admin', isActive: true },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    getCurrentUser: jest.fn().mockResolvedValue({}),
+  }
+  return {
+    __esModule: true,
+    default: () => mockStore,
+    useUserStore: () => mockStore,
+  }
+})
 
 jest.mock('@/lib/api', () => ({
   __esModule: true,
@@ -63,7 +74,7 @@ jest.mock('@/lib/utils', () => ({
 describe('ProfilePage', () => {
   it('renders profile page structure', async () => {
     render(<ProfilePage />)
-    
+
     // Wait for Profile heading to appear after loading completes
     await waitFor(() => {
       expect(screen.getByText(/Profile/i)).toBeInTheDocument()

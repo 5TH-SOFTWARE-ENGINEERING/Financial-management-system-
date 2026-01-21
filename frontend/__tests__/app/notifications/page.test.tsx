@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@/__tests__/utils/test-utils'
 import NotificationsPage from '@/app/notifications/page'
 import { AuthProvider } from '@/lib/rbac/auth-context'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -86,26 +86,6 @@ jest.mock('@/components/layout', () => {
 })
 
 // --------------------
-// Wrapper (FIXED)
-// --------------------
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  })
-
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
-    </QueryClientProvider>
-  )
-
-  Wrapper.displayName = 'NotificationsPageTestWrapper'
-  return Wrapper
-}
-
-// --------------------
 // Tests
 // --------------------
 describe('NotificationsPage', () => {
@@ -122,7 +102,17 @@ describe('NotificationsPage', () => {
   })
 
   it('renders page component', async () => {
-    render(<NotificationsPage />, { wrapper: createWrapper() })
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <NotificationsPage />
+      </QueryClientProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Notifications/i })).toBeInTheDocument()

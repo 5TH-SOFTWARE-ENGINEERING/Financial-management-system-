@@ -230,7 +230,7 @@ allowed_origins = [
     "http://localhost:8081",  # Expo web dev server
     "http://127.0.0.1:3000",
     "http://127.0.0.1:8081",  # Expo web dev server
-    "https://project1-e00p.onrender.com",
+    "https://project1frontend.onrender.com",
 ]
 # Allow all in debug to simplify local dev
 if settings.DEBUG:

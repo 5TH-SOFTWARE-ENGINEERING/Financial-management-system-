@@ -1,5 +1,5 @@
 import React from 'react'
-import { render } from '@testing-library/react'
+import { render } from '@/__tests__/utils/test-utils'
 import Sidebar from '@/components/common/Sidebar'
 
 // Mock dependencies
@@ -9,7 +9,7 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('@/lib/rbac/auth-context', () => ({
   useAuth: () => ({
-    user: { id: '1', userType: 'ADMIN' },
+    user: { id: '1', userType: 'ADMIN', role: 'admin' },
     isAuthenticated: true,
   }),
 }))
@@ -21,6 +21,18 @@ jest.mock('@/lib/rbac/use-authorization', () => ({
     hasUserType: jest.fn().mockReturnValue(true),
   }),
 }))
+
+jest.mock('@/store/useThemeStore', () => {
+  const mockStore = {
+    themePreference: 'light',
+    setThemePreference: jest.fn(),
+  }
+  return {
+    __esModule: true,
+    useThemeStore: () => mockStore,
+    default: () => mockStore,
+  }
+})
 
 jest.mock('@/lib/rbac', () => ({
   ComponentGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -48,4 +60,3 @@ describe('Sidebar', () => {
     expect(document.body).toBeTruthy()
   })
 })
-

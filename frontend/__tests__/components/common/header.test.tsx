@@ -1,5 +1,4 @@
-import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '@/__tests__/utils/test-utils'
 import Header from '@/components/common/Header'
 
 // Mock next/image

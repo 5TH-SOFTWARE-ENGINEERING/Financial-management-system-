@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '@/__tests__/utils/test-utils'
 import ProtectedLayout from '@/app/(protected)/layout'
 
 // Mock dependencies
@@ -13,12 +13,14 @@ jest.mock('next/navigation', () => ({
 }))
 
 jest.mock('@/lib/rbac/auth-context', () => ({
+  __esModule: true,
   useAuth: () => ({
     isAuthenticated: true,
     isLoading: false,
     user: { id: '1', role: 'admin' },
     refreshUser: mockRefreshUser,
   }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 jest.mock('@/components/common/Navbar', () => {

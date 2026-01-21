@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@/__tests__/utils/test-utils'
 import LogsPage from '@/app/settings/logs/page'
 
 // Mock dependencies
@@ -36,7 +36,7 @@ jest.mock('sonner', () => ({
 describe('LogsPage', () => {
   it('renders page component', async () => {
     render(<LogsPage />)
-    
+
     // Wait for "Audit Logs" heading to appear after loading completes
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Audit Logs/i })).toBeInTheDocument()

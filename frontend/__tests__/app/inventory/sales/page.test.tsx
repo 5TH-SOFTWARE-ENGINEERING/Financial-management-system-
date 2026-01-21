@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@/__tests__/utils/test-utils'
 import InventorySalesPage from '@/app/inventory/sales/page'
 
 // Generic API mock that returns resolved empty data for any method

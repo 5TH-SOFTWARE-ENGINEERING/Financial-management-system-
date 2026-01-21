@@ -1,13 +1,20 @@
 import React, { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
-import { AuthProvider } from '@/components/AuthProvider'
+import * as AuthContextModule from '@/lib/rbac/auth-context'
 import { ThemeProvider } from 'next-themes'
+import { ThemeProvider as StyledThemeProvider } from 'styled-components'
+import { lightTheme } from '@/components/common/theme'
+
+// Fallback to pass-through if AuthProvider is undefined (which happens when it's mocked in tests)
+const SafeAuthProvider = (AuthContextModule as any).AuthProvider || (({ children }: { children: React.ReactNode }) => <>{children}</>)
 
 // Mock theme provider
 const MockThemeProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-      {children}
+      <StyledThemeProvider theme={lightTheme}>
+        {children}
+      </StyledThemeProvider>
     </ThemeProvider>
   )
 }
@@ -16,9 +23,9 @@ const MockThemeProvider = ({ children }: { children: React.ReactNode }) => {
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   return (
     <MockThemeProvider>
-      <AuthProvider>
+      <SafeAuthProvider>
         {children}
-      </AuthProvider>
+      </SafeAuthProvider>
     </MockThemeProvider>
   )
 }

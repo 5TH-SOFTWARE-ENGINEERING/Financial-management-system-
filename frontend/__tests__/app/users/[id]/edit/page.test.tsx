@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@/__tests__/utils/test-utils'
 import EditUserPage from '@/app/users/[id]/edit/page'
 import apiClient from '@/lib/api'
 
@@ -21,15 +21,20 @@ jest.mock('next/navigation', () => ({
 // --------------------
 // User store mock
 // --------------------
-jest.mock('@/store/userStore', () => ({
-  useUserStore: () => ({
+jest.mock('@/store/userStore', () => {
+  const mockStore = {
     user: { id: '1', role: 'admin' },
     allUsers: [
       { id: '1', name: 'Test User', email: 'test@test.com', role: 'admin' },
     ],
     fetchAllUsers: jest.fn(),
-  }),
-}))
+  }
+  return {
+    __esModule: true,
+    default: () => mockStore,
+    useUserStore: () => mockStore,
+  }
+})
 
 // --------------------
 // API mock

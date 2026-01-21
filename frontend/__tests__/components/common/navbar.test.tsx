@@ -1,5 +1,5 @@
 import React from 'react'
-import { render } from '@testing-library/react'
+import { render } from '@/__tests__/utils/test-utils'
 import Navbar from '@/components/common/Navbar'
 
 // Mock dependencies
@@ -13,19 +13,55 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
 }))
 
+const mockUser = { id: '1', full_name: 'Test User', email: 'test@example.com', role: 'admin' }
 jest.mock('@/lib/rbac/auth-context', () => ({
   useAuth: () => ({
-    user: { id: '1', full_name: 'Test User', email: 'test@example.com' },
+    user: mockUser,
     isAuthenticated: true,
     logout: jest.fn(),
   }),
 }))
 
-jest.mock('@/store/userStore', () => ({
-  useUserStore: () => ({
-    user: { id: '1', name: 'Test User' },
-  }),
-}))
+jest.mock('@/store/userStore', () => {
+  const mockStore = {
+    user: { id: '1', name: 'Test User', role: 'admin' },
+  }
+  return {
+    __esModule: true,
+    default: () => mockStore,
+    useUserStore: () => mockStore,
+  }
+})
+
+jest.mock('@/store/notificationStore', () => {
+  const mockStore = {
+    notifications: [],
+    unreadCount: 0,
+    isLoading: false,
+    fetchNotifications: jest.fn(),
+    markAsRead: jest.fn(),
+    markAllAsRead: jest.fn(),
+    setAccessibleUserIds: jest.fn(),
+    accessibleUserIds: null,
+  }
+  return {
+    __esModule: true,
+    useNotificationStore: () => mockStore,
+    default: () => mockStore,
+  }
+})
+
+jest.mock('@/store/useThemeStore', () => {
+  const mockStore = {
+    themePreference: 'light',
+    setThemePreference: jest.fn(),
+  }
+  return {
+    __esModule: true,
+    useThemeStore: () => mockStore,
+    default: () => mockStore,
+  }
+})
 
 jest.mock('@/lib/rbac', () => ({
   ComponentGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,

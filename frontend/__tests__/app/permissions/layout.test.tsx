@@ -1,5 +1,5 @@
 import React from 'react'
-import { render } from '@testing-library/react'
+import { render } from '@/__tests__/utils/test-utils'
 import PermissionsLayout from '@/app/permissions/layout'
 
 // Mock components

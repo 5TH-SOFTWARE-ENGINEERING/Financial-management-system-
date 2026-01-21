@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '@/__tests__/utils/test-utils'
 import SearchPage from '@/app/search/page'
 
 // Mock dependencies
@@ -12,11 +12,22 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
-jest.mock('@/store/userStore', () => ({
-  useUserStore: () => ({
-    user: { id: '1', role: 'admin' },
-  }),
-}))
+jest.mock('@/store/userStore', () => {
+  const mockStore = {
+    user: { id: '1', role: 'admin', name: 'Admin', email: 'admin@test.com', isActive: true },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: jest.fn(),
+    logout: jest.fn(),
+    getCurrentUser: jest.fn().mockResolvedValue({}),
+  }
+  return {
+    __esModule: true,
+    default: () => mockStore,
+    useUserStore: () => mockStore,
+  }
+})
 
 jest.mock('@/lib/api', () => ({
   __esModule: true,

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@/__tests__/utils/test-utils'
 import FinanceCreatePage from '@/app/finance/create/page'
 
 // --------------------
@@ -15,23 +15,36 @@ jest.mock('next/navigation', () => ({
 // --------------------
 // User store mock
 // --------------------
-jest.mock('@/store/userStore', () => ({
-  useUserStore: () => ({
+jest.mock('@/store/userStore', () => {
+  const mockStore = {
     user: { id: '1', role: 'admin' },
     isAuthenticated: true,
-  }),
-}))
+  }
+  return {
+    __esModule: true,
+    default: () => mockStore,
+    useUserStore: () => mockStore,
+  }
+})
 
 // --------------------
 // API mock
 // --------------------
-jest.mock('@/lib/api', () => ({
-  __esModule: true,
-  default: {
-    createUser: jest.fn(),
-    getDepartments: jest.fn().mockResolvedValue([]),
-  },
-}))
+jest.mock('@/lib/api', () => {
+  const mocks: Record<string, jest.Mock> = {}
+  const mockApiClient = new Proxy({}, {
+    get: (target, prop: string) => {
+      if (!(prop in mocks)) {
+        mocks[prop] = jest.fn().mockResolvedValue({ data: [] })
+      }
+      return mocks[prop]
+    }
+  })
+  return {
+    __esModule: true,
+    default: mockApiClient,
+  }
+})
 
 // --------------------
 // Toast mock
@@ -85,14 +98,17 @@ jest.mock('next/link', () => {
 // Tests
 // --------------------
 describe('FinanceCreatePage', () => {
-  it('renders page component', () => {
+  it('renders page component', async () => {
     render(<FinanceCreatePage />)
-    expect(screen.getByTestId('sidebar')).toBeInTheDocument()
-    expect(screen.getByTestId('navbar')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Create Finance Manager/i, level: 1 })).toBeInTheDocument()
+    })
   })
 
-  it('renders create finance manager form', () => {
+  it('renders create finance manager form', async () => {
     render(<FinanceCreatePage />)
-    expect(screen.getByTestId('sidebar')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Create Finance Manager/i, level: 1 })).toBeInTheDocument()
+    })
   })
 })

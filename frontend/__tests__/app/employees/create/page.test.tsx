@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '@/__tests__/utils/test-utils'
 import EmployeesCreatePage from '@/app/employees/create/page'
 
 // --------------------
@@ -14,12 +14,17 @@ jest.mock('next/navigation', () => ({
 // --------------------
 // User store mock
 // --------------------
-jest.mock('@/store/userStore', () => ({
-  useUserStore: () => ({
+jest.mock('@/store/userStore', () => {
+  const mockStore = {
     user: { id: '1', role: 'admin' },
     isAuthenticated: true,
-  }),
-}))
+  }
+  return {
+    __esModule: true,
+    default: () => mockStore,
+    useUserStore: () => mockStore,
+  }
+})
 
 // --------------------
 // API mock
