@@ -752,8 +752,8 @@ export default function TransactionListPage() {
         const itemId = toNumber(item.id);
         const quantity = toNumber(item.quantity);
         const buyingPrice = toNumber(item.buying_price);
-        const totalCostAttr = toNumber(item.total_cost);
-        const totalCost = totalCostAttr > 0 ? totalCostAttr : (buyingPrice * quantity);
+        const unitCost = toNumber(item.total_cost) || buyingPrice;
+        const totalCost = unitCost * quantity;
         const createdById = toNumber(item.created_by_id ?? item.createdBy ?? item.created_by);
         return {
           id: `inventory-${itemId}`,
