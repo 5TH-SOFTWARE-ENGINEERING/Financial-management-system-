@@ -233,14 +233,14 @@ def _train_multiple_models(
                     results['best_model'] = model_result
                     results['best_model_type'] = model_type
                 
-                logger.info(f"✅ Trained {metric} {model_type}: RMSE={rmse:.2f}, MAE={mae:.2f}")
+                logger.info(f"[SUCCESS] Trained {metric} {model_type}: RMSE={rmse:.2f}, MAE={mae:.2f}")
             else:
-                logger.warning(f"⚠️ {metric} {model_type} training failed or returned no results")
+                logger.warning(f"[WARNING] {metric} {model_type} training failed or returned no results")
                 
         except Exception as e:
             error_msg = str(e)
             if "Insufficient data" not in error_msg:
-                logger.warning(f"⚠️ {metric} {model_type} training failed: {error_msg}")
+                logger.warning(f"[WARNING] {metric} {model_type} training failed: {error_msg}")
             else:
                 logger.debug(f"{metric} {model_type} skipped: {error_msg}")
     
@@ -270,7 +270,7 @@ def trigger_auto_learn(metric: str, db: Optional[Session] = None, force: bool = 
         close_db = True
     
     try:
-        logger.info(f"🔄 Auto-learning triggered for {metric} metric")
+        logger.info(f"[AUTO-LEARN] Auto-learning triggered for {metric} metric")
         
         # Calculate date range (last 2 years, or 3 years if inventory for more data)
         end_date = datetime.now(timezone.utc)
@@ -298,7 +298,7 @@ def trigger_auto_learn(metric: str, db: Optional[Session] = None, force: bool = 
         training_results = _train_multiple_models(metric, db, start_date, end_date)
         
         if not training_results.get('trained_models'):
-            logger.warning(f"⚠️ No models successfully trained for {metric}")
+            logger.warning(f"[WARNING] No models successfully trained for {metric}")
             return None
         
         best_new_result = training_results.get('best_model')
@@ -307,7 +307,7 @@ def trigger_auto_learn(metric: str, db: Optional[Session] = None, force: bool = 
         if best_new_result and _compare_models(old_best_result, best_new_result):
             # Save the best model
             best_model_type = training_results.get('best_model_type')
-            logger.info(f"💾 Saving best {metric} model: {best_model_type} (RMSE={best_new_result.get('rmse'):.2f})")
+            logger.info(f"[SAVE] Saving best {metric} model: {best_model_type} (RMSE={best_new_result.get('rmse'):.2f})")
             
             # Retrain and save the best model
             try:
@@ -353,13 +353,13 @@ def trigger_auto_learn(metric: str, db: Optional[Session] = None, force: bool = 
                 
                 training_results['model_saved'] = True
                 training_results['saved_model_type'] = best_model_type
-                logger.info(f"✅ Best {metric} model ({best_model_type}) saved successfully")
+                logger.info(f"[SUCCESS] Best {metric} model ({best_model_type}) saved successfully")
             except Exception as e:
-                logger.error(f"❌ Failed to save best {metric} model: {str(e)}")
+                logger.error(f"[ERROR] Failed to save best {metric} model: {str(e)}")
                 training_results['model_saved'] = False
                 training_results['save_error'] = str(e)
         else:
-            logger.info(f"📊 Keeping existing {metric} model (new models didn't show sufficient improvement)")
+            logger.info(f"[INFO] Keeping existing {metric} model (new models didn't show sufficient improvement)")
             training_results['model_saved'] = False
             training_results['reason'] = "Insufficient improvement"
         
@@ -381,11 +381,11 @@ def trigger_auto_learn(metric: str, db: Optional[Session] = None, force: bool = 
         _new_data_counts[metric] = 0
         _save_state()
         
-        logger.info(f"✅ Auto-learning completed for {metric}: {len(training_results.get('trained_models', []))} models trained")
+        logger.info(f"[SUCCESS] Auto-learning completed for {metric}: {len(training_results.get('trained_models', []))} models trained")
         return training_results
         
     except Exception as e:
-        logger.error(f"❌ Auto-learning failed for {metric}: {str(e)}", exc_info=True)
+        logger.error(f"[ERROR] Auto-learning failed for {metric}: {str(e)}", exc_info=True)
         return None
     finally:
         if close_db:

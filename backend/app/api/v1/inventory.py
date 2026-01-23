@@ -27,6 +27,7 @@ from ...api.v1.auth import get_client_info
 from ...utils.encryption import encrypt_value, decrypt_value
 from ...core.security import verify_password
 from pydantic import BaseModel # type: ignore[import-untyped]
+from ...services.ml_auto_learn import record_new_data, trigger_auto_learn_background
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -152,6 +153,13 @@ def create_inventory_item(
         'profit_per_unit': item.calculate_profit_per_unit(),
         'profit_margin': item.calculate_profit_margin(),
     }
+    
+    # Trigger auto-learning for inventory
+    try:
+        record_new_data("inventory", count=1)
+        background_tasks.add_task(trigger_auto_learn_background, "inventory")
+    except Exception as e:
+        logger.warning(f"Auto-learning trigger failed for inventory creation: {str(e)}")
     
     # Log inventory item creation
     try:
@@ -409,6 +417,17 @@ def update_inventory_item(
                 )
     except Exception as e:
         logger.warning(f"Notification failed for inventory update: {str(e)}")
+    
+    # Trigger auto-learning for inventory on update (if data changed)
+    try:
+        # Count as new data point if quantity or price changed
+        update_dict = item_update.dict(exclude_unset=True)
+        relevant_fields = ['quantity', 'selling_price', 'buying_price', 'expense_amount']
+        if any(field in update_dict for field in relevant_fields):
+            record_new_data("inventory", count=1)
+            background_tasks.add_task(trigger_auto_learn_background, "inventory")
+    except Exception as e:
+        logger.warning(f"Auto-learning trigger failed for inventory update: {str(e)}")
     
     # Return with role-based filtering
     item_dict = {

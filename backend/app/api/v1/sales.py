@@ -26,6 +26,7 @@ from ...schemas.sale import (
 )
 from ...utils.audit import AuditLogger, AuditAction
 from ...api.v1.auth import get_client_info
+from ...services.ml_auto_learn import record_new_data, trigger_auto_learn_background
 
 router = APIRouter()
 
@@ -129,6 +130,13 @@ def create_sale(
             )
         except Exception as e:
             logger.warning(f"Notification failed for sale creation: {str(e)}")
+        
+        # Trigger auto-learning for inventory (sale changes quantity)
+        try:
+            record_new_data("inventory", count=1)
+            background_tasks.add_task(trigger_auto_learn_background, "inventory")
+        except Exception as e:
+            logger.warning(f"Auto-learning trigger failed for sale creation: {str(e)}")
         
         # Log sale creation
         try:
@@ -432,6 +440,13 @@ def post_sale(
         except Exception as audit_err:
             logger.warning(f"Audit logging failed for sale posting: {str(audit_err)}")
 
+        # Trigger auto-learning for inventory on sale posting
+        try:
+            record_new_data("inventory", count=1)
+            background_tasks.add_task(trigger_auto_learn_background, "inventory")
+        except Exception as e:
+            logger.warning(f"Auto-learning trigger failed for sale posting: {str(e)}")
+
         return _format_sale_output(sale, current_user)
     except HTTPException:
         raise
@@ -448,6 +463,7 @@ def post_sale(
 @router.post("/{sale_id}/cancel", response_model=SaleOut)
 def cancel_sale(
     sale_id: int,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -472,6 +488,13 @@ def cancel_sale(
             )
         except Exception as audit_err:
             logger.warning(f"Audit logging failed for sale cancellation: {str(audit_err)}")
+
+        # Trigger auto-learning for inventory on cancellation (restores quantity)
+        try:
+            record_new_data("inventory", count=1)
+            background_tasks.add_task(trigger_auto_learn_background, "inventory")
+        except Exception as e:
+            logger.warning(f"Auto-learning trigger failed for sale cancellation: {str(e)}")
 
         return _format_sale_output(sale, current_user)
     except HTTPException:

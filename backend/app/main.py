@@ -46,11 +46,10 @@ from .models import (  # noqa: F401
     Department
 )
 
-# Create log directory early if LOG_FILE is set (prevents FileNotFoundError during config)
-if settings.LOG_FILE:
-    log_dir = os.path.dirname(settings.LOG_FILE)
-    os.makedirs(log_dir, exist_ok=True)
-    print(f"Log directory ensured: {log_dir}")  # Simple console output (optional; no logger yet)
+# Create required directories early (prevents FileNotFoundError during config or mount)
+for directory in ("uploads", "reports", "backups", "logs"):
+    os.makedirs(directory, exist_ok=True)
+    print(f"Directory ensured: {directory}")
 
 # Now safe to configure logging
 LOGGING_CONFIG = {
@@ -174,13 +173,8 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to create database tables: {e}")
 
-    # 2. Ensure required directories
-    for directory in ("uploads", "reports", "backups", "logs"):
-        try:
-            os.makedirs(directory, exist_ok=True)
-            logger.info(f"Directory {directory} created/verified")
-        except Exception as e:
-            logger.error(f"Failed to create directory {directory}: {e}")
+    # 2. Ensure required directories (handled at module level for mounts)
+    pass
 
     # 3. **Self-healing migration**
     ensure_database_schema_sync(engine)

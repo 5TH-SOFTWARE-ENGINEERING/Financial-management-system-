@@ -1,9 +1,23 @@
 {
-  "last_training_times": {},
-  "new_data_counts": {
-    "expense": 37,
-    "revenue": 35
+  "last_training_times": {
+    "inventory": "2026-01-23T04:13:44.822956+00:00"
   },
-  "training_history": [],
-  "last_updated": "2026-01-21T07:16:53.928281+00:00"
+  "new_data_counts": {
+    "expense": 294,
+    "revenue": 273,
+    "inventory": 2
+  },
+  "training_history": [
+    {
+      "metric": "inventory",
+      "timestamp": "2026-01-23T04:13:44.822956+00:00",
+      "new_data_points": 0,
+      "models_trained": 3,
+      "best_model_type": "xgboost",
+      "best_rmse": 16.010054842667778,
+      "model_saved": true,
+      "old_rmse": 3385.9992023215104
+    }
+  ],
+  "last_updated": "2026-01-23T04:19:36.787178+00:00"
 }

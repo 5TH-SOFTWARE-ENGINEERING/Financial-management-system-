@@ -595,7 +595,10 @@ class MLForecastingService:
             
             return result
         except Exception as e:
-            logger.error(f"ARIMA training failed: {str(e)}")
+            if "Insufficient data" in str(e):
+                logger.debug(f"ARIMA training skipped: {str(e)}")
+            else:
+                logger.error(f"ARIMA training failed: {str(e)}")
             raise
     
     @staticmethod
@@ -678,7 +681,10 @@ class MLForecastingService:
             }
         except (ImportError, ValueError, RuntimeError) as e:
             # Re-raise known exceptions with their original messages
-            logger.error(f"Prophet training failed: {str(e)}")
+            if "Insufficient data" in str(e):
+                logger.debug(f"Prophet training skipped: {str(e)}")
+            else:
+                logger.error(f"Prophet training failed: {str(e)}")
             raise
         except Exception as e:
             # Catch any other unexpected exceptions and wrap them
@@ -747,7 +753,10 @@ class MLForecastingService:
                 "trained_at": datetime.now(timezone.utc).isoformat()
             }
         except Exception as e:
-            logger.error(f"Linear Regression training failed: {str(e)}")
+            if "Insufficient data" in str(e):
+                logger.debug(f"Linear Regression training skipped: {str(e)}")
+            else:
+                logger.error(f"Linear Regression training failed: {str(e)}")
             raise
     
     # ============================================================================
@@ -834,7 +843,10 @@ class MLForecastingService:
             }
         except (ImportError, ValueError, RuntimeError) as e:
             # Re-raise known exceptions with their original messages
-            logger.error(f"Prophet revenue training failed: {str(e)}")
+            if "Insufficient data" in str(e):
+                logger.debug(f"Prophet revenue training skipped: {str(e)}")
+            else:
+                logger.error(f"Prophet revenue training failed: {str(e)}")
             raise
         except Exception as e:
             # Catch any other unexpected exceptions and wrap them
@@ -919,7 +931,10 @@ class MLForecastingService:
                 "trained_at": datetime.now(timezone.utc).isoformat()
             }
         except Exception as e:
-            logger.error(f"XGBoost revenue training failed: {str(e)}")
+            if "Insufficient data" in str(e):
+                logger.debug(f"XGBoost revenue training skipped: {str(e)}")
+            else:
+                logger.error(f"XGBoost revenue training failed: {str(e)}")
             raise
     
     @staticmethod
@@ -1051,7 +1066,10 @@ class MLForecastingService:
             
             return result
         except Exception as e:
-            logger.error(f"LSTM revenue training failed: {str(e)}")
+            if "Insufficient data" in str(e):
+                logger.debug(f"LSTM revenue training skipped: {str(e)}")
+            else:
+                logger.error(f"LSTM revenue training failed: {str(e)}")
             raise
     
     # ============================================================================
@@ -1111,7 +1129,10 @@ class MLForecastingService:
                 "trained_at": datetime.now(timezone.utc).isoformat()
             }
         except Exception as e:
-            logger.error(f"SARIMA training failed: {str(e)}")
+            if "Insufficient data" in str(e):
+                logger.debug(f"SARIMA training skipped: {str(e)}")
+            else:
+                logger.error(f"SARIMA training failed: {str(e)}")
             raise
     
     @staticmethod
@@ -1184,7 +1205,10 @@ class MLForecastingService:
                 "trained_at": datetime.now(timezone.utc).isoformat()
             }
         except Exception as e:
-            logger.error(f"XGBoost inventory training failed: {str(e)}")
+            if "Insufficient data" in str(e):
+                logger.debug(f"XGBoost inventory training skipped: {str(e)}")
+            else:
+                logger.error(f"XGBoost inventory training failed: {str(e)}")
             raise
     
     @staticmethod
@@ -1309,7 +1333,10 @@ class MLForecastingService:
             }
             return result
         except Exception as e:
-            logger.error(f"LSTM inventory training failed: {str(e)}")
+            if "Insufficient data" in str(e):
+                logger.debug(f"LSTM inventory training skipped: {str(e)}")
+            else:
+                logger.error(f"LSTM inventory training failed: {str(e)}")
             raise
     
     # ============================================================================

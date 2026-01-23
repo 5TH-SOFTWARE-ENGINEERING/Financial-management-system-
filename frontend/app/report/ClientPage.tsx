@@ -725,6 +725,19 @@ export default function ReportPage() {
   const [mlInsights, setMlInsights] = useState<any>(null);
   const [loadingMLInsights, setLoadingMLInsights] = useState(false);
   const [generatingForecast, setGeneratingForecast] = useState<string | null>(null);
+  const [savingForecast, setSavingForecast] = useState<string | null>(null);
+
+  // Manual Forecast Form State
+  const [showCreateForecast, setShowCreateForecast] = useState(false);
+  const [newForecast, setNewForecast] = useState({
+    name: '',
+    description: '',
+    forecast_type: 'revenue',
+    method: 'moving_average',
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString().split('T')[0],
+    method_params: {}
+  });
 
   // Helper function to safely convert values to numbers, handling NaN, null, undefined
   const safeNumber = (value: unknown): number => {
@@ -1424,6 +1437,92 @@ export default function ReportPage() {
       setGeneratingForecast(null);
     }
   };
+
+  // Save forecast from ML insight
+  const saveForecastFromInsight = async (metric: string, insight: any) => {
+    if (!insight || !insight.forecast) return;
+
+    setSavingForecast(metric);
+    try {
+      const forecastName = `${capitalize(metric)} Forecast (${insight.model_type?.toUpperCase() || 'AI'}) - ${new Date().toLocaleDateString()}`;
+      const payload = {
+        name: forecastName,
+        description: insight.summary || `AI-generated ${metric} forecast using ${insight.model_type} model.`,
+        forecast_type: metric,
+        method: insight.model_type || 'ai',
+        start_date: insight.forecast[0]?.date || new Date().toISOString().split('T')[0],
+        end_date: insight.forecast[insight.forecast.length - 1]?.date || new Date().toISOString().split('T')[0],
+        forecast_data: insight.forecast,
+        method_params: {
+          trend: insight.trend_analysis,
+          advice: insight.advice,
+          alerts: insight.alerts
+        }
+      };
+
+      const response = await apiClient.createForecast(payload);
+      if (response.data) {
+        toast.success(`Forecast saved successfully as "${forecastName}"`);
+        // Refresh forecast list
+        loadReports(true);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || 'Failed to save forecast');
+    } finally {
+      setSavingForecast(null);
+    }
+  };
+
+  // Handle manual forecast creation
+  const handleCreateForecast = async () => {
+    if (!newForecast.name) {
+      toast.error('Please enter a forecast name');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiClient.createForecast(newForecast);
+      if (response.data) {
+        toast.success('Forecast created successfully');
+        setShowCreateForecast(false);
+        setNewForecast({
+          name: '',
+          description: '',
+          forecast_type: 'revenue',
+          method: 'moving_average',
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString().split('T')[0],
+          method_params: {}
+        });
+        loadReports(true);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || 'Failed to create forecast');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete forecast
+  const handleDeleteForecast = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this forecast?')) return;
+
+    try {
+      // Prompt for password if the backend requires it
+      const password = window.prompt('Please enter your password to confirm deletion:');
+      if (password === null) return;
+
+      const response = await apiClient.deleteForecast(id, password);
+      if (response.data) {
+        toast.success('Forecast deleted successfully');
+        loadReports(true);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || 'Failed to delete forecast');
+    }
+  };
+
 
   // Load ML insights for all metrics
   const loadMLInsights = async () => {
@@ -2444,6 +2543,24 @@ export default function ReportPage() {
                                     </InsightCard>
                                   );
                                 })}
+
+                                <Button
+                                  style={{ marginTop: theme.spacing.md, width: '100%' }}
+                                  onClick={() => saveForecastFromInsight(metric, insight)}
+                                  disabled={savingForecast === metric}
+                                >
+                                  {savingForecast === metric ? (
+                                    <>
+                                      <Loader2 size={16} className="mr-2 animate-spin" />
+                                      Saving to Forecast Reports...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FileText size={16} className="mr-2" />
+                                      Save as Permanent Forecast Record
+                                    </>
+                                  )}
+                                </Button>
                               </div>
                             )}
 
@@ -2545,7 +2662,98 @@ export default function ReportPage() {
                         View and analyze all financial forecasts
                       </p>
                     </div>
+                    <Button onClick={() => setShowCreateForecast(!showCreateForecast)}>
+                      {showCreateForecast ? 'Cancel' : 'Create Manual Forecast'}
+                    </Button>
                   </ReportHeader>
+
+                  {showCreateForecast && (
+                    <div style={{
+                      background: theme.colors.backgroundSecondary,
+                      padding: theme.spacing.xl,
+                      borderRadius: theme.borderRadius.md,
+                      marginBottom: theme.spacing.xl,
+                      border: `1px solid ${theme.colors.border}`
+                    }}>
+                      <SectionTitle>Create New Forecast</SectionTitle>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.lg }}>
+                        <DateInputGroup>
+                          <Label>Forecast Name</Label>
+                          <Input
+                            placeholder="e.g. Q3 Sales Projection"
+                            value={newForecast.name}
+                            onChange={e => setNewForecast({ ...newForecast, name: e.target.value })}
+                          />
+                        </DateInputGroup>
+                        <DateInputGroup>
+                          <Label>Type</Label>
+                          <select
+                            style={{
+                              padding: '8px',
+                              borderRadius: '4px',
+                              border: `1px solid ${theme.colors.border}`,
+                              background: theme.colors.background
+                            }}
+                            value={newForecast.forecast_type}
+                            onChange={e => setNewForecast({ ...newForecast, forecast_type: e.target.value })}
+                          >
+                            <option value="revenue">Revenue</option>
+                            <option value="expense">Expense</option>
+                            <option value="profit">Profit</option>
+                            <option value="inventory">Inventory</option>
+                          </select>
+                        </DateInputGroup>
+                        <DateInputGroup>
+                          <Label>Method</Label>
+                          <select
+                            style={{
+                              padding: '8px',
+                              borderRadius: '4px',
+                              border: `1px solid ${theme.colors.border}`,
+                              background: theme.colors.background
+                            }}
+                            value={newForecast.method}
+                            onChange={e => setNewForecast({ ...newForecast, method: e.target.value })}
+                          >
+                            <option value="moving_average">Moving Average</option>
+                            <option value="linear_growth">Linear Growth</option>
+                            <option value="trend">Trend Analysis</option>
+                          </select>
+                        </DateInputGroup>
+                        <DateInputGroup>
+                          <Label>Description</Label>
+                          <Input
+                            placeholder="Optional"
+                            value={newForecast.description}
+                            onChange={e => setNewForecast({ ...newForecast, description: e.target.value })}
+                          />
+                        </DateInputGroup>
+                        <DateInputGroup>
+                          <Label>Start Date</Label>
+                          <Input
+                            type="date"
+                            value={newForecast.start_date}
+                            onChange={e => setNewForecast({ ...newForecast, start_date: e.target.value })}
+                          />
+                        </DateInputGroup>
+                        <DateInputGroup>
+                          <Label>End Date</Label>
+                          <Input
+                            type="date"
+                            value={newForecast.end_date}
+                            onChange={e => setNewForecast({ ...newForecast, end_date: e.target.value })}
+                          />
+                        </DateInputGroup>
+                      </div>
+                      <Button
+                        style={{ marginTop: theme.spacing.lg, width: '100%' }}
+                        onClick={handleCreateForecast}
+                        disabled={loading}
+                      >
+                        {loading ? <Loader2 className="animate-spin" /> : 'Generate & Save Forecast'}
+                      </Button>
+                    </div>
+                  )}
 
                   {forecasts && forecasts.length > 0 ? (
                     <>
@@ -2617,6 +2825,7 @@ export default function ReportPage() {
                               <th style={{ textAlign: 'right' }}>Total Forecasted</th>
                               <th>Data Points</th>
                               <th>Created</th>
+                              <th style={{ textAlign: 'right' }}>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2659,6 +2868,16 @@ export default function ReportPage() {
                                   </td>
                                   <td>{forecastData.length}</td>
                                   <td>{formatDate(forecast.created_at)}</td>
+                                  <td style={{ textAlign: 'right' }}>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteForecast(forecast.id)}
+                                      style={{ color: '#dc2626' }}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </td>
                                 </tr>
                               );
                             })}
