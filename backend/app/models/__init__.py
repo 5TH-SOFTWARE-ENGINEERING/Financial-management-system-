@@ -11,7 +11,7 @@ from .notification import Notification
 from .project import Project
 from .login_history import LoginHistory
 from .budget import Budget, BudgetItem, BudgetScenario, Forecast, BudgetVariance, BudgetType, BudgetPeriod, BudgetStatus
-from .inventory import InventoryItem
+from .inventory import InventoryItem, Warehouse, WarehouseItemStock, StockTransfer, TransferStatus
 from .sale import Sale, SaleStatus, JournalEntry
 from .inventory_audit import InventoryAuditLog, InventoryChangeType
 from .department import Department
@@ -36,7 +36,7 @@ __all__ = [
     "Project", "LoginHistory",
     "Budget", "BudgetItem", "BudgetScenario", "Forecast", "BudgetVariance",
     "BudgetType", "BudgetPeriod", "BudgetStatus",
-    "InventoryItem",
+    "InventoryItem", "Warehouse", "WarehouseItemStock", "StockTransfer", "TransferStatus",
     "Sale", "SaleStatus", "JournalEntry",
     "InventoryAuditLog", "InventoryChangeType",
     "Department", "IPRestriction", "IPStatus",

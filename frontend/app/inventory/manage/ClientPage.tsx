@@ -6,7 +6,7 @@ import styled from 'styled-components';
 import {
   Package, Plus, Edit, Trash2, Search,
   DollarSign, TrendingUp, AlertCircle,
-  Loader2, Save, X, Power, PowerOff, Download
+  Loader2, Save, X, Power, PowerOff, Download, Warehouse as WarehouseIcon
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -1172,12 +1172,22 @@ export default function InventoryManagePage() {
               </p>
             </HeaderText>
             {!isAccountant && (
-              <Button onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-                <ButtonIcon $iconType="plus" $size={16} $active={true}>
-                  <Plus size={16} />
-                </ButtonIcon>
-                Add Item
-              </Button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push('/inventory/warehouses')}
+                  style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
+                >
+                  <WarehouseIcon size={16} />
+                  Warehouses
+                </Button>
+                <Button onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <ButtonIcon $iconType="plus" $size={16} $active={true}>
+                    <Plus size={16} />
+                  </ButtonIcon>
+                  Add Item
+                </Button>
+              </div>
             )}
           </HeaderContent>
         </HeaderContainer>

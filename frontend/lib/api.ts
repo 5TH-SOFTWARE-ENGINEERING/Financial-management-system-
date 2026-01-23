@@ -1918,6 +1918,32 @@ class ApiClient {
   async getPayslips(periodId: number) {
     return this.get<any[]>(`/payroll/periods/${periodId}/payslips`);
   }
+
+  // Warehouses
+  async getWarehouses() {
+    return this.get<any[]>('/warehouses');
+  }
+
+  async createWarehouse(data: any) {
+    return this.post<any>('/warehouses', data);
+  }
+
+  async initiateTransfer(data: {
+    item_id: number;
+    from_warehouse_id: number;
+    to_warehouse_id: number;
+    quantity: number;
+  }) {
+    return this.post<any>('/warehouses/transfers', data);
+  }
+
+  async shipTransfer(id: number) {
+    return this.post<any>(`/warehouses/transfers/${id}/ship`);
+  }
+
+  async receiveTransfer(id: number) {
+    return this.post<any>(`/warehouses/transfers/${id}/receive`);
+  }
 }
 
 export const apiClient = new ApiClient();

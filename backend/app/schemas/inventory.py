@@ -130,3 +130,55 @@ class InventoryAuditLogOut(BaseModel):
     class Config:
         from_attributes = True
 
+# Warehouse Schemas
+class WarehouseBase(BaseModel):
+    name: str
+    address: Optional[str] = None
+    is_active: bool = True
+    is_main: bool = False
+
+class WarehouseCreate(WarehouseBase):
+    pass
+
+class WarehouseUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_main: Optional[bool] = None
+
+class WarehouseOut(WarehouseBase):
+    id: int
+    
+    class Config:
+        from_attributes = True
+
+# Warehouse Item Stock Schemas
+class WarehouseItemStockOut(BaseModel):
+    warehouse_id: int
+    item_id: int
+    quantity: int
+    warehouse: WarehouseOut
+    
+    class Config:
+        from_attributes = True
+
+# Stock Transfer Schemas
+class StockTransferCreate(BaseModel):
+    item_id: int
+    from_warehouse_id: int
+    to_warehouse_id: int
+    quantity: int
+
+class StockTransferOut(BaseModel):
+    id: int
+    item_id: int
+    from_warehouse_id: int
+    to_warehouse_id: int
+    quantity: int
+    status: str
+    created_at: datetime
+    shipped_at: Optional[datetime] = None
+    received_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True

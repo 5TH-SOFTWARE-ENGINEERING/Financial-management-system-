@@ -19,7 +19,7 @@ from .api.v1 import (
     auth, users, revenue, expenses, dashboard,
     reports, approvals, notifications, admin,
     projects, departments, analytics, budgeting,
-    inventory, sales, contact, ip_management, accounting, documents, banking, fixed_assets, ai, payroll
+    inventory, sales, contact, ip_management, accounting, documents, banking, fixed_assets, ai, payroll, warehouses
 )
 
 from .utils.audit import AuditLogger, AuditAction
@@ -40,7 +40,7 @@ from .models import (  # noqa: F401
     Project, LoginHistory,
     Budget, BudgetItem, BudgetScenario, Forecast, BudgetVariance,
     BudgetType, BudgetPeriod, BudgetStatus,
-    InventoryItem,
+    InventoryItem, Warehouse, WarehouseItemStock, StockTransfer,
     Sale, SaleStatus, JournalEntry,
     Account, AccountingJournalEntry, JournalEntryLine, JournalEntryStatus,
     TaxType, TaxRate, TaxComponent,
@@ -582,6 +582,7 @@ app.include_router(banking.router, prefix=f"{api_prefix}/banking", tags=["Bankin
 app.include_router(fixed_assets.router, prefix=f"{api_prefix}/fixed-assets", tags=["Fixed Assets"])
 app.include_router(ai.router, prefix=f"{api_prefix}/ai", tags=["Applied AI"])
 app.include_router(payroll.router, prefix=f"{api_prefix}/payroll", tags=["Payroll"])
+app.include_router(warehouses.router, prefix=f"{api_prefix}/warehouses", tags=["Warehouses"])
 
 
 # Health check endpoint
