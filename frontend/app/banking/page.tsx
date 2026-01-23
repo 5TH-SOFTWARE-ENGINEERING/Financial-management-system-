@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import styled from "styled-components";
 import { Plus, TrendingUp, Upload, DollarSign } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
@@ -14,6 +15,240 @@ import {
     Legend,
     ResponsiveContainer
 } from 'recharts';
+
+// Styled Components
+
+const PageWrapper = styled.div`
+  min-height: 100vh;
+  background-color: ${props => props.theme.colors.backgroundSecondary};
+  padding: ${props => props.theme.spacing.lg};
+`;
+
+const ContentContainer = styled.div`
+  max-width: 80rem; /* 7xl equivalent */
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.xl};
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const HeaderText = styled.div``;
+
+const Title = styled.h1`
+  font-size: 1.875rem; /* 3xl */
+  font-weight: 700;
+  color: ${props => props.theme.colors.textDark};
+`;
+
+const Subtitle = styled.p`
+  color: ${props => props.theme.colors.textSecondary};
+  margin-top: ${props => props.theme.spacing.xs};
+`;
+
+const ConnectButton = styled.button`
+  background-color: #2563eb; /* blue-600 */
+  &:hover {
+    background-color: #1d4ed8; /* blue-700 */
+  }
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: ${props => props.theme.borderRadius.md}; /* rounded-lg */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+`;
+
+const ChartCard = styled.div`
+  background-color: ${props => props.theme.colors.card};
+  padding: ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  box-shadow: ${props => props.theme.shadows.sm};
+  border: 1px solid ${props => props.theme.colors.border};
+`;
+
+const ChartHeader = styled.h2`
+  font-size: 1.25rem; /* xl */
+  font-weight: 600;
+  margin-bottom: ${props => props.theme.spacing.md};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: ${props => props.theme.colors.textDark};
+`;
+
+const ChartContainerWrapper = styled.div`
+  height: 300px;
+  width: 100%;
+`;
+
+const GridContainer = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${props => props.theme.spacing.lg};
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+`;
+
+const AccountCard = styled.div`
+  background-color: ${props => props.theme.colors.card};
+  padding: ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  box-shadow: ${props => props.theme.shadows.sm};
+  border: 1px solid ${props => props.theme.colors.border};
+`;
+
+const AccountHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: ${props => props.theme.spacing.md};
+`;
+
+const IconWrapper = styled.div`
+  padding: 0.75rem;
+  background-color: #eff6ff; /* blue-50 */
+  border-radius: ${props => props.theme.borderRadius.md};
+  color: #2563eb; /* blue-600 */
+`;
+
+const StatusBadge = styled.span`
+  font-size: 0.875rem; /* sm */
+  padding: 0.25rem 0.5rem;
+  background-color: #dcfce7; /* green-100 */
+  color: #15803d; /* green-700 */
+  border-radius: 9999px; /* rounded-full */
+  font-weight: 500;
+`;
+
+const AccountName = styled.h3`
+  font-size: 1.125rem; /* lg */
+  font-weight: 700;
+  color: ${props => props.theme.colors.textDark};
+`;
+
+const AccountDetails = styled.p`
+  font-size: 0.875rem; /* sm */
+  color: ${props => props.theme.colors.textSecondary};
+`;
+
+const ActionGroup = styled.div`
+  margin-top: ${props => props.theme.spacing.lg};
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const UploadLabel = styled.label`
+  flex: 1;
+  cursor: pointer;
+  background-color: #f3f4f6; /* gray-100 */
+  &:hover {
+    background-color: #e5e7eb; /* gray-200 */
+  }
+  color: #374151; /* gray-700 */
+  padding: 0.5rem 1rem;
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: 0.875rem; /* sm */
+  font-weight: 500;
+  text-align: center;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+`;
+
+const SecondaryButton = styled.button`
+  flex: 1;
+  border: 1px solid ${props => props.theme.colors.border};
+  &:hover {
+    background-color: ${props => props.theme.colors.muted};
+  }
+  color: ${props => props.theme.colors.text};
+  padding: 0.5rem 1rem;
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: 0.875rem; /* sm */
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+`;
+
+const SimulateGroup = styled.div`
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const SimulateSyncButton = styled.button`
+  flex: 1;
+  background-color: #eff6ff; /* blue-50 */
+  &:hover {
+    background-color: #dbeafe; /* blue-100 */
+  }
+  color: #1d4ed8; /* blue-700 */
+  padding: 0.5rem 1rem;
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: 0.875rem; /* sm */
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+`;
+
+const WebhookButton = styled.button`
+  flex: 1;
+  background-color: #faf5ff; /* purple-50 */
+  &:hover {
+    background-color: #f3e8ff; /* purple-100 */
+  }
+  color: #7e22ce; /* purple-700 */
+  padding: 0.5rem 1rem;
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: 0.875rem; /* sm */
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+`;
+
+const AddAccountButton = styled.button`
+  border: 2px dashed ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  padding: ${props => props.theme.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.theme.colors.textSecondary};
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 200px; /* approximates the height of other cards */
+
+  &:hover {
+    color: #2563eb; /* blue-600 */
+    border-color: #3b82f6; /* blue-500 */
+  }
+`;
+
+const AddAccountText = styled.span`
+  font-weight: 500;
+`;
 
 export default function BankingPage() {
     const [accounts, setAccounts] = useState<any[]>([]);
@@ -79,25 +314,25 @@ export default function BankingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-            <div className="max-w-7xl mx-auto space-y-8">
+        <PageWrapper>
+            <ContentContainer>
                 {/* Header */}
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Banking & Cash Flow</h1>
-                        <p className="text-gray-500 mt-1">Manage bank feeds and view AI-powered cash forecasts</p>
-                    </div>
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                <Header>
+                    <HeaderText>
+                        <Title>Banking & Cash Flow</Title>
+                        <Subtitle>Manage bank feeds and view AI-powered cash forecasts</Subtitle>
+                    </HeaderText>
+                    <ConnectButton>
                         <Plus size={20} /> Connect Account
-                    </button>
-                </div>
+                    </ConnectButton>
+                </Header>
 
                 {/* Cash Flow Forecast Chart */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <ChartCard>
+                    <ChartHeader>
                         <TrendingUp className="text-green-500" /> 30-Day Cash Flow Forecast
-                    </h2>
-                    <div className="h-[300px] w-full">
+                    </ChartHeader>
+                    <ChartContainerWrapper>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={forecast}>
                                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
@@ -114,62 +349,56 @@ export default function BankingPage() {
                                 />
                             </LineChart>
                         </ResponsiveContainer>
-                    </div>
-                </div>
+                    </ChartContainerWrapper>
+                </ChartCard>
 
                 {/* Bank Accounts Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <GridContainer>
                     {accounts.map(account => (
-                        <div key={account.id} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                                    <DollarSign className="text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <span className="text-sm px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">Active</span>
-                            </div>
+                        <AccountCard key={account.id}>
+                            <AccountHeader>
+                                <IconWrapper>
+                                    <DollarSign />
+                                </IconWrapper>
+                                <StatusBadge>Active</StatusBadge>
+                            </AccountHeader>
 
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{account.account_name}</h3>
-                            <p className="text-sm text-gray-500">{account.bank_name} •••• {account.account_number_last4}</p>
+                            <AccountName>{account.account_name}</AccountName>
+                            <AccountDetails>{account.bank_name} •••• {account.account_number_last4}</AccountDetails>
 
-                            <div className="mt-6 flex gap-2">
-                                <label className="flex-1 cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium text-center transition-colors">
+                            <ActionGroup>
+                                <UploadLabel>
                                     <input
                                         type="file"
                                         className="hidden"
                                         accept=".csv"
                                         onChange={(e) => e.target.files?.[0] && handleUpload(account.id, e.target.files[0])}
                                     />
-                                    <Upload size={16} className="inline mr-2" /> Upload CSV
-                                </label>
-                                <button className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
+                                    <Upload size={16} /> Upload CSV
+                                </UploadLabel>
+                                <SecondaryButton>
                                     View Txns
-                                </button>
-                            </div>
+                                </SecondaryButton>
+                            </ActionGroup>
 
-                            <div className="mt-2 flex gap-2">
-                                <button
-                                    onClick={() => handleSimulateFetch(account.id)}
-                                    className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                                >
+                            <SimulateGroup>
+                                <SimulateSyncButton onClick={() => handleSimulateFetch(account.id)}>
                                     Simulate Sync
-                                </button>
-                                <button
-                                    onClick={() => handleSimulateWebhook(account.id)}
-                                    className="flex-1 bg-purple-50 hover:bg-purple-100 text-purple-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                                >
+                                </SimulateSyncButton>
+                                <WebhookButton onClick={() => handleSimulateWebhook(account.id)}>
                                     Webhook (Mock)
-                                </button>
-                            </div>
-                        </div>
+                                </WebhookButton>
+                            </SimulateGroup>
+                        </AccountCard>
                     ))}
 
                     {/* Add New Placeholder */}
-                    <button className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-6 flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-500 transition-colors">
-                        <Plus size={40} className="mb-2" />
-                        <span className="font-medium">Connect New Bank</span>
-                    </button>
-                </div>
-            </div>
-        </div>
+                    <AddAccountButton>
+                        <Plus size={40} style={{ marginBottom: '0.5rem' }} />
+                        <AddAccountText>Connect New Bank</AddAccountText>
+                    </AddAccountButton>
+                </GridContainer>
+            </ContentContainer>
+        </PageWrapper>
     );
 }
