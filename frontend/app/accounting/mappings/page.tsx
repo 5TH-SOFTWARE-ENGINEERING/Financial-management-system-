@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import {
     LayoutDashboard,
     Link as LinkIcon,
@@ -32,7 +32,7 @@ export default function AccountMappingsPage() {
             setLoading(true);
             const [mappingsRes, accountsRes] = await Promise.all([
                 apiClient.getAccountMappings(),
-                apiClient.getAccounts()
+                apiClient.getAccountingAccounts()
             ]);
             setMappings(mappingsRes.data);
             setAccounts(accountsRes.data);
