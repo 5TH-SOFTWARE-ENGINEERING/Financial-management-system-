@@ -112,7 +112,53 @@ class CRUDSale:
         if sale.status == SaleStatus.CANCELLED:
             raise ValueError("Cannot post a cancelled sale")
 
-        # Create journal entry
+        # --- Cohesive Accounting Integration ("Gluer" Logic) ---
+        from ..services.accounting_service import accounting_service
+        from ..models.account import AccountType
+        from ..models.journal_entry import ReferenceType
+
+        # 1. Revenue Entry
+        # Dr Cash/AR (Asset)
+        # Cr Sales Revenue (Revenue)
+        revenue_account = accounting_service.get_account_for_category(
+            db, "revenue", sale.item.category.lower() if sale.item and sale.item.category else "sales", "4100", "Sales Revenue", AccountType.REVENUE
+        )
+        debit_account = accounting_service.get_account_for_category(
+            db, "banking", "default", "1010", "Cash at Bank", AccountType.ASSET
+        )
+
+        # 2. COGS & Inventory Entry
+        # Dr Cost of Goods Sold (Expense)
+        # Cr Inventory Asset (Asset)
+        cogs_account = accounting_service.get_account_for_category(
+            db, "expense", "cogs", "5100", "Cost of Goods Sold", AccountType.EXPENSE
+        )
+        inventory_asset = accounting_service.get_account_for_category(
+            db, "inventory", "asset", "1200", "Inventory Asset", AccountType.ASSET
+        )
+
+        total_cost = (sale.item.buying_price if sale.item else 0.0) * sale.quantity_sold
+
+        lines = [
+            # Sales Part
+            {"account_id": debit_account.id, "debit": float(sale.total_sale), "credit": 0.0, "description": f"Sale Payment Recv - {sale.receipt_number}"},
+            {"account_id": revenue_account.id, "debit": 0.0, "credit": float(sale.total_sale), "description": "Revenue Recognition"},
+            # Inventory Part
+            {"account_id": cogs_account.id, "debit": float(total_cost), "credit": 0.0, "description": f"COGS for {sale.item.item_name}"},
+            {"account_id": inventory_asset.id, "debit": 0.0, "credit": float(total_cost), "description": "Inventory Reduction"}
+        ]
+
+        accounting_service.create_journal_entry(
+            db=db,
+            description=f"Sales Posting - Receipt {sale.receipt_number}",
+            reference_type=ReferenceType.SALE,
+            reference_id=sale.id,
+            lines=lines,
+            created_by_id=posted_by_id
+        )
+        # -----------------------------------------------------
+
+        # Legacy Journal Entry (for compatibility with current frontend view if needed)
         journal_entry = JournalEntry(
             sale_id=sale_id,
             entry_date=datetime.now(timezone.utc),

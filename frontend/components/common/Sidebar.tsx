@@ -623,6 +623,12 @@ const Sidebar: React.FC = () => {
                                             </NavIcon>
                                             {!collapsed && 'Warehouse'}
                                         </NavItem>
+                                        <NavItem href="/accounting/mappings" $active={pathname === '/accounting/mappings'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/accounting/mappings'} $collapsed={collapsed} $size={16} $iconType="git-compare">
+                                                <GitCompare />
+                                            </NavIcon>
+                                            {!collapsed && 'Mappings'}
+                                        </NavItem>
                                     </>
                                 )}
                             </SubMenu>

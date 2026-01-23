@@ -19,7 +19,7 @@ from .api.v1 import (
     auth, users, revenue, expenses, dashboard,
     reports, approvals, notifications, admin,
     projects, departments, analytics, budgeting,
-    inventory, sales, contact, ip_management, accounting, documents, banking, fixed_assets, ai, payroll, warehouses
+    inventory, sales, contact, ip_management, accounting, documents, banking, fixed_assets, ai, payroll, warehouses, account_mappings
 )
 
 from .utils.audit import AuditLogger, AuditAction
@@ -583,6 +583,7 @@ app.include_router(fixed_assets.router, prefix=f"{api_prefix}/fixed-assets", tag
 app.include_router(ai.router, prefix=f"{api_prefix}/ai", tags=["Applied AI"])
 app.include_router(payroll.router, prefix=f"{api_prefix}/payroll", tags=["Payroll"])
 app.include_router(warehouses.router, prefix=f"{api_prefix}/warehouses", tags=["Warehouses"])
+app.include_router(account_mappings.router, prefix=f"{api_prefix}/account-mappings", tags=["Accounting Mapping"])
 
 
 # Health check endpoint

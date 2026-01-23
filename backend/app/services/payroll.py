@@ -87,25 +87,42 @@ class PayrollService:
         
         period.status = PayrollStatus.APPROVED
         
-        # Create Journal Entry
+        # --- Cohesive Accounting Integration ("Gluer" Logic) ---
+        from .accounting_service import accounting_service
+        from ..models.account import AccountType
+        from ..models.journal_entry import ReferenceType
+
+        # 1. Get/Create necessary accounts (Dynamically)
+        salaries_exp = accounting_service.get_account_for_category(
+            db, "payroll", "salaries", "6100", "Salaries & Wages Expense", AccountType.EXPENSE
+        )
+        cash_bank = accounting_service.get_account_for_category(
+            db, "banking", "default", "1010", "Cash at Bank", AccountType.ASSET
+        )
+        taxes_pay = accounting_service.get_account_for_category(
+            db, "payroll", "taxes", "2100", "Payroll Taxes Payable", AccountType.LIABILITY
+        )
+
+        # 2. Create balanced Journal Entry
         # Dr Salaries Expense (Total Gross)
         # Cr Cash/Bank (Total Net)
         # Cr Taxes Payable (Total Deductions)
         
-        journal_entry = AccountingJournalEntry(
-            title=f"Payroll Approval - {period.name}",
-            description=f"Payroll for period {period.start_date} to {period.end_date}",
-            date=datetime.now(),
-            status=JournalEntryStatus.DRAFT,
+        lines = [
+            {"account_id": salaries_exp.id, "debit": period.total_gross, "credit": 0.0, "description": "Gross Salaries Expense"},
+            {"account_id": cash_bank.id, "debit": 0.0, "credit": period.total_net, "description": "Net Salary Payment"},
+            {"account_id": taxes_pay.id, "debit": 0.0, "credit": period.total_deductions, "description": "Payroll Tax Liability"}
+        ]
+
+        accounting_service.create_journal_entry(
+            db=db,
+            description=f"Payroll Approval - {period.name}",
             reference_type=ReferenceType.EXPENSE,
             reference_id=period.id,
+            lines=lines,
             created_by_id=user_id
         )
-        db.add(journal_entry)
-        db.flush() # Get journal_entry.id
-        
-        # Real accounting would use specific Account IDs from COA
-        # Mocking for now - in production this would fetch the Salaries Expense Account
+        # -----------------------------------------------------
         
         db.commit()
         return period

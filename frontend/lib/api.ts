@@ -1906,6 +1906,19 @@ class ApiClient {
     });
   }
 
+  // Accounting Mapping
+  async getAccountMappings() {
+    return this.get<any[]>('/account-mappings/');
+  }
+
+  async createAccountMapping(data: { module: string; category: string; account_id: number }) {
+    return this.post<any>('/account-mappings/', data);
+  }
+
+  async deleteAccountMapping(id: number) {
+    return this.delete<any>(`/account-mappings/${id}`);
+  }
+
   // Fixed Assets
   async getFixedAssets(params?: { skip?: number; limit?: number }) {
     return this.get<any[]>('/fixed-assets/', { params });

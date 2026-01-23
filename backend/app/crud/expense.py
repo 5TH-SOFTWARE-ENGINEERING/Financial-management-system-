@@ -109,9 +109,42 @@ class CRUDExpense:
 
     def approve(self, db: Session, id: int, approved_by_id: int) -> ExpenseEntry:
         obj = db.query(ExpenseEntry).get(id)
+        if not obj:
+            return None
+            
         obj.is_approved = True
         obj.approved_by_id = approved_by_id
         obj.approved_at = datetime.utcnow()
+        
+        # --- Cohesive Accounting Integration ---
+        from ..services.accounting_service import accounting_service
+        from ..models.account import AccountType
+        from ..models.journal_entry import ReferenceType
+
+        # 1. Get Accounts (Dynamically)
+        expense_acc = accounting_service.get_account_for_category(
+            db, "expense", obj.category.lower() if obj.category else "other", "6000", "General Expense", AccountType.EXPENSE
+        )
+        credit_acc = accounting_service.get_account_for_category(
+            db, "banking", "default", "1010", "Cash at Bank", AccountType.ASSET
+        )
+
+        # 2. Create Journal Entry
+        lines = [
+            {"account_id": expense_acc.id, "debit": float(obj.amount), "credit": 0.0, "description": f"Expense Paid: {obj.title}"},
+            {"account_id": credit_acc.id, "debit": 0.0, "credit": float(obj.amount), "description": f"Payment Source: {obj.vendor}"}
+        ]
+
+        accounting_service.create_journal_entry(
+            db=db,
+            description=f"Expense Approval - {obj.title}",
+            reference_type=ReferenceType.EXPENSE,
+            reference_id=obj.id,
+            lines=lines,
+            created_by_id=approved_by_id
+        )
+        # --------------------------------------
+
         db.commit()
         db.refresh(obj)
         return obj

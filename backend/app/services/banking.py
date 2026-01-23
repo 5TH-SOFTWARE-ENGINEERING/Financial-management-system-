@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from datetime import datetime
+from sqlalchemy import or_, and_
+from datetime import datetime, timedelta
 import csv
 import io
 from typing import List
@@ -12,27 +12,51 @@ class BankingService:
     @staticmethod
     def match_transaction(db: Session, transaction_id: int) -> bool:
         """
-        Attempt to auto-match a bank transaction to an existing journal entry
+        Attempt to auto-match a bank transaction to an existing journal entry.
+        If matched, it links the transaction to the entry.
+        If not matched, it could (optionally) create a new entry for bank fees or interest.
         """
         transaction = db.query(BankTransaction).filter(BankTransaction.id == transaction_id).first()
         if not transaction or transaction.journal_entry_id:
             return False
 
-        # Simple Logic: Find a JE with same amount + date (+/- 1 day)
-        # Note: This is simplified. In real world, amounts might differ slightly due to fees.
-        # This assumes JournalEntry total matches transaction amount exactly.
+        # 1. Search for matching balanced journal entry line
+        # Logic: Find a JournalEntryLine that uses an 'Asset' account (Bank) 
+        # with matching debit/credit amount and date close to transaction date.
         
-        # Determine JE total to look for
         target_amount = abs(transaction.amount)
+        is_deposit = transaction.amount > 0
         
-        # Find candidate JEs
-        # Logic: A JE representing a deposit (Positive Tx) -> Debit Bank (Asset increased)
-        # Logic: A JE representing a withdrawal (Negative Tx) -> Credit Bank (Asset decreased)
+        from ..models.account import AccountType
         
-        # Here we just look for amount match for simplicity in this MVP
-        # Ideally we'd filter JEs that use the GL Account linked to this Bank Account
-        
-        # ... logic omitted for brevity in MVP, simplistic 'amount' match placeholders
+        # Search window: +/- 3 days
+        start_date = transaction.date - timedelta(days=3)
+        end_date = transaction.date + timedelta(days=3)
+
+        match = (
+            db.query(AccountingJournalEntry)
+            .join(JournalEntryLine)
+            .join(Account)
+            .filter(
+                Account.account_type == AccountType.ASSET,
+                AccountingJournalEntry.entry_date.between(start_date, end_date),
+                AccountingJournalEntry.status == JournalEntryStatus.POSTED
+            )
+            .filter(
+                or_(
+                    and_(is_deposit, JournalEntryLine.debit_amount >= target_amount - 0.01, JournalEntryLine.debit_amount <= target_amount + 0.01),
+                    and_(not is_deposit, JournalEntryLine.credit_amount >= target_amount - 0.01, JournalEntryLine.credit_amount <= target_amount + 0.01)
+                )
+            )
+            .first()
+        )
+
+        if match:
+            transaction.journal_entry_id = match.id
+            transaction.status = TransactionStatus.COMPLETED
+            db.commit()
+            return True
+
         return False
 
     @staticmethod
