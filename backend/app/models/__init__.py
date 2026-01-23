@@ -25,6 +25,7 @@ from .currency import Currency, ExchangeRate, ExchangeRateSource
 from .banking import BankAccount, BankTransaction, TransactionStatus
 from .fixed_asset import FixedAsset, DepreciationLog, DepreciationMethod, FixedAssetStatus
 from .fraud import FraudFlag, FraudFlagStatus
+from .payroll import EmployeeProfile, PayrollPeriod, Payslip, EmploymentStatus, PayrollStatus
 
 __all__ = [
     "User", "UserRole", "Role",
@@ -46,5 +47,6 @@ __all__ = [
     "Currency", "ExchangeRate", "ExchangeRateSource",
     "BankAccount", "BankTransaction", "TransactionStatus",
     "FixedAsset", "DepreciationLog", "DepreciationMethod", "FixedAssetStatus",
-    "FraudFlag", "FraudFlagStatus"
+    "FraudFlag", "FraudFlagStatus",
+    "EmployeeProfile", "PayrollPeriod", "Payslip", "EmploymentStatus", "PayrollStatus"
 ]

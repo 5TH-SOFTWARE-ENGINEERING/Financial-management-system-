@@ -10,7 +10,8 @@ import {
     TrendingUp,
     FileText,
     Settings,
-    BrainCircuit
+    BrainCircuit,
+    Users
 } from "lucide-react";
 
 export default function AccountingHomePage() {
@@ -65,6 +66,13 @@ export default function AccountingHomePage() {
             icon: BrainCircuit,
             href: "/accounting/ai",
             color: "bg-red-500",
+        },
+        {
+            title: "Payroll",
+            description: "Manage employees and process payments",
+            icon: Users,
+            href: "/accounting/payroll",
+            color: "bg-indigo-600",
         },
     ];
 

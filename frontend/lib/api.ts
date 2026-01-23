@@ -1889,6 +1889,35 @@ class ApiClient {
   }) {
     return this.post<any>('/ai/simulate', data);
   }
+
+  // Payroll
+  async getEmployees() {
+    return this.get<any[]>('/payroll/employees');
+  }
+
+  async createEmployee(data: any) {
+    return this.post<any>('/payroll/employees', data);
+  }
+
+  async getPayrollPeriods() {
+    return this.get<any[]>('/payroll/periods');
+  }
+
+  async createPayrollPeriod(data: any) {
+    return this.post<any>('/payroll/periods', data);
+  }
+
+  async generatePayslips(periodId: number) {
+    return this.post<any>(`/payroll/periods/${periodId}/generate`);
+  }
+
+  async approvePayroll(periodId: number) {
+    return this.post<any>(`/payroll/periods/${periodId}/approve`);
+  }
+
+  async getPayslips(periodId: number) {
+    return this.get<any[]>(`/payroll/periods/${periodId}/payslips`);
+  }
 }
 
 export const apiClient = new ApiClient();
