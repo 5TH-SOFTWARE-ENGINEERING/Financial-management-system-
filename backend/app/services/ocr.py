@@ -13,11 +13,13 @@ class OCRService:
     def __init__(self):
         # Configure the Generative AI client
         # Use settings or fallback to env var
-        api_key = os.getenv("GOOGLE_API_KEY") 
+        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not api_key:
-             # Try to get from settings if available, otherwise check direct env
-             if hasattr(settings, "GOOGLE_API_KEY"):
+             # Try to get from settings if available
+             if hasattr(settings, "GOOGLE_API_KEY") and settings.GOOGLE_API_KEY:
                  api_key = settings.GOOGLE_API_KEY
+             elif hasattr(settings, "GEMINI_API_KEY") and settings.GEMINI_API_KEY:
+                 api_key = settings.GEMINI_API_KEY
         
         if api_key:
             genai.configure(api_key=api_key)

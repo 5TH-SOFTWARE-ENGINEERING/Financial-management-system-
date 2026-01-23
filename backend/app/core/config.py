@@ -74,4 +74,7 @@ class Settings(BaseSettings):
     REPORTS_DIR: str = "reports"
     BACKUP_DIR: str = "backups"
 
+    # AI Configuration
+    GEMINI_API_KEY: Optional[str] = None  # Set via GEMINI_API_KEY environment variable
+
 settings = Settings()

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { apiClient, Warehouse, StockTransfer, InventoryItem } from "@/lib/api";
 import { toast } from "sonner";
+import Layout from "@/components/layout";
 
 
 export default function WarehouseDashboard() {
@@ -73,6 +74,7 @@ export default function WarehouseDashboard() {
     };
 
     return (
+        <Layout>
         <div className="min-h-screen bg-[#fafafa] dark:bg-gray-950 p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
@@ -247,5 +249,6 @@ export default function WarehouseDashboard() {
                 )}
             </div>
         </div>
+        </Layout>
     );
 }

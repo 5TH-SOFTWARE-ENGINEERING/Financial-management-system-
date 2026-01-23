@@ -1067,6 +1067,53 @@ const LoadingNotifications = styled.div`
 `;
 
 
+const AppearanceSection = styled.div`
+  border-top: 1px solid ${BORDER_COLOR};
+  margin-top: ${props => props.theme.spacing.xs};
+`;
+
+const AppearanceToggle = styled.div`
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: ${TEXT_COLOR_MUTED};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: ${BACKGROUND_SECONDARY};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${props => props.theme.colors.background};
+    color: ${props => props.theme.colors.text};
+  }
+`;
+
+const AppearanceMenu = styled.div<{ $isOpen: boolean }>`
+  max-height: ${props => props.$isOpen ? '200px' : '0'};
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  background: ${props => props.theme.colors.background};
+`;
+
+const AppearanceItem = styled(DropdownItem) <{ $isActive?: boolean }>`
+  padding-left: ${props => props.$isActive ? props.theme.spacing.xl : props.theme.spacing.lg};
+  background: ${props => props.$isActive ? PRIMARY_ACCENT + '10' : 'transparent'};
+  
+  span {
+    color: ${props => props.$isActive ? PRIMARY_ACCENT : 'inherit'};
+    font-weight: ${props => props.$isActive ? 600 : 400};
+  }
+  
+  ${DropdownIcon} {
+    color: ${props => props.$isActive ? PRIMARY_ACCENT : undefined};
+  }
+`;
+
 export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
@@ -1927,63 +1974,53 @@ export default function Navbar() {
             </DropdownItem>
           </ComponentGate>
 
-          <div
-            onClick={() => setIsAppearanceOpen(!isAppearanceOpen)}
-            style={{
-              padding: '10px 16px',
-              fontSize: '11px',
-              fontWeight: 700,
-              color: 'var(--text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              borderTop: '1px solid var(--border)',
-              marginTop: '4px',
-              background: 'var(--background-secondary)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              transition: 'all 0.2s'
-            }}
-          >
-            <span>Appearance</span>
-            <ChevronDown
-              size={14}
-              style={{
-                transform: isAppearanceOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            />
-          </div>
+          <AppearanceSection>
+            <AppearanceToggle onClick={() => setIsAppearanceOpen(!isAppearanceOpen)}>
+              <span>Appearance</span>
+              <ChevronDown
+                size={14}
+                style={{
+                  transform: isAppearanceOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              />
+            </AppearanceToggle>
 
-          <div style={{
-            maxHeight: isAppearanceOpen ? '200px' : '0',
-            overflow: 'hidden',
-            transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s',
-            opacity: isAppearanceOpen ? 1 : 0
-          }}>
-            <DropdownItem onClick={() => setThemePreference('light')}>
-              <DropdownIcon $iconType="sun">
-                <Sun size={16} color={themePreference === 'light' ? PRIMARY_ACCENT : undefined} />
-              </DropdownIcon>
-              <span style={{ color: themePreference === 'light' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'light' ? 600 : 400 }}>Light Mode</span>
-              {themePreference === 'light' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
-            </DropdownItem>
-            <DropdownItem onClick={() => setThemePreference('dark')}>
-              <DropdownIcon $iconType="moon">
-                <Moon size={16} color={themePreference === 'dark' ? PRIMARY_ACCENT : undefined} />
-              </DropdownIcon>
-              <span style={{ color: themePreference === 'dark' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'dark' ? 600 : 400 }}>Dark Mode</span>
-              {themePreference === 'dark' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
-            </DropdownItem>
-            <DropdownItem onClick={() => setThemePreference('system')}>
-              <DropdownIcon $iconType="monitor">
-                <Monitor size={16} color={themePreference === 'system' ? PRIMARY_ACCENT : undefined} />
-              </DropdownIcon>
-              <span style={{ color: themePreference === 'system' ? PRIMARY_ACCENT : 'inherit', fontWeight: themePreference === 'system' ? 600 : 400 }}>System Default</span>
-              {themePreference === 'system' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
-            </DropdownItem>
-          </div>
+            <AppearanceMenu $isOpen={isAppearanceOpen}>
+              <AppearanceItem
+                onClick={() => setThemePreference('light')}
+                $isActive={themePreference === 'light'}
+              >
+                <DropdownIcon $iconType="sun" $active={themePreference === 'light'}>
+                  <Sun size={16} />
+                </DropdownIcon>
+                <span>Light Mode</span>
+                {themePreference === 'light' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
+              </AppearanceItem>
+
+              <AppearanceItem
+                onClick={() => setThemePreference('dark')}
+                $isActive={themePreference === 'dark'}
+              >
+                <DropdownIcon $iconType="moon" $active={themePreference === 'dark'}>
+                  <Moon size={16} />
+                </DropdownIcon>
+                <span>Dark Mode</span>
+                {themePreference === 'dark' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
+              </AppearanceItem>
+
+              <AppearanceItem
+                onClick={() => setThemePreference('system')}
+                $isActive={themePreference === 'system'}
+              >
+                <DropdownIcon $iconType="monitor" $active={themePreference === 'system'}>
+                  <Monitor size={16} />
+                </DropdownIcon>
+                <span>System Default</span>
+                {themePreference === 'system' && <Check size={14} style={{ color: PRIMARY_ACCENT }} />}
+              </AppearanceItem>
+            </AppearanceMenu>
+          </AppearanceSection>
           <SignOutItem
             data-signout="true"
             onMouseDown={handleSignOutMouseDown}

@@ -1,0 +1,9 @@
+__tests__/utils/mocks.ts(26,3): error TS2322: Type 'number' is not assignable to type 'string'.
+__tests__/utils/mocks.ts(34,3): error TS2322: Type 'string' is not assignable to type 'Date'.
+__tests__/utils/mocks.ts(40,3): error TS2322: Type 'number' is not assignable to type 'string'.
+__tests__/utils/mocks.ts(48,3): error TS2322: Type 'string' is not assignable to type 'Date'.
+__tests__/utils/mocks.ts(54,3): error TS2322: Type 'number' is not assignable to type 'string'.
+__tests__/utils/mocks.ts(62,3): error TS2322: Type 'string' is not assignable to type 'Date'.
+app/accounting/ai/page.tsx(78,51): error TS2339: Property 'surface' does not exist on type '{ background: string; backgroundSecondary: string; primary: string; text: string; textDark: string; textSecondary: string; border: string; error: string; card: string; muted: string; mutedForeground: string; warning: string; primaryForeground: string; }'.
+app/accounting/ai/page.tsx(117,51): error TS2339: Property 'surface' does not exist on type '{ background: string; backgroundSecondary: string; primary: string; text: string; textDark: string; textSecondary: string; border: string; error: string; card: string; muted: string; mutedForeground: string; warning: string; primaryForeground: string; }'.
+app/accounting/ai/page.tsx(460,53): error TS2339: Property 'primaryDark' does not exist on type '{ background: string; backgroundSecondary: string; primary: string; text: string; textDark: string; textSecondary: string; border: string; error: string; card: string; muted: string; mutedForeground: string; warning: string; primaryForeground: string; }'.
