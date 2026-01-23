@@ -14,26 +14,9 @@ import {
     ChevronRight,
     Loader2
 } from "lucide-react";
-import { apiClient } from "@/lib/api";
+import { apiClient, Warehouse, StockTransfer, InventoryItem } from "@/lib/api";
 import { toast } from "sonner";
 
-interface Warehouse {
-    id: number;
-    name: string;
-    address: string;
-    is_active: boolean;
-    is_main: boolean;
-}
-
-interface StockTransfer {
-    id: number;
-    item_id: number;
-    from_warehouse_id: number;
-    to_warehouse_id: number;
-    quantity: number;
-    status: string;
-    created_at: string;
-}
 
 export default function WarehouseDashboard() {
     const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -42,7 +25,7 @@ export default function WarehouseDashboard() {
 
     // Transfer form state
     const [showTransferForm, setShowTransferForm] = useState(false);
-    const [items, setItems] = useState<any[]>([]);
+    const [items, setItems] = useState<InventoryItem[]>([]);
     const [transferData, setTransferData] = useState({
         item_id: 0,
         from_warehouse_id: 0,
@@ -70,8 +53,10 @@ export default function WarehouseDashboard() {
 
     const fetchItems = async () => {
         try {
-            const res = await apiClient.get<any[]>('/inventory');
-            if (res.data) setItems(res.data);
+            const res = await apiClient.getInventoryItems();
+            if (res.data && Array.isArray(res.data)) {
+                setItems(res.data);
+            }
         } catch (error) { }
     };
 

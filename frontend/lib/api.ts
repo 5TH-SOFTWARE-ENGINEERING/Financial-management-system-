@@ -79,6 +79,41 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface InventoryItem {
+  id: number;
+  item_name: string;
+  buying_price?: number;
+  expense_amount?: number;
+  selling_price: number;
+  quantity: number;
+  description?: string;
+  category?: string;
+  sku?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  created_by_id?: number;
+  last_modified_by_id?: number;
+}
+
+export interface Warehouse {
+  id: number;
+  name: string;
+  address?: string;
+  is_active: boolean;
+  is_main: boolean;
+}
+
+export interface StockTransfer {
+  id: number;
+  item_id: number;
+  from_warehouse_id: number;
+  to_warehouse_id: number;
+  quantity: number;
+  status: string;
+  created_at: string;
+}
+
 class ApiClient {
   private client: AxiosInstance;
 
@@ -245,22 +280,22 @@ class ApiClient {
     return error instanceof Error ? error.message : 'An unknown error occurred';
   }
 
-  private async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  public async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.get<T>(url, config);
     return this.normalizeResponse<T>(response.data);
   }
 
-  private async post<T, B = unknown>(url: string, data?: B, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  public async post<T, B = unknown>(url: string, data?: B, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.post<T>(url, data, config);
     return this.normalizeResponse<T>(response.data);
   }
 
-  private async put<T, B = unknown>(url: string, data?: B, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  public async put<T, B = unknown>(url: string, data?: B, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.put<T>(url, data, config);
     return this.normalizeResponse<T>(response.data);
   }
 
-  private async delete<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  public async delete<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.delete<T>(url, { ...config, data });
     return this.normalizeResponse<T>(response.data);
   }
@@ -1609,12 +1644,12 @@ class ApiClient {
     category?: string;
     is_active?: boolean;
     search?: string;
-  }) {
-    return this.get('/inventory/items', { params });
+  }): Promise<ApiResponse<InventoryItem[]>> {
+    return this.get<InventoryItem[]>('/inventory/items', { params });
   }
 
-  async getInventoryItem(itemId: number) {
-    return this.get(`/inventory/items/${itemId}`);
+  async getInventoryItem(itemId: number): Promise<ApiResponse<InventoryItem>> {
+    return this.get<InventoryItem>(`/inventory/items/${itemId}`);
   }
 
   async updateInventoryItem(itemId: number, itemData: {
@@ -1920,12 +1955,12 @@ class ApiClient {
   }
 
   // Warehouses
-  async getWarehouses() {
-    return this.get<any[]>('/warehouses');
+  async getWarehouses(): Promise<ApiResponse<Warehouse[]>> {
+    return this.get<Warehouse[]>('/warehouses');
   }
 
-  async createWarehouse(data: any) {
-    return this.post<any>('/warehouses', data);
+  async createWarehouse(data: Partial<Warehouse>) {
+    return this.post<Warehouse>('/warehouses', data);
   }
 
   async initiateTransfer(data: {
@@ -1933,16 +1968,16 @@ class ApiClient {
     from_warehouse_id: number;
     to_warehouse_id: number;
     quantity: number;
-  }) {
-    return this.post<any>('/warehouses/transfers', data);
+  }): Promise<ApiResponse<StockTransfer>> {
+    return this.post<StockTransfer>('/warehouses/transfers', data);
   }
 
   async shipTransfer(id: number) {
-    return this.post<any>(`/warehouses/transfers/${id}/ship`);
+    return this.post<StockTransfer>(`/warehouses/transfers/${id}/ship`);
   }
 
   async receiveTransfer(id: number) {
-    return this.post<any>(`/warehouses/transfers/${id}/receive`);
+    return this.post<StockTransfer>(`/warehouses/transfers/${id}/receive`);
   }
 }
 
