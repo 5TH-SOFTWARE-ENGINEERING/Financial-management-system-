@@ -10,9 +10,12 @@ import {
   Boxes,
   Truck,
   ShieldCheck,
-  ChevronRight,
+  MoreVertical,
+  Pencil,
+  Trash,
   Loader2,
   X,
+  ChevronRight,
   Building2
 } from "lucide-react";
 import { apiClient, Warehouse, StockTransferCreate, InventoryItem, WarehouseCreate } from "@/lib/api";
@@ -201,6 +204,7 @@ const WarehouseCard = styled.div`
   gap: 1.5rem;
   transition: all 0.2s;
   cursor: pointer;
+  position: relative;
 
   &:hover {
     box-shadow: ${CardShadow};
@@ -284,17 +288,54 @@ const Metric = styled.div<{ $bordered?: boolean }>`
   }
 `;
 
-const ArrowButton = styled.button`
-  padding: 0.75rem;
+const ActionMenuButton = styled.button`
+  padding: 0.5rem;
   color: ${props => props.theme.colors.textSecondary};
   background: transparent;
   border: none;
   cursor: pointer;
+  border-radius: 0.5rem;
   transition: all 0.2s;
   
   &:hover {
+    background: ${props => props.theme.colors.border};
     color: ${TEXT_COLOR_DARK};
-    transform: translateX(4px);
+  }
+`;
+
+const DropdownMenu = styled.div`
+  position: absolute;
+  top: 3.5rem;
+  right: 1.5rem;
+  background: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem;
+  z-index: 10;
+  min-width: 10rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const DropdownItem = styled.button<{ $danger?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: ${props => props.$danger ? '#ef4444' : props.theme.colors.textDark};
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: ${props => props.$danger ? '#fef2f2' : props.theme.colors.background};
   }
 `;
 
@@ -475,6 +516,9 @@ export default function WarehouseDashboard() {
   // Transfer form state
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [warehouseItems, setWarehouseItems] = useState<any[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+
   const [transferData, setTransferData] = useState<StockTransferCreate>({
     item_id: 0,
     from_warehouse_id: 0,
@@ -483,8 +527,11 @@ export default function WarehouseDashboard() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  // Create warehouse form state
+  // Create/Edit warehouse form state
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+
   const [newWarehouseData, setNewWarehouseData] = useState<WarehouseCreate>({
     name: "",
     address: "",
@@ -492,16 +539,44 @@ export default function WarehouseDashboard() {
     is_main: false
   });
 
+  // Fetch stocks when filtering source
+  const handleSourceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const warehouseId = parseInt(e.target.value);
+    setTransferData({ ...transferData, from_warehouse_id: warehouseId, item_id: 0 });
+
+    if (warehouseId === 0) {
+      setWarehouseItems([]);
+      return;
+    }
+
+    try {
+      setLoadingItems(true);
+      const res = await apiClient.getWarehouseStocks(warehouseId);
+      const stocks = Array.isArray(res.data) ? res.data : [];
+      setWarehouseItems(stocks);
+    } catch (error) {
+      console.error("Failed to fetch warehouse stocks:", error);
+      toast.error("Could not load available items for this warehouse");
+      setWarehouseItems([]);
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchItems();
+
+    // Close menu on click outside
+    const handleClickOutside = () => setActiveMenuId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const res = await apiClient.getWarehouses();
-      // Ensure we handle both array and object response structures
       const data = Array.isArray(res.data)
         ? res.data
         : (res.data as any)?.data || [];
@@ -565,9 +640,15 @@ export default function WarehouseDashboard() {
     e.preventDefault();
     try {
       setSubmitting(true);
-      await apiClient.createWarehouse(newWarehouseData);
-      toast.success("Warehouse created successfully");
+      if (editingId) {
+        await apiClient.updateWarehouse(editingId, newWarehouseData);
+        toast.success("Warehouse updated successfully");
+      } else {
+        await apiClient.createWarehouse(newWarehouseData);
+        toast.success("Warehouse created successfully");
+      }
       setShowCreateForm(false);
+      setEditingId(null);
       fetchData();
       setNewWarehouseData({
         name: "",
@@ -576,17 +657,52 @@ export default function WarehouseDashboard() {
         is_main: false
       });
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Failed to create warehouse");
+      toast.error(error.response?.data?.detail || "Failed to save warehouse");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const startEdit = (warehouse: Warehouse) => {
+    setEditingId(warehouse.id);
+    setNewWarehouseData({
+      name: warehouse.name,
+      address: warehouse.address,
+      is_active: warehouse.is_active,
+      is_main: warehouse.is_main
+    });
+    setShowCreateForm(true);
+    setActiveMenuId(null);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this warehouse?")) return;
+
+    try {
+      await apiClient.deleteWarehouse(id);
+      toast.success("Warehouse deleted");
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to delete warehouse");
+    }
+    setActiveMenuId(null);
+  };
+
+  const openNewWarehouseModal = () => {
+    setEditingId(null);
+    setNewWarehouseData({
+      name: "",
+      address: "",
+      is_active: true,
+      is_main: false
+    });
+    setShowCreateForm(true);
   };
 
   return (
     <Layout>
       <PageContainer>
         <ContentContainer>
-          {/* Header */}
           <HeaderContainer>
             <TitleSection>
               <h1>Multi-Warehouse</h1>
@@ -601,14 +717,13 @@ export default function WarehouseDashboard() {
                 <ArrowRightLeft size={16} color="#2563eb" />
                 Transfer Stock
               </StyledButton>
-              <StyledButton onClick={() => setShowCreateForm(true)}>
+              <StyledButton onClick={openNewWarehouseModal}>
                 <Plus size={16} />
                 New Warehouse
               </StyledButton>
             </ActionButtons>
           </HeaderContainer>
 
-          {/* Quick Stats */}
           <StatsGrid>
             <StatCard>
               <StatIconWrapper>
@@ -684,9 +799,25 @@ export default function WarehouseDashboard() {
                   </MetricsRow>
                 </WarehouseInfo>
 
-                <ArrowButton>
-                  <ChevronRight size={24} />
-                </ArrowButton>
+                <div style={{ position: 'relative' }}>
+                  <ActionMenuButton onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenuId(activeMenuId === warehouse.id ? null : warehouse.id);
+                  }}>
+                    <MoreVertical size={20} />
+                  </ActionMenuButton>
+
+                  {activeMenuId === warehouse.id && (
+                    <DropdownMenu onClick={e => e.stopPropagation()}>
+                      <DropdownItem onClick={() => startEdit(warehouse)}>
+                        <Pencil size={14} /> Edit
+                      </DropdownItem>
+                      <DropdownItem $danger onClick={() => handleDelete(warehouse.id)}>
+                        <Trash size={14} /> Delete
+                      </DropdownItem>
+                    </DropdownMenu>
+                  )}
+                </div>
               </WarehouseCard>
             ))}
           </WarehouseGrid>
@@ -713,7 +844,7 @@ export default function WarehouseDashboard() {
                         <StyledSelect
                           required
                           value={transferData.from_warehouse_id}
-                          onChange={(e) => setTransferData({ ...transferData, from_warehouse_id: parseInt(e.target.value) })}
+                          onChange={handleSourceChange}
                         >
                           <option value="0">Select Origin</option>
                           {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -727,7 +858,9 @@ export default function WarehouseDashboard() {
                           onChange={(e) => setTransferData({ ...transferData, to_warehouse_id: parseInt(e.target.value) })}
                         >
                           <option value="0">Select Target</option>
-                          {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                          {warehouses
+                            .filter(w => w.id !== transferData.from_warehouse_id)
+                            .map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                         </StyledSelect>
                       </InputGroup>
                     </FormGrid>
@@ -738,9 +871,16 @@ export default function WarehouseDashboard() {
                         required
                         value={transferData.item_id}
                         onChange={(e) => setTransferData({ ...transferData, item_id: parseInt(e.target.value) })}
+                        disabled={!transferData.from_warehouse_id || loadingItems}
                       >
-                        <option value="0">Select Product</option>
-                        {items.map(i => <option key={i.id} value={i.id}>{i.item_name} (Current: {i.quantity})</option>)}
+                        <option value="0">
+                          {loadingItems ? "Loading items..." : (!transferData.from_warehouse_id ? "Select Source First" : "Select Product")}
+                        </option>
+                        {warehouseItems.map(stock => (
+                          <option key={stock.item_id} value={stock.item_id}>
+                            {stock.item?.item_name || `Item #${stock.item_id}`} (Available: {stock.quantity})
+                          </option>
+                        ))}
                       </StyledSelect>
                     </InputGroup>
 
@@ -766,15 +906,15 @@ export default function WarehouseDashboard() {
             </ModalOverlay>
           )}
 
-          {/* Create Warehouse Modal */}
+          {/* Create/Edit Warehouse Modal */}
           {showCreateForm && (
             <ModalOverlay onClick={() => setShowCreateForm(false)}>
               <ModalContent onClick={e => e.stopPropagation()}>
                 <ModalBody>
                   <ModalHeader>
                     <div>
-                      <h2>New Warehouse</h2>
-                      <p>Add a new physical storage location</p>
+                      <h2>{editingId ? 'Edit Warehouse' : 'New Warehouse'}</h2>
+                      <p>{editingId ? 'Update status and details' : 'Add a new physical storage location'}</p>
                     </div>
                     <CloseButton onClick={() => setShowCreateForm(false)}>
                       <X size={24} />
@@ -824,8 +964,8 @@ export default function WarehouseDashboard() {
                     </div>
 
                     <SubmitButton type="submit" disabled={submitting}>
-                      {submitting ? <Loader2 className="animate-spin" /> : <Plus size={20} />}
-                      Create Warehouse
+                      {submitting ? <Loader2 className="animate-spin" /> : (editingId ? <Pencil size={20} /> : <Plus size={20} />)}
+                      {editingId ? 'Update Warehouse' : 'Create Warehouse'}
                     </SubmitButton>
                   </form>
                 </ModalBody>

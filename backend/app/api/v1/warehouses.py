@@ -26,6 +26,30 @@ def create_warehouse(
     """Create a new warehouse location"""
     return warehouse_service.create_warehouse(db, warehouse_in)
 
+@router.put("/{warehouse_id}", response_model=schemas.WarehouseOut)
+def update_warehouse(
+    warehouse_id: int,
+    warehouse_in: schemas.WarehouseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_min_role(UserRole.FINANCE_ADMIN))
+):
+    """Update a warehouse"""
+    warehouse = warehouse_service.update_warehouse(db, warehouse_id, warehouse_in)
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    return warehouse
+
+    return warehouse_service.delete_warehouse(db, warehouse_id)
+
+@router.get("/{warehouse_id}/stocks", response_model=List[schemas.WarehouseStockWithItem])
+def get_warehouse_stocks(
+    warehouse_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_min_role(UserRole.ACCOUNTANT))
+):
+    """Get stocks for a specific warehouse"""
+    return warehouse_service.get_warehouse_stocks(db, warehouse_id)
+
 @router.post("/transfers", response_model=schemas.StockTransferOut)
 def initiate_transfer(
     transfer_in: schemas.StockTransferCreate,

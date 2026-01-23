@@ -131,6 +131,13 @@ export interface StockTransferCreate {
   quantity: number;
 }
 
+export interface WarehouseStock {
+  warehouse_id: number;
+  item_id: number;
+  quantity: number;
+  item: InventoryItem;
+}
+
 class ApiClient {
   private client: AxiosInstance;
 
@@ -509,6 +516,18 @@ class ApiClient {
 
   async createWarehouse(warehouseData: WarehouseCreate): Promise<ApiResponse<Warehouse>> {
     return this.post('/warehouses/', warehouseData);
+  }
+
+  async updateWarehouse(id: number, warehouseData: Partial<WarehouseCreate>): Promise<ApiResponse<Warehouse>> {
+    return this.put(`/warehouses/${id}`, warehouseData);
+  }
+
+  async deleteWarehouse(id: number): Promise<ApiResponse<{ message: string }>> {
+    return this.delete(`/warehouses/${id}`);
+  }
+
+  async getWarehouseStocks(id: number): Promise<ApiResponse<WarehouseStock[]>> {
+    return this.get(`/warehouses/${id}/stocks`);
   }
 
   async initiateTransfer(transferData: StockTransferCreate): Promise<ApiResponse<StockTransfer>> {

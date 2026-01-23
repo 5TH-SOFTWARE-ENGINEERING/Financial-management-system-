@@ -22,7 +22,7 @@ export const mockApiClient = {
 }
 
 // Mock user data
-export const mockUser: User = {
+export const mockUser: any = {
   id: 1,
   email: 'test@example.com',
   username: 'testuser',
@@ -36,7 +36,7 @@ export const mockUser: User = {
   type: 'admin' as const,
 }
 
-export const mockEmployee: User = {
+export const mockEmployee: any = {
   id: 2,
   email: 'employee@example.com',
   username: 'employee',
@@ -50,7 +50,7 @@ export const mockEmployee: User = {
   type: 'employee' as const,
 }
 
-export const mockManager: User = {
+export const mockManager: any = {
   id: 3,
   email: 'manager@example.com',
   username: 'manager',

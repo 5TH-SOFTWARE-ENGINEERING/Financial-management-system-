@@ -165,6 +165,15 @@ class WarehouseItemStockOut(BaseModel):
     class Config:
         from_attributes = True
 
+class WarehouseStockWithItem(BaseModel):
+    warehouse_id: int
+    item_id: int
+    quantity: int
+    item: InventoryItemPublicOut
+    
+    class Config:
+        from_attributes = True
+
 # Stock Transfer Schemas
 class StockTransferCreate(BaseModel):
     item_id: int

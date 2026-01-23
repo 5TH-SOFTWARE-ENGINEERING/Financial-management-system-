@@ -38,6 +38,35 @@ class WarehouseService:
         return warehouses
 
     @staticmethod
+    def update_warehouse(db: Session, warehouse_id: int, obj_in: WarehouseUpdate) -> Optional[Warehouse]:
+        db_obj = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+        if not db_obj:
+            return None
+        
+        update_data = obj_in.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_obj, field, value)
+            
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    @staticmethod
+    def delete_warehouse(db: Session, warehouse_id: int) -> bool:
+        db_obj = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+        if not db_obj:
+            return False
+            
+        db.delete(db_obj)
+        db.commit()
+        return True
+
+    @staticmethod
+    def get_warehouse_stocks(db: Session, warehouse_id: int) -> List[WarehouseItemStock]:
+        return db.query(WarehouseItemStock).filter(WarehouseItemStock.warehouse_id == warehouse_id).all()
+
+    @staticmethod
     def update_stock(db: Session, warehouse_id: int, item_id: int, quantity_change: int):
         """
         Updates stock for a specific item in a specific warehouse.
