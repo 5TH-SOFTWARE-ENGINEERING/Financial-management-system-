@@ -6,7 +6,7 @@ import io
 from typing import List
 
 from ..models.banking import BankAccount, BankTransaction, TransactionStatus
-from ..models.journal_entry import JournalEntry, JournalEntryLine
+from ..models.journal_entry import AccountingJournalEntry, JournalEntryLine
 
 class BankingService:
     @staticmethod

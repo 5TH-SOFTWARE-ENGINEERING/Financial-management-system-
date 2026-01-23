@@ -42,8 +42,9 @@ from .models import (  # noqa: F401
     BudgetType, BudgetPeriod, BudgetStatus,
     InventoryItem,
     Sale, SaleStatus, JournalEntry,
-    InventoryAuditLog, InventoryChangeType,
-    Department,
+    Account, AccountingJournalEntry, JournalEntryLine, JournalEntryStatus,
+    TaxType, TaxRate, TaxComponent,
+    Currency, ExchangeRate,
     BankAccount, BankTransaction
 )
 

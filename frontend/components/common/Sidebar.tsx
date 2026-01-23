@@ -601,8 +601,8 @@ const Sidebar: React.FC = () => {
                                 )}
                                 {/* Accounting Dashboard - Accountant only */}
                                 {isAccountant && (
-                                    <NavItem href="/accounting" $active={pathname === '/accounting'} $collapsed={collapsed}>
-                                        <NavIcon $active={pathname === '/accounting'} $collapsed={collapsed} $size={16} $iconType="book-open">
+                                    <NavItem href="/sales/accounting" $active={pathname === '/sales/accounting'} $collapsed={collapsed}>
+                                        <NavIcon $active={pathname === '/sales/accounting'} $collapsed={collapsed} $size={16} $iconType="book-open">
                                             <BookOpen />
                                         </NavIcon>
                                         {!collapsed && 'Accounting'}
@@ -610,8 +610,8 @@ const Sidebar: React.FC = () => {
                                 )}
                                 {/* Finance Admin can also access Accounting Dashboard */}
                                 {(isAdmin || isFinanceAdmin) && (
-                                    <NavItem href="/accounting" $active={pathname === '/accounting'} $collapsed={collapsed}>
-                                        <NavIcon $active={pathname === '/accounting'} $collapsed={collapsed} $size={16} $iconType="book-open">
+                                    <NavItem href="/sales/accounting" $active={pathname === '/sales/accounting'} $collapsed={collapsed}>
+                                        <NavIcon $active={pathname === '/sales/accounting'} $collapsed={collapsed} $size={16} $iconType="book-open">
                                             <BookOpen />
                                         </NavIcon>
                                         {!collapsed && 'Accounting'}

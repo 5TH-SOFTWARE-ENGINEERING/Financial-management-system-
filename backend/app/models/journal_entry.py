@@ -29,7 +29,7 @@ class ReferenceType(str, enum.Enum):
     ADJUSTMENT = "adjustment"
 
 
-class JournalEntry(Base):
+class AccountingJournalEntry(Base):
     """
     Journal Entry Header
     Represents a complete accounting transaction
@@ -55,7 +55,7 @@ class JournalEntry(Base):
     # Reversal information
     reversed_at = Column(DateTime(timezone=True), nullable=True)
     reversed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    reversal_entry_id = Column(Integer, ForeignKey("journal_entries.id"), nullable=True)
+    reversal_entry_id = Column(Integer, ForeignKey("accounting_journal_entries.id"), nullable=True)
     
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -67,10 +67,10 @@ class JournalEntry(Base):
     created_by = relationship("User", foreign_keys=[created_by_id])
     posted_by = relationship("User", foreign_keys=[posted_by_id])
     reversed_by = relationship("User", foreign_keys=[reversed_by_id])
-    reversal_entry = relationship("JournalEntry", remote_side=[id], foreign_keys=[reversal_entry_id])
+    reversal_entry = relationship("AccountingJournalEntry", remote_side=[id], foreign_keys=[reversal_entry_id])
 
     def __repr__(self):
-        return f"<JournalEntry {self.entry_number}: {self.description}>"
+        return f"<AccountingJournalEntry {self.entry_number}: {self.description}>"
 
 
 class JournalEntryLine(Base):
@@ -95,7 +95,7 @@ class JournalEntryLine(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    journal_entry = relationship("JournalEntry", back_populates="lines")
+    journal_entry = relationship("AccountingJournalEntry", back_populates="lines")
     account = relationship("Account", back_populates="journal_entry_lines")
 
     def __repr__(self):

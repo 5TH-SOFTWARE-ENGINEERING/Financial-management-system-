@@ -19,7 +19,7 @@ from .ip_restriction import IPRestriction, IPStatus
 
 # Core Accounting Foundations
 from .account import Account, AccountType
-from .journal_entry import JournalEntry as AccountingJournalEntry, JournalEntryLine, JournalEntryStatus, ReferenceType
+from .journal_entry import AccountingJournalEntry, JournalEntryLine, JournalEntryStatus, ReferenceType
 from .tax import TaxType, TaxRate, TaxComponent, TransactionType
 from .currency import Currency, ExchangeRate, ExchangeRateSource
 from .banking import BankAccount, BankTransaction, TransactionStatus

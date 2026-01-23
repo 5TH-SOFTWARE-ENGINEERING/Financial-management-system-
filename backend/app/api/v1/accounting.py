@@ -8,7 +8,7 @@ from ...core.database import get_db
 from ...api import deps
 from ...models.user import User, UserRole
 from ...models.account import Account, AccountType
-from ...models.journal_entry import JournalEntry, JournalEntryLine, JournalEntryStatus
+from ...models.journal_entry import AccountingJournalEntry, JournalEntryLine, JournalEntryStatus
 from ...schemas import account as account_schema
 from ...schemas import journal_entry as journal_entry_schema
 
@@ -72,11 +72,11 @@ def get_journal_entries(
     """
     Retrieve journal entries.
     """
-    query = db.query(JournalEntry)
+    query = db.query(AccountingJournalEntry)
     if status:
-        query = query.filter(JournalEntry.status == status)
+        query = query.filter(AccountingJournalEntry.status == status)
         
-    entries = query.order_by(JournalEntry.entry_date.desc()).offset(skip).limit(limit).all()
+    entries = query.order_by(AccountingJournalEntry.entry_date.desc()).offset(skip).limit(limit).all()
     
     # Populate nested Account objects for lines
     # (FastAPI/Pydantic validation config 'from_attributes=True' handles this if relationships are set up,
@@ -94,11 +94,11 @@ def create_journal_entry(
     """
     # Generate Entry Number
     today_str = datetime.now().strftime("%Y%m%d")
-    count = db.query(func.count(JournalEntry.id)).scalar() or 0
+    count = db.query(func.count(AccountingJournalEntry.id)).scalar() or 0
     entry_number = f"JE-{today_str}-{count + 1:04d}"
     
     # Create Header
-    db_entry = JournalEntry(
+    db_entry = AccountingJournalEntry(
         entry_number=entry_number,
         entry_date=entry_in.entry_date,
         description=entry_in.description,
@@ -134,7 +134,7 @@ def post_journal_entry(
     """
     Post a draft journal entry to the ledger.
     """
-    entry = db.query(JournalEntry).filter(JournalEntry.id == entry_id).first()
+    entry = db.query(AccountingJournalEntry).filter(AccountingJournalEntry.id == entry_id).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Journal entry not found")
         

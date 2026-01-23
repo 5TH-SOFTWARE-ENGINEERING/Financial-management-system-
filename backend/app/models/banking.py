@@ -62,4 +62,4 @@ class BankTransaction(Base):
 
     # Relationships
     bank_account = relationship("BankAccount", back_populates="transactions")
-    journal_entry = relationship("JournalEntry")
+    journal_entry = relationship("AccountingJournalEntry")

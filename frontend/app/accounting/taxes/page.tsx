@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, Receipt, Percent } from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
 
 interface TaxType {
     id: number;
@@ -31,9 +33,25 @@ export default function TaxConfigurationPage() {
     const [activeTab, setActiveTab] = useState<"types" | "rates">("types");
 
     useEffect(() => {
-        // TODO: Fetch from API
-        setLoading(false);
+        fetchData();
     }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [typesRes, ratesRes] = await Promise.all([
+                apiClient.getTaxTypes(),
+                apiClient.getTaxRates()
+            ]);
+            if (typesRes.data) setTaxTypes(typesRes.data);
+            if (ratesRes.data) setTaxRates(ratesRes.data);
+        } catch (error) {
+            console.error("Failed to fetch tax data:", error);
+            toast.error("Failed to load tax configuration");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6">
@@ -59,8 +77,8 @@ export default function TaxConfigurationPage() {
                     <button
                         onClick={() => setActiveTab("types")}
                         className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${activeTab === "types"
-                                ? "bg-purple-600 text-white shadow-lg"
-                                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            ? "bg-purple-600 text-white shadow-lg"
+                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -71,8 +89,8 @@ export default function TaxConfigurationPage() {
                     <button
                         onClick={() => setActiveTab("rates")}
                         className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${activeTab === "rates"
-                                ? "bg-purple-600 text-white shadow-lg"
-                                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            ? "bg-purple-600 text-white shadow-lg"
+                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -136,8 +154,8 @@ export default function TaxConfigurationPage() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${type.is_active
-                                                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                                        : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                                                         }`}>
                                                         {type.is_active ? "Active" : "Inactive"}
                                                     </span>
@@ -235,8 +253,8 @@ export default function TaxConfigurationPage() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${rate.is_active
-                                                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                                        : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                                                         }`}>
                                                         {rate.is_active ? "Active" : "Inactive"}
                                                     </span>

@@ -1781,6 +1781,40 @@ class ApiClient {
     return this.post<any>(`/accounting/journal-entries/${entryId}/post`);
   }
 
+  // Currency Endpoints
+  async getCurrencies(params?: { skip?: number; limit?: number; active_only?: boolean }) {
+    return this.get<any[]>('/accounting/currencies', { params });
+  }
+
+  async createCurrency(data: any) {
+    return this.post<any>('/accounting/currencies', data);
+  }
+
+  async getExchangeRates(params?: { skip?: number; limit?: number; from_currency?: string; to_currency?: string }) {
+    return this.get<any[]>('/accounting/exchange-rates', { params });
+  }
+
+  async createExchangeRate(data: any) {
+    return this.post<any>('/accounting/exchange-rates', data);
+  }
+
+  // Tax Endpoints
+  async getTaxTypes(params?: { skip?: number; limit?: number; active_only?: boolean }) {
+    return this.get<any[]>('/accounting/taxes/types', { params });
+  }
+
+  async createTaxType(data: any) {
+    return this.post<any>('/accounting/taxes/types', data);
+  }
+
+  async getTaxRates(params?: { skip?: number; limit?: number; tax_type?: string; active_only?: boolean }) {
+    return this.get<any[]>('/accounting/taxes/rates', { params });
+  }
+
+  async createTaxRate(data: any) {
+    return this.post<any>('/accounting/taxes/rates', data);
+  }
+
   // Document Intelligence (OCR)
   async analyzeDocument(file: File) {
     const formData = new FormData();

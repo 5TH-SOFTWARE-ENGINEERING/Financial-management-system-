@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, TrendingUp, DollarSign } from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
 
 interface Currency {
     id: number;
@@ -30,9 +32,25 @@ export default function CurrencyManagementPage() {
     const [activeTab, setActiveTab] = useState<"currencies" | "rates">("currencies");
 
     useEffect(() => {
-        // TODO: Fetch from API
-        setLoading(false);
+        fetchData();
     }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [currenciesRes, ratesRes] = await Promise.all([
+                apiClient.getCurrencies(),
+                apiClient.getExchangeRates()
+            ]);
+            if (currenciesRes.data) setCurrencies(currenciesRes.data);
+            if (ratesRes.data) setExchangeRates(ratesRes.data);
+        } catch (error) {
+            console.error("Failed to fetch currency data:", error);
+            toast.error("Failed to load currency management data");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6">

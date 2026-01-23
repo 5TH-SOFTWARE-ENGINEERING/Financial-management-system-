@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from typing import List, Dict, Any
 
-from ..models.journal_entry import JournalEntry, JournalEntryLine
+from ..models.journal_entry import AccountingJournalEntry, JournalEntryLine
 from ..models.account import Account, AccountType
 
 class ForecastingService:
@@ -20,13 +20,13 @@ class ForecastingService:
         # Get daily revenue/expense totals (Net Income Approach)
         results = (
             db.query(
-                func.date(JournalEntry.entry_date).label('date'),
+                func.date(AccountingJournalEntry.entry_date).label('date'),
                 func.sum(JournalEntryLine.credit_amount - JournalEntryLine.debit_amount).label('net_amount')
             )
             .join(JournalEntryLine)
             .join(Account)
             .filter(Account.account_type.in_([AccountType.REVENUE, AccountType.EXPENSE])) 
-            .group_by(func.date(JournalEntry.entry_date))
+            .group_by(func.date(AccountingJournalEntry.entry_date))
             .order_by('date')
             .all()
         )
