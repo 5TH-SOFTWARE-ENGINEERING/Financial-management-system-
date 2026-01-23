@@ -1853,6 +1853,19 @@ class ApiClient {
   async getCashFlowForecast(days: number = 30) {
     return this.get<any>('/banking/forecast', { params: { days } });
   }
+
+  // Fixed Assets
+  async getFixedAssets(params?: { skip?: number; limit?: number }) {
+    return this.get<any[]>('/fixed-assets/', { params });
+  }
+
+  async createFixedAsset(data: any) {
+    return this.post<any>('/fixed-assets/', data);
+  }
+
+  async depreciateFixedAsset(id: number) {
+    return this.post<any>(`/fixed-assets/${id}/depreciate`);
+  }
 }
 
 export const apiClient = new ApiClient();

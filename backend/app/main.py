@@ -19,7 +19,7 @@ from .api.v1 import (
     auth, users, revenue, expenses, dashboard,
     reports, approvals, notifications, admin,
     projects, departments, analytics, budgeting,
-    inventory, sales, contact, ip_management, accounting, documents, banking
+    inventory, sales, contact, ip_management, accounting, documents, banking, fixed_assets
 )
 
 from .utils.audit import AuditLogger, AuditAction
@@ -45,7 +45,8 @@ from .models import (  # noqa: F401
     Account, AccountingJournalEntry, JournalEntryLine, JournalEntryStatus,
     TaxType, TaxRate, TaxComponent,
     Currency, ExchangeRate,
-    BankAccount, BankTransaction
+    BankAccount, BankTransaction,
+    FixedAsset, DepreciationLog
 )
 
 # Create required directories early (prevents FileNotFoundError during config or mount)
@@ -576,6 +577,7 @@ app.include_router(contact.router, prefix="/api/v1/contact", tags=["Contact"])
 app.include_router(accounting.router, prefix=f"{api_prefix}/accounting", tags=["Accounting"])
 app.include_router(documents.router, prefix=f"{api_prefix}/documents", tags=["Document Intelligence"])
 app.include_router(banking.router, prefix=f"{api_prefix}/banking", tags=["Banking"])
+app.include_router(fixed_assets.router, prefix=f"{api_prefix}/fixed-assets", tags=["Fixed Assets"])
 
 
 # Health check endpoint
