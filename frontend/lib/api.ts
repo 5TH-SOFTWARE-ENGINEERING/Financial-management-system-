@@ -1866,6 +1866,29 @@ class ApiClient {
   async depreciateFixedAsset(id: number) {
     return this.post<any>(`/fixed-assets/${id}/depreciate`);
   }
+
+  // Applied AI (Fraud Detection & Scenario Modeling)
+  async getFraudFlags(params?: { skip?: number; limit?: number }) {
+    return this.get<any[]>('/ai/fraud', { params });
+  }
+
+  async runFraudScan() {
+    return this.post<{ message: string; new_flags_found: number }>('/ai/fraud/scan');
+  }
+
+  async updateFraudFlag(id: number, data: { status: string; review_comments?: string }) {
+    return this.put<any>(`/ai/fraud/${id}`, data);
+  }
+
+  async runScenarioSimulation(data: {
+    period_months: number;
+    revenue_multiplier: number;
+    expense_multiplier: number;
+    fixed_revenue_offset: number;
+    fixed_expense_offset: number;
+  }) {
+    return this.post<any>('/ai/simulate', data);
+  }
 }
 
 export const apiClient = new ApiClient();

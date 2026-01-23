@@ -9,7 +9,8 @@ import {
     Receipt,
     TrendingUp,
     FileText,
-    Settings
+    Settings,
+    BrainCircuit
 } from "lucide-react";
 
 export default function AccountingHomePage() {
@@ -57,6 +58,13 @@ export default function AccountingHomePage() {
             icon: DollarSign,
             href: "/accounting/general-ledger",
             color: "bg-teal-500",
+        },
+        {
+            title: "Applied AI",
+            description: "Fraud detection and scenario modeling",
+            icon: BrainCircuit,
+            href: "/accounting/ai",
+            color: "bg-red-500",
         },
     ];
 
