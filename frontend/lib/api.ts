@@ -114,6 +114,20 @@ export interface StockTransfer {
   created_at: string;
 }
 
+export interface WarehouseCreate {
+  name: string;
+  address?: string;
+  is_active?: boolean;
+  is_main?: boolean;
+}
+
+export interface StockTransferCreate {
+  item_id: number;
+  from_warehouse_id: number;
+  to_warehouse_id: number;
+  quantity: number;
+}
+
 class ApiClient {
   private client: AxiosInstance;
 
@@ -483,6 +497,27 @@ class ApiClient {
 
   async deleteUser(userId: number, password: string): Promise<ApiResponse<{ message: string }>> {
     return this.post(`/users/${userId}/delete`, { password });
+  }
+
+  // Warehouse endpoints
+  async getWarehouses(): Promise<ApiResponse<Warehouse[]>> {
+    return this.get('/warehouses/');
+  }
+
+  async createWarehouse(warehouseData: WarehouseCreate): Promise<ApiResponse<Warehouse>> {
+    return this.post('/warehouses/', warehouseData);
+  }
+
+  async initiateTransfer(transferData: StockTransferCreate): Promise<ApiResponse<StockTransfer>> {
+    return this.post('/warehouses/transfers', transferData);
+  }
+
+  async shipTransfer(transferId: number): Promise<ApiResponse<StockTransfer>> {
+    return this.post(`/warehouses/transfers/${transferId}/ship`);
+  }
+
+  async receiveTransfer(transferId: number): Promise<ApiResponse<StockTransfer>> {
+    return this.post(`/warehouses/transfers/${transferId}/receive`);
   }
 
   async activateUser(userId: number, password: string): Promise<ApiResponse<{ message: string }>> {
@@ -1984,31 +2019,7 @@ class ApiClient {
     return this.get<any[]>(`/payroll/periods/${periodId}/payslips`);
   }
 
-  // Warehouses
-  async getWarehouses(): Promise<ApiResponse<Warehouse[]>> {
-    return this.get<Warehouse[]>('/warehouses');
-  }
 
-  async createWarehouse(data: Partial<Warehouse>) {
-    return this.post<Warehouse>('/warehouses', data);
-  }
-
-  async initiateTransfer(data: {
-    item_id: number;
-    from_warehouse_id: number;
-    to_warehouse_id: number;
-    quantity: number;
-  }): Promise<ApiResponse<StockTransfer>> {
-    return this.post<StockTransfer>('/warehouses/transfers', data);
-  }
-
-  async shipTransfer(id: number) {
-    return this.post<StockTransfer>(`/warehouses/transfers/${id}/ship`);
-  }
-
-  async receiveTransfer(id: number) {
-    return this.post<StockTransfer>(`/warehouses/transfers/${id}/receive`);
-  }
 }
 
 export const apiClient = new ApiClient();
