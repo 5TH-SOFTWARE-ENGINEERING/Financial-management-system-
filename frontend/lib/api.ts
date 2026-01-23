@@ -1780,6 +1780,18 @@ class ApiClient {
   async postAccountingJournalEntry(entryId: number) {
     return this.post<any>(`/accounting/journal-entries/${entryId}/post`);
   }
+
+  // Document Intelligence (OCR)
+  async analyzeDocument(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.post<any>('/documents/analyze', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 60000, // 60s timeout for AI analysis
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

@@ -114,3 +114,5 @@ pyod==1.1.2                  # Outlier detection library (for anomaly detection 
 
 # Task Scheduling
 apscheduler==3.10.4          # Advanced Python Scheduler (for automated model retraining)
+# AI/ML - Generative AI
+google-generativeai==0.3.2
