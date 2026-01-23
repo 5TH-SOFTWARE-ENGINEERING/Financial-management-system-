@@ -1792,6 +1792,33 @@ class ApiClient {
       timeout: 60000, // 60s timeout for AI analysis
     });
   }
+
+  // Banking Endpoints
+  async getBankAccounts() {
+    return this.get<any[]>('/banking/accounts');
+  }
+
+  async createBankAccount(data: any) {
+    return this.post<any>('/banking/accounts', data);
+  }
+
+  async uploadBankStatement(bankAccountId: number, file: File) {
+    const formData = new FormData();
+    formData.append('bank_account_id', bankAccountId.toString());
+    formData.append('file', file);
+    return this.post<any[]>('/banking/upload-statement', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
+
+  async getBankTransactions(bankAccountId: number, params?: { skip?: number; limit?: number }) {
+    return this.get<any[]>('/banking/transactions', { params: { bank_account_id: bankAccountId, ...params } });
+  }
+
+  // Cash Flow Forecasting
+  async getCashFlowForecast(days: number = 30) {
+    return this.get<any>('/banking/forecast', { params: { days } });
+  }
 }
 
 export const apiClient = new ApiClient();

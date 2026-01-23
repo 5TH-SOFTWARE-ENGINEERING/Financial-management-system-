@@ -22,6 +22,7 @@ from .account import Account, AccountType
 from .journal_entry import JournalEntry as AccountingJournalEntry, JournalEntryLine, JournalEntryStatus, ReferenceType
 from .tax import TaxType, TaxRate, TaxComponent, TransactionType
 from .currency import Currency, ExchangeRate, ExchangeRateSource
+from .banking import BankAccount, BankTransaction, TransactionStatus
 
 __all__ = [
     "User", "UserRole", "Role",
@@ -40,5 +41,6 @@ __all__ = [
     "Account", "AccountType",
     "AccountingJournalEntry", "JournalEntryLine", "JournalEntryStatus", "ReferenceType",
     "TaxType", "TaxRate", "TaxComponent", "TransactionType",
-    "Currency", "ExchangeRate", "ExchangeRateSource"
+    "Currency", "ExchangeRate", "ExchangeRateSource",
+    "BankAccount", "BankTransaction", "TransactionStatus",
 ]
