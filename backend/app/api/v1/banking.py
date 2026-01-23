@@ -9,6 +9,7 @@ from ...models.banking import BankAccount, BankTransaction
 from ...schemas import banking as banking_schema
 from ...services.banking import banking_service
 from ...services.forecasting import forecasting_service
+from ...services.bank_feed_service import bank_feed_service
 
 router = APIRouter()
 
@@ -74,6 +75,38 @@ def get_transactions(
     return db.query(BankTransaction).filter(
         BankTransaction.bank_account_id == bank_account_id
     ).offset(skip).limit(limit).all()
+
+# ------------------------------------------------------------------
+# Simulation & Automation
+# ------------------------------------------------------------------
+
+@router.post("/simulate-fetch", response_model=List[banking_schema.BankTransaction])
+def simulate_bank_fetch(
+    bank_account_id: int,
+    count: int = 5,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_min_role(UserRole.ACCOUNTANT))
+):
+    """
+    Manually trigger a simulated bank API fetch (polling simulation)
+    """
+    return bank_feed_service.simulate_polling_sync(db, bank_account_id, count)
+
+@router.post("/webhook/simulator", response_model=banking_schema.BankTransaction)
+def simulate_bank_webhook(
+    bank_account_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_min_role(UserRole.ACCOUNTANT))
+):
+    """
+    Simulate an incoming webhook from a bank provider
+    Example Payload: {"id": "evt_123", "amount": -45.50, "description": "Client Dinner", "date": "2024-01-20T10:00:00"}
+    """
+    tx = bank_feed_service.process_mock_webhook(db, bank_account_id, payload)
+    if not tx:
+        raise HTTPException(status_code=400, detail="Failed to process simulated webhook")
+    return tx
 
 # ------------------------------------------------------------------
 # Cash Flow Forecasting

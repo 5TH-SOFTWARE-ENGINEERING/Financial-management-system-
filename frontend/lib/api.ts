@@ -1893,6 +1893,19 @@ class ApiClient {
     return this.get<any>('/banking/forecast', { params: { days } });
   }
 
+  // Banking Simulation
+  async simulateBankFetch(bankAccountId: number, count: number = 5) {
+    return this.post<any[]>('/banking/simulate-fetch', {}, {
+      params: { bank_account_id: bankAccountId, count }
+    });
+  }
+
+  async simulateBankWebhook(bankAccountId: number, payload: any) {
+    return this.post<any>('/banking/webhook/simulator', payload, {
+      params: { bank_account_id: bankAccountId }
+    });
+  }
+
   // Fixed Assets
   async getFixedAssets(params?: { skip?: number; limit?: number }) {
     return this.get<any[]>('/fixed-assets/', { params });

@@ -20,25 +20,26 @@ export default function BankingPage() {
     const [forecast, setForecast] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const [accountsRes, forecastRes] = await Promise.all([
+                apiClient.getBankAccounts(),
+                apiClient.getCashFlowForecast(30)
+            ]);
+
+            if (accountsRes.data) setAccounts(accountsRes.data);
+            if (forecastRes.data && forecastRes.data.forecast) setForecast(forecastRes.data.forecast);
+
+        } catch (error) {
+            console.error("Failed to load banking data", error);
+            toast.error("Failed to load banking dashboard");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                const [accountsRes, forecastRes] = await Promise.all([
-                    apiClient.getBankAccounts(),
-                    apiClient.getCashFlowForecast(30)
-                ]);
-
-                if (accountsRes.data) setAccounts(accountsRes.data);
-                if (forecastRes.data && forecastRes.data.forecast) setForecast(forecastRes.data.forecast);
-
-            } catch (error) {
-                console.error("Failed to load banking data", error);
-                toast.error("Failed to load banking dashboard");
-            } finally {
-                setLoading(false);
-            }
-        };
         loadData();
     }, []);
 
@@ -46,9 +47,34 @@ export default function BankingPage() {
         try {
             await apiClient.uploadBankStatement(accountId, file);
             toast.success("Statement uploaded successfully");
-            // Reload logic could go here
+            loadData();
         } catch (error) {
             toast.error("Failed to upload statement");
+        }
+    };
+
+    const handleSimulateFetch = async (accountId: number) => {
+        try {
+            const res = await apiClient.simulateBankFetch(accountId);
+            toast.success(`Fetched ${res.data.length} simulated transactions`);
+            loadData();
+        } catch (error) {
+            toast.error("Failed to simulate fetch");
+        }
+    };
+
+    const handleSimulateWebhook = async (accountId: number) => {
+        try {
+            const payload = {
+                amount: -(Math.random() * 100).toFixed(2),
+                description: "Simulation Webhook Meal",
+                date: new Date().toISOString()
+            };
+            await apiClient.simulateBankWebhook(accountId, payload);
+            toast.success("Simulated webhook processed");
+            loadData();
+        } catch (error) {
+            toast.error("Failed to simulate webhook");
         }
     };
 
@@ -117,6 +143,21 @@ export default function BankingPage() {
                                 </label>
                                 <button className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
                                     View Txns
+                                </button>
+                            </div>
+
+                            <div className="mt-2 flex gap-2">
+                                <button
+                                    onClick={() => handleSimulateFetch(account.id)}
+                                    className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Simulate Sync
+                                </button>
+                                <button
+                                    onClick={() => handleSimulateWebhook(account.id)}
+                                    className="flex-1 bg-purple-50 hover:bg-purple-100 text-purple-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Webhook (Mock)
                                 </button>
                             </div>
                         </div>
