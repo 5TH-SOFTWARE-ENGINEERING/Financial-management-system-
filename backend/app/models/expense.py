@@ -29,10 +29,20 @@ class ExpenseEntry(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text)
-    amount = Column(Float, nullable=False)
+    amount = Column(Float, nullable=False)  # Amount in transaction currency
     category = Column(String, default=ExpenseCategory.OTHER)
     vendor = Column(String)
     date = Column(DateTime(timezone=True), nullable=False)
+    
+    # Multi-currency support
+    currency_id = Column(Integer, ForeignKey("currencies.id"), nullable=True)
+    exchange_rate = Column(Float, nullable=True)  # Rate used for conversion
+    amount_base_currency = Column(Float, nullable=True)  # Amount in base currency
+    
+    # Tax support
+    tax_rate_id = Column(Integer, ForeignKey("tax_rates.id"), nullable=True)
+    tax_amount = Column(Float, default=0.0, nullable=False)
+    amount_before_tax = Column(Float, nullable=True)  # Amount excluding tax
     is_recurring = Column(Boolean, default=False)
     recurring_frequency = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -66,3 +76,7 @@ class ExpenseEntry(Base):
         back_populates="expense_entry",
         cascade="all, delete-orphan"
     )
+    
+    # Multi-currency and tax relationships
+    currency = relationship("Currency", back_populates="expense_entries")
+    tax_rate = relationship("TaxRate")

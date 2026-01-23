@@ -17,6 +17,12 @@ from .inventory_audit import InventoryAuditLog, InventoryChangeType
 from .department import Department
 from .ip_restriction import IPRestriction, IPStatus
 
+# Core Accounting Foundations
+from .account import Account, AccountType
+from .journal_entry import JournalEntry as AccountingJournalEntry, JournalEntryLine, JournalEntryStatus, ReferenceType
+from .tax import TaxType, TaxRate, TaxComponent, TransactionType
+from .currency import Currency, ExchangeRate, ExchangeRateSource
+
 __all__ = [
     "User", "UserRole", "Role",
     "RevenueEntry", "ExpenseEntry",
@@ -29,5 +35,10 @@ __all__ = [
     "InventoryItem",
     "Sale", "SaleStatus", "JournalEntry",
     "InventoryAuditLog", "InventoryChangeType",
-    "Department", "IPRestriction", "IPStatus"
+    "Department", "IPRestriction", "IPStatus",
+    # Core Accounting Foundations
+    "Account", "AccountType",
+    "AccountingJournalEntry", "JournalEntryLine", "JournalEntryStatus", "ReferenceType",
+    "TaxType", "TaxRate", "TaxComponent", "TransactionType",
+    "Currency", "ExchangeRate", "ExchangeRateSource"
 ]

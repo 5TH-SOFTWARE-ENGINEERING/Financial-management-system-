@@ -1760,6 +1760,26 @@ class ApiClient {
     const response = await this.client.request<T>(config);
     return this.normalizeResponse<T>(response.data);
   }
+  // Accounting Endpoints
+  async getAccountingAccounts(params?: { skip?: number; limit?: number }) {
+    return this.get<any[]>('/accounting/accounts', { params });
+  }
+
+  async createAccountingAccount(data: any) {
+    return this.post<any>('/accounting/accounts', data);
+  }
+
+  async getAccountingJournalEntries(params?: { skip?: number; limit?: number; status?: string }) {
+    return this.get<any[]>('/accounting/journal-entries', { params });
+  }
+
+  async createAccountingJournalEntry(data: any) {
+    return this.post<any>('/accounting/journal-entries', data);
+  }
+
+  async postAccountingJournalEntry(entryId: number) {
+    return this.post<any>(`/accounting/journal-entries/${entryId}/post`);
+  }
 }
 
 export const apiClient = new ApiClient();
