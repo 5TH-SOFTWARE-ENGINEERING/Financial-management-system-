@@ -44,7 +44,7 @@ class OCRService:
         - tax_amount: number (float)
         - currency: string (ISO code, e.g., USD, EUR)
         - category: string (suggest a category like 'Meals', 'Travel', 'Office Supplies', 'Software')
-        - items: list of objects { description: string, quantity: number, unit_price: number, total_amount: number }
+        - items: list of objects { description: string, sku: string (if available), quantity: number, unit_price: number, total_amount: number }
         
         Also calculate:
         - is_receipt: boolean (true if it looks like a valid receipt/invoice)

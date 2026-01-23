@@ -6,7 +6,7 @@ import styled, { useTheme } from 'styled-components';
 import {
   ShoppingCart, Package, Plus, Receipt,
   Loader2,
-  X, Printer
+  X, Printer, Download
 } from 'lucide-react';
 import Layout from '@/components/layout';
 import apiClient from '@/lib/api';
@@ -667,6 +667,25 @@ export default function SalesPage() {
     }
   };
 
+  const handleDownloadEInvoice = async (saleId: number, format: 'json' | 'xml') => {
+    try {
+      const response = await apiClient.getEInvoice(saleId, format);
+      const data = response.data;
+      const blob = new Blob([format === 'json' ? JSON.stringify(data, null, 2) : (data as string)], {
+        type: format === 'json' ? 'application/json' : 'application/xml'
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `einvoice-${saleId}.${format}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast.error('Failed to download E-Invoice');
+    }
+  };
+
   const totalSale = saleItems.reduce((sum, item) => sum + item.total, 0);
 
   // Items are already filtered by backend search parameter, so we use items directly
@@ -997,6 +1016,24 @@ export default function SalesPage() {
                     Print
                   </Button>
                 </div>
+                {completedSales.length === 1 && completedSales[0].id && (
+                  <div style={{ marginTop: theme.spacing.md, display: 'flex', gap: theme.spacing.md }}>
+                    <Button
+                      variant="outline"
+                      style={{ flex: 1, fontSize: '0.75rem', borderColor: '#3b82f6', color: '#3b82f6' }}
+                      onClick={() => handleDownloadEInvoice(completedSales[0].id!, 'json')}
+                    >
+                      <Download size={14} style={{ marginRight: theme.spacing.xs }} /> JSON E-Invoice
+                    </Button>
+                    <Button
+                      variant="outline"
+                      style={{ flex: 1, fontSize: '0.75rem', borderColor: '#10b981', color: '#10b981' }}
+                      onClick={() => handleDownloadEInvoice(completedSales[0].id!, 'xml')}
+                    >
+                      <Download size={14} style={{ marginRight: theme.spacing.xs }} /> UBL XML (E-Inv)
+                    </Button>
+                  </div>
+                )}
               </ReceiptContent>
             </ReceiptModal>
           )}

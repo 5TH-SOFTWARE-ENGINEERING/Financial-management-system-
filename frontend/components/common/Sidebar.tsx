@@ -610,12 +610,20 @@ const Sidebar: React.FC = () => {
                                 )}
                                 {/* Finance Admin can also access Accounting Dashboard */}
                                 {(isAdmin || isFinanceAdmin) && (
-                                    <NavItem href="/sales/accounting" $active={pathname === '/sales/accounting'} $collapsed={collapsed}>
-                                        <NavIcon $active={pathname === '/sales/accounting'} $collapsed={collapsed} $size={16} $iconType="book-open">
-                                            <BookOpen />
-                                        </NavIcon>
-                                        {!collapsed && 'Accounting'}
-                                    </NavItem>
+                                    <>
+                                        <NavItem href="/sales/accounting" $active={pathname === '/sales/accounting'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/sales/accounting'} $collapsed={collapsed} $size={16} $iconType="book-open">
+                                                <BookOpen />
+                                            </NavIcon>
+                                            {!collapsed && 'Accounting'}
+                                        </NavItem>
+                                        <NavItem href="/inventory/warehouses" $active={pathname === '/inventory/warehouses'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/inventory/warehouses'} $collapsed={collapsed} $size={16} $iconType="book-open">
+                                                <BookOpen />
+                                            </NavIcon>
+                                            {!collapsed && 'Warehouse'}
+                                        </NavItem>
+                                    </>
                                 )}
                             </SubMenu>
                         )}
@@ -624,12 +632,20 @@ const Sidebar: React.FC = () => {
 
                 {/* Reports */}
                 <ComponentGate componentId={ComponentId.SIDEBAR_REPORT}>
-                    <NavItem href="/report" $active={pathname.includes('/report')} $collapsed={collapsed}>
-                        <NavIcon $active={pathname.includes('/report')} $collapsed={collapsed} $iconType="pie-chart">
-                            <PieChart />
-                        </NavIcon>
-                        {!collapsed && 'Reports'}
-                    </NavItem>
+                    <>
+                        <NavItem href="/report" $active={pathname.includes('/report')} $collapsed={collapsed}>
+                            <NavIcon $active={pathname.includes('/report')} $collapsed={collapsed} $iconType="pie-chart">
+                                <PieChart />
+                            </NavIcon>
+                            {!collapsed && 'Reports'}
+                        </NavItem>
+                        <NavItem href="/accounting/documents" $active={pathname === '/accounting/documents'} $collapsed={collapsed}>
+                            <NavIcon $active={pathname === '/accounting/documents'} $collapsed={collapsed} $iconType="brain">
+                                <Brain />
+                            </NavIcon>
+                            {!collapsed && 'AI Documents'}
+                        </NavItem>
+                    </>
                 </ComponentGate>
 
                 {/* Forecasts - Only for Admin, Finance Admin, and Manager (hidden from Accountant and Employee) */}

@@ -1753,6 +1753,10 @@ class ApiClient {
     return this.get(`/sales/receipt/${saleId}`);
   }
 
+  async getEInvoice(saleId: number, format: 'json' | 'xml' = 'json') {
+    return this.get(`/sales/${saleId}/einvoice`, { params: { format } });
+  }
+
   async getJournalEntries(params?: {
     skip?: number;
     limit?: number;

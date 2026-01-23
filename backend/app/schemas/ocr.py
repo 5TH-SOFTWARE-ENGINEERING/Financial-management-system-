@@ -4,6 +4,7 @@ from datetime import date, datetime
 
 class LineItem(BaseModel):
     description: str
+    sku: Optional[str] = None
     quantity: Optional[float] = 1.0
     unit_price: Optional[float] = None
     total_amount: Optional[float] = None

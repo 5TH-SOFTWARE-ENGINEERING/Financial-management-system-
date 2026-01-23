@@ -27,6 +27,7 @@ from ...schemas.sale import (
 from ...utils.audit import AuditLogger, AuditAction
 from ...api.v1.auth import get_client_info
 from ...services.ml_auto_learn import record_new_data, trigger_auto_learn_background
+from ...services.invoice_service import invoice_service
 
 router = APIRouter()
 
@@ -670,4 +671,30 @@ def get_journal_entries(
         })
     
     return result
+
+
+@router.get("/{sale_id}/einvoice")
+def get_sale_einvoice(
+    sale_id: int,
+    format: str = Query("json", enum=["json", "xml"]),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate E-Invoice for a sale in JSON or UBL XML format.
+    """
+    sale = sale_crud.get(db, sale_id)
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    
+    # Check permissions (same as get_sale)
+    if current_user.role == UserRole.EMPLOYEE and sale.sold_by_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if format == "xml":
+        from fastapi.responses import Response
+        xml_content = invoice_service.generate_ubl_xml(sale)
+        return Response(content=xml_content, media_type="application/xml")
+    else:
+        return invoice_service.generate_json_einvoice(sale)
 
