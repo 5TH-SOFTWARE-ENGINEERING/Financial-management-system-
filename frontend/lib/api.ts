@@ -102,6 +102,9 @@ export interface Warehouse {
   address?: string;
   is_active: boolean;
   is_main: boolean;
+  total_items?: number;
+  total_value?: number;
+  utilization?: number;
 }
 
 export interface StockTransfer {

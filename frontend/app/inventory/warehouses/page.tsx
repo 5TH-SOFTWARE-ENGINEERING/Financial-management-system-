@@ -3,17 +3,17 @@
 import { useState, useEffect } from "react";
 import styled, { useTheme, css } from "styled-components";
 import {
-    Warehouse as WarehouseIcon,
-    ArrowRightLeft,
-    MapPin,
-    Plus,
-    Boxes,
-    Truck,
-    ShieldCheck,
-    ChevronRight,
-    Loader2,
-    X,
-    Building2
+  Warehouse as WarehouseIcon,
+  ArrowRightLeft,
+  MapPin,
+  Plus,
+  Boxes,
+  Truck,
+  ShieldCheck,
+  ChevronRight,
+  Loader2,
+  X,
+  Building2
 } from "lucide-react";
 import { apiClient, Warehouse, StockTransferCreate, InventoryItem, WarehouseCreate } from "@/lib/api";
 import { toast } from "sonner";
@@ -468,372 +468,372 @@ const EmptyIconWrapper = styled.div`
 `;
 
 export default function WarehouseDashboard() {
-    const theme = useTheme();
-    const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-    const [loading, setLoading] = useState(true);
+  const theme = useTheme();
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    // Transfer form state
-    const [showTransferForm, setShowTransferForm] = useState(false);
-    const [items, setItems] = useState<InventoryItem[]>([]);
-    const [transferData, setTransferData] = useState<StockTransferCreate>({
+  // Transfer form state
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [transferData, setTransferData] = useState<StockTransferCreate>({
+    item_id: 0,
+    from_warehouse_id: 0,
+    to_warehouse_id: 0,
+    quantity: 0
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  // Create warehouse form state
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newWarehouseData, setNewWarehouseData] = useState<WarehouseCreate>({
+    name: "",
+    address: "",
+    is_active: true,
+    is_main: false
+  });
+
+  useEffect(() => {
+    fetchData();
+    fetchItems();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.getWarehouses();
+      // Ensure we handle both array and object response structures
+      const data = Array.isArray(res.data)
+        ? res.data
+        : (res.data as any)?.data || [];
+
+      setWarehouses(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to fetch warehouses:", error);
+      toast.error("Failed to load warehouses");
+      setWarehouses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchItems = async () => {
+    try {
+      const res = await apiClient.getInventoryItems();
+      const data = Array.isArray(res.data)
+        ? res.data
+        : (res.data as any)?.data || [];
+      if (Array.isArray(data)) {
+        setItems(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch inventory items:", error);
+    }
+  };
+
+  const handleCreateTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferData.item_id || !transferData.from_warehouse_id || !transferData.to_warehouse_id || !transferData.quantity) {
+      toast.error("Please fill all fields");
+      return;
+    }
+
+    if (transferData.from_warehouse_id === transferData.to_warehouse_id) {
+      toast.error("Source and destination must be different");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await apiClient.initiateTransfer(transferData);
+      toast.success("Stock transfer initiated");
+      setShowTransferForm(false);
+      fetchData();
+      setTransferData({
         item_id: 0,
         from_warehouse_id: 0,
         to_warehouse_id: 0,
         quantity: 0
-    });
-    const [submitting, setSubmitting] = useState(false);
+      });
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Transfer failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    // Create warehouse form state
-    const [showCreateForm, setShowCreateForm] = useState(false);
-    const [newWarehouseData, setNewWarehouseData] = useState<WarehouseCreate>({
+  const handleCreateWarehouse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSubmitting(true);
+      await apiClient.createWarehouse(newWarehouseData);
+      toast.success("Warehouse created successfully");
+      setShowCreateForm(false);
+      fetchData();
+      setNewWarehouseData({
         name: "",
         address: "",
         is_active: true,
         is_main: false
-    });
+      });
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to create warehouse");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    useEffect(() => {
-        fetchData();
-        fetchItems();
-    }, []);
+  return (
+    <Layout>
+      <PageContainer>
+        <ContentContainer>
+          {/* Header */}
+          <HeaderContainer>
+            <TitleSection>
+              <h1>Multi-Warehouse</h1>
+              <p>Manage stock across multiple physical locations</p>
+            </TitleSection>
 
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const res = await apiClient.getWarehouses();
-            // Ensure we handle both array and object response structures
-            const data = Array.isArray(res.data)
-                ? res.data
-                : (res.data as any)?.data || [];
+            <ActionButtons>
+              <StyledButton
+                $variant="secondary"
+                onClick={() => setShowTransferForm(true)}
+              >
+                <ArrowRightLeft size={16} color="#2563eb" />
+                Transfer Stock
+              </StyledButton>
+              <StyledButton onClick={() => setShowCreateForm(true)}>
+                <Plus size={16} />
+                New Warehouse
+              </StyledButton>
+            </ActionButtons>
+          </HeaderContainer>
 
-            setWarehouses(Array.isArray(data) ? data : []);
-        } catch (error) {
-            console.error("Failed to fetch warehouses:", error);
-            toast.error("Failed to load warehouses");
-            setWarehouses([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+          {/* Quick Stats */}
+          <StatsGrid>
+            <StatCard>
+              <StatIconWrapper>
+                <WarehouseIcon size={128} />
+              </StatIconWrapper>
+              <StatLabel>Total Capacity</StatLabel>
+              <StatValue>{warehouses.reduce((acc, w) => acc + (w.total_items || 0), 0)}</StatValue>
+              <StatSubtext>Total Items Stored</StatSubtext>
+            </StatCard>
 
-    const fetchItems = async () => {
-        try {
-            const res = await apiClient.getInventoryItems();
-            const data = Array.isArray(res.data)
-                ? res.data
-                : (res.data as any)?.data || [];
-            if (Array.isArray(data)) {
-                setItems(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch inventory items:", error);
-        }
-    };
+            <StatCard>
+              <StatIconWrapper>
+                <Boxes size={128} />
+              </StatIconWrapper>
+              <StatLabel>Stock Value</StatLabel>
+              <StatValue>${(warehouses.reduce((acc, w) => acc + (w.total_value || 0), 0) / 1000).toFixed(1)}k</StatValue>
+              <StatSubtext>Across all locations</StatSubtext>
+            </StatCard>
 
-    const handleCreateTransfer = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!transferData.item_id || !transferData.from_warehouse_id || !transferData.to_warehouse_id || !transferData.quantity) {
-            toast.error("Please fill all fields");
-            return;
-        }
+            <StatCard style={{ background: theme.mode === 'dark' ? '#0f172a' : '#1e293b' }}>
+              <StatIconWrapper>
+                <Truck size={128} color="white" style={{ opacity: 0.1 }} />
+              </StatIconWrapper>
+              <StatLabel style={{ color: 'rgba(255,255,255,0.5)' }}>Live Transfers</StatLabel>
+              <StatValue style={{ color: 'white' }}>12</StatValue>
+              <StatSubtext style={{ color: 'rgba(255,255,255,0.5)' }}>In-transit movements</StatSubtext>
+            </StatCard>
+          </StatsGrid>
 
-        if (transferData.from_warehouse_id === transferData.to_warehouse_id) {
-            toast.error("Source and destination must be different");
-            return;
-        }
+          {/* Warehouse List */}
+          <WarehouseGrid>
+            {loading ? (
+              <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', padding: '5rem' }}>
+                <Loader2 className="animate-spin text-blue-500" size={40} />
+              </div>
+            ) : warehouses.length === 0 ? (
+              <EmptyState>
+                <EmptyIconWrapper>
+                  <WarehouseIcon size={40} />
+                </EmptyIconWrapper>
+                <h3>No Warehouses Configured</h3>
+                <p>Create your first physical storage location to start tracking stock across multiple areas.</p>
+              </EmptyState>
+            ) : warehouses.map((warehouse) => (
+              <WarehouseCard key={warehouse.id}>
+                <IconBox>
+                  <WarehouseIcon size={32} />
+                  {warehouse.is_main && (
+                    <div style={{ position: 'absolute', top: -8, right: -8, background: '#2563eb', color: 'white', padding: 4, borderRadius: '50%', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                      <ShieldCheck size={12} />
+                    </div>
+                  )}
+                </IconBox>
 
-        try {
-            setSubmitting(true);
-            await apiClient.initiateTransfer(transferData);
-            toast.success("Stock transfer initiated");
-            setShowTransferForm(false);
-            fetchData();
-            setTransferData({
-                item_id: 0,
-                from_warehouse_id: 0,
-                to_warehouse_id: 0,
-                quantity: 0
-            });
-        } catch (error: any) {
-            toast.error(error.response?.data?.detail || "Transfer failed");
-        } finally {
-            setSubmitting(false);
-        }
-    };
+                <WarehouseInfo>
+                  <WarehouseName>
+                    <h4>{warehouse.name}</h4>
+                    {warehouse.is_main && <MainBadge>Main HQ</MainBadge>}
+                  </WarehouseName>
+                  <AddressRow>
+                    <MapPin size={12} />
+                    {warehouse.address || "No address set"}
+                  </AddressRow>
+                  <MetricsRow>
+                    <Metric>
+                      <div>Items</div>
+                      <div>{warehouse.total_items || 0}</div>
+                    </Metric>
+                    <Metric $bordered>
+                      <div>Utilization</div>
+                      <div>{warehouse.utilization || 0}%</div>
+                    </Metric>
+                  </MetricsRow>
+                </WarehouseInfo>
 
-    const handleCreateWarehouse = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            setSubmitting(true);
-            await apiClient.createWarehouse(newWarehouseData);
-            toast.success("Warehouse created successfully");
-            setShowCreateForm(false);
-            fetchData();
-            setNewWarehouseData({
-                name: "",
-                address: "",
-                is_active: true,
-                is_main: false
-            });
-        } catch (error: any) {
-            toast.error(error.response?.data?.detail || "Failed to create warehouse");
-        } finally {
-            setSubmitting(false);
-        }
-    };
+                <ArrowButton>
+                  <ChevronRight size={24} />
+                </ArrowButton>
+              </WarehouseCard>
+            ))}
+          </WarehouseGrid>
 
-    return (
-        <Layout>
-            <PageContainer>
-                <ContentContainer>
-                    {/* Header */}
-                    <HeaderContainer>
-                        <TitleSection>
-                            <h1>Multi-Warehouse</h1>
-                            <p>Manage stock across multiple physical locations</p>
-                        </TitleSection>
+          {/* Transfer Modal */}
+          {showTransferForm && (
+            <ModalOverlay onClick={() => setShowTransferForm(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <ModalBody>
+                  <ModalHeader>
+                    <div>
+                      <h2>Transfer Stock</h2>
+                      <p>Move inventory between locations</p>
+                    </div>
+                    <CloseButton onClick={() => setShowTransferForm(false)}>
+                      <X size={24} />
+                    </CloseButton>
+                  </ModalHeader>
 
-                        <ActionButtons>
-                            <StyledButton
-                                $variant="secondary"
-                                onClick={() => setShowTransferForm(true)}
-                            >
-                                <ArrowRightLeft size={16} color="#2563eb" />
-                                Transfer Stock
-                            </StyledButton>
-                            <StyledButton onClick={() => setShowCreateForm(true)}>
-                                <Plus size={16} />
-                                New Warehouse
-                            </StyledButton>
-                        </ActionButtons>
-                    </HeaderContainer>
+                  <form onSubmit={handleCreateTransfer}>
+                    <FormGrid>
+                      <InputGroup>
+                        <label>Source Warehouse</label>
+                        <StyledSelect
+                          required
+                          value={transferData.from_warehouse_id}
+                          onChange={(e) => setTransferData({ ...transferData, from_warehouse_id: parseInt(e.target.value) })}
+                        >
+                          <option value="0">Select Origin</option>
+                          {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                        </StyledSelect>
+                      </InputGroup>
+                      <InputGroup>
+                        <label>Destination</label>
+                        <StyledSelect
+                          required
+                          value={transferData.to_warehouse_id}
+                          onChange={(e) => setTransferData({ ...transferData, to_warehouse_id: parseInt(e.target.value) })}
+                        >
+                          <option value="0">Select Target</option>
+                          {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                        </StyledSelect>
+                      </InputGroup>
+                    </FormGrid>
 
-                    {/* Quick Stats */}
-                    <StatsGrid>
-                        <StatCard>
-                            <StatIconWrapper>
-                                <WarehouseIcon size={128} />
-                            </StatIconWrapper>
-                            <StatLabel>Total Capacity</StatLabel>
-                            <StatValue>{warehouses.length}</StatValue>
-                            <StatSubtext>Active Warehouses</StatSubtext>
-                        </StatCard>
+                    <InputGroup style={{ marginBottom: '1.5rem' }}>
+                      <label>Inventory Item</label>
+                      <StyledSelect
+                        required
+                        value={transferData.item_id}
+                        onChange={(e) => setTransferData({ ...transferData, item_id: parseInt(e.target.value) })}
+                      >
+                        <option value="0">Select Product</option>
+                        {items.map(i => <option key={i.id} value={i.id}>{i.item_name} (Current: {i.quantity})</option>)}
+                      </StyledSelect>
+                    </InputGroup>
 
-                        <StatCard>
-                            <StatIconWrapper>
-                                <Boxes size={128} />
-                            </StatIconWrapper>
-                            <StatLabel>Stock Value</StatLabel>
-                            <StatValue>$450.2k</StatValue>
-                            <StatSubtext>Across all locations</StatSubtext>
-                        </StatCard>
+                    <InputGroup style={{ marginBottom: '1.5rem' }}>
+                      <label>Transfer Quantity</label>
+                      <StyledInput
+                        type="number"
+                        required
+                        placeholder="0"
+                        min="1"
+                        value={transferData.quantity || ''}
+                        onChange={(e) => setTransferData({ ...transferData, quantity: parseInt(e.target.value) })}
+                      />
+                    </InputGroup>
 
-                        <StatCard style={{ background: theme.mode === 'dark' ? '#0f172a' : '#1e293b' }}>
-                            <StatIconWrapper>
-                                <Truck size={128} color="white" style={{ opacity: 0.1 }} />
-                            </StatIconWrapper>
-                            <StatLabel style={{ color: 'rgba(255,255,255,0.5)' }}>Live Transfers</StatLabel>
-                            <StatValue style={{ color: 'white' }}>12</StatValue>
-                            <StatSubtext style={{ color: 'rgba(255,255,255,0.5)' }}>In-transit movements</StatSubtext>
-                        </StatCard>
-                    </StatsGrid>
+                    <SubmitButton type="submit" disabled={submitting}>
+                      {submitting ? <Loader2 className="animate-spin" /> : <ArrowRightLeft size={20} />}
+                      Initiate Transfer
+                    </SubmitButton>
+                  </form>
+                </ModalBody>
+              </ModalContent>
+            </ModalOverlay>
+          )}
 
-                    {/* Warehouse List */}
-                    <WarehouseGrid>
-                        {loading ? (
-                            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', padding: '5rem' }}>
-                                <Loader2 className="animate-spin text-blue-500" size={40} />
-                            </div>
-                        ) : warehouses.length === 0 ? (
-                            <EmptyState>
-                                <EmptyIconWrapper>
-                                    <WarehouseIcon size={40} />
-                                </EmptyIconWrapper>
-                                <h3>No Warehouses Configured</h3>
-                                <p>Create your first physical storage location to start tracking stock across multiple areas.</p>
-                            </EmptyState>
-                        ) : warehouses.map((warehouse) => (
-                            <WarehouseCard key={warehouse.id}>
-                                <IconBox>
-                                    <WarehouseIcon size={32} />
-                                    {warehouse.is_main && (
-                                        <div style={{ position: 'absolute', top: -8, right: -8, background: '#2563eb', color: 'white', padding: 4, borderRadius: '50%', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                                            <ShieldCheck size={12} />
-                                        </div>
-                                    )}
-                                </IconBox>
+          {/* Create Warehouse Modal */}
+          {showCreateForm && (
+            <ModalOverlay onClick={() => setShowCreateForm(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <ModalBody>
+                  <ModalHeader>
+                    <div>
+                      <h2>New Warehouse</h2>
+                      <p>Add a new physical storage location</p>
+                    </div>
+                    <CloseButton onClick={() => setShowCreateForm(false)}>
+                      <X size={24} />
+                    </CloseButton>
+                  </ModalHeader>
 
-                                <WarehouseInfo>
-                                    <WarehouseName>
-                                        <h4>{warehouse.name}</h4>
-                                        {warehouse.is_main && <MainBadge>Main HQ</MainBadge>}
-                                    </WarehouseName>
-                                    <AddressRow>
-                                        <MapPin size={12} />
-                                        {warehouse.address || "No address set"}
-                                    </AddressRow>
-                                    <MetricsRow>
-                                        <Metric>
-                                            <div>Items</div>
-                                            <div>124</div>
-                                        </Metric>
-                                        <Metric $bordered>
-                                            <div>Utilization</div>
-                                            <div>68%</div>
-                                        </Metric>
-                                    </MetricsRow>
-                                </WarehouseInfo>
+                  <form onSubmit={handleCreateWarehouse}>
+                    <InputGroup style={{ marginBottom: '1.5rem' }}>
+                      <label>Warehouse Name</label>
+                      <StyledInput
+                        required
+                        placeholder="e.g. Downtown Hub"
+                        value={newWarehouseData.name}
+                        onChange={(e) => setNewWarehouseData({ ...newWarehouseData, name: e.target.value })}
+                      />
+                    </InputGroup>
 
-                                <ArrowButton>
-                                    <ChevronRight size={24} />
-                                </ArrowButton>
-                            </WarehouseCard>
-                        ))}
-                    </WarehouseGrid>
+                    <InputGroup style={{ marginBottom: '1.5rem' }}>
+                      <label>Address</label>
+                      <StyledInput
+                        placeholder="Physical address"
+                        value={newWarehouseData.address || ''}
+                        onChange={(e) => setNewWarehouseData({ ...newWarehouseData, address: e.target.value })}
+                        style={{ fontSize: '1rem' }}
+                      />
+                    </InputGroup>
 
-                    {/* Transfer Modal */}
-                    {showTransferForm && (
-                        <ModalOverlay onClick={() => setShowTransferForm(false)}>
-                            <ModalContent onClick={e => e.stopPropagation()}>
-                                <ModalBody>
-                                    <ModalHeader>
-                                        <div>
-                                            <h2>Transfer Stock</h2>
-                                            <p>Move inventory between locations</p>
-                                        </div>
-                                        <CloseButton onClick={() => setShowTransferForm(false)}>
-                                            <X size={24} />
-                                        </CloseButton>
-                                    </ModalHeader>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>
+                        <input
+                          type="checkbox"
+                          checked={newWarehouseData.is_main}
+                          onChange={(e) => setNewWarehouseData({ ...newWarehouseData, is_main: e.target.checked })}
+                          style={{ width: '1.25rem', height: '1.25rem' }}
+                        />
+                        Main HQ
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>
+                        <input
+                          type="checkbox"
+                          checked={newWarehouseData.is_active}
+                          onChange={(e) => setNewWarehouseData({ ...newWarehouseData, is_active: e.target.checked })}
+                          style={{ width: '1.25rem', height: '1.25rem' }}
+                        />
+                        Active
+                      </label>
+                    </div>
 
-                                    <form onSubmit={handleCreateTransfer}>
-                                        <FormGrid>
-                                            <InputGroup>
-                                                <label>Source Warehouse</label>
-                                                <StyledSelect
-                                                    required
-                                                    value={transferData.from_warehouse_id}
-                                                    onChange={(e) => setTransferData({ ...transferData, from_warehouse_id: parseInt(e.target.value) })}
-                                                >
-                                                    <option value="0">Select Origin</option>
-                                                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                                                </StyledSelect>
-                                            </InputGroup>
-                                            <InputGroup>
-                                                <label>Destination</label>
-                                                <StyledSelect
-                                                    required
-                                                    value={transferData.to_warehouse_id}
-                                                    onChange={(e) => setTransferData({ ...transferData, to_warehouse_id: parseInt(e.target.value) })}
-                                                >
-                                                    <option value="0">Select Target</option>
-                                                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                                                </StyledSelect>
-                                            </InputGroup>
-                                        </FormGrid>
-
-                                        <InputGroup style={{ marginBottom: '1.5rem' }}>
-                                            <label>Inventory Item</label>
-                                            <StyledSelect
-                                                required
-                                                value={transferData.item_id}
-                                                onChange={(e) => setTransferData({ ...transferData, item_id: parseInt(e.target.value) })}
-                                            >
-                                                <option value="0">Select Product</option>
-                                                {items.map(i => <option key={i.id} value={i.id}>{i.item_name} (Current: {i.quantity})</option>)}
-                                            </StyledSelect>
-                                        </InputGroup>
-
-                                        <InputGroup style={{ marginBottom: '1.5rem' }}>
-                                            <label>Transfer Quantity</label>
-                                            <StyledInput
-                                                type="number"
-                                                required
-                                                placeholder="0"
-                                                min="1"
-                                                value={transferData.quantity || ''}
-                                                onChange={(e) => setTransferData({ ...transferData, quantity: parseInt(e.target.value) })}
-                                            />
-                                        </InputGroup>
-
-                                        <SubmitButton type="submit" disabled={submitting}>
-                                            {submitting ? <Loader2 className="animate-spin" /> : <ArrowRightLeft size={20} />}
-                                            Initiate Transfer
-                                        </SubmitButton>
-                                    </form>
-                                </ModalBody>
-                            </ModalContent>
-                        </ModalOverlay>
-                    )}
-
-                    {/* Create Warehouse Modal */}
-                    {showCreateForm && (
-                        <ModalOverlay onClick={() => setShowCreateForm(false)}>
-                            <ModalContent onClick={e => e.stopPropagation()}>
-                                <ModalBody>
-                                    <ModalHeader>
-                                        <div>
-                                            <h2>New Warehouse</h2>
-                                            <p>Add a new physical storage location</p>
-                                        </div>
-                                        <CloseButton onClick={() => setShowCreateForm(false)}>
-                                            <X size={24} />
-                                        </CloseButton>
-                                    </ModalHeader>
-
-                                    <form onSubmit={handleCreateWarehouse}>
-                                        <InputGroup style={{ marginBottom: '1.5rem' }}>
-                                            <label>Warehouse Name</label>
-                                            <StyledInput
-                                                required
-                                                placeholder="e.g. Downtown Hub"
-                                                value={newWarehouseData.name}
-                                                onChange={(e) => setNewWarehouseData({ ...newWarehouseData, name: e.target.value })}
-                                            />
-                                        </InputGroup>
-
-                                        <InputGroup style={{ marginBottom: '1.5rem' }}>
-                                            <label>Address</label>
-                                            <StyledInput
-                                                placeholder="Physical address"
-                                                value={newWarehouseData.address || ''}
-                                                onChange={(e) => setNewWarehouseData({ ...newWarehouseData, address: e.target.value })}
-                                                style={{ fontSize: '1rem' }}
-                                            />
-                                        </InputGroup>
-
-                                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={newWarehouseData.is_main}
-                                                    onChange={(e) => setNewWarehouseData({ ...newWarehouseData, is_main: e.target.checked })}
-                                                    style={{ width: '1.25rem', height: '1.25rem' }}
-                                                />
-                                                Main HQ
-                                            </label>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={newWarehouseData.is_active}
-                                                    onChange={(e) => setNewWarehouseData({ ...newWarehouseData, is_active: e.target.checked })}
-                                                    style={{ width: '1.25rem', height: '1.25rem' }}
-                                                />
-                                                Active
-                                            </label>
-                                        </div>
-
-                                        <SubmitButton type="submit" disabled={submitting}>
-                                            {submitting ? <Loader2 className="animate-spin" /> : <Plus size={20} />}
-                                            Create Warehouse
-                                        </SubmitButton>
-                                    </form>
-                                </ModalBody>
-                            </ModalContent>
-                        </ModalOverlay>
-                    )}
-                </ContentContainer>
-            </PageContainer>
-        </Layout>
-    );
+                    <SubmitButton type="submit" disabled={submitting}>
+                      {submitting ? <Loader2 className="animate-spin" /> : <Plus size={20} />}
+                      Create Warehouse
+                    </SubmitButton>
+                  </form>
+                </ModalBody>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+        </ContentContainer>
+      </PageContainer>
+    </Layout>
+  );
 }

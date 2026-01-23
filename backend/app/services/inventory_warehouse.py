@@ -15,7 +15,27 @@ class WarehouseService:
 
     @staticmethod
     def get_warehouses(db: Session) -> List[Warehouse]:
-        return db.query(Warehouse).all()
+        warehouses = db.query(Warehouse).all()
+        for w in warehouses:
+            # Calculate stats
+            total_items = 0
+            total_value = 0.0
+            
+            for stock in w.stocks:
+                total_items += stock.quantity
+                # Use selling price for estimated value to avoid permission complexity
+                if stock.item:
+                    total_value += float(stock.quantity * stock.item.selling_price)
+            
+            # Attach to object for Pydantic serialization
+            setattr(w, 'total_items', total_items)
+            setattr(w, 'total_value', total_value)
+            
+            # Assume constant capacity of 5000 units for now
+            capacity = 5000
+            setattr(w, 'utilization', min(round((total_items / capacity) * 100, 1), 100.0))
+            
+        return warehouses
 
     @staticmethod
     def update_stock(db: Session, warehouse_id: int, item_id: int, quantity_change: int):

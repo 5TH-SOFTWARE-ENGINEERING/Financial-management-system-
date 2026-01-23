@@ -148,6 +148,9 @@ class WarehouseUpdate(BaseModel):
 
 class WarehouseOut(WarehouseBase):
     id: int
+    total_items: int = 0
+    total_value: float = 0.0
+    utilization: float = 0.0
     
     class Config:
         from_attributes = True
