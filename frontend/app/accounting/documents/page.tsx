@@ -12,9 +12,20 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
 const PageContainer = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: ${props => props.theme.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-bottom: ${props => props.theme.spacing.xxl};
+  background-color: ${props => props.theme.colors.background};
+`;
+
+const ContentContainer = styled.div`
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${props => props.theme.spacing.sm};
 `;
 
 const Header = styled.div`
@@ -32,6 +43,10 @@ const Title = styled.h1`
   -webkit-text-fill-color: transparent;
 `;
 
+const Description = styled.p`
+  color: ${props => props.theme.colors.textSecondary};
+`;
+
 const DropZone = styled.div<{ $isDragging: boolean }>`
   border: 2px dashed ${props => props.$isDragging ? '#3b82f6' : props.theme.colors.border};
   border-radius: 20px;
@@ -46,6 +61,34 @@ const DropZone = styled.div<{ $isDragging: boolean }>`
     border-color: #3b82f6;
     background: rgba(59, 130, 246, 0.02);
   }
+`;
+
+const UploadContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${props => props.theme.spacing.md};
+`;
+
+const IconWrapper = styled.div`
+  width: 64px;
+  height: 64px;
+  background-color: #eff6ff;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+`;
+
+const UploadPrompt = styled.p`
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+`;
+
+const UploadHint = styled.p`
+  color: #9ca3af;
+  font-size: ${props => props.theme.typography.fontSizes.sm};
 `;
 
 const ResultGrid = styled.div`
@@ -76,6 +119,68 @@ const CardTitle = styled.h2`
   color: ${props => props.theme.colors.textDark};
 `;
 
+const SummaryContent = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: ${props => props.theme.spacing.md};
+`;
+
+const SummaryRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
+  padding-bottom: ${props => props.theme.spacing.sm};
+`;
+
+const SummaryLabel = styled.span`
+  color: ${props => props.theme.colors.textSecondary};
+`;
+
+const SummaryValue = styled.span`
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+`;
+
+const TotalAmountValue = styled.span`
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  font-size: ${props => props.theme.typography.fontSizes.lg};
+  color: #2563eb;
+`;
+
+const CategoryBadge = styled.span`
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  padding: 4px 8px;
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSizes.sm};
+  font-weight: ${props => props.theme.typography.fontWeights.bold};
+  text-transform: uppercase;
+`;
+
+const ConfidenceSection = styled.div`
+  margin-top: ${props => props.theme.spacing.xl};
+`;
+
+const ConfidenceBarTrack = styled.div`
+  width: 100%;
+  background-color: #f3f4f6;
+  border-radius: 9999px;
+  height: 10px;
+  margin-top: ${props => props.theme.spacing.sm};
+`;
+
+const ConfidenceBarFill = styled.div<{ $width: number }>`
+  background-color: #22c55e;
+  height: 100%;
+  border-radius: 9999px;
+  width: ${props => props.$width}%;
+`;
+
+const ConfidenceText = styled.p`
+  font-size: ${props => props.theme.typography.fontSizes.xs};
+  color: #9ca3af;
+  margin-top: ${props => props.theme.spacing.sm};
+`;
+
 const LineItemsTable = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -104,6 +209,29 @@ const SKU = styled.span`
   border-radius: 4px;
   font-family: monospace;
   font-size: 0.75rem;
+`;
+
+const NoItemsRow = styled.tr`
+   td {
+       text-align: center;
+       padding-top: ${props => props.theme.spacing.xl};
+       padding-bottom: ${props => props.theme.spacing.xl};
+       color: #9ca3af;
+   }
+`;
+
+const ButtonGroup = styled.div`
+  margin-top: 24px;
+  display: flex;
+  gap: ${props => props.theme.spacing.md};
+`;
+
+const StyledButton = styled(Button)`
+  flex: 1;
+`;
+
+const StyledExportButton = styled(Button)`
+  flex: 1;
 `;
 
 export default function DocumentIntelligencePage() {
@@ -140,9 +268,10 @@ export default function DocumentIntelligencePage() {
     return (
         <Layout>
             <PageContainer>
+              <ContentContainer>
                 <Header>
                     <Title>Document Intelligence</Title>
-                    <p className="text-gray-500">AI-powered OCR for receipts, invoices, and financial documents with SKU extraction.</p>
+                    <Description>AI-powered OCR for receipts, invoices, and financial documents with SKU extraction.</Description>
                 </Header>
 
                 <DropZone
@@ -163,54 +292,53 @@ export default function DocumentIntelligencePage() {
                         accept="image/*,application/pdf"
                         onChange={handleFileChange}
                     />
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+                    <UploadContent>
+                        <IconWrapper>
                             {analyzing ? <Loader2 size={32} className="animate-spin" /> : <Upload size={32} />}
-                        </div>
+                        </IconWrapper>
                         <div>
-                            <p className="font-bold text-lg">{analyzing ? 'Analyzing Document...' : 'Click or drag receipt/invoice here'}</p>
-                            <p className="text-gray-400 text-sm">PNG, JPG, or PDF up to 10MB</p>
+                            <UploadPrompt>{analyzing ? 'Analyzing Document...' : 'Click or drag receipt/invoice here'}</UploadPrompt>
+                            <UploadHint>PNG, JPG, or PDF up to 10MB</UploadHint>
                         </div>
-                    </div>
+                    </UploadContent>
                 </DropZone>
 
                 {result && (
                     <ResultGrid>
                         <Card>
                             <CardTitle><Receipt size={20} /> Document Summary</CardTitle>
-                            <div className="space-y-4">
-                                <div className="flex justify-between border-b pb-2">
-                                    <span className="text-gray-500">Merchant</span>
-                                    <span className="font-semibold">{result.merchant_name || 'Unknown'}</span>
-                                </div>
-                                <div className="flex justify-between border-b pb-2">
-                                    <span className="text-gray-500">Date</span>
-                                    <span className="font-semibold">{result.date || 'Unknown'}</span>
-                                </div>
-                                <div className="flex justify-between border-b pb-2">
-                                    <span className="text-gray-500">Total Amount</span>
-                                    <span className="font-bold text-lg text-blue-600">
+                            <SummaryContent>
+                                <SummaryRow>
+                                    <SummaryLabel>Merchant</SummaryLabel>
+                                    <SummaryValue>{result.merchant_name || 'Unknown'}</SummaryValue>
+                                </SummaryRow>
+                                <SummaryRow>
+                                    <SummaryLabel>Date</SummaryLabel>
+                                    <SummaryValue>{result.date || 'Unknown'}</SummaryValue>
+                                </SummaryRow>
+                                <SummaryRow>
+                                    <SummaryLabel>Total Amount</SummaryLabel>
+                                    <TotalAmountValue>
                                         {result.currency} {result.total_amount?.toFixed(2)}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between border-b pb-2">
-                                    <span className="text-gray-500">Category (AI Suggested)</span>
-                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold uppercase">
+                                    </TotalAmountValue>
+                                </SummaryRow>
+                                <SummaryRow>
+                                    <SummaryLabel>Category (AI Suggested)</SummaryLabel>
+                                    <CategoryBadge>
                                         {result.category}
-                                    </span>
-                                </div>
-                            </div>
+                                    </CategoryBadge>
+                                </SummaryRow>
+                            </SummaryContent>
 
-                            <div className="mt-8">
+                            <ConfidenceSection>
                                 <CardTitle><Brain size={20} /> AI Confidence</CardTitle>
-                                <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2">
-                                    <div
-                                        className="bg-green-500 h-2.5 rounded-full"
-                                        style={{ width: `${(result.confidence || 0.95) * 100}%` }}
-                                    ></div>
-                                </div>
-                                <p className="text-xs text-gray-400 mt-2">Confidence level: {Math.round((result.confidence || 0.95) * 100)}%</p>
-                            </div>
+                                <ConfidenceBarTrack>
+                                    <ConfidenceBarFill
+                                        $width={(result.confidence || 0.95) * 100}
+                                    />
+                                </ConfidenceBarTrack>
+                                <ConfidenceText>Confidence level: {Math.round((result.confidence || 0.95) * 100)}%</ConfidenceText>
+                            </ConfidenceSection>
                         </Card>
 
                         <Card>
@@ -236,24 +364,25 @@ export default function DocumentIntelligencePage() {
                                         </tr>
                                     ))}
                                     {(!result.items || result.items.length === 0) && (
-                                        <tr>
-                                            <td colSpan={5} className="text-center py-8 text-gray-400">No line items detected</td>
-                                        </tr>
+                                        <NoItemsRow>
+                                            <td colSpan={5}>No line items detected</td>
+                                        </NoItemsRow>
                                     )}
                                 </tbody>
                             </LineItemsTable>
 
-                            <div className="mt-6 flex gap-4">
-                                <Button className="flex-1">
+                            <ButtonGroup>
+                                <StyledButton>
                                     <CheckCircle size={16} className="mr-2" /> Confirm & Post
-                                </Button>
-                                <Button variant="outline" className="flex-1">
+                                </StyledButton>
+                                <StyledExportButton variant="outline">
                                     <Download size={16} className="mr-2" /> Export
-                                </Button>
-                            </div>
+                                </StyledExportButton>
+                            </ButtonGroup>
                         </Card>
                     </ResultGrid>
                 )}
+              </ContentContainer>
             </PageContainer>
         </Layout>
     );
