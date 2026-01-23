@@ -762,3 +762,39 @@ Support for modern compression (especially improved in PostgreSQL 16)
 
 source venv/Scripts/activate
 uvicorn app.main:app --reload
+
+
+…\backend > python -c "from sqlalchemy import create_engine, text; from sqlalchemy.orm import sessionmaker; engine = create_engine('postgresql://postgres:amare@localhost/projectai'); SessionLocal = sessionmaker(bind=engine); db = SessionLocal(); exp_count = db.execute(text('SELECT COUNT(*) FROM expense_entries WHERE is_approved = true')).scalar(); rev_count = db.execute(text('SELECT COUNT(*) FROM revenue_entries WHERE is_approved = true')).scalar(); print(f'Approved Expenses: {exp_count}'); print(f'Approved Revenues: {rev_count}'); db.close()"
+
+Approved Expenses: 32
+Approved Revenues: 34
+Go to Terminal
+·
+Exit code 0
+
+Request Review
+Checked command status
+There are currently 32 approved expense entries and 34 approved revenue entries in the database.
+
+This exceeds the minimum requirement of 10 approved records, which is a great start for training your AI models!
+
+check out how many approved expense and revenue
+
+Thought for <1s
+
+
+…\backend > python -c "from sqlalchemy import create_engine, text; from sqlalchemy.orm import sessionmaker; engine = create_engine('postgresql://postgres:amare@localhost/projectai'); SessionLocal = sessionmaker(bind=engine); db = SessionLocal(); exp_count = db.execute(text('SELECT COUNT(*) FROM expense_entries WHERE is_approved = true')).scalar(); rev_count = db.execute(text('SELECT COUNT(*) FROM revenue_entries WHERE is_approved = true')).scalar(); print(f'Approved Expenses: {exp_count}'); print(f'Approved Revenues: {rev_count}'); db.close()"
+
+Ran terminal command
+Relocate
+·
+Exit code 0
+
+Request Review
+There are now 47 approved expense entries and 48 approved revenue entries!
+
+It looks like you've approved more records since the last check, which provides even more data for the ML models to work with.
+
+
+
+python -c "from sqlalchemy import create_engine, text; from sqlalchemy.orm import sessionmaker; engine = create_engine('postgresql://postgres:amare@localhost/projectai'); SessionLocal = sessionmaker(bind=engine); db = SessionLocal(); exp_count = db.execute(text('SELECT COUNT(*) FROM expense_entries WHERE is_approved = true')).scalar(); rev_count = db.execute(text('SELECT COUNT(*) FROM revenue_entries WHERE is_approved = true')).scalar(); print(f'Approved Expenses: {exp_count}'); print(f'Approved Revenues: {rev_count}'); db.close()"

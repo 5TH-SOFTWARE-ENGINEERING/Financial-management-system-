@@ -1,11 +1,12 @@
 {
   "last_training_times": {
-    "inventory": "2026-01-23T04:13:44.822956+00:00"
+    "inventory": "2026-01-23T06:02:27.394330+00:00",
+    "expense": "2026-01-23T06:02:12.301604+00:00"
   },
   "new_data_counts": {
-    "expense": 294,
+    "expense": 0,
     "revenue": 273,
-    "inventory": 2
+    "inventory": 0
   },
   "training_history": [
     {
@@ -17,7 +18,37 @@
       "best_rmse": 16.010054842667778,
       "model_saved": true,
       "old_rmse": 3385.9992023215104
+    },
+    {
+      "metric": "expense",
+      "timestamp": "2026-01-23T05:47:31.982240+00:00",
+      "new_data_points": 294,
+      "models_trained": 2,
+      "best_model_type": "linear_regression",
+      "best_rmse": 70.8826624409012,
+      "model_saved": false,
+      "old_rmse": 72.8138328819084
+    },
+    {
+      "metric": "expense",
+      "timestamp": "2026-01-23T06:02:12.301604+00:00",
+      "new_data_points": 0,
+      "models_trained": 2,
+      "best_model_type": "linear_regression",
+      "best_rmse": 313.6980412608741,
+      "model_saved": false,
+      "old_rmse": 72.8138328819084
+    },
+    {
+      "metric": "inventory",
+      "timestamp": "2026-01-23T06:02:27.394330+00:00",
+      "new_data_points": 2,
+      "models_trained": 3,
+      "best_model_type": "xgboost",
+      "best_rmse": 15.999564425001473,
+      "model_saved": true,
+      "old_rmse": 3385.9992023215104
     }
   ],
-  "last_updated": "2026-01-23T04:19:36.787178+00:00"
+  "last_updated": "2026-01-23T06:02:27.394859+00:00"
 }
