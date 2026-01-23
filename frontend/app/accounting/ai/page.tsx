@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import Layout from "@/components/layout";
 import {
     LineChart,
     Line,
@@ -123,6 +124,7 @@ export default function AIDashboard() {
     })) : [];
 
     return (
+        <Layout>
         <div className="min-h-screen bg-[#fafafa] dark:bg-gray-950 p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
@@ -401,5 +403,6 @@ export default function AIDashboard() {
                 }
             `}</style>
         </div>
+    </Layout>
     );
 }

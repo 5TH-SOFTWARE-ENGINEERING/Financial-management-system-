@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
+import Layout from '@/components/layout';
 import {
     LayoutDashboard,
     Link as LinkIcon,
@@ -84,6 +85,7 @@ export default function AccountMappingsPage() {
     };
 
     return (
+        <Layout>
         <div className="min-h-screen bg-[#0a0a0a] text-gray-100 p-8 space-y-8">
             {/* Header */}
             <header className="flex justify-between items-center">
@@ -250,5 +252,6 @@ export default function AccountMappingsPage() {
                 }
             `}</style>
         </div>
+        </Layout>
     );
 }
