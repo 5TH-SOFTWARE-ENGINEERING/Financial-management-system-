@@ -84,6 +84,11 @@ Laptop Computer,800.00,1200.00,25,electronics,LAPTOP-001,High-performance laptop
 Once data is imported, train your AI models:
 
 ```bash
+python import_csv_data.py --all
 python train_ai_models.py --all
 ```
 
+
+
+
+python -c "from sqlalchemy import create_engine, text; from sqlalchemy.orm import sessionmaker; engine = create_engine('postgresql://postgres:amare@localhost/projectai'); SessionLocal = sessionmaker(bind=engine); db = SessionLocal(); exp_count = db.execute(text('SELECT COUNT(*) FROM expense_entries WHERE is_approved = true')).scalar(); rev_count = db.execute(text('SELECT COUNT(*) FROM revenue_entries WHERE is_approved = true')).scalar(); inv_count = db.execute(text('SELECT COUNT(*) FROM inventory_items WHERE is_active = true')).scalar(); print(f'Approved Expenses: {exp_count}'); print(f'Approved Revenues: {rev_count}'); print(f'Active Inventory: {inv_count}'); exp_months = db.execute(text('SELECT COUNT(DISTINCT DATE_TRUNC(\\'month\\', date)) FROM expense_entries WHERE is_approved = true')).scalar(); rev_months = db.execute(text('SELECT COUNT(DISTINCT DATE_TRUNC(\\'month\\', date)) FROM revenue_entries WHERE is_approved = true')).scalar(); print(f'\\nExpense months: {exp_months}'); print(f'Revenue months: {rev_months}'); db.close()"
