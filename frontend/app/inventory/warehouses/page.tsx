@@ -16,7 +16,8 @@ import {
   Loader2,
   X,
   ChevronRight,
-  Building2
+  Building2,
+  History
 } from "lucide-react";
 import { apiClient, Warehouse, StockTransferCreate, InventoryItem, WarehouseCreate, StockTransfer } from "@/lib/api";
 import { toast } from "sonner";
@@ -24,25 +25,42 @@ import Layout from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
+
 // --- Styled Components ---
 
-const PRIMARY_COLOR = (props: any) => props.theme.colors.primary || '#00AA00';
-const TEXT_COLOR_DARK = (props: any) => props.theme.colors.textDark;
-const TEXT_COLOR_MUTED = (props: any) => props.theme.colors.textSecondary || '#666';
-const BACKGROUND_GRADIENT = (props: any) => props.theme.mode === 'dark' ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${props.theme.colors.background} 100%)` : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${props.theme.colors.background} 100%)`;
+const getThemeColor = (props: any, key: string, fallback: string) => {
+  const theme = props?.theme || props;
+  return theme?.colors?.[key] || fallback;
+};
 
-const CardShadow = (props: any) => `
-  0 2px 4px -1px rgba(0, 0, 0, 0.06),
-  0 1px 2px -1px rgba(0, 0, 0, 0.03),
-  inset 0 0 0 1px ${props.theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'}
-`;
+const PRIMARY_COLOR = (props: any) => getThemeColor(props, 'primary', '#00AA00');
+const TEXT_COLOR_DARK = (props: any) => getThemeColor(props, 'textDark', '#0f172a');
+const TEXT_COLOR_MUTED = (props: any) => getThemeColor(props, 'textSecondary', '#666');
+
+const BACKGROUND_GRADIENT = (props: any) => {
+  const theme = props?.theme || props;
+  const mode = theme?.mode || 'light';
+  const bg = theme?.colors?.background || '#ffffff';
+  return mode === 'dark'
+    ? `linear-gradient(180deg, #0f172a 0%, #1e293b 60%, ${bg} 100%)`
+    : `linear-gradient(180deg, #f9fafb 0%, #f3f4f6 60%, ${bg} 100%)`;
+};
+
+const CardShadow = (props: any) => {
+  const theme = props?.theme || props;
+  return `
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 1px 2px -1px rgba(0, 0, 0, 0.03),
+    inset 0 0 0 1px ${theme?.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'}
+  `;
+};
 
 const PageContainer = styled.div`
   flex: 1;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: ${props => props.theme.spacing.lg};
+  padding: ${props => props.theme?.spacing?.lg || '24px'};
   background: ${BACKGROUND_GRADIENT};
   min-height: 100vh;
 `;
@@ -53,19 +71,19 @@ const ContentContainer = styled.div`
   max-width: 980px;
   margin-left: auto;
   margin-right: 0;
-  padding: ${props => props.theme.spacing.sm};
+  padding: ${props => props.theme?.spacing?.sm || '8px'};
 `;
 
 const HeaderContainer = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: ${props => props.theme.spacing.xl};
+  margin-bottom: ${props => props.theme?.spacing?.xl || '32px'};
   
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: flex-start;
-    gap: ${props => props.theme.spacing.md};
+    gap: ${props => props.theme?.spacing?.md || '16px'};
   }
 `;
 
@@ -93,17 +111,17 @@ const ActionButtons = styled.div`
 const StyledButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   display: flex;
   align-items: center;
-  gap: ${props => props.theme.spacing.sm};
-  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.lg};
-  border-radius: ${props => props.theme.borderRadius.md};
+  gap: ${props => props.theme?.spacing?.sm || '8px'};
+  padding: ${props => props.theme?.spacing?.sm || '8px'} ${props => props.theme?.spacing?.lg || '24px'};
+  border-radius: ${props => props.theme?.borderRadius?.md || '8px'};
   font-weight: bold;
   transition: all 0.2s;
   cursor: pointer;
   
   ${props => props.$variant === 'secondary' ? css`
-    background: ${props.theme.colors.card};
+    background: ${props.theme?.colors?.card || '#fff'};
     color: ${TEXT_COLOR_DARK};
-    border: 1px solid ${props.theme.colors.border};
+    border: 1px solid ${props.theme?.colors?.border || '#ddd'};
     box-shadow: ${CardShadow};
     
     &:hover {
@@ -111,7 +129,7 @@ const StyledButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     }
   ` : css`
     background: ${TEXT_COLOR_DARK};
-    color: ${props.theme.colors.background};
+    color: ${props.theme?.colors?.background || '#fff'};
     border: none;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     
@@ -125,8 +143,8 @@ const StyledButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(1, 1fr);
-  gap: ${props => props.theme.spacing.md};
-  margin-bottom: ${props => props.theme.spacing.xl};
+  gap: ${props => props.theme?.spacing?.md || '16px'};
+  margin-bottom: ${props => props.theme?.spacing?.xl || '32px'};
   
   @media (min-width: 768px) {
     grid-template-columns: repeat(3, 1fr);
@@ -134,12 +152,12 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled(motion.div)`
-  background: ${props => props.theme.colors.card};
+  background: ${props => props.theme?.colors?.card || '#fff'};
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 1.5rem;
   padding: 2rem;
-  border: 1px solid ${props => props.theme.colors.border};
+  border: 1px solid ${props => props.theme?.colors?.border || '#ddd'};
   box-shadow: ${CardShadow};
   position: relative;
   overflow: hidden;
@@ -190,7 +208,7 @@ const StatSubtext = styled.p`
 const WarehouseGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: ${props => props.theme.spacing.md};
+  gap: ${props => props.theme?.spacing?.md || '16px'};
   
   @media (min-width: 1024px) {
     grid-template-columns: repeat(2, 1fr);
@@ -198,11 +216,11 @@ const WarehouseGrid = styled.div`
 `;
 
 const WarehouseCard = styled(motion.div)`
-  background: ${props => props.theme.colors.card};
+  background: ${props => props.theme?.colors?.card || '#fff'};
   backdrop-filter: blur(8px);
   border-radius: 1.5rem;
   padding: 1.5rem;
-  border: 1px solid ${props => props.theme.colors.border};
+  border: 1px solid ${props => props.theme?.colors?.border || '#ddd'};
   display: flex;
   align-items: center;
   gap: 1.5rem;
@@ -220,7 +238,7 @@ const WarehouseCard = styled(motion.div)`
 const IconBox = styled.div`
   width: 4rem;
   height: 4rem;
-  background: ${props => props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : '#eff6ff'};
+  background: ${props => props.theme?.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : '#eff6ff'};
   border-radius: 1rem;
   display: flex;
   align-items: center;
@@ -275,7 +293,7 @@ const MetricsRow = styled.div`
 
 const Metric = styled.div<{ $bordered?: boolean }>`
   ${props => props.$bordered && css`
-    border-left: 1px solid ${props.theme.colors.border};
+    border-left: 1px solid ${props.theme?.colors?.border || '#ddd'};
     padding-left: 1rem;
   `}
   
@@ -295,7 +313,7 @@ const Metric = styled.div<{ $bordered?: boolean }>`
 
 const ActionMenuButton = styled.button`
   padding: 0.5rem;
-  color: ${props => props.theme.colors.textSecondary};
+  color: ${props => props.theme?.colors?.textSecondary || '#666'};
   background: transparent;
   border: none;
   cursor: pointer;
@@ -303,25 +321,32 @@ const ActionMenuButton = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    background: ${props => props.theme.colors.border};
+    background: ${props => props.theme?.colors?.border || '#ddd'};
     color: ${TEXT_COLOR_DARK};
   }
 `;
 
 const DropdownMenu = styled.div`
   position: absolute;
-  top: 3.5rem;
-  right: 1.5rem;
-  background: ${props => props.theme.colors.card};
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: 0.75rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  top: calc(100% + 10px);
+  right: 0;
+  background: ${props => props.theme?.colors?.card || '#fff'};
+  border: 1px solid ${props => props.theme?.colors?.border || '#ddd'};
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 0.5rem;
-  z-index: 10;
-  min-width: 10rem;
+  z-index: 1000;
+  min-width: 14rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  transform-origin: top right;
+  animation: fadeIn scaleIn 0.2s ease-out;
+
+  @keyframes scaleIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
 `;
 
 const DropdownItem = styled.button<{ $danger?: boolean }>`
@@ -332,7 +357,7 @@ const DropdownItem = styled.button<{ $danger?: boolean }>`
   width: 100%;
   border: none;
   background: transparent;
-  color: ${props => props.$danger ? '#ef4444' : props.theme.colors.textDark};
+  color: ${props => props.$danger ? '#ef4444' : props.theme?.colors?.textDark || '#0f172a'};
   font-weight: 600;
   font-size: 0.875rem;
   border-radius: 0.5rem;
@@ -340,7 +365,7 @@ const DropdownItem = styled.button<{ $danger?: boolean }>`
   transition: all 0.2s;
   
   &:hover {
-    background: ${props => props.$danger ? '#fef2f2' : props.theme.colors.background};
+    background: ${props => props.$danger ? '#fef2f2' : props.theme?.colors?.background || '#f9fafb'};
   }
 `;
 
@@ -358,13 +383,13 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${props => props.theme.colors.card};
+  background: ${props => props.theme?.colors?.card || '#fff'};
   width: 100%;
   max-width: 36rem;
   border-radius: 2.5rem;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   overflow: hidden;
-  border: 1px solid ${props => props.theme.colors.border};
+  border: 1px solid ${props => props.theme?.colors?.border || '#ddd'};
 `;
 
 const ModalBody = styled.div`
@@ -422,10 +447,10 @@ const InputGroup = styled.div`
 
 const StyledSelect = styled.select`
   width: 100%;
-  background: ${props => props.theme.colors.background};
+  background: ${props => props.theme?.colors?.background || '#fff'};
   padding: 1rem;
   border-radius: 1rem;
-  border: 1px solid ${props => props.theme.colors.border};
+  border: 1px solid ${props => props.theme?.colors?.border || '#ddd'};
   outline: none;
   font-weight: 700;
   color: ${TEXT_COLOR_DARK};
@@ -437,10 +462,10 @@ const StyledSelect = styled.select`
 
 const StyledInput = styled.input`
   width: 100%;
-  background: ${props => props.theme.colors.background};
+  background: ${props => props.theme?.colors?.background || '#fff'};
   padding: 1rem;
   border-radius: 1rem;
-  border: 1px solid ${props => props.theme.colors.border};
+  border: 1px solid ${props => props.theme?.colors?.border || '#ddd'};
   outline: none;
   font-weight: 700;
   font-size: 1.25rem;
@@ -481,10 +506,10 @@ const SubmitButton = styled.button`
 
 const EmptyState = styled.div`
   grid-column: 1 / -1;
-  background: ${props => props.theme.colors.card};
+  background: ${props => props.theme?.colors?.card || '#fff'};
   border-radius: 1.5rem;
   padding: 5rem;
-  border: 1px solid ${props => props.theme.colors.border};
+  border: 1px solid ${props => props.theme?.colors?.border || '#ddd'};
   text-align: center;
   
   h3 {
@@ -504,13 +529,13 @@ const EmptyState = styled.div`
 const EmptyIconWrapper = styled.div`
   width: 5rem;
   height: 5rem;
-  background: ${props => props.theme.colors.background};
+  background: ${props => props.theme?.colors?.background || '#f9fafb'};
   border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 1.5rem;
-  color: ${props => props.theme.colors.border};
+  color: ${props => props.theme?.colors?.border || '#ddd'};
 `;
 
 export default function WarehouseDashboard() {
@@ -518,6 +543,13 @@ export default function WarehouseDashboard() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // New Modals State
+  const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [modalData, setModalData] = useState<any[]>([]);
+  const [modalLoading, setModalLoading] = useState(false);
 
   // Transfer form state
   const [showTransferForm, setShowTransferForm] = useState(false);
@@ -575,9 +607,15 @@ export default function WarehouseDashboard() {
     fetchTransfers();
 
     // Close menu on click outside
-    const handleClickOutside = () => setActiveMenuId(null);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    const handleClickOutside = (e: MouseEvent) => {
+      // Check if the click was on a morevertical button or menu
+      const target = e.target as HTMLElement;
+      if (!target.closest('.action-menu-container')) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchTransfers = async () => {
@@ -661,6 +699,34 @@ export default function WarehouseDashboard() {
     }
   };
 
+  const handleShipTransfer = async (transferId: number) => {
+    try {
+      setSubmitting(true);
+      await apiClient.shipTransfer(transferId);
+      toast.success("Stock shipped");
+      fetchData();
+      fetchTransfers();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Action failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReceiveTransfer = async (transferId: number) => {
+    try {
+      setSubmitting(true);
+      await apiClient.receiveTransfer(transferId);
+      toast.success("Stock received and updated");
+      fetchData();
+      fetchTransfers();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Action failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleCreateWarehouse = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -724,6 +790,36 @@ export default function WarehouseDashboard() {
     setShowCreateForm(true);
   };
 
+  const openInventoryModal = async (warehouse: Warehouse) => {
+    setSelectedWarehouse(warehouse);
+    setShowInventoryModal(true);
+    setActiveMenuId(null);
+    try {
+      setModalLoading(true);
+      const res = await apiClient.getWarehouseStocks(warehouse.id);
+      setModalData(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      toast.error("Failed to load inventory");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const openAuditModal = async (warehouse: Warehouse) => {
+    setSelectedWarehouse(warehouse);
+    setShowAuditModal(true);
+    setActiveMenuId(null);
+    try {
+      setModalLoading(true);
+      const res = await apiClient.getTransfers(undefined, warehouse.id);
+      setModalData(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      toast.error("Failed to load audit history");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <PageContainer>
@@ -769,7 +865,7 @@ export default function WarehouseDashboard() {
             </StatCard>
 
             <StatCard
-              style={{ background: theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.7)' : 'rgba(15, 23, 42, 0.9)' }}
+              style={{ background: theme?.mode === 'dark' ? 'rgba(30, 41, 59, 0.7)' : 'rgba(15, 23, 42, 0.9)' }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -828,17 +924,29 @@ export default function WarehouseDashboard() {
                       </AddressRow>
                       <MetricsRow>
                         <Metric>
-                          <div>Items</div>
+                          <div>Stock</div>
                           <div>{warehouse.total_items || 0}</div>
                         </Metric>
                         <Metric $bordered>
                           <div>Utilization</div>
                           <div>{warehouse.utilization || 0}%</div>
                         </Metric>
+                        {(() => {
+                          const incomingCount = transfers
+                            .filter(t => t.to_warehouse_id === warehouse.id && (t.status === 'pending' || t.status === 'shipped'))
+                            .reduce((sum, t) => sum + t.quantity, 0);
+
+                          return incomingCount > 0 ? (
+                            <Metric $bordered>
+                              <div style={{ color: '#2563eb' }}>Incoming</div>
+                              <div style={{ color: '#2563eb' }}>+{incomingCount}</div>
+                            </Metric>
+                          ) : null;
+                        })()}
                       </MetricsRow>
                     </WarehouseInfo>
 
-                    <div style={{ position: 'relative' }}>
+                    <div className="action-menu-container" style={{ position: 'relative' }}>
                       <ActionMenuButton onClick={(e) => {
                         e.stopPropagation();
                         setActiveMenuId(activeMenuId === warehouse.id ? null : warehouse.id);
@@ -848,11 +956,18 @@ export default function WarehouseDashboard() {
 
                       {activeMenuId === warehouse.id && (
                         <DropdownMenu onClick={e => e.stopPropagation()}>
+                          <DropdownItem onClick={() => openInventoryModal(warehouse)}>
+                            <Boxes size={18} /> <span>View Inventory</span>
+                          </DropdownItem>
+                          <DropdownItem onClick={() => openAuditModal(warehouse)}>
+                            <History size={18} /> <span>Audit History</span>
+                          </DropdownItem>
+                          <div style={{ height: '1px', background: theme?.colors?.border || '#ddd', margin: '8px 4px', opacity: 0.5 }} />
                           <DropdownItem onClick={() => startEdit(warehouse)}>
-                            <Pencil size={14} /> Edit
+                            <Pencil size={18} /> <span>Edit Warehouse</span>
                           </DropdownItem>
                           <DropdownItem $danger onClick={() => handleDelete(warehouse.id)}>
-                            <Trash size={14} /> Delete
+                            <Trash size={18} /> <span>Delete Warehouse</span>
                           </DropdownItem>
                         </DropdownMenu>
                       )}
@@ -862,6 +977,103 @@ export default function WarehouseDashboard() {
               </AnimatePresence>
             )}
           </WarehouseGrid>
+
+          {/* Movements Section */}
+          <div style={{ marginTop: '4rem' }}>
+            <HeaderContainer>
+              <TitleSection>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: TEXT_COLOR_DARK(theme as any) }}>Stock Movements</h2>
+                <p>Track in-transit items and pending actions</p>
+              </TitleSection>
+            </HeaderContainer>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {transfers.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', background: (theme as any)?.colors?.card || '#fff', borderRadius: '1.5rem', border: `1px solid ${(theme as any)?.colors?.border || '#ddd'}` }}>
+                  <p style={{ color: TEXT_COLOR_MUTED(theme as any) }}>No recent stock movements</p>
+                </div>
+              ) : (
+                transfers.map((transfer) => (
+                  <div
+                    key={transfer.id}
+                    style={{
+                      background: (theme as any)?.colors?.card || '#fff',
+                      padding: '1.25rem 1.5rem',
+                      borderRadius: '1.25rem',
+                      border: `1px solid ${(theme as any)?.colors?.border || '#ddd'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1.5rem'
+                    }}
+                  >
+                    <div style={{
+                      width: '3rem',
+                      height: '3rem',
+                      background: transfer.status === 'received' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(37, 99, 235, 0.1)',
+                      borderRadius: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: transfer.status === 'received' ? '#22c55e' : '#2563eb'
+                    }}>
+                      {transfer.status === 'received' ? <ShieldCheck size={20} /> : <Truck size={20} />}
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, color: TEXT_COLOR_DARK(theme as any), fontSize: '1.05rem' }}>
+                        {transfer.quantity}x {transfer.item_name || `Item #${transfer.item_id}`}
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: TEXT_COLOR_MUTED(theme as any), display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        {transfer.from_warehouse_name} <ArrowRightLeft size={12} /> {transfer.to_warehouse_name}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{
+                          fontSize: '0.625rem',
+                          fontWeight: 900,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.1em',
+                          color: transfer.status === 'received' ? '#22c55e' : (transfer.status === 'shipped' ? '#f59e0b' : '#2563eb'),
+                          background: transfer.status === 'received' ? 'rgba(34, 197, 94, 0.1)' : (transfer.status === 'shipped' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(37, 99, 235, 0.1)'),
+                          padding: '0.25rem 0.625rem',
+                          borderRadius: '9999px'
+                        }}>
+                          {transfer.status}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: TEXT_COLOR_MUTED(theme as any), marginTop: '0.4rem', fontWeight: 600 }}>
+                          {new Date(transfer.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+
+                      {transfer.status === 'pending' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleShipTransfer(transfer.id)}
+                          disabled={submitting}
+                          style={{ fontWeight: 800, borderRadius: '0.75rem' }}
+                        >
+                          Ship
+                        </Button>
+                      )}
+                      {transfer.status === 'shipped' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleReceiveTransfer(transfer.id)}
+                          disabled={submitting}
+                          style={{ fontWeight: 800, borderRadius: '0.75rem', background: '#2563eb' }}
+                        >
+                          Receive
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
 
           {/* Transfer Modal */}
           {showTransferForm && (
@@ -1009,6 +1221,102 @@ export default function WarehouseDashboard() {
                       {editingId ? 'Update Warehouse' : 'Create Warehouse'}
                     </SubmitButton>
                   </form>
+                </ModalBody>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+
+          {/* Inventory View Modal */}
+          {showInventoryModal && (
+            <ModalOverlay onClick={() => setShowInventoryModal(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <ModalBody>
+                  <ModalHeader>
+                    <div>
+                      <h2>{selectedWarehouse?.name} Inventory</h2>
+                      <p>Current stock levels at this location</p>
+                    </div>
+                    <CloseButton onClick={() => setShowInventoryModal(false)}>
+                      <X size={24} />
+                    </CloseButton>
+                  </ModalHeader>
+
+                  <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                    {modalLoading ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+                        <Loader2 className="animate-spin text-blue-500" size={32} />
+                      </div>
+                    ) : modalData.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '3rem' }}>
+                        <Boxes size={48} style={{ opacity: 0.2, margin: '0 auto 1rem' }} />
+                        <p style={{ color: TEXT_COLOR_MUTED(theme as any) }}>Empty inventory</p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {modalData.map((stock: any) => (
+                          <div key={stock.item_id} style={{ padding: '1rem', background: (theme as any)?.colors?.background || '#fff', borderRadius: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: `1px solid ${(theme as any)?.colors?.border || '#ddd'}` }}>
+                            <div>
+                              <div style={{ fontWeight: 800, color: TEXT_COLOR_DARK(theme as any) }}>{stock.item?.item_name || `Item #${stock.item_id}`}</div>
+                              <div style={{ fontSize: '0.75rem', color: TEXT_COLOR_MUTED(theme as any) }}>ID: {stock.item_id}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#2563eb' }}>{stock.quantity}</div>
+                              <div style={{ fontSize: '0.625rem', color: TEXT_COLOR_MUTED(theme as any), fontWeight: 700 }}>UNITS</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </ModalBody>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+
+          {/* Audit History Modal */}
+          {showAuditModal && (
+            <ModalOverlay onClick={() => setShowAuditModal(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <ModalBody>
+                  <ModalHeader>
+                    <div>
+                      <h2>Activity History</h2>
+                      <p>Transfer logs for {selectedWarehouse?.name}</p>
+                    </div>
+                    <CloseButton onClick={() => setShowAuditModal(false)}>
+                      <X size={24} />
+                    </CloseButton>
+                  </ModalHeader>
+
+                  <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                    {modalLoading ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+                        <Loader2 className="animate-spin text-blue-500" size={32} />
+                      </div>
+                    ) : modalData.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '3rem' }}>
+                        <History size={48} style={{ opacity: 0.2, margin: '0 auto 1rem' }} />
+                        <p style={{ color: TEXT_COLOR_MUTED(theme as any) }}>No activity found</p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {modalData.map((log: any) => (
+                          <div key={log.id} style={{ padding: '1rem', background: (theme as any)?.colors?.background || '#fff', borderRadius: '1rem', border: `1px solid ${(theme as any)?.colors?.border || '#ddd'}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                              <div style={{ fontWeight: 800 }}>{log.item_name}</div>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', color: log.status === 'received' ? '#22c55e' : '#2563eb' }}>{log.status}</div>
+                            </div>
+                            <div style={{ fontSize: '0.875rem', color: TEXT_COLOR_MUTED(theme as any), display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              {log.from_warehouse_name} <ArrowRightLeft size={10} /> {log.to_warehouse_name}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: TEXT_COLOR_MUTED(theme as any), marginTop: '0.5rem' }}>
+                              {new Date(log.created_at).toLocaleString()} • Qty: {log.quantity}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </ModalBody>
               </ModalContent>
             </ModalOverlay>

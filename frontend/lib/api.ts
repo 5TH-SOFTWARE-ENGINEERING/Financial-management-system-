@@ -110,8 +110,11 @@ export interface Warehouse {
 export interface StockTransfer {
   id: number;
   item_id: number;
+  item_name?: string;
   from_warehouse_id: number;
+  from_warehouse_name?: string;
   to_warehouse_id: number;
+  to_warehouse_name?: string;
   quantity: number;
   status: string;
   created_at: string;
@@ -534,8 +537,8 @@ class ApiClient {
     return this.post('/warehouses/transfers', transferData);
   }
 
-  async getTransfers(status?: string): Promise<ApiResponse<StockTransfer[]>> {
-    return this.get('/warehouses/transfers', { params: { status } });
+  async getTransfers(status?: string, warehouseId?: number): Promise<ApiResponse<StockTransfer[]>> {
+    return this.get('/warehouses/transfers', { params: { status, warehouse_id: warehouseId } });
   }
 
   async shipTransfer(transferId: number): Promise<ApiResponse<StockTransfer>> {
