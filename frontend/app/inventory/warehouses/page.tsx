@@ -328,24 +328,24 @@ const ActionMenuButton = styled.button`
 
 const DropdownMenu = styled.div`
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 5px);
   right: 0;
   background: ${props => props.theme?.colors?.card || '#fff'};
   border: 1px solid ${props => props.theme?.colors?.border || '#ddd'};
-  border-radius: 1rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   padding: 0.5rem;
   z-index: 1000;
-  min-width: 14rem;
+  min-width: 12rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  transform-origin: top right;
-  animation: fadeIn scaleIn 0.2s ease-out;
-
-  @keyframes scaleIn {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+  
+  /* Ensure it has a fade-in animation */
+  animation: dropdownFadeIn 0.15s ease-out;
+  @keyframes dropdownFadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 `;
 
@@ -606,14 +606,15 @@ export default function WarehouseDashboard() {
     fetchItems();
     fetchTransfers();
 
-    // Close menu on click outside
+    // Close menu on click outside - more robust detection
     const handleClickOutside = (e: MouseEvent) => {
-      // Check if the click was on a morevertical button or menu
       const target = e.target as HTMLElement;
-      if (!target.closest('.action-menu-container')) {
+      // If the click is not on the menu button and not inside the menu, close it
+      if (!target.closest('.action-menu-trigger') && !target.closest('.action-menu-dropdown')) {
         setActiveMenuId(null);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -903,6 +904,7 @@ export default function WarehouseDashboard() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
+                    style={{ zIndex: activeMenuId === warehouse.id ? 100 : 1 }}
                   >
                     <IconBox>
                       <WarehouseIcon size={32} />
@@ -946,28 +948,31 @@ export default function WarehouseDashboard() {
                       </MetricsRow>
                     </WarehouseInfo>
 
-                    <div className="action-menu-container" style={{ position: 'relative' }}>
-                      <ActionMenuButton onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveMenuId(activeMenuId === warehouse.id ? null : warehouse.id);
-                      }}>
+                    <div style={{ position: 'relative' }}>
+                      <ActionMenuButton
+                        className="action-menu-trigger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(activeMenuId === warehouse.id ? null : warehouse.id);
+                        }}
+                      >
                         <MoreVertical size={20} />
                       </ActionMenuButton>
 
                       {activeMenuId === warehouse.id && (
-                        <DropdownMenu onClick={e => e.stopPropagation()}>
+                        <DropdownMenu className="action-menu-dropdown" onClick={e => e.stopPropagation()}>
                           <DropdownItem onClick={() => openInventoryModal(warehouse)}>
-                            <Boxes size={18} /> <span>View Inventory</span>
+                            <Boxes size={16} /> View Stocks / Inventory
                           </DropdownItem>
                           <DropdownItem onClick={() => openAuditModal(warehouse)}>
-                            <History size={18} /> <span>Audit History</span>
+                            <History size={16} /> Audit History
                           </DropdownItem>
-                          <div style={{ height: '1px', background: theme?.colors?.border || '#ddd', margin: '8px 4px', opacity: 0.5 }} />
+                          <div style={{ height: '1px', background: theme?.colors?.border || '#ddd', margin: '4px 0', opacity: 0.5 }} />
                           <DropdownItem onClick={() => startEdit(warehouse)}>
-                            <Pencil size={18} /> <span>Edit Warehouse</span>
+                            <Pencil size={16} /> Edit / Update Details
                           </DropdownItem>
                           <DropdownItem $danger onClick={() => handleDelete(warehouse.id)}>
-                            <Trash size={18} /> <span>Delete Warehouse</span>
+                            <Trash size={16} /> Delete Warehouse
                           </DropdownItem>
                         </DropdownMenu>
                       )}
