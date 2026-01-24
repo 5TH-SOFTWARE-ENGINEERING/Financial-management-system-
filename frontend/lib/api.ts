@@ -534,6 +534,10 @@ class ApiClient {
     return this.post('/warehouses/transfers', transferData);
   }
 
+  async getTransfers(status?: string): Promise<ApiResponse<StockTransfer[]>> {
+    return this.get('/warehouses/transfers', { params: { status } });
+  }
+
   async shipTransfer(transferId: number): Promise<ApiResponse<StockTransfer>> {
     return this.post(`/warehouses/transfers/${transferId}/ship`);
   }

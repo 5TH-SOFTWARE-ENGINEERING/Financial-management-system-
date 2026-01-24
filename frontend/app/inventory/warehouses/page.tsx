@@ -18,10 +18,11 @@ import {
   ChevronRight,
   Building2
 } from "lucide-react";
-import { apiClient, Warehouse, StockTransferCreate, InventoryItem, WarehouseCreate } from "@/lib/api";
+import { apiClient, Warehouse, StockTransferCreate, InventoryItem, WarehouseCreate, StockTransfer } from "@/lib/api";
 import { toast } from "sonner";
 import Layout from "@/components/layout";
 import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 
 // --- Styled Components ---
 
@@ -132,19 +133,21 @@ const StatsGrid = styled.div`
   }
 `;
 
-const StatCard = styled.div`
+const StatCard = styled(motion.div)`
   background: ${props => props.theme.colors.card};
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 1.5rem;
   padding: 2rem;
   border: 1px solid ${props => props.theme.colors.border};
   box-shadow: ${CardShadow};
   position: relative;
   overflow: hidden;
-  group: hover;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
 
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   }
 `;
 
@@ -194,21 +197,23 @@ const WarehouseGrid = styled.div`
   }
 `;
 
-const WarehouseCard = styled.div`
+const WarehouseCard = styled(motion.div)`
   background: ${props => props.theme.colors.card};
+  backdrop-filter: blur(8px);
   border-radius: 1.5rem;
   padding: 1.5rem;
   border: 1px solid ${props => props.theme.colors.border};
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
 
   &:hover {
     box-shadow: ${CardShadow};
-    transform: translateY(-2px);
+    transform: translateY(-4px) scale(1.01);
+    border-color: ${PRIMARY_COLOR};
   }
 `;
 
@@ -511,6 +516,7 @@ const EmptyIconWrapper = styled.div`
 export default function WarehouseDashboard() {
   const theme = useTheme();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Transfer form state
@@ -566,12 +572,23 @@ export default function WarehouseDashboard() {
   useEffect(() => {
     fetchData();
     fetchItems();
+    fetchTransfers();
 
     // Close menu on click outside
     const handleClickOutside = () => setActiveMenuId(null);
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
+
+  const fetchTransfers = async () => {
+    try {
+      const res = await apiClient.getTransfers();
+      const data = Array.isArray(res.data) ? res.data : [];
+      setTransfers(data);
+    } catch (error) {
+      console.error("Failed to fetch transfers:", error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -617,12 +634,20 @@ export default function WarehouseDashboard() {
       return;
     }
 
+    // New validation: check against available stock
+    const selectedItemStock = warehouseItems.find(s => s.item_id === transferData.item_id);
+    if (selectedItemStock && transferData.quantity > selectedItemStock.quantity) {
+      toast.error(`Insufficient stock. Available: ${selectedItemStock.quantity}`);
+      return;
+    }
+
     try {
       setSubmitting(true);
       await apiClient.initiateTransfer(transferData);
       toast.success("Stock transfer initiated");
       setShowTransferForm(false);
       fetchData();
+      fetchTransfers();
       setTransferData({
         item_id: 0,
         from_warehouse_id: 0,
@@ -729,7 +754,7 @@ export default function WarehouseDashboard() {
               <StatIconWrapper>
                 <WarehouseIcon size={128} />
               </StatIconWrapper>
-              <StatLabel>Total Capacity</StatLabel>
+              <StatLabel>Stock Volume</StatLabel>
               <StatValue>{warehouses.reduce((acc, w) => acc + (w.total_items || 0), 0)}</StatValue>
               <StatSubtext>Total Items Stored</StatSubtext>
             </StatCard>
@@ -743,12 +768,19 @@ export default function WarehouseDashboard() {
               <StatSubtext>Across all locations</StatSubtext>
             </StatCard>
 
-            <StatCard style={{ background: theme.mode === 'dark' ? '#0f172a' : '#1e293b' }}>
+            <StatCard
+              style={{ background: theme.mode === 'dark' ? 'rgba(30, 41, 59, 0.7)' : 'rgba(15, 23, 42, 0.9)' }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
               <StatIconWrapper>
                 <Truck size={128} color="white" style={{ opacity: 0.1 }} />
               </StatIconWrapper>
               <StatLabel style={{ color: 'rgba(255,255,255,0.5)' }}>Live Transfers</StatLabel>
-              <StatValue style={{ color: 'white' }}>12</StatValue>
+              <StatValue style={{ color: 'white' }}>
+                {transfers.filter(t => t.status === 'pending' || t.status === 'shipped').length}
+              </StatValue>
               <StatSubtext style={{ color: 'rgba(255,255,255,0.5)' }}>In-transit movements</StatSubtext>
             </StatCard>
           </StatsGrid>
@@ -767,59 +799,68 @@ export default function WarehouseDashboard() {
                 <h3>No Warehouses Configured</h3>
                 <p>Create your first physical storage location to start tracking stock across multiple areas.</p>
               </EmptyState>
-            ) : warehouses.map((warehouse) => (
-              <WarehouseCard key={warehouse.id}>
-                <IconBox>
-                  <WarehouseIcon size={32} />
-                  {warehouse.is_main && (
-                    <div style={{ position: 'absolute', top: -8, right: -8, background: '#2563eb', color: 'white', padding: 4, borderRadius: '50%', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                      <ShieldCheck size={12} />
+            ) : (
+              <AnimatePresence>
+                {warehouses.map((warehouse, index) => (
+                  <WarehouseCard
+                    key={warehouse.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <IconBox>
+                      <WarehouseIcon size={32} />
+                      {warehouse.is_main && (
+                        <div style={{ position: 'absolute', top: -8, right: -8, background: '#2563eb', color: 'white', padding: 4, borderRadius: '50%', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                          <ShieldCheck size={12} />
+                        </div>
+                      )}
+                    </IconBox>
+
+                    <WarehouseInfo>
+                      <WarehouseName>
+                        <h4>{warehouse.name}</h4>
+                        {warehouse.is_main && <MainBadge>Main HQ</MainBadge>}
+                      </WarehouseName>
+                      <AddressRow>
+                        <MapPin size={12} />
+                        {warehouse.address || "No address set"}
+                      </AddressRow>
+                      <MetricsRow>
+                        <Metric>
+                          <div>Items</div>
+                          <div>{warehouse.total_items || 0}</div>
+                        </Metric>
+                        <Metric $bordered>
+                          <div>Utilization</div>
+                          <div>{warehouse.utilization || 0}%</div>
+                        </Metric>
+                      </MetricsRow>
+                    </WarehouseInfo>
+
+                    <div style={{ position: 'relative' }}>
+                      <ActionMenuButton onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(activeMenuId === warehouse.id ? null : warehouse.id);
+                      }}>
+                        <MoreVertical size={20} />
+                      </ActionMenuButton>
+
+                      {activeMenuId === warehouse.id && (
+                        <DropdownMenu onClick={e => e.stopPropagation()}>
+                          <DropdownItem onClick={() => startEdit(warehouse)}>
+                            <Pencil size={14} /> Edit
+                          </DropdownItem>
+                          <DropdownItem $danger onClick={() => handleDelete(warehouse.id)}>
+                            <Trash size={14} /> Delete
+                          </DropdownItem>
+                        </DropdownMenu>
+                      )}
                     </div>
-                  )}
-                </IconBox>
-
-                <WarehouseInfo>
-                  <WarehouseName>
-                    <h4>{warehouse.name}</h4>
-                    {warehouse.is_main && <MainBadge>Main HQ</MainBadge>}
-                  </WarehouseName>
-                  <AddressRow>
-                    <MapPin size={12} />
-                    {warehouse.address || "No address set"}
-                  </AddressRow>
-                  <MetricsRow>
-                    <Metric>
-                      <div>Items</div>
-                      <div>{warehouse.total_items || 0}</div>
-                    </Metric>
-                    <Metric $bordered>
-                      <div>Utilization</div>
-                      <div>{warehouse.utilization || 0}%</div>
-                    </Metric>
-                  </MetricsRow>
-                </WarehouseInfo>
-
-                <div style={{ position: 'relative' }}>
-                  <ActionMenuButton onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveMenuId(activeMenuId === warehouse.id ? null : warehouse.id);
-                  }}>
-                    <MoreVertical size={20} />
-                  </ActionMenuButton>
-
-                  {activeMenuId === warehouse.id && (
-                    <DropdownMenu onClick={e => e.stopPropagation()}>
-                      <DropdownItem onClick={() => startEdit(warehouse)}>
-                        <Pencil size={14} /> Edit
-                      </DropdownItem>
-                      <DropdownItem $danger onClick={() => handleDelete(warehouse.id)}>
-                        <Trash size={14} /> Delete
-                      </DropdownItem>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </WarehouseCard>
-            ))}
+                  </WarehouseCard>
+                ))}
+              </AnimatePresence>
+            )}
           </WarehouseGrid>
 
           {/* Transfer Modal */}
