@@ -28,6 +28,7 @@ from .utils.audit import AuditLogger, AuditAction
 from .models.user import User, UserRole        # SQLAlchemy model + Enum
 from .schemas.user import UserCreate           # Pydantic schema
 from .core.security import get_password_hash   # Use core.security (bcrypt directly)
+from .models.currency import Currency          # SQLAlchemy model
 
 # --- Import all models to ensure they're registered with Base ---
 # This ensures all tables are created when Base.metadata.create_all() is called
@@ -147,6 +148,30 @@ def create_default_admin():
     finally:
         db.close()
 
+def create_default_currencies():
+    """Create default currencies if they don't exist."""
+    db = SessionLocal()
+    try:
+        defaults = [
+            {"code": "USD", "name": "US Dollar", "symbol": "$", "is_base_currency": True},
+            {"code": "EUR", "name": "Euro", "symbol": "€", "is_base_currency": False},
+            {"code": "ETB", "name": "Ethiopian Birr", "symbol": "Br", "is_base_currency": False},
+        ]
+        
+        for curr_data in defaults:
+            existing = db.query(Currency).filter(Currency.code == curr_data["code"]).first()
+            if not existing:
+                db_curr = Currency(**curr_data)
+                db.add(db_curr)
+                logger.info(f"Default currency created: {curr_data['code']}")
+        
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to create default currencies: {e}")
+    finally:
+        db.close()
+
 def ensure_database_schema_sync(engine):
     """
     Ensure the database schema is in sync with the models.
@@ -184,7 +209,8 @@ async def lifespan(app: FastAPI):
     # 3. **Self-healing migration**
     ensure_database_schema_sync(engine)
 
-    # 4. **Create default admin** (replaces @app.on_event)
+    # 4. **Create default admin and currencies** (replaces @app.on_event)
+    create_default_currencies()
     create_default_admin()
 
     # 4. Start ML model training scheduler (optional)
@@ -223,26 +249,40 @@ app = FastAPI(
     lifespan=lifespan,                     # <-- new way
 )
 
-# CORS configuration
-allowed_origins = [
+# --- CORS Configuration ---
+# Standard FastAPI CORS handling. Added here to be the outermost middleware layer.
+all_origins = [
     "http://localhost:3000",
-    "http://localhost:8081",  # Expo web dev server
+    "http://localhost:3001",
+    "http://localhost:8081",
     "http://127.0.0.1:3000",
-    "http://127.0.0.1:8081",  # Expo web dev server
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:8081",
     "https://project1frontend.onrender.com",
 ]
-# Allow all in debug to simplify local dev
+
+# Add extra origins from settings if provided
+if settings.ALLOWED_ORIGINS:
+    extra_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+    for origin in extra_origins:
+        if origin not in all_origins:
+            all_origins.append(origin)
+
+# Special handling for debug mode
+# Note: we don't use "*" because allow_credentials=True requires specific origins
 if settings.DEBUG:
-    allowed_origins.append("*")
+    # Most common dev origins are already covered
+    pass
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=all_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Requires-2FA"],  # <--- CRITICAL: Allow frontend to see this header
+    expose_headers=["X-Requires-2FA", "Content-Disposition", "*"],
 )
+
 
 # Custom OpenAPI Schema with Bearer Token Authorization
 def custom_openapi():
@@ -381,70 +421,8 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4
 # Override default OpenAPI schema with custom one
 app.openapi = custom_openapi
 
-# Add CORS middleware - MUST be added early, before other middleware
-# Default development origins (always included for local development)
-default_origins = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:8081",  # Expo web dev server
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-    "http://127.0.0.1:8081",  # Expo web dev server
-]
+# --- End CORS Configuration ---
 
-# Determine allowed origins based on settings
-if settings.ALLOWED_ORIGINS:
-    origins_str = settings.ALLOWED_ORIGINS.strip()
-    if origins_str == "*":
-        # Wildcard mode - credentials must be False
-        logger.info("CORS: Using wildcard origins (credentials disabled)")
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=False,
-            allow_methods=["*"],
-            allow_headers=["*"],
-            expose_headers=["*"],
-        )
-    elif origins_str:
-        # Parse comma-separated origins
-        parsed_origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
-        # Merge with defaults and remove duplicates
-        all_origins = list(dict.fromkeys(default_origins + parsed_origins))
-        logger.info(f"CORS: Allowing origins: {all_origins}")
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=all_origins,
-            allow_credentials=True,
-            allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-            allow_headers=["*"],
-            expose_headers=["X-Requires-2FA", "*"],
-            max_age=3600,
-        )
-    else:
-        # Empty string - use defaults
-        logger.info(f"CORS: Using default development origins: {default_origins}")
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=default_origins,
-            allow_credentials=True,
-            allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-            allow_headers=["*"],
-            expose_headers=["X-Requires-2FA", "*"],
-            max_age=3600,
-        )
-else:
-    # No ALLOWED_ORIGINS set - always use defaults for development
-    logger.info(f"CORS: Using default development origins: {default_origins}")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=default_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-        allow_headers=["*"],
-        expose_headers=["X-Requires-2FA", "*"],
-        max_age=3600,
-    )
 
 # Add trusted host middleware for production (after CORS)
 if not settings.DEBUG:

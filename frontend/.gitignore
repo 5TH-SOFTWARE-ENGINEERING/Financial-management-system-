@@ -182,3 +182,27 @@ storybook-build/
 # Local Development
 .local/
 .local.*
+app/accounting/
+app/banking/
+app/settings/logs/
+app/settings/ipmanagement/
+app/settings/backup/
+app/settings/backup/**
+app/settings/ipmanagement/**
+app/settings/logs/**
+app/settings/notifications/**
+app/settings/notifications/**
+app/settings/passwordmanagement/**
+app/settings/passwordmanagement/**
+app/settings/rolemanagement/**
+app/settings/rolemanagement/**
+app/settings/usermanagement/**
+app/settings/usermanagement/**
+app/settings/security/**
+app/settings/security/**
+app/settings/subscription/**    
+app/settings/users-roles/**
+app/ml-training/**
+app/ml-training/**
+app/banking/
+app/(protected)/
