@@ -15,6 +15,9 @@ import {
     Legend,
     ResponsiveContainer
 } from 'recharts';
+import { ComponentGate } from '@/lib/rbac';
+import { useAuthorization } from '@/lib/rbac/use-authorization';
+import Layout from "@/components/layout";
 
 // Styled Components
 
@@ -25,11 +28,12 @@ const PageWrapper = styled.div`
 `;
 
 const ContentContainer = styled.div`
-  max-width: 80rem; /* 7xl equivalent */
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: ${props => props.theme.spacing.xl};
+  flex: 1;
+  width: 100%;
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: 0;
+  padding: ${props => props.theme.spacing.sm};
 `;
 
 const Header = styled.div`
@@ -314,6 +318,7 @@ export default function BankingPage() {
     };
 
     return (
+        <Layout>
         <PageWrapper>
             <ContentContainer>
                 {/* Header */}
@@ -400,5 +405,6 @@ export default function BankingPage() {
                 </GridContainer>
             </ContentContainer>
         </PageWrapper>
+        </Layout>
     );
 }

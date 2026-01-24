@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ...core.database import get_db
@@ -38,8 +38,17 @@ def update_warehouse(
     if not warehouse:
         raise HTTPException(status_code=404, detail="Warehouse not found")
     return warehouse
-
-    return warehouse_service.delete_warehouse(db, warehouse_id)
+@router.delete("/{warehouse_id}", response_model=Any)
+def delete_warehouse(
+    warehouse_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_min_role(UserRole.FINANCE_ADMIN))
+):
+    """Delete a warehouse"""
+    success = warehouse_service.delete_warehouse(db, warehouse_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    return {"message": "Warehouse deleted successfully"}
 
 @router.get("/{warehouse_id}/stocks", response_model=List[schemas.WarehouseStockWithItem])
 def get_warehouse_stocks(
@@ -49,6 +58,16 @@ def get_warehouse_stocks(
 ):
     """Get stocks for a specific warehouse"""
     return warehouse_service.get_warehouse_stocks(db, warehouse_id)
+
+@router.get("/transfers", response_model=List[schemas.StockTransferOut])
+def list_transfers(
+    status: Optional[schemas.TransferStatus] = None,
+    warehouse_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_min_role(UserRole.ACCOUNTANT))
+):
+    """List all stock transfers"""
+    return warehouse_service.get_transfers(db, status, warehouse_id)
 
 @router.post("/transfers", response_model=schemas.StockTransferOut)
 def initiate_transfer(

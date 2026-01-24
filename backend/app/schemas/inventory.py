@@ -2,7 +2,15 @@
 from pydantic import BaseModel, field_validator # type: ignore[import-untyped]
 from typing import Optional
 from datetime import datetime
+from typing import Optional, List
 from decimal import Decimal
+import enum
+
+class TransferStatus(str, enum.Enum):
+    PENDING = "pending"
+    SHIPPED = "shipped"
+    RECEIVED = "received"
+    CANCELLED = "cancelled"
 
 class InventoryItemBase(BaseModel):
     item_name: str
@@ -184,8 +192,11 @@ class StockTransferCreate(BaseModel):
 class StockTransferOut(BaseModel):
     id: int
     item_id: int
+    item_name: Optional[str] = None
     from_warehouse_id: int
+    from_warehouse_name: Optional[str] = None
     to_warehouse_id: int
+    to_warehouse_name: Optional[str] = None
     quantity: int
     status: str
     created_at: datetime

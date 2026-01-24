@@ -8,7 +8,7 @@ import {
     Home, ArrowDownCircle, ArrowUpCircle, Receipt, PieChart, Building, Briefcase, Users,
     UserCog, Settings, ChevronDown, Wallet, Shield, UserPlus, List, Calculator,
     DollarSign, Plus, FileText, TrendingUp, GitCompare, BarChart3, Package, ShoppingCart, BookOpen,
-    Key, ChevronLeft, ChevronRight, Brain, Activity, Bell, Database, History, LockKeyhole, Network,
+    Key, ChevronLeft, ChevronRight, Brain, Activity, Bell, Database, History, LockKeyhole, Network, Landmark
 } from 'lucide-react';
 import { ComponentGate, ComponentId } from '@/lib/rbac';
 import { useAuthorization } from '@/lib/rbac/use-authorization';
@@ -193,6 +193,7 @@ const getIconColor = (iconType: string, active: boolean): string => {
             'database': '#3b82f6',        // Blue
             'lockKeyhole': '#8b5cf6',     // Purple
             'network': '#3b82f6',         // Blue
+            'banking': '#10b981',         // Green
         };
         return activeColors[iconType] || theme.colors.primary;
     } else {
@@ -227,6 +228,7 @@ const getIconColor = (iconType: string, active: boolean): string => {
             'database': '#60a5fa',        // Light Blue
             'lockKeyhole': '#a78bfa',     // Light Purple
             'network': '#60a5fa',         // Light Blue
+            'banking': '#34d399',         // Light Green
         };
         return inactiveColors[iconType] || theme.colors.textSecondary;
     }
@@ -628,6 +630,12 @@ const Sidebar: React.FC = () => {
                                                 <GitCompare />
                                             </NavIcon>
                                             {!collapsed && 'Mappings'}
+                                        </NavItem>
+                                        <NavItem href="/banking" $active={pathname === '/banking'} $collapsed={collapsed}>
+                                            <NavIcon $active={pathname === '/banking'} $collapsed={collapsed} $iconType="banking">
+                                                <Landmark />
+                                            </NavIcon>
+                                            {!collapsed && 'Banking'}
                                         </NavItem>
                                     </>
                                 )}

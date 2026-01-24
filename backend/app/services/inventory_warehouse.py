@@ -110,8 +110,8 @@ class WarehouseService:
         if not source_stock or source_stock.quantity < obj_in.quantity:
             raise ValueError("Insufficient stock in source warehouse")
 
-        # 2. Deduct from source
-        source_stock.quantity -= obj_in.quantity
+        # 2. Deduct from source (updates both warehouse and global counts)
+        WarehouseService.update_stock(db, obj_in.from_warehouse_id, obj_in.item_id, -obj_in.quantity)
         
         # 3. Create Transfer record
         transfer = StockTransfer(
@@ -195,5 +195,23 @@ class WarehouseService:
 
         db.commit()
         return stock
+
+    @staticmethod
+    def get_transfers(db: Session, status: Optional[TransferStatus] = None, warehouse_id: Optional[int] = None) -> List[StockTransfer]:
+        query = db.query(StockTransfer)
+        if status:
+            query = query.filter(StockTransfer.status == status)
+        if warehouse_id:
+            from sqlalchemy import or_
+            query = query.filter(or_(
+                StockTransfer.from_warehouse_id == warehouse_id,
+                StockTransfer.to_warehouse_id == warehouse_id
+            ))
+        transfers = query.order_by(StockTransfer.created_at.desc()).all()
+        for t in transfers:
+            setattr(t, 'item_name', t.item.item_name if t.item else f"Item #{t.item_id}")
+            setattr(t, 'from_warehouse_name', t.from_warehouse.name if t.from_warehouse else f"Warehouse #{t.from_warehouse_id}")
+            setattr(t, 'to_warehouse_name', t.to_warehouse.name if t.to_warehouse else f"Warehouse #{t.to_warehouse_id}")
+        return transfers
 
 warehouse_service = WarehouseService()
