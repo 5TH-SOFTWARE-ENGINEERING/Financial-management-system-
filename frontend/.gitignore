@@ -183,3 +183,18 @@ storybook-build/
 .local/
 .local.*
 
+# AI Related
+.openai_api_key
+ai-metadata.json
+*ai_debug.log
+.gpt_cache/
+ml-trainings/
+*.pt
+*.onnx
+
+# Testing
+test_output.txt
+playwright-report/
+blob-report/
+test-results/
+

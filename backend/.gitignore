@@ -257,11 +257,19 @@ media/
 static/collected/
 
 
-data/
-model/
-report/
-uploads/
-scripts/
-tests/
-docs/
-app/AI/
+# AI and Machine Learning Assets
+ai_verification_log*.txt
+ml-trainings/
+models/*.pt
+models/*.h5
+models/*.onnx
+models/*.pkl
+*.joblib
+.ipynb_checkpoints/
+
+# Data and Assets (Ignore large data files but keep directory)
+data/*.csv
+data/*.json
+!data/.gitkeep
+uploads/*
+!uploads/.gitkeep
