@@ -223,27 +223,32 @@ test-results/
 .openai_api_key
 
 # Testing Related
-**/coverage/
-.coverage
-**/.pytest_cache/
-**/htmlcov/
-*.log
-junit.xml
+**/tests/
+**/__tests__/
 **/test-results/
+**/coverage/
+**/.coverage
+**/htmlcov/
+**.log
+junit.xml
+**/playwright.config.ts
+**/jest.config.js
+**/jest.setup.js
+**/vitest.config.ts
 **/ml-training/
 **/app/AI.md/
 **/data/
 **/model/
 **/uploads/
 **/scripts/
-**/tests/
-**/docs/
 **/store/
 **/audit/
 **/banking/
 **/accounting/
 **/warehouses/
 AI.md
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
 
-# forntend
-**/__tests__/
+

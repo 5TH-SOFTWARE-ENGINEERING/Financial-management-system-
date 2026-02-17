@@ -91,21 +91,21 @@ AI.md
 .openai_api_key
 
 # Testing Related
-**/coverage/
-.coverage
+**/tests/
+**/__tests__/
+**/test-results/
+**/pytest_cache/
 **/.pytest_cache/
 **/htmlcov/
-*.log
+**/.coverage
+**.log
 junit.xml
-**/test-results/
 **/ml-training/
 **/app/AI.md/
 **/data/
 **/model/
 **/uploads/
 **/scripts/
-**/tests/
-**/docs/
 **/store/
 **/audit/
 **/banking/
@@ -113,5 +113,11 @@ junit.xml
 **/warehouses/
 AI.md
 
-# forntend
-**/__tests__/
+# Configs & Locks
+**/jest.config.js
+**/jest.setup.js
+**/playwright.config.ts
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+
