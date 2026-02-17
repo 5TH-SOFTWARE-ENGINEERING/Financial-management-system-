@@ -1,45 +1,45 @@
-docs/
+**/docs/
 .env
-mobile/
-uploads/
-reports/
-backups/
-logs/
+**/mobile/
+**/uploads/
+**/reports/
+**/backups/
+**/logs/
 
 # AI Related
-.venv/
-venv/
-env/
-__pycache__/
+**/.venv/
+**/venv/
+**/env/
+**/__pycache__/
 *.pyc
-models/
+**/models/
 *.pt
 *.h5
 *.onnx
 .openai_api_key
 
 # Testing Related
-coverage/
+**/coverage/
 .coverage
-.pytest_cache/
-htmlcov/
+**/.pytest_cache/
+**/htmlcov/
 *.log
 junit.xml
-test-results/
-ml-training/
-app/AI.md/
-data/
-model/
-uploads/
-scripts/
-tests/
-docs/
-store/
-audit/
-banking/
-accounting/
-warehouses/
+**/test-results/
+**/ml-training/
+**/app/AI.md/
+**/data/
+**/model/
+**/uploads/
+**/scripts/
+**/tests/
+**/docs/
+**/store/
+**/audit/
+**/banking/
+**/accounting/
+**/warehouses/
 AI.md
 
 # forntend
-__tests__/
+**/__tests__/
